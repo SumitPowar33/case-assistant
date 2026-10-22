@@ -1,0 +1,94 @@
+{
+  "id": "cyber-fraud",
+  "version": "1.0.0-draft",
+  "status": "draft",
+  "review_note": "Drafted from public law and court practice. Must be reviewed and approved by the Directorate of Prosecution before use.",
+  "applies_to": "Online financial fraud: impersonation calls, 'digital arrest', UPI/app fraud, investment scams",
+  "charges": [
+    {
+      "id": "cheating",
+      "law": "BNS 318(4)",
+      "label": "Cheating and dishonestly inducing delivery of property",
+      "ingredients": [
+        {"id": "deception", "text": "The victim was deceived", "proof": ["complainant_statement", "call_or_chat_record"]},
+        {"id": "inducement", "text": "The deception induced the victim to hand over money or property", "proof": ["complainant_statement"]},
+        {"id": "delivery", "text": "Money or property was actually delivered", "proof": ["bank_statement_certified"]}
+      ]
+    },
+    {
+      "id": "personation",
+      "law": "BNS 319(2)",
+      "label": "Cheating by personation",
+      "ingredients": [
+        {"id": "pretended_identity", "text": "The accused pretended to be someone else (for example a police or CBI officer)", "proof": ["call_or_chat_record", "complainant_statement"]},
+        {"id": "no_such_officer", "text": "The person claimed does not exist or did not act", "proof": ["agency_verification_letter"]}
+      ]
+    },
+    {
+      "id": "intimidation",
+      "law": "BNS 351(2)",
+      "label": "Criminal intimidation",
+      "ingredients": [
+        {"id": "threat", "text": "A threat of injury to person, reputation or property was made", "proof": ["call_or_chat_record", "complainant_statement"]},
+        {"id": "intent_alarm", "text": "The threat was meant to cause alarm or make the victim act", "proof": ["complainant_statement"]}
+      ]
+    },
+    {
+      "id": "it_personation",
+      "law": "IT Act 66D",
+      "label": "Cheating by personation using a computer resource",
+      "ingredients": [
+        {"id": "computer_resource", "text": "A phone, app or computer was used", "proof": ["platform_reply_certified"]},
+        {"id": "personation", "text": "The accused cheated by pretending to be someone else", "proof": ["call_or_chat_record"]}
+      ]
+    },
+    {
+      "id": "conspiracy",
+      "law": "BNS 61(2)",
+      "label": "Criminal conspiracy",
+      "ingredients": [
+        {"id": "agreement", "text": "Two or more people agreed to commit the offence", "proof": ["link_evidence_per_accused"]}
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "account_holder_second_link",
+      "severity": "critical",
+      "text": "Money received in an account is not enough to charge the account holder. Each account-holder accused needs at least one more independent link: SIM or device, KYC photo identified, CCTV of withdrawal, login IP, or their own statement.",
+      "applies_to_role": "accused_account_holder",
+      "requires_any": ["sim_or_device_link", "kyc_identification", "cctv_withdrawal", "login_ip_link", "own_statement"]
+    },
+    {
+      "id": "electronic_record_certificate",
+      "severity": "critical",
+      "text": "Every electronic record relied on needs a BSA 63(4) certificate with Part A and Part B and a matching hash.",
+      "source": "BSA 63(4)"
+    },
+    {
+      "id": "bank_officer_witness",
+      "severity": "high",
+      "text": "Record the statement of the bank's nodal officer who can prove the bank records in court.",
+      "source": "BNSS 180"
+    },
+    {
+      "id": "seizure_recorded",
+      "severity": "high",
+      "text": "Every search and seizure must be recorded by audio-video (eSakshya) with the recording linked to the seizure memo.",
+      "source": "BNSS 105"
+    }
+  ],
+  "tasks": [
+    {"id": "golden_hour_hold", "stage": "stop_the_money", "text": "Report on the national portal (1930) and send hold requests to receiving banks", "within_hours": 24},
+    {"id": "block_numbers", "stage": "stop_the_money", "text": "Ask telecom and platforms to block numbers, accounts and links"},
+    {"id": "notice_banks", "stage": "notices", "text": "BNSS 94 notices to banks for statements, KYC and BSA 63(4) certificates", "notice_kind": "BNSS_94"},
+    {"id": "notice_telecom", "stage": "notices", "text": "BNSS 94 notices to telecom for CDR and customer application forms", "notice_kind": "BNSS_94"},
+    {"id": "notice_platform", "stage": "notices", "text": "Request account details and IP logs from the messaging platform"},
+    {"id": "verify_agency", "stage": "verification", "text": "Letter to the impersonated agency to confirm no such officer or action"},
+    {"id": "statement_complainant", "stage": "statements", "text": "Record the complainant's statement (BNSS 180)"},
+    {"id": "statement_bank_officer", "stage": "statements", "text": "Record the bank nodal officer's statement (BNSS 180)"},
+    {"id": "seize_devices", "stage": "accused", "text": "Seize accused's phones, SIMs and cards with eSakshya recording (BNSS 105)"},
+    {"id": "fsl_devices", "stage": "accused", "text": "Send seized devices to the forensic lab with request for expert certificate"},
+    {"id": "victim_update", "stage": "after_filing", "text": "Inform the victim of progress within 90 days (BNSS 193(3)(ii))"}
+  ]
+}
