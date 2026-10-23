@@ -9,6 +9,7 @@ Owner and decision-maker: Sumit Powar. Read `docs/PLAN.md` and `docs/PROGRESS.md
 - Never commit secrets. API keys come from environment variables (`ANTHROPIC_API_KEY`, `GEMINI_API_KEY`).
 - Work on a branch, open a PR, never push to `master` directly.
 - Run the tests before every commit; do not commit red tests.
+- Commits are authored as Sumit Powar. Do not add any Claude/AI name, co-author line or session link to commits, PRs or files.
 
 ## Layout
 - `services/ai-gateway` – Python FastAPI. Claude + Gemini (+ offline `fake`) behind one API; per-feature provider settings; hash-chained audit log. Tests: `python -m pytest -q` in that folder.

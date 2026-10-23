@@ -1,5 +1,9 @@
 # Progress
 
+Working branch: `setup/seed` (open a PR to `master` when ready: https://github.com/SumitPowar33/case-assistant/pull/new/setup/seed)
+
+Nightly sessions: 21:05, 23:35 and 02:05 IST.
+
 ## 23 Oct 2026, session 1
 Done
 - Seeded repo: plan, official forms research, typing engine (77 tests passing).
@@ -9,7 +13,6 @@ Done
 - National pack, cyber-fraud playbook v1.0.0-draft: 5 charges with legal ingredients, 4 rules (incl. second link for account holders, 63(4) certificates), 11 tasks. Validation tests, including a check that no playbook scores guilt or credibility.
 
 Blocked
-- Push access: Claude's GitHub app needs access to this repo (owner to reconnect).
 - Java build: Maven Central is not reachable from the build environment; owner to allow `repo.maven.apache.org`, `repo1.maven.org`, `plugins.gradle.org`, `services.gradle.org`.
 - Live Claude/Gemini calls need `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` as environment secrets. Gemini default model id `gemini-3.7-flash` is unverified until a key is available.
 
