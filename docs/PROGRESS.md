@@ -13,14 +13,17 @@ Done
 - National pack, cyber-fraud playbook v1.0.0-draft: 5 charges with legal ingredients, 4 rules (incl. second link for account holders, 63(4) certificates), 11 tasks. Validation tests, including a check that no playbook scores guilt or credibility.
 
 Blocked
-- Java build: Maven Central is not reachable from the build environment; owner to allow `repo.maven.apache.org`, `repo1.maven.org`, `plugins.gradle.org`, `services.gradle.org`.
-- Live Claude/Gemini calls need `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` as environment secrets. Gemini default model id `gemini-3.7-flash` is unverified until a key is available.
+- Live Claude/Gemini calls need `ANTHROPIC_API_KEY` and `GEMINI_API_KEY`. Sumit will give them after development; keep using the `fake` provider until then and do not ask again before the demo is ready. Gemini default model id `gemini-3.7-flash` is unverified until a key is available.
+
+Decisions (23 Oct, 10:05)
+- Maven Central and Gradle are now reachable: Java build unblocked.
+- Web UI: React + TypeScript in `apps/web` (Vite), talking to the Spring Boot API. Spring serves only JSON APIs.
 
 Next
-1. Java 21 / Spring Boot skeleton in `apps/core`: case, person, document, notice, evidence tables from `docs/research/official-forms.md`.
-2. Settings screen for AI provider per feature (calls the gateway).
-3. Language tool: serve the xlit engine to the web app.
+1. Java 21 / Spring Boot skeleton in `apps/core` (Maven): Flyway runs the existing `V1__core.sql`; JPA entities and REST APIs for FIR, people (masked view for non-team users), notices, evidence and custody, deadlines. Tests with Testcontainers or the local PostgreSQL.
+2. React + TypeScript app `apps/web`: layout and navigation from the design canvas; FIR list and FIR detail pages using the core API.
+3. Language tool in the web app using `packages/xlit` (typing box usable in every text field).
+4. AI settings screen (provider and model per feature) calling `services/ai-gateway`.
 
 Questions for Sumit
 0. (For the prosecutor later) Deadline counting: the schema counts the day of first remand as day 1, so A2 remanded 12 Sep gives a last day of 10 Nov. The demo screens say 11 Nov; I will fix the screens unless the prosecutor says otherwise.
-1. Web UI: Spring server pages (simpler) or a separate React app (richer)? My suggestion: React, because the typing tool and canvas designs are interactive.
