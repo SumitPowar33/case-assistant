@@ -4,6 +4,28 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST.
 
+## 23 Oct 2026, session 2 (nightly)
+Done
+- `apps/core`: Spring Boot 3.5 / Java 21 (Maven). Flyway applies the existing `V1__core.sql` unchanged.
+- REST APIs (plain SQL through Spring `JdbcClient`, not JPA, to keep the code small): `POST/GET /api/firs`, `GET /api/firs/{id}` (with sections); `GET /api/firs/{id}/people` (case team = the IO or an SHO/SP sees real details, everyone else, including no user, sees the masked victim view); `GET /api/firs/{id}/deadlines`; `GET /api/firs/{id}/evidence` (with court-ready flag); `GET/POST .../evidence/{item}/custody` (append only).
+- 9 Java tests on real PostgreSQL 16 (migration, FIR rules, masking, deadlines, custody); new `core` job in CI.
+- All suites green: gateway 9, xlit 77, db 12, packs 3, core 9.
+
+Deliberately skipped / not checked
+- Real login: `X-User-Id` header is a stand-in so the masking rule can be tested; it must not ship as-is.
+- JPA entities (JdbcClient is smaller; say if you want JPA). No Testcontainers: tests use a local/CI PostgreSQL via `DATABASE_URL`.
+- APIs for notices, arrests, certificates and creating people/evidence are not built yet. No PATCH/edit of FIRs.
+- Web app in `apps/web` is only the Vite template so far.
+
+Next
+1. Remaining core APIs: create people/arrests/evidence items, notices and replies, 63(4) certificates.
+2. React app `apps/web`: layout and navigation; FIR list and FIR detail pages using the core API.
+3. Language tool in the web app using `packages/xlit`.
+4. AI settings screen calling `services/ai-gateway`.
+
+Questions for Sumit
+1. Are you happy with plain SQL (JdbcClient) instead of JPA for the Java app?
+
 ## 23 Oct 2026, session 1
 Done
 - Seeded repo: plan, official forms research, typing engine (77 tests passing).
