@@ -4,6 +4,28 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST.
 
+## 23 Oct 2026, session 4 (nightly, last of the night)
+Tonight in short
+- Session 1: repo, AI gateway, schema, playbook. Session 2: Spring Boot app, FIR/people/deadline/evidence/custody APIs. Session 3: create-APIs for people, arrests, evidence, notices, replies, 63(4) certificates. Session 4: first web screens.
+
+Done
+- `apps/web` (React + TypeScript, Vite): Vite template removed; header with the "fictional data, AI drafts, a person decides" banner; FIR list (`#/`) and FIR detail (`#/firs/{id}`) showing sections, original text, people (victim identity shown as protected when the API masks it), deadlines, evidence with court-ready flag. Loading, empty and error states. Plain hash routing, no router library. Dev server proxies `/api` to the core app on port 8080.
+- 3 web tests (vitest + Testing Library + jsdom; added only as dev dependencies for testing). New `web` job in CI. Gateway 9, xlit 77, packs 3 pass; web 3 pass; build passes.
+
+Deliberately skipped / not checked
+- Core Java tests and DB tests were not re-run (no Java change tonight). Not tested against a live core app in a browser, only with a mocked API.
+- No Marathi/other-language UI strings yet; no styling beyond basics; one lint warning (shared date helper in FirList).
+- Still no login; `VITE_USER_ID` stands in for the user.
+
+Next
+1. Language tool in the web app using `packages/xlit` (typing box usable in every text field).
+2. AI settings screen calling `services/ai-gateway`.
+3. Login and roles in `apps/core`.
+4. Web forms to create FIRs, notices and evidence.
+
+Questions for Sumit
+1. Should the first UI language switch (English/Marathi/Hindi) come before or after the typing tool?
+
 ## 23 Oct 2026, session 3 (nightly)
 Done
 - `apps/core`: new `RecordsController` with `POST` for people, arrests (BNSS 35 memo, feeds the 60/90-day deadline), evidence items (electronic needs SHA-256), notices (BNSS 94/35(3)/179; `sent` needs signer and date, so a person signs; `ai_request_id` links to the AI audit log), notice replies (officer's checks set status `complete` or `reply_incomplete`), BSA 63(4) certificates (Part A/B; court-ready flag updates). `GET /notices` lists notices with reply counts. Database rules return 400; unknown case/person/item returns 404.
