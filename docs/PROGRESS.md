@@ -4,6 +4,26 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST.
 
+## 23 Oct 2026, session 3 (nightly)
+Done
+- `apps/core`: new `RecordsController` with `POST` for people, arrests (BNSS 35 memo, feeds the 60/90-day deadline), evidence items (electronic needs SHA-256), notices (BNSS 94/35(3)/179; `sent` needs signer and date, so a person signs; `ai_request_id` links to the AI audit log), notice replies (officer's checks set status `complete` or `reply_incomplete`), BSA 63(4) certificates (Part A/B; court-ready flag updates). `GET /notices` lists notices with reply counts. Database rules return 400; unknown case/person/item returns 404.
+- 3 new Java tests (12 total). All suites green: gateway 9, xlit 77, db 12, packs 3, core 12.
+
+Deliberately skipped / not checked
+- Still no real login (`X-User-Id` stand-in) and no authorisation on the new POSTs: any caller can create records. Must be added with login.
+- No edit/PATCH endpoints; no reply-check generation from the AI yet (the officer ticks the checks).
+- Notice status moves only on replies; there is no "mark sent" step after a draft yet.
+- `add_repo` tool was not available this run; the repo was already cloned and pushable.
+
+Next
+1. React app `apps/web`: layout and navigation; FIR list and FIR detail pages using the core API.
+2. Language tool in the web app using `packages/xlit`.
+3. AI settings screen calling `services/ai-gateway`.
+4. Login and roles in `apps/core`.
+
+Questions for Sumit
+1. Should a notice that gets a complete reply close automatically (as now), or should the officer confirm closing it?
+
 ## 23 Oct 2026, session 2 (nightly)
 Done
 - `apps/core`: Spring Boot 3.5 / Java 21 (Maven). Flyway applies the existing `V1__core.sql` unchanged.
