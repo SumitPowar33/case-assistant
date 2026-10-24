@@ -11,13 +11,15 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * Creates people, arrests, evidence items, notices, notice replies and BSA 63(4) certificates.
  * The database CHECK constraints hold the rules (e.g. a sent notice needs a signer, an electronic
- * item needs a SHA-256); a violation comes back as 400. A person signs and issues notices; the AI
- * only drafts (ai_request_id records the audit-log request).
+ * item needs a SHA-256); a violation comes back as 400. Only the case team adds records. A sent notice is
+ * signed by the signed-in officer; the AI only drafts (ai_request_id records the audit-log request).
  */
 @RestController
 @RequestMapping("/api/firs/{firId}")
@@ -35,7 +37,7 @@ class RecordsController {
                        String sealNo, String sha256) {}
 
     record NewNotice(@NotBlank String kind, @NotBlank String addressee, List<String> itemsRequested,
-                     @NotBlank String body, UUID aiRequestId, UUID signedBy, OffsetDateTime issuedAt,
+                     @NotBlank String body, UUID aiRequestId, OffsetDateTime issuedAt,
                      LocalDate replyDueOn, @Pattern(regexp = "draft|sent") String status) {}
 
     record Reply(@NotNull OffsetDateTime receivedAt, @NotBlank String channel, String checksJson) {}
@@ -45,9 +47,11 @@ class RecordsController {
                        @NotNull OffsetDateTime signedAt, @NotBlank String place) {}
 
     private final JdbcClient db;
+    private final CaseTeam team;
 
-    RecordsController(JdbcClient db) {
+    RecordsController(JdbcClient db, CaseTeam team) {
         this.db = db;
+        this.team = team;
     }
 
     private void requireFir(UUID firId) {
@@ -70,7 +74,8 @@ class RecordsController {
     }
 
     @PostMapping("/people")
-    ResponseEntity<Map<String, UUID>> person(@PathVariable UUID firId, @Valid @RequestBody NewPerson p) {
+    ResponseEntity<Map<String, UUID>> person(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody NewPerson p) {
+        team.requireTeam(CaseTeam.user(jwt), firId);
         requireFir(firId);
         return created(db.sql("""
                 insert into person (fir_id, role, label, identity_known, full_name, alias, parentage, age_years, gender,
@@ -82,7 +87,8 @@ class RecordsController {
     }
 
     @PostMapping("/arrests")
-    ResponseEntity<Map<String, UUID>> arrest(@PathVariable UUID firId, @Valid @RequestBody NewArrest a) {
+    ResponseEntity<Map<String, UUID>> arrest(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody NewArrest a) {
+        team.requireTeam(CaseTeam.user(jwt), firId);
         requireRow("person", a.personId, firId);
         return created(db.sql("""
                 insert into arrest (person_id, arrested_at, place, grounds, informed_name, informed_contact,
@@ -94,7 +100,8 @@ class RecordsController {
     }
 
     @PostMapping("/evidence")
-    ResponseEntity<Map<String, UUID>> evidence(@PathVariable UUID firId, @Valid @RequestBody NewEvidence e) {
+    ResponseEntity<Map<String, UUID>> evidence(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody NewEvidence e) {
+        team.requireTeam(CaseTeam.user(jwt), firId);
         requireFir(firId);
         return created(db.sql("""
                 insert into evidence_item (fir_id, label, description, kind, seized_at, seizure_memo, esakshya_id, seal_no, sha256)
@@ -114,7 +121,8 @@ class RecordsController {
     }
 
     @PostMapping("/notices")
-    ResponseEntity<Map<String, UUID>> notice(@PathVariable UUID firId, @Valid @RequestBody NewNotice n) {
+    ResponseEntity<Map<String, UUID>> notice(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody NewNotice n) {
+        team.requireTeam(CaseTeam.user(jwt), firId);
         requireFir(firId);
         return created(db.sql("""
                 insert into notice (fir_id, kind, addressee, items_requested, body, ai_request_id, signed_by,
@@ -122,7 +130,7 @@ class RecordsController {
                 values (?,?,?,?,?,?,?,?,?, coalesce(?, 'draft')) returning id""")
                 .params(firId, n.kind, n.addressee,
                         (n.itemsRequested == null ? List.<String>of() : n.itemsRequested).toArray(new String[0]),
-                        n.body, n.aiRequestId, n.signedBy, n.issuedAt, n.replyDueOn, n.status)
+                        n.body, n.aiRequestId, "sent".equals(n.status) ? CaseTeam.user(jwt) : null, n.issuedAt, n.replyDueOn, n.status)
                 .query(UUID.class).single());
     }
 
@@ -134,8 +142,9 @@ class RecordsController {
      */
     @PostMapping("/notices/{noticeId}/replies")
     @org.springframework.transaction.annotation.Transactional
-    ResponseEntity<Map<String, Object>> reply(@PathVariable UUID firId, @PathVariable UUID noticeId,
+    ResponseEntity<Map<String, Object>> reply(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @PathVariable UUID noticeId,
                                               @Valid @RequestBody Reply r) {
+        team.requireTeam(CaseTeam.user(jwt), firId);
         requireRow("notice", noticeId, firId);
         String checks = r.checksJson == null ? "[]" : r.checksJson;
         db.sql("insert into notice_reply (notice_id, received_at, channel, checks) values (?,?,?,?::jsonb)")
@@ -157,7 +166,8 @@ class RecordsController {
     }
 
     @PostMapping("/evidence/{itemId}/certificates")
-    ResponseEntity<Void> certificate(@PathVariable UUID firId, @PathVariable UUID itemId, @Valid @RequestBody Certificate c) {
+    ResponseEntity<Void> certificate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @PathVariable UUID itemId, @Valid @RequestBody Certificate c) {
+        team.requireTeam(CaseTeam.user(jwt), firId);
         requireRow("evidence", itemId, firId);
         db.sql("""
                 insert into certificate_63_4 (item_id, part, signer_name, device_type, device_ids, hash_algo, hash_value,

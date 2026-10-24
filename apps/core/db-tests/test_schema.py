@@ -188,3 +188,15 @@ def test_evidence_hash_cannot_change_once_recorded(db):
     with pytest.raises(psycopg.errors.RaiseException):
         db.execute("UPDATE evidence_item SET sha256=%s", ("b" * 64,))
     db.execute("UPDATE evidence_item SET description='Phone (black)'")   # other fields may still be corrected
+
+
+def test_login_fields_need_a_clean_unique_username(db):
+    st, io, fir = seed_case(db)
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("UPDATE app_user SET password_hash='{bcrypt}x'")              # a password needs a username
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("UPDATE app_user SET username='Has Spaces'")
+    db.execute("UPDATE app_user SET username='a.deshmukh', password_hash='{bcrypt}x'")
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        db.execute("INSERT INTO app_user(full_name,rank,role,username) VALUES ('B. Fictional','HC','front_desk','a.deshmukh')")
+    assert one(db, "SELECT active FROM app_user WHERE id=%s", io)[0] is True

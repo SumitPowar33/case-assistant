@@ -20,7 +20,9 @@ import org.springframework.test.web.servlet.MockMvc;
 class RecordsApiTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcClient db;
+    @Autowired org.springframework.security.oauth2.jwt.JwtEncoder tokens;
     UUID fir, io;
+    String auth;
     static final String SHA = "b".repeat(64);
 
     @BeforeEach
@@ -33,13 +35,14 @@ class RecordsApiTest {
                 .param(station).query(UUID.class).single();
         fir = db.sql("""
                 insert into fir (station_id, fir_year, fir_no, gd_entry_no, registered_at, information_received_at,
-                  contents_original, contents_language, action_taken)
-                values (?,2026,9,'GD-5','2026-10-01T10:00Z','2026-10-01T09:00Z','Fictional complaint','en','investigate')
-                returning id""").param(station).query(UUID.class).single();
+                  contents_original, contents_language, action_taken, io_id)
+                values (?,2026,9,'GD-5','2026-10-01T10:00Z','2026-10-01T09:00Z','Fictional complaint','en','investigate',?)
+                returning id""").params(station, io).query(UUID.class).single();
+        auth = TestAuth.bearer(tokens, io);
     }
 
     String send(String path, String body, int expected) throws Exception {
-        return mvc.perform(post("/api/firs/" + fir + path).contentType(MediaType.APPLICATION_JSON).content(body))
+        return mvc.perform(post("/api/firs/" + fir + path).header("Authorization", auth).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().is(expected)).andReturn().getResponse().getContentAsString();
     }
 
@@ -54,7 +57,7 @@ class RecordsApiTest {
                 {"personId":"%s","arrestedAt":"2026-09-12T08:00:00Z","place":"Testpur","grounds":["to prevent further offence"],
                  "informedName":"Fictional Relative","arrestingOfficer":"%s","firstRemandOn":"2026-09-12","maxPunishment":"less_than_10_years"}""".formatted(pid, io);
         send("/arrests", arrest, 201);
-        mvc.perform(get("/api/firs/" + fir + "/deadlines")).andExpect(jsonPath("$[?(@.kind=='chargesheet_custody')].due_on").value("2026-11-10"));
+        mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", auth)).andExpect(jsonPath("$[?(@.kind=='chargesheet_custody')].due_on").value("2026-11-10"));
         send("/arrests", arrest.replace("[\"to prevent further offence\"]", "[]"), 400);
         send("/arrests", arrest.replace(pid, UUID.randomUUID().toString()), 404);
     }
@@ -69,39 +72,54 @@ class RecordsApiTest {
                 + "\"hashValue\":\"%s\",\"signedAt\":\"2026-10-03T10:00:00Z\",\"place\":\"Testpur\"}";
         send("/evidence/" + item + "/certificates", cert.formatted("A", SHA), 201);
         send("/evidence/" + item + "/certificates", cert.formatted("B", "c".repeat(64)), 201);
-        mvc.perform(get("/api/firs/" + fir + "/evidence")).andExpect(jsonPath("$[0].court_ready").value(false));
+        mvc.perform(get("/api/firs/" + fir + "/evidence").header("Authorization", auth)).andExpect(jsonPath("$[0].court_ready").value(false));
         send("/evidence/" + item + "/certificates", cert.formatted("A", SHA), 400); // part A twice
         db.sql("update certificate_63_4 set hash_value = ? where part = 'B'").param(SHA).update();
-        mvc.perform(get("/api/firs/" + fir + "/evidence")).andExpect(jsonPath("$[0].court_ready").value(true));
+        mvc.perform(get("/api/firs/" + fir + "/evidence").header("Authorization", auth)).andExpect(jsonPath("$[0].court_ready").value(true));
     }
 
     @Test
     void noticeNeedsSignerToBeSentAndReplyChecksSetStatus() throws Exception {
         String n = "{\"kind\":\"BNSS_94\",\"addressee\":\"Fictional Bank Nodal Officer\",\"itemsRequested\":[\"statement\",\"Part B certificate\"],\"body\":\"Please produce.\"%s}";
-        send("/notices", n.formatted(",\"status\":\"sent\""), 400); // sent without signer and date
+        send("/notices", n.formatted(",\"status\":\"sent\""), 400); // sent without an issue date
         send("/notices", n.replace("\"itemsRequested\":[\"statement\",\"Part B certificate\"],", ""). formatted(""), 400); // 94 needs items
-        String id = idOf(send("/notices", n.formatted(",\"signedBy\":\"" + io + "\",\"issuedAt\":\"2026-10-05T10:00:00Z\",\"replyDueOn\":\"2026-10-12\",\"status\":\"sent\""), 201));
+        String id = idOf(send("/notices", n.formatted(",\"issuedAt\":\"2026-10-05T10:00:00Z\",\"replyDueOn\":\"2026-10-12\",\"status\":\"sent\""), 201));
         send("/notices/" + id + "/replies", "{\"receivedAt\":\"2026-10-10T10:00:00Z\",\"channel\":\"email\",\"checksJson\":\"[{\\\"item\\\":\\\"statement\\\",\\\"present\\\":true},{\\\"item\\\":\\\"Part B certificate\\\",\\\"present\\\":false}]\"}", 201);
-        mvc.perform(get("/api/firs/" + fir + "/notices")).andExpect(jsonPath("$[0].status").value("reply_incomplete"))
+        mvc.perform(get("/api/firs/" + fir + "/notices").header("Authorization", auth)).andExpect(jsonPath("$[0].status").value("reply_incomplete"))
                 .andExpect(jsonPath("$[0].replies").value(1));
         send("/notices/" + id + "/replies", "{\"receivedAt\":\"2026-10-11T10:00:00Z\",\"channel\":\"post\",\"checksJson\":\"[{\\\"item\\\":\\\"Part B certificate\\\",\\\"present\\\":true}]\"}", 201); // brings only the missing item
-        mvc.perform(get("/api/firs/" + fir + "/notices")).andExpect(jsonPath("$[0].status").value("complete"));
+        mvc.perform(get("/api/firs/" + fir + "/notices").header("Authorization", auth)).andExpect(jsonPath("$[0].status").value("complete"));
         send("/notices/" + UUID.randomUUID() + "/replies", "{\"receivedAt\":\"2026-10-11T10:00:00Z\",\"channel\":\"post\"}", 404);
+        // the signer is the signed-in officer, not a name from the request
+        org.assertj.core.api.Assertions.assertThat(db.sql("select signed_by from notice where id = ?::uuid").param(id).query(UUID.class).single()).isEqualTo(io);
+    }
+
+    @Test
+    void onlyTheCaseTeamAddsRecords() throws Exception {
+        UUID station = db.sql("select station_id from fir where id = ?").param(fir).query(UUID.class).single();
+        UUID clerk = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'HC Fictional Clerk','HC','front_desk') returning id")
+                .param(station).query(UUID.class).single();
+        auth = TestAuth.bearer(tokens, clerk);
+        send("/people", "{\"role\":\"witness\",\"label\":\"W1\"}", 403);
+        send("/notices", "{\"kind\":\"BNSS_94\",\"addressee\":\"Fictional Bank\",\"itemsRequested\":[\"statement\"],\"body\":\"Please produce.\"}", 403);
+        mvc.perform(post("/api/firs/" + UUID.randomUUID() + "/people").header("Authorization", TestAuth.bearer(tokens, io))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"witness\",\"label\":\"W1\"}")).andExpect(status().isForbidden());
+        org.assertj.core.api.Assertions.assertThat(db.sql("select count(*) from person").query(Long.class).single()).isZero();
     }
 
     @Test
     void emptyOrPartialChecksNeverCloseANotice() throws Exception {
         String n = "{\"kind\":\"BNSS_94\",\"addressee\":\"Fictional Telecom Nodal Officer\",\"itemsRequested\":[\"CDR\",\"Part A certificate\"],"
-                + "\"body\":\"Please produce.\",\"signedBy\":\"" + io + "\",\"issuedAt\":\"2026-10-05T10:00:00Z\",\"status\":\"%s\"}";
+                + "\"body\":\"Please produce.\",\"issuedAt\":\"2026-10-05T10:00:00Z\",\"status\":\"%s\"}";
         send("/notices", n.formatted("complete"), 400); // a notice cannot be created already complete
         String id = idOf(send("/notices", n.formatted("sent"), 201));
         String reply = "{\"receivedAt\":\"2026-10-10T10:00:00Z\",\"channel\":\"email\"%s}";
         send("/notices/" + id + "/replies", reply.formatted(""), 201);
-        mvc.perform(get("/api/firs/" + fir + "/notices")).andExpect(jsonPath("$[0].status").value("reply_incomplete"));
+        mvc.perform(get("/api/firs/" + fir + "/notices").header("Authorization", auth)).andExpect(jsonPath("$[0].status").value("reply_incomplete"));
         // every ticked check is present, but the Part A certificate was never checked
         send("/notices/" + id + "/replies", reply.formatted(",\"checksJson\":\"[{\\\"item\\\":\\\"CDR\\\",\\\"present\\\":true}]\""), 201);
-        mvc.perform(get("/api/firs/" + fir + "/notices")).andExpect(jsonPath("$[0].status").value("reply_incomplete"));
+        mvc.perform(get("/api/firs/" + fir + "/notices").header("Authorization", auth)).andExpect(jsonPath("$[0].status").value("reply_incomplete"));
         send("/notices/" + id + "/replies", reply.formatted(",\"checksJson\":\"{\\\"present\\\":true}\""), 400); // not a list
-        mvc.perform(get("/api/firs/" + fir + "/notices")).andExpect(jsonPath("$[0].replies").value(2));
+        mvc.perform(get("/api/firs/" + fir + "/notices").header("Authorization", auth)).andExpect(jsonPath("$[0].replies").value(2));
     }
 }

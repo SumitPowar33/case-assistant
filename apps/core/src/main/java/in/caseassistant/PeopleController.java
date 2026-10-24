@@ -4,11 +4,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * People in a case. Only the case team (see {@link CaseTeam}) sees real details; everyone else,
- * including requests with no user, reads the masked view (BNS 72, POCSO 23).
+ * reads the masked view (BNS 72, POCSO 23).
  */
 @RestController
 class PeopleController {
@@ -21,8 +23,8 @@ class PeopleController {
     }
 
     @GetMapping("/api/firs/{firId}/people")
-    List<Map<String, Object>> people(@PathVariable UUID firId, @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
-        String sql = team.includes(userId, firId)
+    List<Map<String, Object>> people(@PathVariable UUID firId, @AuthenticationPrincipal Jwt jwt) {
+        String sql = team.includes(CaseTeam.user(jwt), firId)
                 ? "select id, role, label, full_name as display_name, phone, address_present, age_years, gender, "
                         + "person_masked(role, identity_masked, fir_id) as identity_masked from person where fir_id = ? order by label"
                 : "select id, role, label, display_name, phone, address_present, age_years, gender, identity_masked "

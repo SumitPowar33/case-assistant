@@ -12,6 +12,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -45,11 +47,11 @@ class FirController {
 
     /** The complaint text names the victim, so it is withheld from anyone outside the case team on protected cases. */
     @GetMapping("/{id}")
-    Map<String, Object> one(@PathVariable UUID id, @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+    Map<String, Object> one(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
         var fir = db.sql("select * from fir where id = ?").param(id).query().listOfRows().stream().findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         var out = new java.util.LinkedHashMap<>(fir);
-        boolean withheld = team.identityProtected(id) && !team.includes(userId, id);
+        boolean withheld = team.identityProtected(id) && !team.includes(CaseTeam.user(jwt), id);
         if (withheld) out.put("contents_original", null);
         out.put("contents_withheld", withheld);
         out.put("sections", db.sql("select act, section from fir_section where fir_id = ? order by act, section")
@@ -59,7 +61,8 @@ class FirController {
 
     @PostMapping
     @Transactional
-    ResponseEntity<Map<String, UUID>> create(@Valid @RequestBody NewFir f) {
+    ResponseEntity<Map<String, UUID>> create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody NewFir f) {
+        team.requireStationStaff(CaseTeam.user(jwt), f.stationId);
         UUID id = db.sql("""
                 insert into fir (station_id, fir_year, fir_no, gd_entry_no, registered_at, information_received_at,
                   is_zero_fir, outside_limits_place, contents_original, contents_language, action_taken,

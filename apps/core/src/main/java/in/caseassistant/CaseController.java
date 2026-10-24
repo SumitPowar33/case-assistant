@@ -11,9 +11,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-/** Read-only views over deadlines and evidence, plus the append-only custody log. */
+/** Read-only views over deadlines and evidence, plus the append-only custody log (case team or station malkhana only). */
 @RestController
 @RequestMapping("/api/firs/{firId}")
 class CaseController {
@@ -21,9 +23,11 @@ class CaseController {
                    @NotBlank String location, @NotBlank String purpose, boolean sealIntact) {}
 
     private final JdbcClient db;
+    private final CaseTeam team;
 
-    CaseController(JdbcClient db) {
+    CaseController(JdbcClient db, CaseTeam team) {
         this.db = db;
+        this.team = team;
     }
 
     @GetMapping("/deadlines")
@@ -49,7 +53,8 @@ class CaseController {
     }
 
     @PostMapping("/evidence/{itemId}/custody")
-    ResponseEntity<Void> handOver(@PathVariable UUID firId, @PathVariable UUID itemId, @Valid @RequestBody Custody c) {
+    ResponseEntity<Void> handOver(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @PathVariable UUID itemId, @Valid @RequestBody Custody c) {
+        team.requireCustodian(CaseTeam.user(jwt), firId);
         boolean exists = db.sql("select exists (select 1 from evidence_item where id = ? and fir_id = ?)")
                 .params(itemId, firId).query(Boolean.class).single();
         if (!exists) return ResponseEntity.notFound().build();

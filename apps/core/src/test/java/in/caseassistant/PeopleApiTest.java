@@ -18,13 +18,14 @@ import org.springframework.test.web.servlet.MockMvc;
 class PeopleApiTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcClient db;
-    UUID fir, io, clerk;
+    @Autowired org.springframework.security.oauth2.jwt.JwtEncoder tokens;
+    UUID fir, io, clerk, station;
 
     @BeforeEach
     void setUp() {
         db.sql("truncate fir, police_station, state_pack, app_user cascade").update();
         db.sql("insert into state_pack (code, name, version, languages) values ('IN','National','1',array['en'])").update();
-        UUID station = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Testpur City') returning id")
+        station = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Testpur City') returning id")
                 .query(UUID.class).single();
         io = db.sql("insert into app_user (full_name, rank, role) values ('Officer Asha Rao','SI','io') returning id").query(UUID.class).single();
         clerk = db.sql("insert into app_user (full_name, rank, role) values ('Clerk Dev Nair','HC','front_desk') returning id").query(UUID.class).single();
@@ -39,41 +40,56 @@ class PeopleApiTest {
 
     @Test
     void caseTeamSeesTheRealName() throws Exception {
-        mvc.perform(get("/api/firs/" + fir + "/people").header("X-User-Id", io))
+        mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, io)))
                 .andExpect(jsonPath("$[0].display_name").value("Meera Test"))
                 .andExpect(jsonPath("$[0].phone").value("9000000001"));
     }
 
     @Test
     void everyoneElseSeesTheMaskedVictim() throws Exception {
-        for (var req : new org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder[] {
-                get("/api/firs/" + fir + "/people").header("X-User-Id", clerk), get("/api/firs/" + fir + "/people")}) {
-            mvc.perform(req).andExpect(status().isOk())
-                    .andExpect(jsonPath("$[0].display_name").value("Victim V1"))
-                    .andExpect(jsonPath("$[0].phone").doesNotExist());
+        mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, clerk))).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].display_name").value("Victim V1"))
+                .andExpect(jsonPath("$[0].phone").doesNotExist());
+        mvc.perform(get("/api/firs/" + fir + "/people")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shoOfTheStationAndSpOfTheDistrictAreOnTheTeamOthersAreNot() throws Exception {
+        UUID otherDistrict = db.sql("insert into police_station (state_code, district, name) values ('IN','Otherpur','Otherpur City') returning id")
+                .query(UUID.class).single();
+        UUID sameDistrict = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Testpur Rural') returning id")
+                .query(UUID.class).single();
+        String[][] cases = {{"sho", station.toString(), "Meera Test"}, {"sp", sameDistrict.toString(), "Meera Test"},
+                {"sho", sameDistrict.toString(), "Victim V1"}, {"sp", otherDistrict.toString(), "Victim V1"}};
+        for (String[] c : cases) {
+            UUID u = db.sql("insert into app_user (station_id, full_name, rank, role) values (?::uuid,'Fictional Officer','Insp',?) returning id")
+                    .params(c[1], c[0]).query(UUID.class).single();
+            mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, u)))
+                    .andExpect(jsonPath("$[0].display_name").value(c[2]));
         }
+        db.sql("update app_user set active = false where id = ?").param(io).update();
+        mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, io)))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void sectionAloneProtectsTheVictimAndWithholdsTheComplaintText() throws Exception {
         db.sql("update fir set sexual_offence = false").update();
         db.sql("update person set identity_masked = false").update();
-        mvc.perform(get("/api/firs/" + fir).header("X-User-Id", clerk))
+        mvc.perform(get("/api/firs/" + fir).header("Authorization", TestAuth.bearer(tokens, clerk)))
                 .andExpect(jsonPath("$.contents_original").value("Fictional complaint"))
                 .andExpect(jsonPath("$.contents_withheld").value(false));
         db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '64(1)')").param(fir).update();
-        mvc.perform(get("/api/firs/" + fir + "/people").header("X-User-Id", clerk))
+        mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, clerk)))
                 .andExpect(jsonPath("$[0].display_name").value("Victim V1"))
                 .andExpect(jsonPath("$[0].identity_masked").value(true));
-        mvc.perform(get("/api/firs/" + fir + "/people").header("X-User-Id", io))
+        mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, io)))
                 .andExpect(jsonPath("$[0].display_name").value("Meera Test"))
                 .andExpect(jsonPath("$[0].identity_masked").value(true));
-        for (var req : new org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder[] {
-                get("/api/firs/" + fir).header("X-User-Id", clerk), get("/api/firs/" + fir)}) {
-            mvc.perform(req).andExpect(jsonPath("$.contents_original").doesNotExist())
-                    .andExpect(jsonPath("$.contents_withheld").value(true));
-        }
-        mvc.perform(get("/api/firs/" + fir).header("X-User-Id", io))
+        mvc.perform(get("/api/firs/" + fir).header("Authorization", TestAuth.bearer(tokens, clerk)))
+                .andExpect(jsonPath("$.contents_original").doesNotExist())
+                .andExpect(jsonPath("$.contents_withheld").value(true));
+        mvc.perform(get("/api/firs/" + fir).header("Authorization", TestAuth.bearer(tokens, io)))
                 .andExpect(jsonPath("$.contents_original").value("Fictional complaint"));
     }
 }

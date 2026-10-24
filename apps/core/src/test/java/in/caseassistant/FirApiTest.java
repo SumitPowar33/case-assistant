@@ -24,14 +24,18 @@ class FirApiTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcClient db;
     @Autowired ObjectMapper json;
+    @Autowired org.springframework.security.oauth2.jwt.JwtEncoder tokens;
     UUID station;
+    String clerk;
 
     @BeforeEach
     void setUp() {
-        db.sql("truncate fir, police_station, state_pack cascade").update();
+        db.sql("truncate fir, police_station, state_pack, app_user cascade").update();
         db.sql("insert into state_pack (code, name, version, languages) values ('IN','National','1',array['en'])").update();
         station = db.sql("insert into police_station (state_code, district, name, cctns_code) "
                 + "values ('IN','Testpur','Testpur City Station','TP001') returning id").query(UUID.class).single();
+        clerk = TestAuth.bearer(tokens, db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'HC Fictional Clerk','HC','front_desk') returning id")
+                .param(station).query(UUID.class).single());
     }
 
     Map<String, Object> body(int no) {
@@ -44,32 +48,50 @@ class FirApiTest {
 
     @Test
     void createThenReadBack() throws Exception {
-        var res = mvc.perform(post("/api/firs").contentType(MediaType.APPLICATION_JSON)
+        var res = mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(body(1))))
                 .andExpect(status().isCreated()).andReturn();
         String id = json.readTree(res.getResponse().getContentAsString()).get("id").asText();
-        mvc.perform(get("/api/firs/" + id)).andExpect(status().isOk())
+        mvc.perform(get("/api/firs/" + id).header("Authorization", clerk)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.sections[0].section").value("318(4)"));
-        mvc.perform(get("/api/firs")).andExpect(jsonPath("$.length()").value(1));
+        mvc.perform(get("/api/firs").header("Authorization", clerk)).andExpect(jsonPath("$.length()").value(1));
     }
 
     @Test
     void databaseRulesBecomeFriendlyErrors() throws Exception {
         var zeroWithoutPlace = new java.util.HashMap<>(body(2));
         zeroWithoutPlace.put("zeroFir", true);
-        mvc.perform(post("/api/firs").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(zeroWithoutPlace)))
                 .andExpect(status().isBadRequest());
         var blank = new java.util.HashMap<>(body(3));
         blank.put("contentsOriginal", " ");
-        mvc.perform(post("/api/firs").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(blank)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void unknownFirIs404() throws Exception {
-        mvc.perform(get("/api/firs/" + UUID.randomUUID())).andExpect(status().isNotFound());
+        mvc.perform(get("/api/firs/" + UUID.randomUUID()).header("Authorization", clerk)).andExpect(status().isNotFound());
+        assertThat(db.sql("select count(*) from fir").query(Long.class).single()).isZero();
+    }
+
+    @Test
+    void onlyStaffOfTheStationRegisterItsFirs() throws Exception {
+        UUID other = db.sql("insert into police_station (state_code, district, name) values ('IN','Otherpur','Otherpur Station') returning id")
+                .query(UUID.class).single();
+        String outsider = TestAuth.bearer(tokens, db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'SI Fictional Outsider','SI','io') returning id")
+                .param(other).query(UUID.class).single());
+        String prosecutor = TestAuth.bearer(tokens, db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'APP Fictional','APP','prosecutor') returning id")
+                .param(station).query(UUID.class).single());
+        for (String who : new String[] {outsider, prosecutor}) {
+            mvc.perform(post("/api/firs").header("Authorization", who).contentType(MediaType.APPLICATION_JSON)
+                    .content(json.writeValueAsString(body(4)))).andExpect(status().isForbidden());
+        }
+        mvc.perform(post("/api/firs").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body(4))))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/firs")).andExpect(status().isUnauthorized());
         assertThat(db.sql("select count(*) from fir").query(Long.class).single()).isZero();
     }
 }

@@ -1,12 +1,16 @@
 package in.caseassistant;
 
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
- * The case team is the FIR's investigating officer, or an SHO/SP. Only they see protected victim details
- * (BNS 72, POCSO 23). A missing user is never on the team. The X-User-Id header stands in for login.
+ * Who may do what on a case. The case team is the FIR's investigating officer, the SHO of the FIR's station
+ * and the SP of its district. Only they see protected victim details (BNS 72, POCSO 23) and only they add
+ * records to the case. The signed-in user comes from the login token (see {@link SecurityConfig}).
  */
 @Component
 class CaseTeam {
@@ -16,11 +20,47 @@ class CaseTeam {
         this.db = db;
     }
 
+    static UUID user(Jwt jwt) {
+        return UUID.fromString(jwt.getSubject());
+    }
+
     boolean includes(UUID userId, UUID firId) {
         return userId != null && db.sql("""
-                select exists (select 1 from app_user u, fir f
-                  where u.id = ? and f.id = ? and (f.io_id = u.id or u.role in ('sho','sp')))""")
-                .params(userId, firId).query(Boolean.class).single();
+                select exists (select 1 from app_user u
+                  join fir f on f.id = ?
+                  join police_station fs on fs.id = f.station_id
+                  left join police_station us on us.id = u.station_id
+                  where u.id = ? and u.active and (f.io_id = u.id
+                    or (u.role = 'sho' and u.station_id = f.station_id)
+                    or (u.role = 'sp' and us.state_code = fs.state_code and us.district = fs.district)))""")
+                .params(firId, userId).query(Boolean.class).single();
+    }
+
+    /** 403 unless the user is on the case team. An unknown FIR also gives 403, so it reveals nothing. */
+    void requireTeam(UUID userId, UUID firId) {
+        if (!includes(userId, firId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the case team can do this.");
+    }
+
+    /** Evidence custody: the case team, or the malkhana (evidence store) staff of the FIR's station. */
+    void requireCustodian(UUID userId, UUID firId) {
+        boolean malkhana = db.sql("""
+                select exists (select 1 from app_user u join fir f on f.id = ?
+                  where u.id = ? and u.active and u.role = 'malkhana' and u.station_id = f.station_id)""")
+                .params(firId, userId).query(Boolean.class).single();
+        if (!malkhana) requireTeam(userId, firId);
+    }
+
+    /** Registering an FIR: front desk, IO or SHO posted at that station. */
+    void requireStationStaff(UUID userId, UUID stationId) {
+        boolean ok = db.sql("""
+                select exists (select 1 from app_user where id = ? and active and station_id = ?
+                  and role in ('front_desk', 'io', 'sho'))""").params(userId, stationId).query(Boolean.class).single();
+        if (!ok) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only staff of this police station can register its FIRs.");
+    }
+
+    boolean hasRole(UUID userId, String role) {
+        return db.sql("select exists (select 1 from app_user where id = ? and active and role = ?)")
+                .params(userId, role).query(Boolean.class).single();
     }
 
     boolean identityProtected(UUID firId) {
