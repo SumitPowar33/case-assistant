@@ -25,6 +25,7 @@ export async function login(username: string, password: string) {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password }),
   })
   if (res.status === 401 || res.status === 400) throw new Error('Wrong username or password.')
+  if (res.status === 429) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'Too many wrong passwords. Try again later.')
   if (!res.ok) throw new Error(`The server answered ${res.status}. Please try again.`)
   const body = await res.json() as Session
   setSession({ token: body.token, user: body.user })
@@ -63,4 +64,12 @@ export async function ai<T>(path: string, init?: { method: string; body: unknown
   if (res.status === 403) throw new Error('Only the state admin can change AI settings.')
   if (!res.ok) throw new Error(`The AI gateway answered ${res.status} for ${path}`)
   return res.json() as Promise<T>
+}
+
+// Changing the password ends every older token (here and in other tabs); the new token replaces this tab's one.
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const res = await call('/api/me/password', { method: 'POST', body: { currentPassword, newPassword } })
+  const body = await res.json().catch(() => ({})) as { token?: string; error?: string; message?: string }
+  if (!res.ok || !body.token) throw new Error(body.error || body.message || `The server answered ${res.status}`)
+  setSession({ ...session!, token: body.token })
 }
