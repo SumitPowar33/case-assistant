@@ -84,9 +84,11 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             raise HTTPException(404, f"unknown feature {body.feature}")
         s = settings[body.feature]
         provider_name, model = s["provider"], s["model"]
-        if body.provider and body.provider != provider_name:
-            if not s["officer_may_switch"]:
-                raise HTTPException(403, "this feature's provider is fixed by the admin")
+        wants_provider = bool(body.provider) and body.provider != provider_name
+        wants_model = bool(body.model) and body.model != model
+        if (wants_provider or wants_model) and not s["officer_may_switch"]:
+            raise HTTPException(403, "this feature's provider and model are fixed by the admin")
+        if wants_provider:
             if body.provider not in PROVIDERS:
                 raise HTTPException(422, f"unknown provider {body.provider}")
             provider_name, model = body.provider, body.model or DEFAULT_MODELS[body.provider]
@@ -111,6 +113,11 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
     def decision(body: DecisionIn):
         if body.decision not in {"accepted", "edited", "rejected"}:
             raise HTTPException(422, "decision must be accepted, edited or rejected")
+        req = store.find_request(body.request_id)
+        if req is None:
+            raise HTTPException(404, "no AI request with that id")
+        if req["feature"] != body.feature:
+            raise HTTPException(422, "feature does not match the AI request")
         seq = store.log(body.actor, body.decision, body.feature, body.case_ref, {"request_id": body.request_id, "note": body.note})
         return {"logged": seq}
 

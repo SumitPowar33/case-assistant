@@ -73,6 +73,10 @@ def test_officer_override_allowed_and_blocked(setup):
     c.put("/v1/settings/case_qa", json={"provider": "claude", "officer_may_switch": False})
     r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "provider": "gemini"})
     assert r.status_code == 403
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "model": "another-model"})
+    assert r.status_code == 403  # a locked feature's model cannot be swapped either
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "provider": "claude"})
+    assert r.status_code == 200  # naming the admin's own choice is fine
 
 
 def test_unknown_feature_and_provider(setup):
@@ -103,6 +107,8 @@ def test_decisions_logged_and_validated(setup):
     rid = c.post("/v1/generate", json={"feature": "chargesheet_draft", "prompt": "x"}).json()["request_id"]
     assert c.post("/v1/decisions", json={"request_id": rid, "decision": "edited", "feature": "chargesheet_draft"}).status_code == 200
     assert c.post("/v1/decisions", json={"request_id": rid, "decision": "maybe", "feature": "chargesheet_draft"}).status_code == 422
+    assert c.post("/v1/decisions", json={"request_id": "made-up", "decision": "accepted", "feature": "chargesheet_draft"}).status_code == 404
+    assert c.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "case_qa"}).status_code == 422
     actions = [r["action"] for r in c.get("/v1/audit").json()["rows"]]
     assert actions[:2] == ["edited", "ai_request"]
 

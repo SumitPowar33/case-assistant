@@ -82,6 +82,12 @@ class Store:
             self.db.commit()
             return cur.lastrowid
 
+    def find_request(self, request_id: str) -> dict | None:
+        """The audit row of a successful AI request, so decisions can only refer to real drafts."""
+        row = self.db.execute("SELECT feature, case_ref FROM audit WHERE action='ai_request' "
+                              "AND json_extract(detail, '$.request_id') = ?", (request_id,)).fetchone()
+        return {"feature": row[0], "case_ref": row[1]} if row else None
+
     def audit_rows(self, limit: int = 100) -> list[dict]:
         rows = self.db.execute("SELECT seq,at,actor,action,feature,case_ref,detail,hash FROM audit ORDER BY seq DESC LIMIT ?", (limit,)).fetchall()
         return [{"seq": s, "at": a, "actor": ac, "action": act, "feature": f, "case_ref": c, "detail": json.loads(d), "hash": h}
