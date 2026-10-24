@@ -227,7 +227,7 @@ class ReadinessController {
                 holder.put("links", mine);
                 holders.add(holder);
                 if (mine.isEmpty()) gaps.add(gap("second-link:" + h.get("person_id"), secondLink.get().severity(),
-                        who.trim() + " is an account holder with no independent second link yet (" + String.join(", ", accepted) + ").", overrides));
+                        who.trim() + " is an account holder with no independent second link yet (" + String.join(", ", accepted).replace('_', ' ') + ").", overrides));
             }
         }
         if (pb.hasRule(CERTIFICATE_RULE)) {

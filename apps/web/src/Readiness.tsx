@@ -1,16 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { get, send } from './api'
 
-type Linked = { id: string; label: string; kind: string; courtReady?: boolean; linkType?: string }
+type Linked = { id: string; linkId: string; label: string; kind: string; courtReady?: boolean; linkType?: string }
 type Holder = { personId: string; name: string; basis: string; links: Linked[] }
 type Ingredient = { id: string; text: string; suggestedProof: string[]; evidence: Linked[] }
 type Charge = { id: string; law: string; label: string; ingredients: Ingredient[] }
-type Gap = { key: string; severity: string; text: string; override: { reason: string; decidedBy: string; decidedAt: string } | null }
+type Gap = { key: string; severity: string; text: string; override: { id: string; reason: string; decidedBy: string; decidedAt: string } | null }
+type Withdrawn = { what: string; detail: string; reason: string; withdrawn_by: string; withdrawn_at: string }
 type Report = {
   playbook: { id: string; version: string; status: string; reviewNote: string } | null
   charges: Charge[]; gaps: Gap[]; openGaps: number; sectionsNotInPlaybook?: string[]
   checksToConfirm?: { id: string; severity: string; text: string }[]
-  secondLinkRule?: { text: string; requiresAny: string[] } | null; accountHolders?: Holder[]
+  secondLinkRule?: { text: string; requiresAny: string[] } | null; accountHolders?: Holder[]; withdrawn?: Withdrawn[]
 }
 type Playbook = { id: string; version: string; status: string; appliesTo: string }
 type Evidence = { id: string; label: string; kind: string }
@@ -69,7 +70,8 @@ export default function Readiness({ firId }: { firId: string }) {
               <ul>{c.ingredients.map((i) => (
                 <li key={i.id}>{i.text}:{' '}
                   {i.evidence.length
-                    ? i.evidence.map(shown).join(', ')
+                    ? i.evidence.map((e, n) => <span key={e.linkId}>{n > 0 && ', '}{shown(e)}{' '}
+                      <Withdraw firId={firId} kind="links" id={e.linkId} what={`link of ${e.label}`} act={act} /></span>)
                     : <em>nothing linked (for example: {i.suggestedProof.join(', ').replace(/_/g, ' ')})</em>}
                   {evidence.length > 0 && (
                     <form className="inline" onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/readiness/links`, 'POST',
@@ -89,7 +91,8 @@ export default function Readiness({ firId }: { firId: string }) {
           <h3>Gaps</h3>
           {report.gaps.length === 0 ? <p>No gaps found.</p> : <ul>{report.gaps.map((g) => (
             <li key={g.key}>{g.text}{' '}
-              {g.override ? <small>Accepted by {g.override.decidedBy}: “{g.override.reason}”</small> : (
+              {g.override ? <><small>Accepted by {g.override.decidedBy}: “{g.override.reason}”</small>{' '}
+                <Withdraw firId={firId} kind="overrides" id={g.override.id} what="acceptance" act={act} /></> : (
                 <form className="inline" onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/readiness/overrides`, 'POST', { gapKey: g.key, reason: f.get('reason') }))}>
                   <label>Reason to accept this gap{' '}<input name="reason" minLength={10} required /></label>{' '}
                   <button type="submit">Accept with reason</button>
@@ -97,6 +100,10 @@ export default function Readiness({ firId }: { firId: string }) {
               )}
             </li>
           ))}</ul>}
+          {!!report.withdrawn?.length && <>
+            <h3>Withdrawn</h3>
+            <ul>{report.withdrawn.map((w, n) => <li key={n}>{w.what}: {w.detail}. Withdrawn by {w.withdrawn_by}: “{w.reason}”</li>)}</ul>
+          </>}
           {!!report.checksToConfirm?.length && <>
             <h3>Checks for a person to confirm</h3>
             <ul>{report.checksToConfirm.map((r) => <li key={r.id}>{r.text}</li>)}</ul>
@@ -120,7 +127,9 @@ function SecondLinks({ firId, rule, holders, accused, evidence, act }: {
       <p>{rule.text}</p>
       {holders.length === 0 ? <p>No accused is marked as an account holder.</p> : <ul>{holders.map((h) => (
         <li key={h.personId}>{h.name} <small>({h.basis})</small>:{' '}
-          {h.links.length ? h.links.map((l) => `${words(l.linkType ?? '')}: ${shown(l)}`).join(', ') : <em>no independent link yet</em>}
+          {h.links.length ? h.links.map((l, n) => <span key={l.linkId}>{n > 0 && ', '}{words(l.linkType ?? '')}: {shown(l)}{' '}
+            <Withdraw firId={firId} kind="accused-links" id={l.linkId} what={`link of ${l.label} for ${h.name}`} act={act} /></span>)
+            : <em>no independent link yet</em>}
           {evidence.length > 0 && (
             <form className="inline" onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/readiness/accused-links`, 'POST',
               { personId: h.personId, linkType: f.get('type'), evidenceItemId: f.get('item') }))}>
@@ -144,5 +153,18 @@ function SecondLinks({ firId, rule, holders, accused, evidence, act }: {
         </form>
       )}
     </div>
+  )
+}
+
+/** Withdraws a wrong link or an accepted gap. Needs a reason; the record stays and is listed under "Withdrawn". */
+function Withdraw({ firId, kind, id, what, act }: { firId: string; kind: string; id: string; what: string; act: Act }) {
+  return (
+    <details className="inline">
+      <summary>Withdraw<span className="visually-hidden"> {what}</span></summary>
+      <form className="inline" onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/readiness/${kind}/${id}/withdraw`, 'POST', { reason: f.get('reason') }))}>
+        <label>Reason to withdraw {what}{' '}<input name="reason" minLength={10} required /></label>{' '}
+        <button type="submit">Withdraw {what}</button>
+      </form>
+    </details>
   )
 }

@@ -8,11 +8,11 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 const report = {
   playbook: { id: 'cyber-fraud', version: '1.0.0-draft', status: 'draft', reviewNote: 'Must be reviewed by the prosecution.' },
   charges: [{ id: 'cheating', law: 'BNS 318(4)', label: 'Cheating', ingredients: [
-    { id: 'deception', text: 'The victim was deceived', suggestedProof: ['complainant_statement'], evidence: [{ id: 'e1', label: 'S-01', kind: 'document' }] },
+    { id: 'deception', text: 'The victim was deceived', suggestedProof: ['complainant_statement'], evidence: [{ id: 'e1', linkId: 'l1', label: 'S-01', kind: 'document' }] },
     { id: 'delivery', text: 'Money was delivered', suggestedProof: ['bank_statement_certified'], evidence: [] },
   ] }],
   gaps: [{ key: 'ingredient:cheating/delivery', severity: 'critical', text: 'No evidence linked for: Money was delivered (BNS 318(4))', override: null },
-    { key: 'certificate:e9', severity: 'critical', text: 'E-01 is electronic evidence without a complete BSA 63(4) certificate', override: { reason: 'Bank asked again on 5 Oct', decidedBy: 'SI Fictional', decidedAt: '' } }],
+    { key: 'certificate:e9', severity: 'critical', text: 'E-01 is electronic evidence without a complete BSA 63(4) certificate', override: { id: 'o1', reason: 'Bank asked again on 5 Oct', decidedBy: 'SI Fictional', decidedAt: '' } }],
   openGaps: 1, sectionsNotInPlaybook: ['BNS 3(5)'], checksToConfirm: [{ id: 'bank_officer_witness', severity: 'high', text: 'Record the bank nodal officer statement.' }],
 }
 
@@ -83,4 +83,20 @@ test('account holders: shows each holder and their independent links; marks a ho
   fireEvent.click(screen.getByRole('button', { name: 'Add link' }))
   await vi.waitFor(() => expect(calls.find((c) => c.method === 'POST')).toBeTruthy())
   expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ personId: 'p1', linkType: 'kyc_identification', evidenceItemId: 'e1' })
+})
+
+test('a link or an accepted gap is withdrawn with a reason; withdrawn records stay listed', async () => {
+  const withHistory = { ...report, withdrawn: [{ what: 'evidence link', detail: 'S-02 for cheating/delivery', reason: 'Wrong item linked', withdrawn_by: 'SI Fictional', withdrawn_at: '' }] }
+  const calls = mock((url, init) => url.endsWith('/readiness') ? { status: 200, body: withHistory }
+    : init?.method === 'POST' ? { status: 204, body: null } : undefined)
+  render(<Readiness firId="f1" />)
+  expect(await screen.findByText(/evidence link: S-02 for cheating\/delivery\. Withdrawn by SI Fictional: “Wrong item linked”/)).toBeTruthy()
+  fireEvent.change(screen.getByLabelText('Reason to withdraw link of S-01'), { target: { value: 'Linked to the wrong ingredient' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Withdraw link of S-01' }))
+  await vi.waitFor(() => expect(calls.find((c) => c.method === 'POST')).toBeTruthy())
+  expect(calls.find((c) => c.method === 'POST')).toMatchObject({ url: '/api/firs/f1/readiness/links/l1/withdraw', body: { reason: 'Linked to the wrong ingredient' } })
+  fireEvent.change(screen.getByLabelText('Reason to withdraw acceptance'), { target: { value: 'Bank replied after all' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Withdraw acceptance' }))
+  await vi.waitFor(() => expect(calls.filter((c) => c.method === 'POST').length).toBe(2))
+  expect(calls.filter((c) => c.method === 'POST')[1].url).toBe('/api/firs/f1/readiness/overrides/o1/withdraw')
 })
