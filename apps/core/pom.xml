@@ -24,6 +24,15 @@
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
   </dependencies>
   <build>
+    <resources>
+      <resource><directory>src/main/resources</directory></resource>
+      <!-- State packs and playbooks live at the repo root (shared with their Python checks); ship them on the classpath. -->
+      <resource>
+        <directory>../../packs</directory>
+        <targetPath>packs</targetPath>
+        <includes><include>*/playbooks/*.json</include></includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
     </plugins>
