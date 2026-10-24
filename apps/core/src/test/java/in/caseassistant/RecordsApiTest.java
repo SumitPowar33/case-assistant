@@ -71,10 +71,12 @@ class RecordsApiTest {
         String cert = "{\"part\":\"%s\",\"signerName\":\"Fictional Signer\",\"deviceType\":\"phone\",\"hashAlgo\":\"SHA256\","
                 + "\"hashValue\":\"%s\",\"signedAt\":\"2026-10-03T10:00:00Z\",\"place\":\"Testpur\"}";
         send("/evidence/" + item + "/certificates", cert.formatted("A", SHA), 201);
-        send("/evidence/" + item + "/certificates", cert.formatted("B", "c".repeat(64)), 201);
+        String wrongB = idOf(send("/evidence/" + item + "/certificates", cert.formatted("B", "c".repeat(64)), 201));
         mvc.perform(get("/api/firs/" + fir + "/evidence").header("Authorization", auth)).andExpect(jsonPath("$[0].court_ready").value(false));
         send("/evidence/" + item + "/certificates", cert.formatted("A", SHA), 400); // part A twice
-        db.sql("update certificate_63_4 set hash_value = ? where part = 'B'").param(SHA).update();
+        String fix = cert.formatted("B", SHA).replace("}", ",\"supersedes\":\"" + wrongB + "\"%s}");
+        send("/evidence/" + item + "/certificates", fix.formatted(""), 400); // a correction needs a reason
+        send("/evidence/" + item + "/certificates", fix.formatted(",\"correctionReason\":\"hash re-read from the device\""), 201);
         mvc.perform(get("/api/firs/" + fir + "/evidence").header("Authorization", auth)).andExpect(jsonPath("$[0].court_ready").value(true));
     }
 

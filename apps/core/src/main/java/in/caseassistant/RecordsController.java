@@ -44,7 +44,8 @@ class RecordsController {
 
     record Certificate(@NotBlank String part, @NotBlank String signerName, @NotBlank String deviceType,
                        String deviceIds, @NotBlank String hashAlgo, @NotBlank String hashValue,
-                       @NotNull OffsetDateTime signedAt, @NotBlank String place) {}
+                       @NotNull OffsetDateTime signedAt, @NotBlank String place, UUID supersedes,
+                       String correctionReason) {}
 
     private final JdbcClient db;
     private final CaseTeam team;
@@ -166,15 +167,16 @@ class RecordsController {
     }
 
     @PostMapping("/evidence/{itemId}/certificates")
-    ResponseEntity<Void> certificate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @PathVariable UUID itemId, @Valid @RequestBody Certificate c) {
+    /** Certificates are never edited; a correction is a new certificate that names the one it replaces, with a reason. */
+    ResponseEntity<Map<String, UUID>> certificate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @PathVariable UUID itemId, @Valid @RequestBody Certificate c) {
         team.requireTeam(CaseTeam.user(jwt), firId);
         requireRow("evidence", itemId, firId);
-        db.sql("""
+        return created(db.sql("""
                 insert into certificate_63_4 (item_id, part, signer_name, device_type, device_ids, hash_algo, hash_value,
-                  signed_at, place) values (?,?,?,?,?,?,?,?,?)""")
-                .params(itemId, c.part, c.signerName, c.deviceType, c.deviceIds, c.hashAlgo, c.hashValue, c.signedAt, c.place)
-                .update();
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+                  signed_at, place, supersedes, correction_reason) values (?,?,?,?,?,?,?,?,?,?,?) returning id""")
+                .params(itemId, c.part, c.signerName, c.deviceType, c.deviceIds, c.hashAlgo, c.hashValue, c.signedAt, c.place,
+                        c.supersedes, c.correctionReason)
+                .query(UUID.class).single());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

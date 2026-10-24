@@ -102,8 +102,17 @@ def test_63_4_readiness_needs_both_parts_and_matching_hash(db):
     assert one(db, "SELECT has_part_a, has_part_b, court_ready FROM electronic_item_readiness") == (True, False, False)
     db.execute(cert, (item, "B", h.upper()))
     assert one(db, "SELECT court_ready FROM electronic_item_readiness")[0] is True
-    db.execute("UPDATE certificate_63_4 SET hash_value=%s WHERE part='B'", ("1" * 64,))
+    b = one(db, "SELECT id FROM certificate_63_4 WHERE part='B'")[0]
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE certificate_63_4 SET hash_value=%s WHERE part='B'", ("1" * 64,))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM certificate_63_4")
+    fix = """INSERT INTO certificate_63_4(item_id,part,signer_name,device_type,hash_algo,hash_value,signed_at,place,supersedes,correction_reason)
+             VALUES (%s,%s,'Demo signer','server',%s,%s,now(),'Demo City',%s,%s) RETURNING id"""
+    b2 = one(db, fix, item, "B", "SHA256", "1" * 64, b, "typing error in hash")[0]   # a wrong correction
     assert one(db, "SELECT hashes_match, court_ready FROM electronic_item_readiness") == (False, False)
+    one(db, fix, item, "B", "SHA256", h, b2, "hash re-read from the device")          # corrected again
+    assert one(db, "SELECT court_ready FROM electronic_item_readiness")[0] is True
 
 
 @pytest.mark.parametrize("remand,punishment,expected", [
@@ -200,3 +209,27 @@ def test_login_fields_need_a_clean_unique_username(db):
     with pytest.raises(psycopg.errors.UniqueViolation):
         db.execute("INSERT INTO app_user(full_name,rank,role,username) VALUES ('B. Fictional','HC','front_desk','a.deshmukh')")
     assert one(db, "SELECT active FROM app_user WHERE id=%s", io)[0] is True
+
+
+def test_63_4_corrections_must_follow_the_rules_and_other_hashes_are_not_trusted(db):
+    st, io, fir = seed_case(db)
+    h = "ab" * 32
+    ins = """INSERT INTO evidence_item(fir_id,label,description,kind,seized_at,seizure_memo,sha256)
+             VALUES (%s,%s,'Phone','electronic',now(),'N-01',%s) RETURNING id"""
+    item, other = one(db, ins, fir, "E-1", h)[0], one(db, ins, fir, "E-2", h)[0]
+    cert = """INSERT INTO certificate_63_4(item_id,part,signer_name,device_type,hash_algo,hash_value,signed_at,place,supersedes,correction_reason)
+              VALUES (%s,%s,'Demo signer','phone',%s,%s,now(),'Demo City',%s,%s) RETURNING id"""
+    a = one(db, cert, item, "A", "SHA256", h, None, None)[0]
+    one(db, cert, item, "B", "MD5", "c" * 32, None, None)
+    assert one(db, "SELECT court_ready FROM electronic_item_readiness WHERE id=%s", item)[0] is False   # MD5 cannot be checked
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        one(db, cert, item, "A", "SHA256", h, None, None)                    # a second original Part A
+    with pytest.raises(psycopg.errors.CheckViolation):
+        one(db, cert, item, "A", "SHA256", h, a, "  ")                       # a correction needs a reason
+    with pytest.raises(psycopg.errors.CheckViolation):
+        one(db, cert, item, "B", "SHA256", h, a, "wrong part")               # must be the same part
+    with pytest.raises(psycopg.errors.CheckViolation):
+        one(db, cert, other, "A", "SHA256", h, a, "wrong item")              # and the same item
+    one(db, cert, item, "A", "SHA256", h, a, "signer's designation added")
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        one(db, cert, item, "A", "SHA256", h, a, "second correction of the same one")
