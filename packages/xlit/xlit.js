@@ -171,4 +171,4 @@ var XLIT = (function () {
   }
   return { LANGS: LANGS, word: word, suggest: suggest, sentence: sentence, toScript: toScript };
 })();
-if (typeof module !== 'undefined') module.exports = XLIT;
+export default XLIT;

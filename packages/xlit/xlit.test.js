@@ -1,4 +1,5 @@
-const X = require('./xlit.js');
+import { writeFileSync } from 'node:fs';
+import X from './xlit.js';
 let fail = 0, n = 0;
 function eq(label, got, want) { n++; if (got !== want) { fail++; console.log('FAIL', label, 'got', got, [...got].map(c => c.codePointAt(0).toString(16)).join(' '), 'want', want); } }
 // 1. pure rules (word): what a careful typist gets
@@ -39,11 +40,10 @@ eq('sentence keeps punctuation', S('police, bank.', 'mr'), 'पोलीस, ब
 eq('empty', S('', 'mr'), '');
 eq('already native untouched', S('रमेश patil', 'mr'), 'रमेश पाटील');
 // 5. no stray Devanagari in other scripts, no unassigned code points
-const { execFileSync } = require('child_process');
 const outs = [];
 for (const l of Object.keys(X.LANGS)) for (const w of ['ramesh','kshitij','dnyaneshwar','baaL','vishwas','Shashtri','Rushi','Office','bEt','sangli','chhatrapati','jhaaD','phal','thoDa','ghaav','nyay','vyakti','jnyaan','~','.nd'])
   outs.push([l, w, X.word(w, l)]);
-require('fs').writeFileSync(__dirname + '/xlit.out.json', JSON.stringify(outs));
+writeFileSync(new URL('./xlit.out.json', import.meta.url), JSON.stringify(outs));
 for (const [l,w,o] of outs) if (l !== 'mr' && l !== 'hi' && /[ऀ-ॿ]/.test(o)) { fail++; console.log('DEVANAGARI LEAK', l, w, o); }
 console.log(fail ? `${fail}/${n} failed` : `all ${n} checks passed`);
 process.exitCode = fail ? 1 : 0;

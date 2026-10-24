@@ -1,0 +1,6 @@
+{
+  "name": "xlit",
+  "private": true,
+  "type": "module",
+  "main": "xlit.js"
+}
