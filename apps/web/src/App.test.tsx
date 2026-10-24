@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, test, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import App from './App'
 
 const fir = { id: 'f1', fir_year: 2026, fir_no: 7, registered_at: '2026-09-10T10:00:00Z', is_zero_fir: false, action_taken: 'registered', sexual_offence: false, contents_original: 'Fictional complaint text', sections: [{ act: 'BNS', section: '318' }] }
@@ -42,6 +42,16 @@ test('detail withholds the complaint text when the API says so', async () => {
   expect(await screen.findByText(/Complaint text withheld/)).toBeTruthy()
   expect(screen.queryByText('Fictional complaint text')).toBeNull()
   routes['/api/firs/f1'] = fir
+})
+
+test('language tool page converts a whole pasted text', async () => {
+  mockApi()
+  window.location.hash = '#/type'
+  render(<App />)
+  fireEvent.change(screen.getByLabelText('Typing language'), { target: { value: 'mr' } })
+  fireEvent.change(screen.getByLabelText('Text'), { target: { value: 'police station, Pune.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Convert all English-letter words' }))
+  expect((screen.getByLabelText('Text') as HTMLTextAreaElement).value).toBe('पोलीस स्टेशन, पुणे.')
 })
 
 test('shows an error when the server fails', async () => {
