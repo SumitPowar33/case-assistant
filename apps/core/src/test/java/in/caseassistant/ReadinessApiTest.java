@@ -83,7 +83,8 @@ class ReadinessApiTest {
                 .andExpect(jsonPath("$.charges[*].law").value(Matchers.contains("BNS 318(4)", "BNS 319(2)")))
                 .andExpect(jsonPath("$.sectionsNotInPlaybook").value(Matchers.contains("BNS 3(5)")))
                 .andExpect(jsonPath("$.openGaps").value(5)) // 3 cheating + 2 personation ingredients
-                .andExpect(jsonPath("$.checksToConfirm[*].id").value(Matchers.hasItem("account_holder_second_link")))
+                .andExpect(jsonPath("$.checksToConfirm[*].id").value(Matchers.hasItem("bank_officer_witness")))
+                .andExpect(jsonPath("$.checksToConfirm[*].id").value(Matchers.not(Matchers.hasItem("account_holder_second_link"))))
                 .andExpect(jsonPath("$..score").doesNotExist());
 
         call(post("/api/firs/" + fir + "/readiness/links"), io, link("cheating", "deception", statement)).andExpect(status().isCreated());
@@ -134,6 +135,55 @@ class ReadinessApiTest {
                 .andExpect(jsonPath("$.gaps[?(@.key=='" + key + "')].override.reason").value(reason))
                 .andExpect(jsonPath("$.gaps[?(@.key=='" + key + "')].override.decidedBy").value("SI Fictional Kale"));
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> db.sql("delete from readiness_override").update())
+                .hasMessageContaining("kept as written");
+    }
+
+    UUID person(String role, String label) {
+        return db.sql("insert into person (fir_id, role, label, full_name) values (?,?,?,?) returning id")
+                .params(fir, role, label, "Fictional " + label).query(UUID.class).single();
+    }
+
+    @Test
+    void everyAccountHolderNeedsAnIndependentSecondLink() throws Exception {
+        UUID a1 = person("accused", "A1"), a2 = person("accused", "A2"), w1 = person("witness", "W1");
+        String holder = "/api/firs/" + fir + "/people/%s/account-holder";
+        String basis = "{\"basis\":\"Bank reply to notice N-3: receiving account\"}";
+        call(post("/api/firs/" + fir + "/readiness/accused-links"), io, "{\"personId\":\"%s\",\"linkType\":\"own_statement\",\"evidenceItemId\":\"%s\"}"
+                .formatted(a1, statement)).andExpect(status().isUnprocessableEntity()); // no playbook yet
+        call(put("/api/firs/" + fir + "/playbook"), io, "{\"playbookId\":\"cyber-fraud\"}");
+
+        call(put(holder.formatted(a1)), clerk, basis).andExpect(status().isForbidden());
+        call(put(holder.formatted(a1)), io, "{\"basis\":\"x\"}").andExpect(status().isBadRequest());
+        call(put(holder.formatted(w1)), io, basis).andExpect(status().isBadRequest()); // only an accused
+        call(put(holder.formatted(a1)), io, basis).andExpect(status().isCreated());
+        call(put(holder.formatted(a1)), io, basis).andExpect(status().isOk()); // already marked, nothing changes
+        call(put(holder.formatted(a2)), io, basis).andExpect(status().isCreated());
+        report().andExpect(jsonPath("$.openGaps").value(7)) // 5 ingredients + 2 account holders
+                .andExpect(jsonPath("$.secondLinkRule.requiresAny").value(Matchers.hasItem("kyc_identification")))
+                .andExpect(jsonPath("$.accountHolders[*].name").value(Matchers.contains("A1 Fictional A1", "A2 Fictional A2")))
+                .andExpect(jsonPath("$.gaps[?(@.key=='second-link:" + a1 + "')].severity").value("critical"))
+                .andExpect(jsonPath("$..score").doesNotExist());
+
+        String link = "{\"personId\":\"%s\",\"linkType\":\"%s\",\"evidenceItemId\":\"%s\"}";
+        String url = "/api/firs/" + fir + "/readiness/accused-links";
+        call(post(url), io, link.formatted(a1, "money_received", phone)).andExpect(status().isUnprocessableEntity()); // not an independent link
+        call(post(url), io, link.formatted(w1, "kyc_identification", phone)).andExpect(status().isBadRequest());
+        call(post(url), clerk, link.formatted(a1, "kyc_identification", phone)).andExpect(status().isForbidden());
+        call(post(url), io, link.formatted(a1, "kyc_identification", phone)).andExpect(status().isCreated());
+        // A1's gap closes; the KYC record is electronic, so its certificate gap opens until Part A and B are in
+        report().andExpect(jsonPath("$.openGaps").value(7))
+                .andExpect(jsonPath("$.gaps[?(@.key=='second-link:" + a1 + "')]").isEmpty())
+                .andExpect(jsonPath("$.gaps[?(@.key=='certificate:" + phone + "')]").isNotEmpty())
+                .andExpect(jsonPath("$.accountHolders[0].links[0].linkType").value("kyc_identification"));
+
+        String reason = "A2's KYC request sent to the bank on 6 Oct; prosecutor informed";
+        call(post("/api/firs/" + fir + "/readiness/overrides"), io, "{\"gapKey\":\"second-link:%s\",\"reason\":\"%s\"}".formatted(a2, reason))
+                .andExpect(status().isCreated());
+        report().andExpect(jsonPath("$.openGaps").value(6))
+                .andExpect(jsonPath("$.gaps[?(@.key=='second-link:" + a2 + "')].override.reason").value(reason));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> db.sql("delete from accused_link").update()).hasMessageContaining("kept as written");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> db.sql("update account_holder set basis = 'changed later'").update())
                 .hasMessageContaining("kept as written");
     }
 }

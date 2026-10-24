@@ -28,9 +28,14 @@ class ReadinessController {
 
     record Link(@NotBlank String chargeId, @NotBlank String ingredientId, @NotNull UUID evidenceItemId, String note) {}
 
+    record AccusedLink(@NotNull UUID personId, @NotBlank String linkType, @NotNull UUID evidenceItemId, String note) {}
+
+    record HolderMark(@NotBlank @Size(min = 5, max = 500) String basis) {}
+
     record Acceptance(@NotBlank String gapKey, @NotBlank @Size(min = 10, max = 2000) String reason) {}
 
     static final String CERTIFICATE_RULE = "electronic_record_certificate";
+    static final String SECOND_LINK_RULE = "account_holder_second_link";
 
     private final JdbcClient db;
     private final CaseTeam team;
@@ -76,6 +81,33 @@ class ReadinessController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", id));
     }
 
+    /** Marks an accused as an account holder (money in the case reached their account). Kept once written. */
+    @PutMapping("/api/firs/{firId}/people/{personId}/account-holder")
+    ResponseEntity<Void> markHolder(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @PathVariable UUID personId,
+                                    @Valid @RequestBody HolderMark m) {
+        UUID user = CaseTeam.user(jwt);
+        team.requireTeam(user, firId);
+        int added = db.sql("insert into account_holder (person_id, fir_id, basis, marked_by) values (?,?,?,?) on conflict (person_id) do nothing")
+                .params(personId, firId, m.basis.trim(), user).update();
+        return ResponseEntity.status(added == 1 ? HttpStatus.CREATED : HttpStatus.OK).build();
+    }
+
+    /** Links evidence to one accused as an independent link of a kind the playbook's second-link rule accepts. */
+    @PostMapping("/api/firs/{firId}/readiness/accused-links")
+    ResponseEntity<Map<String, UUID>> accusedLink(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody AccusedLink l) {
+        UUID user = CaseTeam.user(jwt);
+        team.requireTeam(user, firId);
+        var rule = playbookOf(firId).flatMap(pb -> pb.rule(SECOND_LINK_RULE))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "This case's playbook has no second-link rule."));
+        if (!rule.requiresAny().contains(l.linkType))
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Link type must be one of " + rule.requiresAny() + ".");
+        UUID id = db.sql("""
+                insert into accused_link (fir_id, person_id, link_type, evidence_item_id, note, linked_by)
+                values (?,?,?,?,?,?) returning id""")
+                .params(firId, l.personId, l.linkType, l.evidenceItemId, l.note, user).query(UUID.class).single();
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", id));
+    }
+
     @PostMapping("/api/firs/{firId}/readiness/overrides")
     @Transactional
     ResponseEntity<Map<String, UUID>> override(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody Acceptance o) {
@@ -112,6 +144,7 @@ class ReadinessController {
         if (pbOpt.isEmpty()) {
             out.put("playbook", null);
             out.put("charges", List.of());
+            out.put("accountHolders", List.of());
             out.put("gaps", List.of());
             out.put("openGaps", 0);
             return out;
@@ -138,23 +171,42 @@ class ReadinessController {
             for (var ing : ch.ingredients()) {
                 var evidence = links.stream()
                         .filter(l -> ch.id().equals(l.get("charge_id")) && ing.id().equals(l.get("ingredient_id")))
-                        .map(l -> {
-                            var e = new LinkedHashMap<String, Object>();
-                            e.put("id", l.get("id"));
-                            e.put("label", l.get("label"));
-                            e.put("kind", l.get("kind"));
-                            e.put("note", l.get("note"));
-                            if ("electronic".equals(l.get("kind"))) {
-                                e.put("courtReady", l.get("court_ready"));
-                                if (!Boolean.TRUE.equals(l.get("court_ready"))) notReady.put(l.get("id").toString(), (String) l.get("label"));
-                            }
-                            return e;
-                        }).toList();
+                        .map(l -> evidence(l, notReady)).toList();
                 String key = "ingredient:" + ch.id() + "/" + ing.id();
                 ingredients.add(Map.of("id", ing.id(), "text", ing.text(), "suggestedProof", ing.proof(), "evidence", evidence));
                 if (evidence.isEmpty()) gaps.add(gap(key, "critical", "No evidence linked for: " + ing.text() + " (" + ch.law() + ")", overrides));
             }
             charges.add(Map.of("id", ch.id(), "law", ch.law(), "label", ch.label(), "ingredients", ingredients));
+        }
+        var holders = new ArrayList<Map<String, Object>>();
+        var secondLink = pb.rule(SECOND_LINK_RULE);
+        if (secondLink.isPresent()) {
+            var accepted = secondLink.get().requiresAny();
+            var personLinks = db.sql("""
+                    select l.person_id, l.link_type, e.id, e.label, e.kind, l.note, r.court_ready
+                    from accused_link l join evidence_item e on e.id = l.evidence_item_id
+                    left join electronic_item_readiness r on r.id = e.id
+                    where l.fir_id = ? order by l.link_type, e.label""").param(firId).query().listOfRows();
+            for (var h : db.sql("""
+                    select a.person_id, p.label, p.display_name, a.basis from account_holder a join person_public p on p.id = a.person_id
+                    where a.fir_id = ? order by p.label, p.display_name""").param(firId).query().listOfRows()) {
+                var mine = personLinks.stream()
+                        .filter(l -> h.get("person_id").equals(l.get("person_id")) && accepted.contains((String) l.get("link_type")))
+                        .map(l -> {
+                            var e = evidence(l, notReady);
+                            e.put("linkType", l.get("link_type"));
+                            return e;
+                        }).toList();
+                String who = Objects.requireNonNullElse((String) h.get("label"), "") + " " + Objects.requireNonNullElse((String) h.get("display_name"), "");
+                var holder = new LinkedHashMap<String, Object>();
+                holder.put("personId", h.get("person_id"));
+                holder.put("name", who.trim());
+                holder.put("basis", h.get("basis"));
+                holder.put("links", mine);
+                holders.add(holder);
+                if (mine.isEmpty()) gaps.add(gap("second-link:" + h.get("person_id"), secondLink.get().severity(),
+                        who.trim() + " is an account holder with no independent second link yet (" + String.join(", ", accepted) + ").", overrides));
+            }
         }
         if (pb.hasRule(CERTIFICATE_RULE)) {
             notReady.forEach((id, label) -> gaps.add(gap("certificate:" + id, "critical",
@@ -165,11 +217,27 @@ class ReadinessController {
         out.put("playbook", Map.of("id", pb.id(), "version", pb.version(), "status", pb.status(),
                 "reviewNote", Objects.requireNonNullElse(pb.reviewNote(), "")));
         out.put("charges", charges);
+        out.put("secondLinkRule", secondLink.orElse(null));
+        out.put("accountHolders", holders);
         out.put("sectionsNotInPlaybook", sections.stream().filter(s -> !covered.contains(s)).toList());
         out.put("gaps", gaps);
         out.put("openGaps", gaps.stream().filter(g -> g.get("override") == null).count());
-        out.put("checksToConfirm", pb.rules().stream().filter(r -> !r.id().equals(CERTIFICATE_RULE)).toList());
+        out.put("checksToConfirm", pb.rules().stream().filter(r -> !r.id().equals(CERTIFICATE_RULE) && !r.id().equals(SECOND_LINK_RULE)).toList());
         return out;
+    }
+
+    /** One linked evidence item; an electronic one without a full certificate is added to notReady. */
+    private static Map<String, Object> evidence(Map<String, Object> l, Map<String, String> notReady) {
+        var e = new LinkedHashMap<String, Object>();
+        e.put("id", l.get("id"));
+        e.put("label", l.get("label"));
+        e.put("kind", l.get("kind"));
+        e.put("note", l.get("note"));
+        if ("electronic".equals(l.get("kind"))) {
+            e.put("courtReady", l.get("court_ready"));
+            if (!Boolean.TRUE.equals(l.get("court_ready"))) notReady.put(l.get("id").toString(), (String) l.get("label"));
+        }
+        return e;
     }
 
     private static Map<String, Object> gap(String key, String severity, String text, Map<String, Map<String, Object>> overrides) {
@@ -184,6 +252,6 @@ class ReadinessController {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<Map<String, String>> rejected() {
-        return ResponseEntity.badRequest().body(Map.of("error", "The database rejected this (evidence from another case, or already linked)."));
+        return ResponseEntity.badRequest().body(Map.of("error", "The database rejected this (a record from another case, a person who is not an accused, or already linked)."));
     }
 }

@@ -1,5 +1,6 @@
 package in.caseassistant;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -18,7 +19,7 @@ class Playbooks {
 
     record Charge(String id, String law, String label, List<Ingredient> ingredients) {}
 
-    record Rule(String id, String severity, String text, String source) {}
+    record Rule(String id, String severity, String text, String source, @JsonAlias("requires_any") List<String> requiresAny) {}
 
     record Playbook(String id, String version, String status, @JsonProperty("review_note") String reviewNote,
                     @JsonProperty("applies_to") String appliesTo, List<Charge> charges, List<Rule> rules) {
@@ -28,7 +29,11 @@ class Playbooks {
         }
 
         boolean hasRule(String ruleId) {
-            return rules.stream().anyMatch(r -> r.id.equals(ruleId));
+            return rule(ruleId).isPresent();
+        }
+
+        Optional<Rule> rule(String ruleId) {
+            return rules.stream().filter(r -> r.id.equals(ruleId)).findFirst();
         }
     }
 

@@ -233,3 +233,20 @@ def test_63_4_corrections_must_follow_the_rules_and_other_hashes_are_not_trusted
     one(db, cert, item, "A", "SHA256", h, a, "signer's designation added")
     with pytest.raises(psycopg.errors.UniqueViolation):
         one(db, cert, item, "A", "SHA256", h, a, "second correction of the same one")
+
+
+def test_account_holders_and_accused_links_stay_inside_their_case(db):
+    st, io, fir = seed_case(db)
+    other = one(db, """INSERT INTO fir(station_id,fir_year,fir_no,gd_entry_no,registered_at,information_received_at,
+                       contents_original,contents_language,action_taken) SELECT station_id,2026,215,'GD-18',registered_at,
+                       information_received_at,'Other demo text','mr','investigate' FROM fir WHERE id=%s RETURNING id""", fir)[0]
+    acc = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A1','Demo Accused') RETURNING id", fir)[0]
+    item = one(db, """INSERT INTO evidence_item(fir_id,label,description,kind,seized_at,seizure_memo)
+                      VALUES (%s,'D-1','Demo KYC form','document','2026-08-20 10:00+05:30','SM-1') RETURNING id""", fir)[0]
+    with pytest.raises(psycopg.errors.ForeignKeyViolation):  # accused of this case, marked under another FIR
+        db.execute("INSERT INTO account_holder(person_id,fir_id,basis,marked_by) VALUES (%s,%s,'Demo bank reply',%s)", (acc, other, io))
+    db.execute("INSERT INTO account_holder(person_id,fir_id,basis,marked_by) VALUES (%s,%s,'Demo bank reply',%s)", (acc, fir, io))
+    db.execute("""INSERT INTO accused_link(fir_id,person_id,link_type,evidence_item_id,linked_by)
+                  VALUES (%s,%s,'kyc_identification',%s,%s)""", (fir, acc, item, io))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM account_holder")
