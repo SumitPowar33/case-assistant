@@ -4,6 +4,38 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST.
 
+## 24 Oct 2026, session 6 (weekend, 23:35)
+Done
+- Login and roles (Next 1). `POST /api/login` (username + password, bcrypt) gives an 8-hour signed token (HS256, `AUTH_SECRET`); `GET /api/me`; `POST /api/users` for the state admin only. The first admin comes from `BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` at start-up, so no password is in the code. Wrong user, wrong password and disabled user all get the same answer. A disabled user is refused at once even with a valid token. `X-User-Id` is gone; every API needs a token. New dependency: Spring Security resource server (the platform's own token checking; a state single sign-on can replace our login later by swapping one bean).
+- Who may do what: case team = the IO, the SHO of the FIR's station and the SP of its district (before: any SHO/SP anywhere). Only the case team adds people, arrests, evidence, notices, replies and certificates; custody also by the station's malkhana staff; FIRs only by front desk/IO/SHO of that station. A sent notice is signed by the signed-in officer, not a name in the request.
+- AI gateway checks the same token (standard library only). The audit log records the signed-in user, not a name sent in the request. Only the state admin changes AI settings or reads the audit log. Each request must name its prompt version; the log keeps it, the safety-rules version and a SHA-256 of the exact text (not the text itself).
+- 63(4) certificates (Next 4): can never be edited or deleted; a correction is a new certificate that names the one it replaces, with a reason. Readiness uses only the current certificates and accepts only SHA-256 that matches the item (an MD5 certificate is no longer counted as "matching").
+- Readiness check (Next 3): the case team picks the playbook; links each evidence item to the charge ingredient it proves; the report lists, for each charge in the FIR that the playbook covers, the linked evidence and the gaps (ingredient with nothing linked; electronic evidence without a full 63(4) certificate). A gap can be accepted only with a written reason (10+ characters); it stays listed with who accepted it, and can never be edited or deleted. Rules the app cannot check yet are listed for a person to confirm. FIR sections the playbook does not cover are listed. No score or percentage anywhere.
+- Web: sign-in page, token on every call, sign out, AI settings link only for the state admin; readiness section on the FIR page. Checked in a real browser against the running core app and gateway (fictional demo users).
+- Migrations V3 (login), V4 (certificate corrections), V5 (readiness). Tests: gateway 12, xlit 77, db 24, packs 3, core 26, web 16; web build passes.
+
+Deliberately skipped / not checked
+- No limit on repeated wrong passwords yet, and no record of sign-ins. Needed before any pilot.
+- The token is kept in the browser tab's session storage (gone when the tab closes); a script injected into the page could read it.
+- The AI gateway cannot see that a user was disabled; their token keeps working there until it expires (max 8 hours).
+- Reading (FIR list, FIR detail, deadlines, evidence, readiness) is open to every signed-in user; only writes and victim details are limited. See question 1.
+- Readiness: a wrong link cannot be removed yet; an accepted gap cannot be withdrawn; the account-holder "second link" rule is listed for a person to confirm, not checked (the data does not yet say which accused is an account holder). Sections must match the playbook exactly ("BNS 318" does not match "BNS 318(4)").
+- No screens yet for users, stations or creating FIRs/evidence (Next 1). Demo users are created through the API.
+
+Next
+1. Web forms to create FIRs, people, evidence, notices and 63(4) certificates, using `TypingField`.
+2. Account-holder second-link rule in the readiness check (mark an accused as account holder; link evidence per accused).
+3. Sign-in safety: lock after repeated wrong passwords, sign-in log, password change.
+4. Remove a wrong readiness link (kept in history) and withdraw an accepted gap.
+
+Blocked
+- Live Claude/Gemini calls still wait for API keys (unchanged; using `fake`).
+
+Questions for Sumit
+1. Who may read a case? Now every signed-in user can open any FIR (victim details stay hidden). Should it be only the same station, the district for SP and prosecutors, and nobody for the state admin?
+2. Should the SHO or SP have to approve a gap that the IO accepts, or is the IO's written reason enough?
+3. For the demo, should I add a script that creates fictional demo users and one fictional cyber-fraud case?
+
 ## 24 Oct 2026, Weekly review (Saturday 21:05 session)
 Checked: every commit from the seed (c200043) to 2a14ea2. Schema and deadlines, victim masking, the custody log, all core APIs, the AI gateway (routing, admin lock, audit chain), the web pages, the playbook and the tests. All suites were green before any change.
 
