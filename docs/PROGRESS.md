@@ -4,6 +4,43 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST.
 
+## 25 Oct 2026, session 7 (weekend, 02:05, last of the night)
+Tonight in short
+- 21:05: weekly review of everything so far, 7 fixes (IST deadline dates, victim masking by section, complaint text withheld, BNSS 193(2) by section, fixed evidence hash, stricter notice completion, AI admin lock covers the model); typing tool in the web app; AI settings screen.
+- 23:35: login and roles (tokens, case team rules, AI gateway checks the same token); 63(4) certificates can no longer be edited; first readiness check (playbook, evidence per ingredient, gaps, accept a gap with a reason).
+- 02:05: account-holder second link in the readiness check; sign-in safety (lock, log, password change); withdraw a wrong link or an accepted gap; web forms to register an FIR and add people and evidence.
+
+Done
+- Account-holder second link (Next 2). The case team marks an accused as an account holder, with the basis (for example "Bank reply to notice N-3"), and links evidence to each accused by link type (SIM or device, KYC identification, CCTV of withdrawal, login IP, own statement; the list comes from the playbook rule). Each account holder without such a link is a critical gap; it can be accepted with a reason like any gap. Electronic evidence linked this way also needs its 63(4) certificate. Only accused people can be marked or linked; records from another case are refused by the database. The rule is no longer in "checks for a person to confirm". Migration V6.
+- Sign-in safety (Next 3). Every sign-in attempt is logged (username tried, result, IP, time; never the password). 5 wrong passwords within 15 minutes lock that username for 15 minutes; unknown usernames lock the same way, so the lock does not show which accounts exist; attempts made while locked do not extend the lock. The answer says when to try again (IST). Users can change their own password (current password needed; 12+ characters); every older token stops working at once and the tab gets a new one. The state admin can read the sign-in log (`GET /api/sign-ins`). Migration V7. Web: "Password" page; the lock message is shown on sign-in.
+- Withdrawals (Next 4). A wrong evidence link, a wrong accused link or an accepted gap can be withdrawn with a reason (10+ characters). Nothing is deleted: the row keeps who withdrew it, when and why; the database allows only that one change, once. The report lists withdrawn records; the same link or acceptance can be made again. Migration V8. Web: "Withdraw" next to each link and accepted gap.
+- Web forms (part of Next 1): register an FIR at the officer's own station (sections typed as "BNS 318(4), IT Act 66D", times read as IST, an IO can name themselves as IO, information typed with the TypingField in any of the 10 scripts), add a person, add evidence (SHA-256 required for electronic items). Dates on screen are now always shown in IST. Readiness forms clear after saving.
+- Checked in a real browser against the running core app with fictional demo users: register FIR, add accused and evidence, choose playbook, mark account holder, add and withdraw a link, change password.
+- Tests: gateway 12, xlit 77, db 25, packs 3, core 32, web 29; web build and lint pass.
+
+Deliberately skipped / not checked
+- An account holder cannot be un-marked yet (the mark is kept as written). If a person's role is changed later in the database, an existing mark is not re-checked (there is no edit of people yet).
+- The lock counts per username, not per IP; many usernames from one machine are not slowed down. Two guesses at exactly the same moment can both pass the limit. Behind a proxy the log records the proxy's IP (X-Forwarded-For is not read on purpose until we know the server set-up).
+- No admin "unlock now" and no screen for the sign-in log yet (API only).
+- The AI gateway still cannot see a password change or a disabled user; old tokens keep working there until they expire (max 8 hours).
+- Forms not built yet: notices, notice replies, 63(4) certificates, arrests. No edit of people or evidence. Users and stations still only through the API.
+- AI gateway and packs not changed tonight (tests re-run, green).
+
+Next
+1. Web forms for notices (BNSS 94 items list), notice replies and 63(4) certificates (Part A/B), using `TypingField`.
+2. AI gateway: refuse tokens of disabled users and tokens issued before a password change (ask the core app, or keep a short list).
+3. State admin screens: users (create, disable), stations, sign-in log, unlock.
+4. Read access rules once question 1 is answered.
+
+Blocked
+- Live Claude/Gemini calls still wait for API keys (unchanged; using `fake`).
+
+Questions for Sumit
+1. Still open: who may read a case? Now every signed-in user can open any FIR (victim details stay hidden).
+2. Still open: should the SHO or SP approve when an IO accepts a gap? And the same for withdrawing an accepted gap?
+3. Is 5 wrong passwords then 15 minutes locked right for the demo? Should the state admin be able to unlock early?
+4. Still open: should I add a script that creates fictional demo users and one fictional cyber-fraud case for the demo?
+
 ## 24 Oct 2026, session 6 (weekend, 23:35)
 Done
 - Login and roles (Next 1). `POST /api/login` (username + password, bcrypt) gives an 8-hour signed token (HS256, `AUTH_SECRET`); `GET /api/me`; `POST /api/users` for the state admin only. The first admin comes from `BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` at start-up, so no password is in the code. Wrong user, wrong password and disabled user all get the same answer. A disabled user is refused at once even with a valid token. `X-User-Id` is gone; every API needs a token. New dependency: Spring Security resource server (the platform's own token checking; a state single sign-on can replace our login later by swapping one bean).
