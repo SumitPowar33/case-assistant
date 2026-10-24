@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
-import { afterEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import App from './App'
+import { setSession, type Session } from './api'
+
+const io: Session = { token: 'tok-io', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional Rao', rank: 'SI', role: 'io', station_id: 's1' } }
 
 const fir = { id: 'f1', fir_year: 2026, fir_no: 7, registered_at: '2026-09-10T10:00:00Z', is_zero_fir: false, action_taken: 'registered', sexual_offence: false, contents_original: 'Fictional complaint text', sections: [{ act: 'BNS', section: '318' }] }
 const routes: Record<string, unknown> = {
@@ -12,12 +15,21 @@ const routes: Record<string, unknown> = {
   '/api/firs/f1/evidence': [{ id: 'e1', label: 'Bank statement', kind: 'electronic', sha256: null, court_ready: false }],
 }
 function mockApi() {
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+  const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+    if (url === '/api/login') {
+      const b = JSON.parse(init!.body as string)
+      return b.password === 'fictional-pass-1'
+        ? { ok: true, status: 200, json: async () => ({ token: 'tok-new', user: { ...io.user, full_name: 'SI New Login' } }) }
+        : { ok: false, status: 401, json: async () => ({ error: 'Wrong username or password.' }) }
+    }
     const body = routes[url]
     return { ok: body !== undefined, status: body === undefined ? 404 : 200, json: async () => body }
-  }))
+  })
+  vi.stubGlobal('fetch', fetch)
+  return fetch
 }
-afterEach(() => { cleanup(); window.location.hash = ''; vi.unstubAllGlobals() })
+beforeEach(() => setSession(io))
+afterEach(() => { cleanup(); window.location.hash = ''; vi.unstubAllGlobals(); setSession(null) })
 
 test('lists FIRs with a link to the detail page', async () => {
   mockApi()
@@ -58,4 +70,34 @@ test('shows an error when the server fails', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })))
   render(<App />)
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('500'))
+})
+
+test('without a session only the sign-in form shows; a wrong password says so; a good one opens the FIR list', async () => {
+  setSession(null)
+  const fetch = mockApi()
+  render(<App />)
+  expect(screen.queryByRole('navigation')).toBeNull()
+  fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'si.fictional' } })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'wrong' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+  expect((await screen.findByRole('alert')).textContent).toBe('Wrong username or password.')
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'fictional-pass-1' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+  expect(await screen.findByRole('link', { name: '7/2026' })).toBeTruthy()
+  expect(screen.getByText(/SI New Login/)).toBeTruthy()
+  const firCall = fetch.mock.calls.find(([url]) => url === '/api/firs')!
+  expect((firCall[1] as RequestInit).headers).toEqual({ authorization: 'Bearer tok-new' })
+  expect(screen.queryByRole('link', { name: 'AI settings' })).toBeNull() // only the state admin sees it
+})
+
+test('a 401 ends the session and shows the sign-in form; sign out does too', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) })))
+  render(<App />)
+  expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeTruthy()
+  setSession(io)
+  mockApi()
+  cleanup()
+  render(<App />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
+  expect(screen.getByRole('heading', { name: 'Sign in' })).toBeTruthy()
 })

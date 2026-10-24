@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { actor, ai } from './api'
+import { ai } from './api'
 
 type Setting = { label: string; provider: string; model: string; officer_may_switch: boolean }
 type Features = { providers: string[]; default_models: Record<string, string> }
@@ -27,7 +27,7 @@ export default function SettingsPage() {
     setError(''); setSaved('')
     try {
       const out = await ai<Setting>(`/v1/settings/${feature}`, {
-        method: 'PUT', body: { provider: s.provider, model: s.model || null, officer_may_switch: s.officer_may_switch, ...(actor ? { actor } : {}) },
+        method: 'PUT', body: { provider: s.provider, model: s.model || null, officer_may_switch: s.officer_may_switch },
       })
       edit(feature, out)
       setSaved(`Saved: ${out.label} now uses ${out.provider} / ${out.model}.`)
@@ -41,7 +41,7 @@ export default function SettingsPage() {
       <h1>AI settings</h1>
       <p>Choose the AI provider and model for each feature. Every change is written to the audit log.
         {' '}{chainOk ? 'Audit log check: intact.' : <strong>Audit log check: broken. Report this to the state admin.</strong>}</p>
-      <p><small>Admin only once login is built. "fake" gives offline demo drafts.</small></p>
+      <p><small>Only the state admin can save changes. "fake" gives offline demo drafts.</small></p>
       {error && <p role="alert">{error}</p>}
       <p aria-live="polite">{saved}</p>
       <table>

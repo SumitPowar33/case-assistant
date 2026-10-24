@@ -12,3 +12,8 @@ blockquote { margin: 1rem 0; padding-left: 1rem; border-left: 4px solid #12355b;
 .suggestions button { font: inherit; padding: .2rem .5rem; }
 .suggestions li:first-child button { font-weight: bold; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.login { display: grid; gap: .75rem; max-width: 20rem; }
+.login label { display: grid; gap: .25rem; }
+.login input, .login button { font: inherit; padding: .4rem; }
+.who { margin-left: auto; }
+.who button { margin-left: .5rem; }
