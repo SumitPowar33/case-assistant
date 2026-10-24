@@ -34,6 +34,16 @@ test('detail shows people with protected identity, deadlines and evidence', asyn
   expect(await screen.findByText(/not court-ready yet/)).toBeTruthy()
 })
 
+test('detail withholds the complaint text when the API says so', async () => {
+  routes['/api/firs/f1'] = { ...fir, contents_original: null, contents_withheld: true }
+  mockApi()
+  window.location.hash = '#/firs/f1'
+  render(<App />)
+  expect(await screen.findByText(/Complaint text withheld/)).toBeTruthy()
+  expect(screen.queryByText('Fictional complaint text')).toBeNull()
+  routes['/api/firs/f1'] = fir
+})
+
 test('shows an error when the server fails', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })))
   render(<App />)

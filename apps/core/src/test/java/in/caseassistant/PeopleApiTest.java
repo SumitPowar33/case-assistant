@@ -53,4 +53,27 @@ class PeopleApiTest {
                     .andExpect(jsonPath("$[0].phone").doesNotExist());
         }
     }
+
+    @Test
+    void sectionAloneProtectsTheVictimAndWithholdsTheComplaintText() throws Exception {
+        db.sql("update fir set sexual_offence = false").update();
+        db.sql("update person set identity_masked = false").update();
+        mvc.perform(get("/api/firs/" + fir).header("X-User-Id", clerk))
+                .andExpect(jsonPath("$.contents_original").value("Fictional complaint"))
+                .andExpect(jsonPath("$.contents_withheld").value(false));
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '64(1)')").param(fir).update();
+        mvc.perform(get("/api/firs/" + fir + "/people").header("X-User-Id", clerk))
+                .andExpect(jsonPath("$[0].display_name").value("Victim V1"))
+                .andExpect(jsonPath("$[0].identity_masked").value(true));
+        mvc.perform(get("/api/firs/" + fir + "/people").header("X-User-Id", io))
+                .andExpect(jsonPath("$[0].display_name").value("Meera Test"))
+                .andExpect(jsonPath("$[0].identity_masked").value(true));
+        for (var req : new org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder[] {
+                get("/api/firs/" + fir).header("X-User-Id", clerk), get("/api/firs/" + fir)}) {
+            mvc.perform(req).andExpect(jsonPath("$.contents_original").doesNotExist())
+                    .andExpect(jsonPath("$.contents_withheld").value(true));
+        }
+        mvc.perform(get("/api/firs/" + fir).header("X-User-Id", io))
+                .andExpect(jsonPath("$.contents_original").value("Fictional complaint"));
+    }
 }

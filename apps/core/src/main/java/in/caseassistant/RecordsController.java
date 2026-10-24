@@ -36,7 +36,7 @@ class RecordsController {
 
     record NewNotice(@NotBlank String kind, @NotBlank String addressee, List<String> itemsRequested,
                      @NotBlank String body, UUID aiRequestId, UUID signedBy, OffsetDateTime issuedAt,
-                     LocalDate replyDueOn, String status) {}
+                     LocalDate replyDueOn, @Pattern(regexp = "draft|sent") String status) {}
 
     record Reply(@NotNull OffsetDateTime receivedAt, @NotBlank String channel, String checksJson) {}
 
@@ -126,16 +126,30 @@ class RecordsController {
                 .query(UUID.class).single());
     }
 
-    /** Logs a reply and marks the notice complete or reply_incomplete, from the checks the officer ticked. */
+    /**
+     * Logs a reply and marks the notice complete or reply_incomplete, from the checks the officer ticked.
+     * With items requested (BNSS 94), complete means every requested item has been ticked present in some
+     * reply so far. Without items, complete means this reply has at least one check and all are present.
+     * An empty or partial check list never closes a notice.
+     */
     @PostMapping("/notices/{noticeId}/replies")
+    @org.springframework.transaction.annotation.Transactional
     ResponseEntity<Map<String, Object>> reply(@PathVariable UUID firId, @PathVariable UUID noticeId,
                                               @Valid @RequestBody Reply r) {
         requireRow("notice", noticeId, firId);
         String checks = r.checksJson == null ? "[]" : r.checksJson;
         db.sql("insert into notice_reply (notice_id, received_at, channel, checks) values (?,?,?,?::jsonb)")
                 .params(noticeId, r.receivedAt, r.channel, checks).update();
-        boolean allPresent = db.sql("select not exists (select 1 from jsonb_array_elements(?::jsonb) c "
-                        + "where (c->>'present')::boolean is not true)").param(checks).query(Boolean.class).single();
+        boolean allPresent = db.sql("""
+                select case when cardinality(n.items_requested) > 0
+                  then not exists (select 1 from unnest(n.items_requested) i where not exists (
+                         select 1 from notice_reply r, jsonb_array_elements(r.checks) x
+                         where r.notice_id = n.id and x->>'item' = i and (x->>'present')::boolean))
+                  else jsonb_array_length(c.j) > 0
+                       and not exists (select 1 from jsonb_array_elements(c.j) x where (x->>'present')::boolean is not true)
+                  end
+                from notice n, (select ?::jsonb as j) c where n.id = ?""")
+                .params(checks, noticeId).query(Boolean.class).single();
         String status = allPresent ? "complete" : "reply_incomplete";
         db.sql("update notice set status = ? where id = ? and status in ('sent','reply_incomplete')")
                 .params(status, noticeId).update();

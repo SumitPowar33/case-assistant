@@ -29,9 +29,11 @@ class FirController {
     record Section(@NotBlank String act, @NotBlank String section) {}
 
     private final JdbcClient db;
+    private final CaseTeam team;
 
-    FirController(JdbcClient db) {
+    FirController(JdbcClient db, CaseTeam team) {
         this.db = db;
+        this.team = team;
     }
 
     @GetMapping
@@ -41,11 +43,15 @@ class FirController {
                 .query().listOfRows();
     }
 
+    /** The complaint text names the victim, so it is withheld from anyone outside the case team on protected cases. */
     @GetMapping("/{id}")
-    Map<String, Object> one(@PathVariable UUID id) {
+    Map<String, Object> one(@PathVariable UUID id, @RequestHeader(value = "X-User-Id", required = false) UUID userId) {
         var fir = db.sql("select * from fir where id = ?").param(id).query().listOfRows().stream().findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         var out = new java.util.LinkedHashMap<>(fir);
+        boolean withheld = team.identityProtected(id) && !team.includes(userId, id);
+        if (withheld) out.put("contents_original", null);
+        out.put("contents_withheld", withheld);
         out.put("sections", db.sql("select act, section from fir_section where fir_id = ? order by act, section")
                 .param(id).query().listOfRows());
         return out;

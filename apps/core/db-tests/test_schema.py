@@ -1,4 +1,4 @@
-"""Applies V1__core.sql to a throwaway PostgreSQL database and checks the legal rules it encodes.
+"""Applies every Flyway migration (V1, V2, ...) to a throwaway PostgreSQL database and checks the legal rules it encodes.
 
 Run: DATABASE_URL=postgresql://user:pass@localhost/db python -m pytest -q apps/core/db-tests
 All data below is fictional.
@@ -11,7 +11,8 @@ import uuid
 import psycopg
 import pytest
 
-MIGRATION = pathlib.Path(__file__).parents[1] / "src/main/resources/db/migration/V1__core.sql"
+MIGRATIONS = sorted((pathlib.Path(__file__).parents[1] / "src/main/resources/db/migration").glob("V*__*.sql"),
+                    key=lambda p: int(p.name[1:].split("__")[0]))
 URL = os.environ.get("DATABASE_URL", "postgresql://caseapp:caseapp@localhost/caseapp_test")
 
 
@@ -21,7 +22,8 @@ def db():
     conn = psycopg.connect(URL, autocommit=True)
     conn.execute(f"CREATE SCHEMA {schema}")
     conn.execute(f"SET search_path TO {schema}, public")
-    conn.execute(MIGRATION.read_text())
+    for m in MIGRATIONS:
+        conn.execute(m.read_text())
     yield conn
     conn.execute(f"DROP SCHEMA {schema} CASCADE")
     conn.close()
@@ -134,3 +136,55 @@ def test_notice_must_be_signed_before_sent(db):
         db.execute("INSERT INTO notice(fir_id,kind,addressee,items_requested,body,status) VALUES (%s,'BNSS_94','Bank','{x}','b','sent')", (fir,))
     with pytest.raises(psycopg.errors.CheckViolation):
         db.execute("INSERT INTO notice(fir_id,kind,addressee,body) VALUES (%s,'BNSS_94','Bank','b')", (fir,))
+
+
+def add_section(conn, fir, act, section):
+    conn.execute("INSERT INTO fir_section(fir_id,act,section) VALUES (%s,%s,%s)", (fir, act, section))
+
+
+def test_victim_masked_by_section_even_without_the_flag(db):
+    st, io, fir = seed_case(db, sexual=False)
+    db.execute("""INSERT INTO person(fir_id,role,label,full_name,phone) VALUES
+                  (%s,'victim','V1','Demo Name','9000000000'), (%s,'complainant','C1','Demo Parent','9000000002'),
+                  (%s,'witness','W1','Demo Witness','9000000003')""", (fir, fir, fir))
+    assert one(db, "SELECT display_name FROM person_public WHERE label='V1'")[0] == "Demo Name"
+    add_section(db, fir, "BNS", "64(1)")
+    rows = {r[0]: r[1:] for r in db.execute("SELECT label, display_name, phone, identity_masked FROM person_public")}
+    assert rows["V1"] == ("Victim V1", None, True)
+    assert rows["C1"] == ("Complainant C1", None, True)
+    assert rows["W1"] == ("Demo Witness", "9000000003", False)
+
+
+def test_any_pocso_section_masks_the_victim(db):
+    st, io, fir = seed_case(db)
+    db.execute("INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'victim','V1','Demo Child')", (fir,))
+    add_section(db, fir, "POCSO Act", "12")
+    assert one(db, "SELECT display_name FROM person_public")[0] == "Victim V1"
+
+
+@pytest.mark.parametrize("act,section,applies", [
+    ("BNS", "64(1)", True), ("BNS", "70(2)", True), ("BNS", "69", False),
+    ("POCSO Act", "6", True), ("POCSO Act", "12", False), ("BNS", "318(4)", False),
+])
+def test_bnss_193_2_follows_the_listed_sections(db, act, section, applies):
+    st, io, fir = seed_case(db, sexual=True)
+    add_section(db, fir, act, section)
+    kinds = [r[0] for r in db.execute("SELECT kind FROM case_deadline")]
+    assert ("sexual_offence_investigation" in kinds) is applies
+
+
+def test_deadlines_count_the_indian_calendar_day(db):
+    st, io, fir = seed_case(db)
+    db.execute("SET TIME ZONE 'UTC'")
+    db.execute("UPDATE fir SET registered_at='2026-10-01 01:00+05:30', information_received_at='2026-10-01 00:30+05:30'")
+    due = one(db, "SELECT due_on FROM case_deadline WHERE kind='victim_progress_update'")[0]
+    assert due == dt.date(2026, 12, 30)   # 1 Oct IST + 90 days, not 30 Sep (UTC date)
+
+
+def test_evidence_hash_cannot_change_once_recorded(db):
+    st, io, fir = seed_case(db)
+    db.execute("""INSERT INTO evidence_item(fir_id,label,description,kind,seized_at,seizure_memo,sha256)
+                  VALUES (%s,'214/E-12','Phone','electronic',now(),'N-02',%s)""", (fir, "a" * 64))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE evidence_item SET sha256=%s", ("b" * 64,))
+    db.execute("UPDATE evidence_item SET description='Phone (black)'")   # other fields may still be corrected

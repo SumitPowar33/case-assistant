@@ -84,8 +84,24 @@ class RecordsApiTest {
         send("/notices/" + id + "/replies", "{\"receivedAt\":\"2026-10-10T10:00:00Z\",\"channel\":\"email\",\"checksJson\":\"[{\\\"item\\\":\\\"statement\\\",\\\"present\\\":true},{\\\"item\\\":\\\"Part B certificate\\\",\\\"present\\\":false}]\"}", 201);
         mvc.perform(get("/api/firs/" + fir + "/notices")).andExpect(jsonPath("$[0].status").value("reply_incomplete"))
                 .andExpect(jsonPath("$[0].replies").value(1));
-        send("/notices/" + id + "/replies", "{\"receivedAt\":\"2026-10-11T10:00:00Z\",\"channel\":\"post\",\"checksJson\":\"[{\\\"item\\\":\\\"statement\\\",\\\"present\\\":true}]\"}", 201);
+        send("/notices/" + id + "/replies", "{\"receivedAt\":\"2026-10-11T10:00:00Z\",\"channel\":\"post\",\"checksJson\":\"[{\\\"item\\\":\\\"Part B certificate\\\",\\\"present\\\":true}]\"}", 201); // brings only the missing item
         mvc.perform(get("/api/firs/" + fir + "/notices")).andExpect(jsonPath("$[0].status").value("complete"));
         send("/notices/" + UUID.randomUUID() + "/replies", "{\"receivedAt\":\"2026-10-11T10:00:00Z\",\"channel\":\"post\"}", 404);
+    }
+
+    @Test
+    void emptyOrPartialChecksNeverCloseANotice() throws Exception {
+        String n = "{\"kind\":\"BNSS_94\",\"addressee\":\"Fictional Telecom Nodal Officer\",\"itemsRequested\":[\"CDR\",\"Part A certificate\"],"
+                + "\"body\":\"Please produce.\",\"signedBy\":\"" + io + "\",\"issuedAt\":\"2026-10-05T10:00:00Z\",\"status\":\"%s\"}";
+        send("/notices", n.formatted("complete"), 400); // a notice cannot be created already complete
+        String id = idOf(send("/notices", n.formatted("sent"), 201));
+        String reply = "{\"receivedAt\":\"2026-10-10T10:00:00Z\",\"channel\":\"email\"%s}";
+        send("/notices/" + id + "/replies", reply.formatted(""), 201);
+        mvc.perform(get("/api/firs/" + fir + "/notices")).andExpect(jsonPath("$[0].status").value("reply_incomplete"));
+        // every ticked check is present, but the Part A certificate was never checked
+        send("/notices/" + id + "/replies", reply.formatted(",\"checksJson\":\"[{\\\"item\\\":\\\"CDR\\\",\\\"present\\\":true}]\""), 201);
+        mvc.perform(get("/api/firs/" + fir + "/notices")).andExpect(jsonPath("$[0].status").value("reply_incomplete"));
+        send("/notices/" + id + "/replies", reply.formatted(",\"checksJson\":\"{\\\"present\\\":true}\""), 400); // not a list
+        mvc.perform(get("/api/firs/" + fir + "/notices")).andExpect(jsonPath("$[0].replies").value(2));
     }
 }
