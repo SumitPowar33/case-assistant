@@ -15,7 +15,7 @@ class MigrationTest {
 
     @Test
     void flywayAppliesTheCoreSchema() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("7");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("8");
         assertThat(db.sql("select count(*) from fir").query(Long.class).single()).isGreaterThanOrEqualTo(0);
     }
 }

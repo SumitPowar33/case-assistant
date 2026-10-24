@@ -32,6 +32,8 @@ class ReadinessController {
 
     record HolderMark(@NotBlank @Size(min = 5, max = 500) String basis) {}
 
+    record Withdrawal(@NotBlank @Size(min = 10, max = 2000) String reason) {}
+
     record Acceptance(@NotBlank String gapKey, @NotBlank @Size(min = 10, max = 2000) String reason) {}
 
     static final String CERTIFICATE_RULE = "electronic_record_certificate";
@@ -108,6 +110,26 @@ class ReadinessController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", id));
     }
 
+    /** The readiness records that can be withdrawn, by the path segment used in the API. */
+    private static final Map<String, String> WITHDRAWABLE = Map.of(
+            "links", "ingredient_evidence", "accused-links", "accused_link", "overrides", "readiness_override");
+
+    /** Withdraws a wrong link or an accepted gap. The row stays, with who withdrew it, when and why. */
+    @PostMapping("/api/firs/{firId}/readiness/{kind}/{id}/withdraw")
+    ResponseEntity<Void> withdraw(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @PathVariable String kind,
+                                  @PathVariable UUID id, @Valid @RequestBody Withdrawal w) {
+        String table = WITHDRAWABLE.get(kind);
+        if (table == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if (w.reason.trim().length() < 10) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Give a reason of at least 10 characters.");
+        UUID user = CaseTeam.user(jwt);
+        team.requireTeam(user, firId);
+        int n = db.sql("update " + table + " set withdrawn_at = now(), withdrawn_by = ?, withdrawn_reason = ? "
+                        + "where id = ? and fir_id = ? and withdrawn_at is null")
+                .params(user, w.reason.trim(), id, firId).update();
+        if (n == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Nothing to withdraw (not in this case, or already withdrawn).");
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/api/firs/{firId}/readiness/overrides")
     @Transactional
     ResponseEntity<Map<String, UUID>> override(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody Acceptance o) {
@@ -152,14 +174,14 @@ class ReadinessController {
         var pb = pbOpt.get();
         List<String> sections = sections(firId);
         var links = db.sql("""
-                select l.charge_id, l.ingredient_id, e.id, e.label, e.kind, l.note, r.court_ready
+                select l.id as link_id, l.charge_id, l.ingredient_id, e.id, e.label, e.kind, l.note, r.court_ready
                 from ingredient_evidence l join evidence_item e on e.id = l.evidence_item_id
                 left join electronic_item_readiness r on r.id = e.id
-                where l.fir_id = ? order by e.label""").param(firId).query().listOfRows();
+                where l.fir_id = ? and l.withdrawn_at is null order by e.label""").param(firId).query().listOfRows();
         var overrides = new HashMap<String, Map<String, Object>>();
         db.sql("""
-                select o.gap_key, o.reason, o.decided_at, u.full_name as decided_by
-                from readiness_override o join app_user u on u.id = o.decided_by where o.fir_id = ?""")
+                select o.id, o.gap_key, o.reason, o.decided_at, u.full_name as decided_by
+                from readiness_override o join app_user u on u.id = o.decided_by where o.fir_id = ? and o.withdrawn_at is null""")
                 .param(firId).query().listOfRows().forEach(r -> overrides.put((String) r.get("gap_key"), r));
 
         var charges = new ArrayList<Map<String, Object>>();
@@ -183,10 +205,10 @@ class ReadinessController {
         if (secondLink.isPresent()) {
             var accepted = secondLink.get().requiresAny();
             var personLinks = db.sql("""
-                    select l.person_id, l.link_type, e.id, e.label, e.kind, l.note, r.court_ready
+                    select l.id as link_id, l.person_id, l.link_type, e.id, e.label, e.kind, l.note, r.court_ready
                     from accused_link l join evidence_item e on e.id = l.evidence_item_id
                     left join electronic_item_readiness r on r.id = e.id
-                    where l.fir_id = ? order by l.link_type, e.label""").param(firId).query().listOfRows();
+                    where l.fir_id = ? and l.withdrawn_at is null order by l.link_type, e.label""").param(firId).query().listOfRows();
             for (var h : db.sql("""
                     select a.person_id, p.label, p.display_name, a.basis from account_holder a join person_public p on p.id = a.person_id
                     where a.fir_id = ? order by p.label, p.display_name""").param(firId).query().listOfRows()) {
@@ -222,6 +244,22 @@ class ReadinessController {
         out.put("sectionsNotInPlaybook", sections.stream().filter(s -> !covered.contains(s)).toList());
         out.put("gaps", gaps);
         out.put("openGaps", gaps.stream().filter(g -> g.get("override") == null).count());
+        out.put("withdrawn", db.sql("""
+                select 'evidence link' as what, e.label || ' for ' || w.charge_id || '/' || w.ingredient_id as detail,
+                       w.withdrawn_reason as reason, u.full_name as withdrawn_by, w.withdrawn_at
+                from ingredient_evidence w join evidence_item e on e.id = w.evidence_item_id join app_user u on u.id = w.withdrawn_by
+                where w.fir_id = ? and w.withdrawn_at is not null
+                union all
+                select 'accused link', e.label || ' as ' || w.link_type || ' for ' || coalesce(p.label, p.display_name, ''),
+                       w.withdrawn_reason, u.full_name, w.withdrawn_at
+                from accused_link w join evidence_item e on e.id = w.evidence_item_id join person_public p on p.id = w.person_id
+                     join app_user u on u.id = w.withdrawn_by
+                where w.fir_id = ? and w.withdrawn_at is not null
+                union all
+                select 'accepted gap', w.gap_key || ': ' || w.reason, w.withdrawn_reason, u.full_name, w.withdrawn_at
+                from readiness_override w join app_user u on u.id = w.withdrawn_by
+                where w.fir_id = ? and w.withdrawn_at is not null
+                order by withdrawn_at""").params(firId, firId, firId).query().listOfRows());
         out.put("checksToConfirm", pb.rules().stream().filter(r -> !r.id().equals(CERTIFICATE_RULE) && !r.id().equals(SECOND_LINK_RULE)).toList());
         return out;
     }
@@ -230,6 +268,7 @@ class ReadinessController {
     private static Map<String, Object> evidence(Map<String, Object> l, Map<String, String> notReady) {
         var e = new LinkedHashMap<String, Object>();
         e.put("id", l.get("id"));
+        e.put("linkId", l.get("link_id"));
         e.put("label", l.get("label"));
         e.put("kind", l.get("kind"));
         e.put("note", l.get("note"));
@@ -246,7 +285,8 @@ class ReadinessController {
         g.put("severity", severity);
         g.put("text", text);
         var o = overrides.get(key);
-        g.put("override", o == null ? null : Map.of("reason", o.get("reason"), "decidedBy", o.get("decided_by"), "decidedAt", o.get("decided_at")));
+        g.put("override", o == null ? null
+                : Map.of("id", o.get("id"), "reason", o.get("reason"), "decidedBy", o.get("decided_by"), "decidedAt", o.get("decided_at")));
         return g;
     }
 

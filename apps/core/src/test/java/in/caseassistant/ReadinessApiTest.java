@@ -187,4 +187,43 @@ class ReadinessApiTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> db.sql("update account_holder set basis = 'changed later'").update())
                 .hasMessageContaining("kept as written");
     }
+
+    @Test
+    void aWrongLinkOrAnAcceptedGapIsWithdrawnWithAReasonAndStaysOnRecord() throws Exception {
+        call(put("/api/firs/" + fir + "/playbook"), io, "{\"playbookId\":\"cyber-fraud\"}");
+        String linkId = com.jayway.jsonpath.JsonPath.read(call(post("/api/firs/" + fir + "/readiness/links"), io, link("cheating", "deception", statement))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        report().andExpect(jsonPath("$.openGaps").value(4)).andExpect(jsonPath("$.charges[0].ingredients[0].evidence[0].linkId").value(linkId));
+        String url = "/api/firs/" + fir + "/readiness/links/" + linkId + "/withdraw";
+        String why = "{\"reason\":\"%s\"}";
+        call(post(url), io, why.formatted("too short")).andExpect(status().isBadRequest());
+        call(post(url), io, why.formatted("          x")).andExpect(status().isBadRequest());
+        call(post(url), clerk, why.formatted("Linked to the wrong ingredient")).andExpect(status().isForbidden());
+        call(post("/api/firs/" + fir + "/readiness/people/" + linkId + "/withdraw"), io, why.formatted("Linked to the wrong ingredient")).andExpect(status().isNotFound());
+        call(post(url), io, why.formatted("Linked to the wrong ingredient")).andExpect(status().isNoContent());
+        call(post(url), io, why.formatted("Linked to the wrong ingredient")).andExpect(status().isNotFound()); // already withdrawn
+        report().andExpect(jsonPath("$.openGaps").value(5))
+                .andExpect(jsonPath("$.charges[0].ingredients[0].evidence").isEmpty())
+                .andExpect(jsonPath("$.withdrawn[0].what").value("evidence link"))
+                .andExpect(jsonPath("$.withdrawn[0].reason").value("Linked to the wrong ingredient"))
+                .andExpect(jsonPath("$.withdrawn[0].withdrawn_by").value("SI Fictional Kale"));
+        call(post("/api/firs/" + fir + "/readiness/links"), io, link("cheating", "deception", statement)).andExpect(status().isCreated()); // can be made anew
+
+        String key = "ingredient:personation/no_such_officer";
+        String accept = "{\"gapKey\":\"" + key + "\",\"reason\":\"Agency letter pending, prosecutor told\"}";
+        String overrideId = com.jayway.jsonpath.JsonPath.read(call(post("/api/firs/" + fir + "/readiness/overrides"), io, accept)
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        report().andExpect(jsonPath("$.gaps[?(@.key=='" + key + "')].override.id").value(overrideId));
+        call(post("/api/firs/" + fir + "/readiness/overrides/" + overrideId + "/withdraw"), io, why.formatted("Agency replied; the letter is now on file"))
+                .andExpect(status().isNoContent());
+        report().andExpect(jsonPath("$.gaps[?(@.key=='" + key + "')].override").value(Matchers.contains((Object) null)))
+                .andExpect(jsonPath("$.withdrawn[1].what").value("accepted gap"));
+        call(post("/api/firs/" + fir + "/readiness/overrides"), io, accept).andExpect(status().isCreated()); // can be accepted again
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> db.sql("delete from ingredient_evidence").update()).hasMessageContaining("kept as written");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> db.sql("update ingredient_evidence set note = 'changed', withdrawn_at = now(), "
+                + "withdrawn_by = linked_by, withdrawn_reason = 'a long enough reason'").update()).hasMessageContaining("kept as written");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> db.sql("update readiness_override set withdrawn_reason = 'rewritten later on' "
+                + "where withdrawn_at is not null").update()).hasMessageContaining("already withdrawn");
+    }
 }
