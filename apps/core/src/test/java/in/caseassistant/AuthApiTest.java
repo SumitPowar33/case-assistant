@@ -107,4 +107,67 @@ class AuthApiTest {
         auth.ensureAdmin("", "");
         assertThat(db.sql("select count(*) from app_user").query(Long.class).single()).isEqualTo(1);
     }
+
+    @Test
+    void fiveWrongPasswordsLockTheUsernameForFifteenMinutesKnownOrNot() throws Exception {
+        for (int i = 0; i < 5; i++) login("admin.one", "not-the-password", 401);
+        var locked = mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(java.util.Map.of("username", "ADMIN.ONE", "password", ADMIN_PW))))
+                .andExpect(status().isTooManyRequests()).andReturn().getResponse();
+        assertThat(locked.getContentAsString()).contains("Try again after").contains("IST");
+        assertThat(Integer.parseInt(locked.getHeader("Retry-After"))).isBetween(1, 900);
+        // unknown usernames lock the same way, so the lock does not show which accounts exist
+        for (int i = 0; i < 5; i++) login("nobody.here", "guess-" + i, 401);
+        login("nobody.here", "guess-6", 429);
+        // attempts made while locked do not count; older wrong passwords have expired
+        db.sql("truncate sign_in_attempt").update();
+        for (int i = 0; i < 5; i++)
+            db.sql("insert into sign_in_attempt (username_tried, outcome, at) values ('admin.one','wrong_password', now() - interval '20 minutes')").update();
+        db.sql("insert into sign_in_attempt (username_tried, outcome) values ('admin.one','locked')").update();
+        login("admin.one", ADMIN_PW, 200);
+    }
+
+    @Test
+    void aSuccessfulSignInClearsEarlierWrongPasswords() throws Exception {
+        for (int i = 0; i < 4; i++) login("admin.one", "not-the-password", 401);
+        login("admin.one", ADMIN_PW, 200);
+        for (int i = 0; i < 4; i++) login("admin.one", "not-the-password", 401);
+        login("admin.one", ADMIN_PW, 200);
+    }
+
+    @Test
+    void everyAttemptIsLoggedWithoutThePasswordAndOnlyTheAdminReadsTheLog() throws Exception {
+        login("admin.one", "not-the-password", 401);
+        String admin = "Bearer " + json.readTree(login("admin.one", ADMIN_PW, 200)).get("token").asText();
+        String log = mvc.perform(get("/api/sign-ins").param("username", " Admin.One ").header("Authorization", admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[*].outcome").value(org.hamcrest.Matchers.contains("ok", "wrong_password")))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(log).doesNotContain("not-the-password").doesNotContain(ADMIN_PW);
+        UUID io = db.sql("insert into app_user (full_name, rank, role) values ('SI Fictional','SI','io') returning id").query(UUID.class).single();
+        mvc.perform(get("/api/sign-ins").header("Authorization", TestAuth.bearer(tokens, io))).andExpect(status().isForbidden());
+        assertThatThrownBy(() -> db.sql("delete from sign_in_attempt").update()).hasMessageContaining("kept as written");
+    }
+
+    @Test
+    void changingThePasswordEndsEveryOlderToken() throws Exception {
+        String old = "Bearer " + json.readTree(login("admin.one", ADMIN_PW, 200)).get("token").asText();
+        String change = "{\"currentPassword\":\"%s\",\"newPassword\":\"%s\"}";
+        String newPw = "fictional-admin-pass-2";
+        mvc.perform(post("/api/me/password").header("Authorization", old).contentType(MediaType.APPLICATION_JSON)
+                .content(change.formatted("wrong-current-pass", newPw))).andExpect(status().isForbidden());
+        mvc.perform(post("/api/me/password").header("Authorization", old).contentType(MediaType.APPLICATION_JSON)
+                .content(change.formatted(ADMIN_PW, "short"))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/me/password").header("Authorization", old).contentType(MediaType.APPLICATION_JSON)
+                .content(change.formatted(ADMIN_PW, ADMIN_PW))).andExpect(status().isBadRequest());
+        String fresh = "Bearer " + json.readTree(mvc.perform(post("/api/me/password").header("Authorization", old)
+                .contentType(MediaType.APPLICATION_JSON).content(change.formatted(ADMIN_PW, newPw)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).get("token").asText();
+        mvc.perform(get("/api/me").header("Authorization", old)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/me").header("Authorization", fresh)).andExpect(status().isOk());
+        login("admin.one", ADMIN_PW, 401);
+        String again = "Bearer " + json.readTree(login("admin.one", newPw, 200)).get("token").asText();
+        mvc.perform(get("/api/me").header("Authorization", again)).andExpect(status().isOk());
+        assertThat(db.sql("select outcome from sign_in_attempt order by at").query(String.class).list())
+                .containsExactly("ok", "wrong_current_password", "password_changed", "wrong_password", "ok");
+    }
 }
