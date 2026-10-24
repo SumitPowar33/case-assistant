@@ -42,7 +42,9 @@ export default function Readiness({ firId }: { firId: string }) {
   async function act(e: FormEvent<HTMLFormElement>, run: (form: FormData) => Promise<unknown>) {
     e.preventDefault()
     setError('')
-    try { await run(new FormData(e.currentTarget)); setVersion((v) => v + 1) } catch (err) { setError((err as Error).message) }
+    const form = e.currentTarget
+    // cleared after success, so a basis or reason typed for one item is never sent again for the next
+    try { await run(new FormData(form)); form.reset(); setVersion((v) => v + 1) } catch (err) { setError((err as Error).message) }
   }
 
   if (!report) return <section><h2>Readiness check</h2>{error ? <p role="alert">{error}</p> : <p>Loading…</p>}</section>

@@ -77,6 +77,7 @@ test('account holders: shows each holder and their independent links; marks a ho
   fireEvent.click(screen.getByRole('button', { name: 'Mark as account holder' }))
   await vi.waitFor(() => expect(calls.find((c) => c.method === 'PUT')).toBeTruthy())
   expect(calls.find((c) => c.method === 'PUT')).toMatchObject({ url: '/api/firs/f1/people/p2/account-holder', body: { basis: 'Bank reply N-4' } })
+  await vi.waitFor(() => expect((screen.getByLabelText(/Basis/) as HTMLInputElement).value).toBe(''))
 
   fireEvent.change(screen.getByLabelText('Kind of link for A1 Fictional One'), { target: { value: 'kyc_identification' } })
   fireEvent.click(screen.getByRole('button', { name: 'Add link' }))
