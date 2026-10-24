@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { get } from './api'
 
-export function useLoad<T>(path: string) {
+/** Loads path; changing version loads it again (after a save). */
+export function useLoad<T>(path: string, version = 0) {
   const [state, setState] = useState<{ data?: T; error?: string }>({})
   useEffect(() => {
     let live = true
@@ -10,6 +11,6 @@ export function useLoad<T>(path: string) {
       (e: Error) => live && setState({ error: e.message }),
     )
     return () => { live = false }
-  }, [path])
+  }, [path, version])
   return state
 }
