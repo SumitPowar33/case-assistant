@@ -12,6 +12,8 @@ const routes: Record<string, unknown> = {
   '/api/firs/f1': fir,
   '/api/firs/f1/people': [{ id: 'p1', role: 'victim', label: 'V1', display_name: 'Victim 1', age_years: 30, identity_masked: true }],
   '/api/firs/f1/deadlines': [{ kind: 'chargesheet_60', due_on: '2026-11-10', basis: 'BNSS 187(3)' }],
+  '/api/firs/f1/readiness': { playbook: null, charges: [], gaps: [], openGaps: 0 },
+  '/api/playbooks': [],
   '/api/firs/f1/evidence': [{ id: 'e1', label: 'Bank statement', kind: 'electronic', sha256: null, court_ready: false }],
 }
 function mockApi() {

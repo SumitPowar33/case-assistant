@@ -1,5 +1,6 @@
 import { useLoad } from './useLoad'
 import { fmt } from './FirList'
+import Readiness from './Readiness'
 
 type Fir = { id: string; fir_year: number; fir_no: number; registered_at: string; is_zero_fir: boolean; contents_original: string | null; contents_withheld: boolean; action_taken: string; sections: { act: string; section: string }[] }
 type Person = { id: string; role: string; label: string; display_name: string; age_years: number | null; identity_masked: boolean }
@@ -39,9 +40,10 @@ export default function FirDetail({ id }: { id: string }) {
       </Section>
       <Section<Evidence> title="Evidence" path={`/firs/${id}/evidence`}>
         {(rows) => <ul>{rows.map((e) => (
-          <li key={e.id}>{e.label} ({e.kind}) · {e.court_ready ? 'court-ready' : 'not court-ready yet'}</li>
+          <li key={e.id}>{e.label} ({e.kind}){e.kind === 'electronic' && (e.court_ready ? ' · court-ready' : ' · not court-ready yet (BSA 63(4))')}</li>
         ))}</ul>}
       </Section>
+      <Readiness firId={id} />
     </>
   )
 }

@@ -17,3 +17,4 @@ blockquote { margin: 1rem 0; padding-left: 1rem; border-left: 4px solid #12355b;
 .login input, .login button { font: inherit; padding: .4rem; }
 .who { margin-left: auto; }
 .who button { margin-left: .5rem; }
+.inline { display: inline; margin-left: .5rem; }

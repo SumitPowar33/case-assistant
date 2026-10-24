@@ -47,6 +47,16 @@ export async function get<T>(path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// Writes to the core app. The server's own message (e.g. "Only the case team can do this.") is shown to the user.
+export async function send<T>(path: string, method: 'POST' | 'PUT', body: unknown): Promise<T | null> {
+  const res = await call(`/api${path}`, { method, body })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { message?: string; error?: string }
+    throw new Error(err.message || err.error || `The server answered ${res.status}`)
+  }
+  return res.status === 204 ? null : res.json() as Promise<T>
+}
+
 // The AI gateway (services/ai-gateway) is served under /ai.
 export async function ai<T>(path: string, init?: { method: string; body: unknown }): Promise<T> {
   const res = await call(`/ai${path}`, init)
