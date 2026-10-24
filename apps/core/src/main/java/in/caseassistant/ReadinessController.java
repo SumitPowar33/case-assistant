@@ -87,9 +87,9 @@ class ReadinessController {
                                     @Valid @RequestBody HolderMark m) {
         UUID user = CaseTeam.user(jwt);
         team.requireTeam(user, firId);
-        int added = db.sql("insert into account_holder (person_id, fir_id, basis, marked_by) values (?,?,?,?) on conflict (person_id) do nothing")
-                .params(personId, firId, m.basis.trim(), user).update();
-        return ResponseEntity.status(added == 1 ? HttpStatus.CREATED : HttpStatus.OK).build();
+        db.sql("insert into account_holder (person_id, fir_id, basis, marked_by) values (?,?,?,?) on conflict (person_id) do nothing")
+                .params(personId, firId, m.basis.trim(), user).update(); // marked once; the first basis is kept
+        return ResponseEntity.noContent().build();
     }
 
     /** Links evidence to one accused as an independent link of a kind the playbook's second-link rule accepts. */

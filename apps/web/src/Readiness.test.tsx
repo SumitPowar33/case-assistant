@@ -22,7 +22,9 @@ function mock(answer: (url: string, init?: RequestInit) => { status: number; bod
     calls.push({ url, method: init?.method ?? 'GET', body: init?.body && JSON.parse(init.body as string) })
     const special = answer(url, init)
     if (special) return { ok: special.status < 300, status: special.status, json: async () => special.body }
-    const body = url.endsWith('/readiness') ? report : url === '/api/playbooks' ? [] : url.endsWith('/evidence') ? [{ id: 'e1', label: 'S-01', kind: 'document' }] : undefined
+    const body = url.endsWith('/readiness') ? report : url === '/api/playbooks' ? [] : url.endsWith('/evidence') ? [{ id: 'e1', label: 'S-01', kind: 'document' }]
+      : url.endsWith('/people') ? [{ id: 'p1', role: 'accused', label: 'A1', display_name: 'Fictional One' }, { id: 'p2', role: 'accused', label: 'A2', display_name: 'Fictional Two' },
+        { id: 'p3', role: 'victim', label: 'V1', display_name: 'Victim V1' }] : undefined
     return { ok: !!body, status: body ? 200 : 404, json: async () => body }
   }))
   return calls
@@ -57,4 +59,27 @@ test('linking evidence posts the chosen item and reloads the report', async () =
   await screen.findByText(/1 open gap\./)
   expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ chargeId: 'cheating', ingredientId: 'delivery', evidenceItemId: 'e1' })
   await vi.waitFor(() => expect(calls.filter((c) => c.url.endsWith('/readiness')).length).toBe(2))
+})
+
+test('account holders: shows each holder and their independent links; marks a holder and adds a link', async () => {
+  const withHolders = { ...report,
+    secondLinkRule: { text: 'Money received in an account is not enough.', requiresAny: ['sim_or_device_link', 'kyc_identification'] },
+    accountHolders: [{ personId: 'p1', name: 'A1 Fictional One', basis: 'Bank reply N-3', links: [] }] }
+  const calls = mock((url, init) => url.endsWith('/readiness') ? { status: 200, body: withHolders }
+    : init?.method && init.method !== 'GET' ? { status: url.endsWith('/account-holder') ? 204 : 201, body: {} } : undefined)
+  render(<Readiness firId="f1" />)
+  expect(await screen.findByText('no independent link yet')).toBeTruthy()
+  expect(screen.getByText('Money received in an account is not enough.')).toBeTruthy()
+  // only accused not yet marked are offered; never the victim
+  const options = [...(screen.getByLabelText('Accused') as HTMLSelectElement).options].map((o) => o.textContent)
+  expect(options).toEqual(['A2 Fictional Two'])
+  fireEvent.change(screen.getByLabelText(/Basis/), { target: { value: 'Bank reply N-4' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Mark as account holder' }))
+  await vi.waitFor(() => expect(calls.find((c) => c.method === 'PUT')).toBeTruthy())
+  expect(calls.find((c) => c.method === 'PUT')).toMatchObject({ url: '/api/firs/f1/people/p2/account-holder', body: { basis: 'Bank reply N-4' } })
+
+  fireEvent.change(screen.getByLabelText('Kind of link for A1 Fictional One'), { target: { value: 'kyc_identification' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Add link' }))
+  await vi.waitFor(() => expect(calls.find((c) => c.method === 'POST')).toBeTruthy())
+  expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ personId: 'p1', linkType: 'kyc_identification', evidenceItemId: 'e1' })
 })

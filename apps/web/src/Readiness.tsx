@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { get, send } from './api'
 
-type Linked = { id: string; label: string; kind: string; courtReady?: boolean }
+type Linked = { id: string; label: string; kind: string; courtReady?: boolean; linkType?: string }
+type Holder = { personId: string; name: string; basis: string; links: Linked[] }
 type Ingredient = { id: string; text: string; suggestedProof: string[]; evidence: Linked[] }
 type Charge = { id: string; law: string; label: string; ingredients: Ingredient[] }
 type Gap = { key: string; severity: string; text: string; override: { reason: string; decidedBy: string; decidedAt: string } | null }
@@ -9,9 +10,14 @@ type Report = {
   playbook: { id: string; version: string; status: string; reviewNote: string } | null
   charges: Charge[]; gaps: Gap[]; openGaps: number; sectionsNotInPlaybook?: string[]
   checksToConfirm?: { id: string; severity: string; text: string }[]
+  secondLinkRule?: { text: string; requiresAny: string[] } | null; accountHolders?: Holder[]
 }
 type Playbook = { id: string; version: string; status: string; appliesTo: string }
 type Evidence = { id: string; label: string; kind: string }
+type Person = { id: string; role: string; label: string | null; display_name: string | null }
+
+const words = (id: string) => id.replace(/_/g, ' ')
+const shown = (e: Linked) => `${e.label}${e.kind === 'electronic' ? (e.courtReady ? ' (63(4) complete)' : ' (63(4) certificate missing)') : ''}`
 
 /**
  * Charge ingredients -> linked evidence -> gaps. Lists facts about the file only; it never scores the case or anyone in it.
@@ -21,13 +27,15 @@ export default function Readiness({ firId }: { firId: string }) {
   const [report, setReport] = useState<Report>()
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
   const [evidence, setEvidence] = useState<Evidence[]>([])
+  const [people, setPeople] = useState<Person[]>([])
   const [error, setError] = useState('')
   const [version, setVersion] = useState(0)
 
   useEffect(() => {
     let live = true
-    Promise.all([get<Report>(`/firs/${firId}/readiness`), get<Playbook[]>('/playbooks'), get<Evidence[]>(`/firs/${firId}/evidence`)])
-      .then(([r, p, e]) => { if (live) { setReport(r); setPlaybooks(p); setEvidence(e) } }, (e: Error) => live && setError(e.message))
+    Promise.all([get<Report>(`/firs/${firId}/readiness`), get<Playbook[]>('/playbooks'), get<Evidence[]>(`/firs/${firId}/evidence`),
+      get<Person[]>(`/firs/${firId}/people`)])
+      .then(([r, p, e, pp]) => { if (live) { setReport(r); setPlaybooks(p); setEvidence(e); setPeople(pp) } }, (e: Error) => live && setError(e.message))
     return () => { live = false }
   }, [firId, version])
 
@@ -59,7 +67,7 @@ export default function Readiness({ firId }: { firId: string }) {
               <ul>{c.ingredients.map((i) => (
                 <li key={i.id}>{i.text}:{' '}
                   {i.evidence.length
-                    ? i.evidence.map((e) => `${e.label}${e.kind === 'electronic' ? (e.courtReady ? ' (63(4) complete)' : ' (63(4) certificate missing)') : ''}`).join(', ')
+                    ? i.evidence.map(shown).join(', ')
                     : <em>nothing linked (for example: {i.suggestedProof.join(', ').replace(/_/g, ' ')})</em>}
                   {evidence.length > 0 && (
                     <form className="inline" onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/readiness/links`, 'POST',
@@ -73,6 +81,8 @@ export default function Readiness({ firId }: { firId: string }) {
               ))}</ul>
             </div>
           ))}
+          {report.secondLinkRule && <SecondLinks firId={firId} rule={report.secondLinkRule} holders={report.accountHolders ?? []}
+            accused={people.filter((p) => p.role === 'accused')} evidence={evidence} act={act} />}
           {!!report.sectionsNotInPlaybook?.length && <p>Not checked by this playbook: {report.sectionsNotInPlaybook.join(', ')}.</p>}
           <h3>Gaps</h3>
           {report.gaps.length === 0 ? <p>No gaps found.</p> : <ul>{report.gaps.map((g) => (
@@ -92,5 +102,45 @@ export default function Readiness({ firId }: { firId: string }) {
         </>
       )}
     </section>
+  )
+}
+
+type Act = (e: FormEvent<HTMLFormElement>, run: (form: FormData) => Promise<unknown>) => void
+
+/** Account-holder accused and the independent links recorded for each (the playbook's second-link rule). */
+function SecondLinks({ firId, rule, holders, accused, evidence, act }: {
+  firId: string; rule: { text: string; requiresAny: string[] }; holders: Holder[]; accused: Person[]; evidence: Evidence[]; act: Act
+}) {
+  const unmarked = accused.filter((p) => !holders.some((h) => h.personId === p.id))
+  return (
+    <div>
+      <h3>Account holders</h3>
+      <p>{rule.text}</p>
+      {holders.length === 0 ? <p>No accused is marked as an account holder.</p> : <ul>{holders.map((h) => (
+        <li key={h.personId}>{h.name} <small>({h.basis})</small>:{' '}
+          {h.links.length ? h.links.map((l) => `${words(l.linkType ?? '')}: ${shown(l)}`).join(', ') : <em>no independent link yet</em>}
+          {evidence.length > 0 && (
+            <form className="inline" onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/readiness/accused-links`, 'POST',
+              { personId: h.personId, linkType: f.get('type'), evidenceItemId: f.get('item') }))}>
+              <label><span className="visually-hidden">Kind of link for {h.name}</span>
+                <select name="type">{rule.requiresAny.map((t) => <option key={t} value={t}>{words(t)}</option>)}</select>
+              </label>{' '}
+              <label><span className="visually-hidden">Evidence for {h.name}</span>
+                <select name="item">{evidence.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}</select>
+              </label>{' '}<button type="submit">Add link</button>
+            </form>
+          )}
+        </li>
+      ))}</ul>}
+      {unmarked.length > 0 && (
+        <form onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/people/${f.get('person')}/account-holder`, 'PUT', { basis: f.get('basis') }))}>
+          <label>Accused{' '}
+            <select name="person">{unmarked.map((p) => <option key={p.id} value={p.id}>{[p.label, p.display_name].filter(Boolean).join(' ')}</option>)}</select>
+          </label>{' '}
+          <label>Basis (which record shows the account){' '}<input name="basis" minLength={5} required /></label>{' '}
+          <button type="submit">Mark as account holder</button>
+        </form>
+      )}
+    </div>
   )
 }

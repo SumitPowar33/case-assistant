@@ -155,12 +155,13 @@ class ReadinessApiTest {
         call(put(holder.formatted(a1)), clerk, basis).andExpect(status().isForbidden());
         call(put(holder.formatted(a1)), io, "{\"basis\":\"x\"}").andExpect(status().isBadRequest());
         call(put(holder.formatted(w1)), io, basis).andExpect(status().isBadRequest()); // only an accused
-        call(put(holder.formatted(a1)), io, basis).andExpect(status().isCreated());
-        call(put(holder.formatted(a1)), io, basis).andExpect(status().isOk()); // already marked, nothing changes
-        call(put(holder.formatted(a2)), io, basis).andExpect(status().isCreated());
+        call(put(holder.formatted(a1)), io, basis).andExpect(status().isNoContent());
+        call(put(holder.formatted(a1)), io, "{\"basis\":\"A later, different basis\"}").andExpect(status().isNoContent()); // already marked: the first basis stays
+        call(put(holder.formatted(a2)), io, basis).andExpect(status().isNoContent());
         report().andExpect(jsonPath("$.openGaps").value(7)) // 5 ingredients + 2 account holders
                 .andExpect(jsonPath("$.secondLinkRule.requiresAny").value(Matchers.hasItem("kyc_identification")))
                 .andExpect(jsonPath("$.accountHolders[*].name").value(Matchers.contains("A1 Fictional A1", "A2 Fictional A2")))
+                .andExpect(jsonPath("$.accountHolders[0].basis").value("Bank reply to notice N-3: receiving account"))
                 .andExpect(jsonPath("$.gaps[?(@.key=='second-link:" + a1 + "')].severity").value("critical"))
                 .andExpect(jsonPath("$..score").doesNotExist());
 
