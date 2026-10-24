@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import uuid
 
@@ -19,6 +20,8 @@ from .auth import TokenError, verify
 from .providers import ClaudeProvider, FakeProvider, GeminiProvider, Provider, ProviderError
 from .store import DEFAULT_MODELS, FEATURES, PROVIDERS, Store
 
+# Change SAFETY_VERSION whenever SAFETY_SYSTEM changes, so the audit log shows which rules a draft was made under.
+SAFETY_VERSION = "safety-1"
 SAFETY_SYSTEM = (
     "You assist an Indian police investigating officer. Use only the material given. "
     "If the material does not say something, say it is not in the documents; never guess. "
@@ -30,6 +33,8 @@ SAFETY_SYSTEM = (
 class GenerateIn(BaseModel):
     feature: str
     prompt: str = Field(min_length=1, max_length=60000)
+    # Which prompt template the caller used, e.g. "notice_draft/bnss94@1". Logged with every request.
+    prompt_version: str = Field(min_length=1, max_length=80, pattern=r"^[\w./@-]+$")
     system: str = ""
     case_ref: str | None = None
     provider: str | None = None  # officer override, if allowed
@@ -114,14 +119,17 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             model = body.model
         request_id = str(uuid.uuid4())
         system = SAFETY_SYSTEM + ("\n\n" + body.system if body.system else "")
+        # The text itself is not kept (it may name people); its hash proves later which exact text was sent.
+        versions = {"prompt_version": body.prompt_version, "safety_version": SAFETY_VERSION,
+                    "prompt_sha256": hashlib.sha256(f"{system}\n\n{body.prompt}".encode()).hexdigest()}
         try:
             out = providers[provider_name].complete(model=model, system=system, prompt=body.prompt, max_tokens=body.max_tokens)
         except ProviderError as e:
             store.log(u["sub"], "ai_error", body.feature, body.case_ref,
-                      {"request_id": request_id, "provider": provider_name, "model": model, "error": str(e)})
+                      {"request_id": request_id, "provider": provider_name, "model": model, **versions, "error": str(e)})
             raise HTTPException(502, str(e))
         store.log(u["sub"], "ai_request", body.feature, body.case_ref, {
-            "request_id": request_id, "provider": out.provider, "model": out.model,
+            "request_id": request_id, "provider": out.provider, "model": out.model, **versions,
             "prompt_chars": len(body.prompt), "output_chars": len(out.text),
             "input_tokens": out.input_tokens, "output_tokens": out.output_tokens})
         return {"request_id": request_id, "draft": out.text, "provider": out.provider, "model": out.model,
