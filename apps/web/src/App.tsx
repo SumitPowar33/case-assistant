@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import FirList from './FirList'
 import FirDetail from './FirDetail'
 import TypePage from './TypePage'
+import SettingsPage from './SettingsPage'
 import { LANGS, TypingContext, type TypingLang } from './typing'
 
 export default function App() {
@@ -17,7 +18,7 @@ export default function App() {
     <TypingContext.Provider value={{ lang, setLang }}>
       <header>
         <strong>Case Assistant</strong> <small>demo · fictional data only · the AI drafts, a person decides</small>
-        <nav aria-label="Main"><a href="#/">FIRs</a> <a href="#/type">Type</a></nav>
+        <nav aria-label="Main"><a href="#/">FIRs</a> <a href="#/type">Type</a> <a href="#/settings">AI settings</a></nav>
         <label>Typing language{' '}
           <select value={lang} onChange={(e) => setLang(e.target.value as TypingLang)}>
             <option value="en">English (no conversion)</option>
@@ -25,7 +26,7 @@ export default function App() {
           </select>
         </label>
       </header>
-      <main>{firId ? <FirDetail id={firId} /> : hash === '#/type' ? <TypePage /> : <FirList />}</main>
+      <main>{firId ? <FirDetail id={firId} /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : <FirList />}</main>
     </TypingContext.Provider>
   )
 }

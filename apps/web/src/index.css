@@ -11,3 +11,4 @@ blockquote { margin: 1rem 0; padding-left: 1rem; border-left: 4px solid #12355b;
 .suggestions { display: flex; flex-wrap: wrap; gap: .4rem; list-style: none; margin: 0; padding: 0; }
 .suggestions button { font: inherit; padding: .2rem .5rem; }
 .suggestions li:first-child button { font-weight: bold; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
