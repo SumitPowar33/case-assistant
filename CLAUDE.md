@@ -28,7 +28,9 @@ At the end of each session, note in PROGRESS.md anything you deliberately skippe
 ## Layout
 - `services/ai-gateway` – Python FastAPI. Claude + Gemini (+ offline `fake`) behind one API; per-feature provider settings; hash-chained audit log. Tests: `python -m pytest -q` in that folder.
 - `packages/xlit` – English-letters to Indian-script typing engine. Tests: `node packages/xlit/xlit.test.js`.
-- `apps/core` (to come) – Java 21 / Spring Boot main app.
+- `apps/core` – Java 21 / Spring Boot main app; Flyway migrations in `src/main/resources/db/migration`. Tests (need PostgreSQL): `mvn -f apps/core/pom.xml test` and `python -m pytest -q apps/core/db-tests`.
+- `apps/web` – React + TypeScript (Vite). Tests: `npm test` and `npm run build` in that folder.
+- `packs` – state packs and playbooks. Tests: `python -m pytest -q packs/tests`.
 - `docs/` – plan, progress, research.
 
 ## End of every session

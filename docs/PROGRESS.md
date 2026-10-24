@@ -4,6 +4,52 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST.
 
+## 24 Oct 2026, Weekly review (Saturday 21:05 session)
+Checked: every commit from the seed (c200043) to 2a14ea2. Schema and deadlines, victim masking, the custody log, all core APIs, the AI gateway (routing, admin lock, audit chain), the web pages, the playbook and the tests. All suites were green before any change.
+
+Fixed (each with tests)
+1. Deadline dates were taken in the database server's time zone (UTC). An FIR registered between 00:00 and 05:30 IST got every deadline one day early. Dates are now counted on the IST calendar day (`V2__review_fixes.sql`).
+2. Victim masking depended only on a hand-ticked box. A victim in an FIR under BNS 64-71, or under any POCSO section, was shown in full if the box was missed. Masking now also follows the sections, and covers the complainant too (often the victim or a parent).
+3. `GET /api/firs/{id}` returned the complaint text (which names the victim) to anyone. On protected cases the text is now withheld from everyone outside the case team (`contents_withheld: true`); the web page says so.
+4. The BNSS 193(2) two-month limit came from the same box. It now follows the sections the law lists (BNS 64-68, 70, 71; POCSO 4, 6, 8, 10). BNS 69 is masked but has no 193(2) limit. With no section recorded yet, the box still decides.
+5. An evidence item's SHA-256 could be changed after seizure. It is now fixed once recorded (database trigger).
+6. A notice reply with no checks marked the notice complete. Now a BNSS 94 notice is complete only when every requested item has been ticked present in some reply; a bad check list returns 400 and nothing is saved. A notice can no longer be created as `complete`.
+7. AI gateway: when the admin locked a feature, an officer could still swap the model. The lock now covers the model too. Decisions (accepted/edited/rejected) must now refer to a real AI request of the same feature.
+
+Still worried about
+- No login: anyone can create records, change AI settings and read the AI audit log. This is the biggest gap.
+- 63(4) certificates can still be edited after signing; a correction should be a new certificate. Readiness counts a non-SHA-256 certificate hash as "matching" without checking it.
+- The AI audit log cannot detect deletion of its newest rows, and fields are joined with "|" before hashing. Prompt version is not logged yet (the plan asks for it).
+- The 60/90-day deadline ignores bail/release and chargesheet filing; one deadline per case (earliest), not per accused.
+- Old IPC sections (e.g. 376) are not recognised for masking or the two-month limit.
+- Age and gender of a masked victim are still shown to everyone.
+
+## 24 Oct 2026, session 5 (weekend)
+Done
+- Weekly review and fixes above (migration V2, db tests 12 to 22, core tests 12 to 14, gateway tests extended).
+- Language tool (Next 1): `TypingField` in `apps/web` turns English letters into the chosen script while typing: space, Enter or punctuation puts in the top suggestion, a click picks another, Esc keeps English. Typing language picker in the header (English + 10 languages); "Type" page with "Convert all". `packages/xlit` is now an ES module with a `.d.ts` so the web app imports it directly (no copy). Checked in a real browser.
+- AI settings screen (Next 2): `#/settings` lists each feature with provider, model and the officer-may-switch lock, saves through the AI gateway and shows whether the audit chain is intact. Dev server proxies `/ai` to the gateway on port 8000. Checked against a running gateway.
+- Tests: gateway 9, xlit 77, db 22, packs 3, core 14, web 11; web build passes.
+
+Deliberately skipped / not checked
+- The typing language is not remembered between visits and is not taken from the user's `ui_language` yet (needs login).
+- The TypingField is not yet used in any form, because there are no create forms yet (Next 4).
+- No UI strings translated yet; one old lint warning remains (FirList exports a helper).
+
+Next
+1. Login and roles in `apps/core` (and the same identity for the AI gateway): replaces `X-User-Id`; only the case team creates records on a case; only the state admin changes AI settings.
+2. Web forms to create FIRs, notices and evidence, using `TypingField`.
+3. Readiness check (charge ingredients from the playbook to evidence, gaps, override with reason).
+4. Make 63(4) certificates unchangeable after signing; log the prompt version in the AI gateway.
+
+Blocked
+- Live Claude/Gemini calls still wait for API keys (unchanged; using `fake`).
+
+Questions for Sumit
+1. Masking now also hides the complainant in sexual-offence and POCSO cases. Is that right, or only the victim?
+2. Login: a simple username and password for the demo, or should it look like a state single sign-on from the start?
+3. BNSS 193(2) "within two months": the app shows the same date two months later (18 Aug to 18 Oct). Please confirm with the prosecutor, as for the 60/90 days.
+
 ## 23 Oct 2026, session 4 (nightly, last of the night)
 Tonight in short
 - Session 1: repo, AI gateway, schema, playbook. Session 2: Spring Boot app, FIR/people/deadline/evidence/custody APIs. Session 3: create-APIs for people, arrests, evidence, notices, replies, 63(4) certificates. Session 4: first web screens.
