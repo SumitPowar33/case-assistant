@@ -4,10 +4,11 @@ import Readiness from './Readiness'
 import Notices from './Notices'
 import Certificates from './Certificates'
 import Arrests from './Arrests'
+import IoAssignment from './IoAssignment'
 import { AddEvidenceForm, AddPersonForm } from './Forms'
 import { useState } from 'react'
 
-type Fir = { id: string; fir_year: number; fir_no: number; registered_at: string; is_zero_fir: boolean; contents_original: string | null; contents_withheld: boolean; action_taken: string; sections: { act: string; section: string }[] }
+type Fir = { id: string; fir_year: number; fir_no: number; registered_at: string; is_zero_fir: boolean; contents_original: string | null; contents_withheld: boolean; action_taken: string; io_name: string | null; sections: { act: string; section: string }[] }
 type Person = { id: string; role: string; label: string; display_name: string; age_years: number | null; identity_masked: boolean }
 type Deadline = { kind: string; due_on: string; basis: string }
 type Evidence = { id: string; label: string; kind: string; sha256: string | null; court_ready: boolean }
@@ -26,8 +27,8 @@ function Section<T>({ title, path, version, children, form }: {
 }
 
 export default function FirDetail({ id }: { id: string }) {
-  const { data: fir, error } = useLoad<Fir>(`/firs/${id}`)
   const [version, setVersion] = useState(0)
+  const { data: fir, error } = useLoad<Fir>(`/firs/${id}`, version)
   const saved = () => setVersion((v) => v + 1)
   if (error) return <p role="alert">{error}</p>
   if (!fir) return <p>Loading…</p>
@@ -36,6 +37,7 @@ export default function FirDetail({ id }: { id: string }) {
       <p><a href="#/">← All FIRs</a></p>
       <h1>FIR {fir.fir_no}/{fir.fir_year}{fir.is_zero_fir ? ' (Zero FIR)' : ''}</h1>
       <p>Registered {fmt(fir.registered_at)} · {fir.action_taken}</p>
+      <IoAssignment firId={id} ioName={fir.io_name} version={version} onSaved={saved} />
       <p>Sections: {fir.sections.map((s) => `${s.act} ${s.section}`).join(', ') || 'none'}</p>
       {fir.contents_withheld
         ? <p>Complaint text withheld: this case protects the victim's identity (BNS 72). Only the case team can read it.</p>
