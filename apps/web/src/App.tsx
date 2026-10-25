@@ -4,6 +4,7 @@ import FirDetail from './FirDetail'
 import TypePage from './TypePage'
 import SettingsPage from './SettingsPage'
 import PasswordPage from './PasswordPage'
+import AdminPage from './AdminPage'
 import LoginPage from './LoginPage'
 import { currentSession, onSessionChange, setSession } from './api'
 import { LANGS, TypingContext, type TypingLang } from './typing'
@@ -23,7 +24,7 @@ export default function App() {
     <TypingContext.Provider value={{ lang, setLang }}>
       <header>
         <strong>Case Assistant</strong> <small>demo · fictional data only · the AI drafts, a person decides</small>
-        {session && <nav aria-label="Main"><a href="#/">FIRs</a> <a href="#/type">Type</a> <a href="#/password">Password</a>{admin && <> <a href="#/settings">AI settings</a></>}</nav>}
+        {session && <nav aria-label="Main"><a href="#/">FIRs</a> <a href="#/type">Type</a> <a href="#/password">Password</a>{admin && <> <a href="#/admin">Admin</a> <a href="#/settings">AI settings</a></>}</nav>}
         <label>Typing language{' '}
           <select value={lang} onChange={(e) => setLang(e.target.value as TypingLang)}>
             <option value="en">English (no conversion)</option>
@@ -33,7 +34,7 @@ export default function App() {
         {session && <span className="who">{session.user.full_name} ({session.user.rank})
           <button type="button" onClick={() => setSession(null)}>Sign out</button></span>}
       </header>
-      <main>{!session ? <LoginPage /> : firId ? <FirDetail id={firId} /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : <FirList />}</main>
+      <main>{!session ? <LoginPage /> : firId ? <FirDetail id={firId} /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : <FirList />}</main>
     </TypingContext.Provider>
   )
 }
