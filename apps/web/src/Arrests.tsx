@@ -39,7 +39,7 @@ function ReleaseForm({ firId, arrest, onSaved }: { firId: string; arrest: Arrest
     <Form title="Record release from custody" onSaved={onSaved}
       submit={(f) => send(`/firs/${firId}/arrests/${arrest.id}/release`, 'POST', { releasedOn: text(f, 'released'), basis: f.get('basis') })}>
       <label>Released on <input name="released" type="date" required /></label>
-      <label>Released <select name="basis">{Object.entries(RELEASE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+      <label>How released <select name="basis">{Object.entries(RELEASE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       <p><small>Check it against the court's order. It cannot be changed after saving.</small></p>
     </Form>
   )

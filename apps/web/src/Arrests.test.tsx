@@ -87,7 +87,7 @@ test('a release is recorded once; released and chargesheeted arrests say the lim
   expect(forms).toHaveLength(1)
   const form = forms[0].closest('details')!
   type('Released on', '2026-11-01', within(form))
-  fireEvent.change(within(form).getByLabelText('Released'), { target: { value: 'default_bail' } })
+  fireEvent.change(within(form).getByLabelText('How released'), { target: { value: 'default_bail' } })
   fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
   await vi.waitFor(() => expect(writes).toHaveLength(1))
   expect(writes[0]).toEqual({ url: '/api/firs/f1/arrests/a2/release', body: { releasedOn: '2026-11-01', basis: 'default_bail' } })
