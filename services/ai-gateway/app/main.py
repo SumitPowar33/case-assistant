@@ -16,7 +16,7 @@ import uuid
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from .auth import TokenError, verify
+from .auth import CoreCheck, CoreUnavailable, TokenError, verify
 from .providers import ClaudeProvider, FakeProvider, GeminiProvider, Provider, ProviderError
 from .store import DEFAULT_MODELS, FEATURES, PROVIDERS, Store
 
@@ -57,10 +57,12 @@ class SettingIn(BaseModel):
 
 
 def create_app(store: Store | None = None, providers: dict[str, Provider] | None = None,
-               auth_secret: str | None = None) -> FastAPI:
+               auth_secret: str | None = None, core_check=None) -> FastAPI:
     secret = auth_secret if auth_secret is not None else os.environ.get("AUTH_SECRET", "")
     if len(secret) < 32:
         raise RuntimeError("AUTH_SECRET must be set (at least 32 characters, the same value as the core app)")
+    # Asks the core app if the user is still active and the password unchanged (see auth.CoreCheck).
+    core_check = core_check or CoreCheck(os.environ.get("CORE_URL", "http://localhost:8080"))
     store = store or Store(os.environ.get("AI_GATEWAY_DB", "ai-gateway.sqlite3"))
     providers = providers or {"claude": ClaudeProvider(), "gemini": GeminiProvider(), "fake": FakeProvider()}
     app = FastAPI(title="Case Assistant AI gateway", version="0.1.0")
@@ -69,10 +71,16 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         scheme, _, token = authorization.partition(" ")
         if scheme.lower() != "bearer" or not token:
             raise HTTPException(401, "sign in first", headers={"WWW-Authenticate": "Bearer"})
+        token = token.strip()
         try:
-            return verify(token.strip(), secret)
+            claims = verify(token, secret)
+            me = core_check(token, str(claims["sub"]))
         except TokenError as e:
             raise HTTPException(401, str(e), headers={"WWW-Authenticate": "Bearer"})
+        except CoreUnavailable as e:
+            raise HTTPException(503, str(e))
+        # the role as the core app has it now, not as it was when the token was issued
+        return {**claims, "role": me["role"]}
 
     def admin(u: dict = Depends(user)) -> dict:
         if u.get("role") != "state_admin":

@@ -11,6 +11,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.auth import CoreCheck, verify
 from app.main import create_app
 from app.providers import ClaudeProvider, FakeProvider, GeminiProvider
 from app.store import Store
@@ -28,8 +29,14 @@ def token(sub="user-admin", role="state_admin", secret=SECRET, exp_in=600, alg="
     return f"{head}.{body}.{sig}"
 
 
+def core_says_active(tok, subject):
+    """Stands in for the core app's GET /api/me when the user is active and the password unchanged."""
+    claims = verify(tok, SECRET)
+    return {"id": claims["sub"], "role": claims["role"]}
+
+
 def client(store, providers, role="state_admin", sub="user-admin"):
-    return TestClient(create_app(store, providers, SECRET), headers={"Authorization": "Bearer " + token(sub, role)})
+    return TestClient(create_app(store, providers, SECRET, core_says_active), headers={"Authorization": "Bearer " + token(sub, role)})
 
 
 def mock_client(handler):
@@ -152,7 +159,7 @@ def test_fake_provider_works_offline():
 
 def test_every_call_needs_a_valid_login_token():
     store = Store(":memory:")
-    app = create_app(store, {"fake": FakeProvider()}, SECRET)
+    app = create_app(store, {"fake": FakeProvider()}, SECRET, core_says_active)
     bad = [None, "Basic abc", "Bearer not.a.token", "Bearer " + token(secret="another-secret-another-secret-xx"),
            "Bearer " + token(exp_in=-5), "Bearer " + token(alg="none"), "Bearer " + token(sub="")]
     for h in bad:
@@ -162,7 +169,7 @@ def test_every_call_needs_a_valid_login_token():
     assert store.audit_rows() == []
     assert TestClient(app).get("/health").status_code == 200
     with pytest.raises(RuntimeError):
-        create_app(Store(":memory:"), {"fake": FakeProvider()}, "too-short")
+        create_app(Store(":memory:"), {"fake": FakeProvider()}, "too-short", core_says_active)
 
 
 def test_officer_cannot_change_settings_or_read_audit_and_actor_comes_from_token():
@@ -188,3 +195,57 @@ def test_prompt_version_is_required_and_logged_with_a_hash_not_the_text(setup):
     d = store.audit_rows()[0]["detail"]
     assert d["prompt_version"] == "case_qa/ask@2" and d["safety_version"].startswith("safety-")
     assert len(d["prompt_sha256"]) == 64 and "Who is witness" not in json.dumps(store.audit_rows())
+
+
+def core_app(answers):
+    """A fake core app: answers[i] is the reply to the i-th GET /api/me (a status code, an exception or a dict)."""
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request)
+        assert request.url.path == "/api/me" and request.headers["authorization"].startswith("Bearer ")
+        a = answers[min(len(calls), len(answers)) - 1]
+        if isinstance(a, Exception):
+            raise a
+        return httpx.Response(200, json=a) if isinstance(a, dict) else httpx.Response(a, json={"error": "x"})
+    return calls, handler
+
+
+def test_disabled_user_or_changed_password_is_refused_even_with_a_good_signature():
+    calls, handler = core_app([401])
+    app = create_app(Store(":memory:"), {"fake": FakeProvider()}, SECRET, CoreCheck("http://core", mock_client(handler)))
+    c = TestClient(app, headers={"Authorization": "Bearer " + token("user-io-7", "io")})
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1"})
+    assert r.status_code == 401 and "disabled" in r.json()["detail"]
+    # a bad signature never reaches the core app
+    bad = TestClient(app, headers={"Authorization": "Bearer " + token(secret="another-secret-another-secret-xx")})
+    assert bad.get("/v1/settings").status_code == 401 and len(calls) == 1
+
+
+def test_core_app_down_means_refused_not_let_through():
+    _, handler = core_app([httpx.ConnectError("down"), 500])
+    app = create_app(Store(":memory:"), {"fake": FakeProvider()}, SECRET, CoreCheck("http://core", mock_client(handler)))
+    c = TestClient(app, headers={"Authorization": "Bearer " + token()})
+    assert c.get("/v1/settings").status_code == 503
+    assert c.get("/v1/settings").status_code == 503
+
+
+def test_role_comes_from_the_core_app_now_and_a_yes_is_kept_only_briefly():
+    now = [1000.0]
+    calls, handler = core_app([{"id": "user-x", "role": "io"}, {"id": "user-x", "role": "io"}, 401])
+    check = CoreCheck("http://core", mock_client(handler), ttl=30, clock=lambda: now[0])
+    app = create_app(Store(":memory:"), {"fake": FakeProvider()}, SECRET, check)
+    c = TestClient(app, headers={"Authorization": "Bearer " + token("user-x", "state_admin")})
+    assert c.get("/v1/audit").status_code == 403  # token says admin, the core app says io now
+    assert c.get("/v1/settings").status_code == 200 and len(calls) == 1  # remembered
+    now[0] += 31
+    assert c.get("/v1/settings").status_code == 200 and len(calls) == 2
+    now[0] += 31
+    assert c.get("/v1/settings").status_code == 401 and len(calls) == 3  # disabled meanwhile
+
+
+def test_core_answer_for_another_user_is_refused():
+    _, handler = core_app([{"id": "someone-else", "role": "state_admin"}])
+    check = CoreCheck("http://core", mock_client(handler))
+    with pytest.raises(Exception, match="does not match"):
+        check(token("user-x"), "user-x")
