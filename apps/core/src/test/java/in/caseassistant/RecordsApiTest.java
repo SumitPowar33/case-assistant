@@ -124,4 +124,37 @@ class RecordsApiTest {
         send("/notices/" + id + "/replies", reply.formatted(",\"checksJson\":\"{\\\"present\\\":true}\""), 400); // not a list
         mvc.perform(get("/api/firs/" + fir + "/notices").header("Authorization", auth)).andExpect(jsonPath("$[0].replies").value(2));
     }
+
+    @Test
+    void draftIsSentBySignedInOfficerAndListShowsWhatIsStillMissing() throws Exception {
+        String id = idOf(send("/notices", "{\"kind\":\"BNSS_94\",\"addressee\":\"Fictional Bank Nodal Officer\",\"itemsRequested\":[\"statement; Jan-Mar\",\"KYC\"],\"body\":\"Please produce.\"}", 201));
+        String reply = "{\"receivedAt\":\"2026-10-10T10:00:00Z\",\"channel\":\"email\",\"checksJson\":\"[{\\\"item\\\":\\\"KYC\\\",\\\"present\\\":true}]\"}";
+        send("/notices/" + id + "/replies", reply, 409); // a draft was never sent
+        send("/notices/" + id + "/send", "{\"issuedAt\":\"2026-10-05T10:00:00Z\",\"replyDueOn\":\"2026-10-04\"}", 400); // due before issue
+        send("/notices/" + id + "/send", "{\"issuedAt\":\"2026-10-05T10:00:00Z\",\"replyDueOn\":\"2026-10-12\"}", 204);
+        send("/notices/" + id + "/send", "{\"issuedAt\":\"2026-10-06T10:00:00Z\"}", 409); // only once
+        send("/notices/" + id + "/replies", reply, 201);
+        mvc.perform(get("/api/firs/" + fir + "/notices").header("Authorization", auth))
+                .andExpect(jsonPath("$[0].status").value("reply_incomplete"))
+                .andExpect(jsonPath("$[0].items_requested[0]").value("statement; Jan-Mar"))
+                .andExpect(jsonPath("$[0].items_missing.length()").value(1))
+                .andExpect(jsonPath("$[0].items_missing[0]").value("statement; Jan-Mar"))
+                .andExpect(jsonPath("$[0].signed_by_name").value("SI Asha Rao"));
+        org.assertj.core.api.Assertions.assertThat(db.sql("select signed_by from notice where id = ?::uuid").param(id).query(UUID.class).single()).isEqualTo(io);
+    }
+
+    @Test
+    void certificatesAreListedWithTheCorrectionThatReplacedThem() throws Exception {
+        String item = idOf(send("/evidence", "{\"label\":\"E-02\",\"description\":\"Fictional laptop\",\"kind\":\"electronic\",\"seizedAt\":\"2026-10-02T10:00:00Z\",\"seizureMemo\":\"SM-2\",\"sha256\":\"" + SHA + "\"}", 201));
+        String cert = "{\"part\":\"A\",\"signerName\":\"Fictional Signer\",\"deviceType\":\"laptop\",\"hashAlgo\":\"SHA256\",\"hashValue\":\"%s\",\"signedAt\":\"%s\",\"place\":\"Testpur\"%s}";
+        String first = idOf(send("/evidence/" + item + "/certificates", cert.formatted("c".repeat(64), "2026-10-03T10:00:00Z", ""), 201));
+        String fix = idOf(send("/evidence/" + item + "/certificates", cert.formatted(SHA, "2026-10-04T10:00:00Z",
+                ",\"supersedes\":\"" + first + "\",\"correctionReason\":\"hash re-read from the device\""), 201));
+        mvc.perform(get("/api/firs/" + fir + "/evidence/" + item + "/certificates").header("Authorization", auth))
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].replaced_by").value(fix))
+                .andExpect(jsonPath("$[1].supersedes").value(first))
+                .andExpect(jsonPath("$[1].replaced_by").doesNotExist());
+        mvc.perform(get("/api/firs/" + fir + "/evidence/" + UUID.randomUUID() + "/certificates").header("Authorization", auth)).andExpect(status().isNotFound());
+    }
 }

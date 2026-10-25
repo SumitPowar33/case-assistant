@@ -112,13 +112,52 @@ class RecordsController {
                 .query(UUID.class).single());
     }
 
+    /**
+     * Notices with the items asked for and, for each, whether some reply has brought it (ticked present).
+     * `items_missing` lists what is still outstanding, so the officer knows what to chase.
+     */
     @GetMapping("/notices")
     List<Map<String, Object>> notices(@PathVariable UUID firId) {
         return db.sql("""
-                select n.id, n.kind, n.addressee, array_to_string(n.items_requested, '; ') as items_requested, n.status, n.issued_at, n.reply_due_on,
+                select n.id, n.kind, n.addressee, to_json(n.items_requested)::text as items_requested,
+                  to_json(array(select i from unnest(n.items_requested) i where not exists (
+                    select 1 from notice_reply r, jsonb_array_elements(r.checks) x
+                    where r.notice_id = n.id and x->>'item' = i and (x->>'present')::boolean)))::text as items_missing,
+                  n.status, n.issued_at, n.reply_due_on, u.full_name as signed_by_name,
                   (select count(*) from notice_reply r where r.notice_id = n.id) as replies
-                from notice n where n.fir_id = ? order by n.issued_at nulls first, n.id""")
-                .param(firId).query().listOfRows();
+                from notice n left join app_user u on u.id = n.signed_by
+                where n.fir_id = ? order by n.issued_at nulls first, n.id""")
+                .param(firId).query().listOfRows().stream().map(RecordsController::jsonLists).toList();
+    }
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
+
+    /** The two item lists come from PostgreSQL as JSON text; send them as real lists. */
+    private static Map<String, Object> jsonLists(Map<String, Object> row) {
+        var out = new java.util.LinkedHashMap<>(row);
+        for (String k : List.of("items_requested", "items_missing")) {
+            try {
+                out.put(k, JSON.readValue((String) row.get(k), List.class));
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+        return out;
+    }
+
+    record Send(@NotNull OffsetDateTime issuedAt, LocalDate replyDueOn) {}
+
+    /** A draft becomes a sent notice, signed by the signed-in officer. Only drafts can be sent. */
+    @PostMapping("/notices/{noticeId}/send")
+    ResponseEntity<Void> sendNotice(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @PathVariable UUID noticeId,
+                                    @Valid @RequestBody Send s) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        requireRow("notice", noticeId, firId);
+        int n = db.sql("update notice set status = 'sent', signed_by = ?, issued_at = ?, reply_due_on = ? where id = ? and status = 'draft'")
+                .params(me, s.issuedAt, s.replyDueOn, noticeId).update();
+        if (n == 0) throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT, "Only a draft notice can be sent.");
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/notices")
@@ -147,6 +186,10 @@ class RecordsController {
                                               @Valid @RequestBody Reply r) {
         team.requireTeam(CaseTeam.user(jwt), firId);
         requireRow("notice", noticeId, firId);
+        String noticeStatus = db.sql("select status from notice where id = ?").param(noticeId).query(String.class).single();
+        if (noticeStatus.equals("draft") || noticeStatus.equals("cancelled"))
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
+                    "This notice was never sent (" + noticeStatus + "); a reply cannot be logged against it.");
         String checks = r.checksJson == null ? "[]" : r.checksJson;
         db.sql("insert into notice_reply (notice_id, received_at, channel, checks) values (?,?,?,?::jsonb)")
                 .params(noticeId, r.receivedAt, r.channel, checks).update();
@@ -164,6 +207,16 @@ class RecordsController {
         db.sql("update notice set status = ? where id = ? and status in ('sent','reply_incomplete')")
                 .params(status, noticeId).update();
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("replyComplete", allPresent));
+    }
+
+    /** All 63(4) certificates of an item, oldest first; `replaced_by` is set on those a correction replaced. */
+    @GetMapping("/evidence/{itemId}/certificates")
+    List<Map<String, Object>> certificates(@PathVariable UUID firId, @PathVariable UUID itemId) {
+        requireRow("evidence", itemId, firId);
+        return db.sql("""
+                select c.id, c.part, c.signer_name, c.device_type, c.device_ids, c.hash_algo, c.hash_value, c.signed_at, c.place,
+                  c.supersedes, c.correction_reason, (select n.id from certificate_63_4 n where n.supersedes = c.id) as replaced_by
+                from certificate_63_4 c where c.item_id = ? order by c.signed_at, c.id""").param(itemId).query().listOfRows();
     }
 
     @PostMapping("/evidence/{itemId}/certificates")
