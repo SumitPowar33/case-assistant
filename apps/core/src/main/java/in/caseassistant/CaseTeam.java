@@ -41,6 +41,25 @@ class CaseTeam {
         if (!includes(userId, firId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the case team can do this.");
     }
 
+    /** Assigning the IO: the SHO of the FIR's station or the SP of its district (not the IO). */
+    void requireSupervisor(UUID userId, UUID firId) {
+        boolean ok = db.sql("""
+                select exists (select 1 from app_user u
+                  join fir f on f.id = ?
+                  join police_station fs on fs.id = f.station_id
+                  left join police_station us on us.id = u.station_id
+                  where u.id = ? and u.active and ((u.role = 'sho' and u.station_id = f.station_id)
+                    or (u.role = 'sp' and us.state_code = fs.state_code and us.district = fs.district)))""")
+                .params(firId, userId).query(Boolean.class).single();
+        if (!ok) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the SHO of the station or the SP of the district can assign the IO.");
+    }
+
+    /** Who can be the IO of an FIR: an active IO or SHO posted at the FIR's police station. */
+    boolean canBeIo(UUID userId, UUID stationId) {
+        return db.sql("select exists (select 1 from app_user where id = ? and active and role in ('io', 'sho') and station_id = ?)")
+                .params(userId, stationId).query(Boolean.class).single();
+    }
+
     /** Evidence custody: the case team, or the malkhana (evidence store) staff of the FIR's station. */
     void requireCustodian(UUID userId, UUID firId) {
         boolean malkhana = db.sql("""

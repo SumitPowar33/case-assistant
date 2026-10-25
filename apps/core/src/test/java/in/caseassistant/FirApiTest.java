@@ -94,4 +94,58 @@ class FirApiTest {
         mvc.perform(get("/api/firs")).andExpect(status().isUnauthorized());
         assertThat(db.sql("select count(*) from fir").query(Long.class).single()).isZero();
     }
+
+    UUID user(String name, String role, UUID at) {
+        return db.sql("insert into app_user (station_id, full_name, rank, role) values (?,?,'SI',?) returning id")
+                .params(at, name, role).query(UUID.class).single();
+    }
+
+    org.springframework.test.web.servlet.ResultActions assign(String bearer, String fir, String body) throws Exception {
+        return mvc.perform(post("/api/firs/" + fir + "/io").header("Authorization", bearer).contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    void theShoAssignsAndChangesTheIoWithAReasonAndEveryAssignmentIsKept() throws Exception {
+        UUID io1 = user("SI Fictional One", "io", station), io2 = user("SI Fictional Two", "io", station);
+        UUID otherStation = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Other PS') returning id")
+                .query(UUID.class).single();
+        UUID elsewhere = user("SI Elsewhere", "io", otherStation);
+        String sho = TestAuth.bearer(tokens, user("PI Fictional SHO", "sho", station));
+        String fir = json.readTree(mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(body(5)))).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        String to = "{\"ioId\":\"%s\"%s}";
+        assign(clerk, fir, to.formatted(io1, "")).andExpect(status().isForbidden());
+        assign(sho, fir, to.formatted(elsewhere, "")).andExpect(status().isBadRequest());   // not of this station
+        assign(sho, fir, to.formatted(io1, "")).andExpect(status().isNoContent());           // first IO: no reason needed
+        mvc.perform(get("/api/firs/" + fir).header("Authorization", clerk)).andExpect(jsonPath("$.io_name").value("SI Fictional One"));
+        assign(TestAuth.bearer(tokens, io1), fir, to.formatted(io2, ",\"reason\":\"Fictional leave of IO\"")).andExpect(status().isForbidden());
+        assign(sho, fir, to.formatted(io1, ",\"reason\":\"Fictional leave of IO\"")).andExpect(status().isConflict());
+        assign(sho, fir, to.formatted(io2, "")).andExpect(status().isBadRequest()).andExpect(status().reason(org.hamcrest.Matchers.startsWith("Give the reason")));
+        assign(sho, fir, to.formatted(io2, ",\"reason\":\"Fictional leave of IO\"")).andExpect(status().isNoContent());
+        // the old IO is off the case team at once; the new one is on it
+        mvc.perform(get("/api/firs/" + fir + "/io-candidates").header("Authorization", TestAuth.bearer(tokens, io1))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/firs/" + fir + "/io-candidates").header("Authorization", TestAuth.bearer(tokens, io2)))
+                .andExpect(jsonPath("$[*].full_name").value(org.hamcrest.Matchers.contains("PI Fictional SHO", "SI Fictional One", "SI Fictional Two")));
+        mvc.perform(get("/api/firs/" + fir + "/io-history").header("Authorization", clerk))
+                .andExpect(jsonPath("$[0].from_name").value("SI Fictional One"))
+                .andExpect(jsonPath("$[0].to_name").value("SI Fictional Two"))
+                .andExpect(jsonPath("$[0].reason").value("Fictional leave of IO"))
+                .andExpect(jsonPath("$[1].assigned_by_name").value("PI Fictional SHO"));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> db.sql("update fir_io_assignment set reason = 'changed later'").update())
+                .hasMessageContaining("kept as written");
+    }
+
+    @Test
+    void anFirCanNameOnlyAnIoOfItsOwnStation() throws Exception {
+        UUID otherStation = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Other PS') returning id")
+                .query(UUID.class).single();
+        var b = new java.util.HashMap<>(body(6));
+        b.put("ioId", user("SI Elsewhere", "io", otherStation));
+        mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(b)))
+                .andExpect(status().isBadRequest());
+        b.put("ioId", user("SI Here", "io", station));
+        mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(b)))
+                .andExpect(status().isCreated());
+        assertThat(db.sql("select count(*) from fir_io_assignment").query(Long.class).single()).isEqualTo(1);
+    }
 }
