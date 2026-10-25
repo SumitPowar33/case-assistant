@@ -4,6 +4,49 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 26 Oct 2026, session 10 (weekend, Sunday night, 02:05 IST run, last of the night)
+Tonight in short
+- Session 8 (21:05): AI gateway checks every token with the core app (disabled users and old tokens refused); web forms for notices, replies and 63(4) certificates.
+- Session 9: state admin screens (accounts, disable/enable/unlock with a reason, stations, sign-in log, admin log); AI draft of a notice through the gateway with accept/edit/reject logged.
+- Session 10 (this one): arrests in the web app with stricter legal rules; release from custody and chargesheets now stop the 60/90-day limit; IO can be assigned and changed by the SHO/SP; state admin can change an account's role, rank or station.
+
+Started from `setup/seed` at 2c1670f (session 9). All suites green before any change.
+
+Done
+- Arrests (Next 1). Core: only an accused can be arrested; the signed-in officer is recorded as the arresting officer (the API no longer takes an officer id); arrest time cannot be in the future; the first remand cannot be before the arrest day (IST) and can be recorded later, once ("Record the first remand"); the memo is kept as written (database trigger). `GET .../arrests` lists each arrest with its own BNSS 187(3) last day. The relative or friend informed (BNSS 48) is shown only to the case team. Web: "Arrests" section on the FIR page (accused only, grounds one per line with the TypingField, India time, highest punishment with 60/90 days shown). Migration V11.
+- Release and chargesheet (legal logic from the weekly review's "still worried" list). Release from custody (bail, default bail, otherwise) is recorded once per arrest; a chargesheet (court, number, accused it names) is recorded and kept as written, supplementary ones as new entries. The custody limit stops for an accused who is released or named in a filed chargesheet; the BNSS 193(2) two-month limit stops when any chargesheet is filed. The arrest list keeps showing the last day and says if the chargesheet came after it. Web: "Record release from custody" and a "Chargesheets" section. Migration V14.
+- Assign or change the IO (found while doing Next 3: an FIR registered at the front desk had no way to get an IO). The SHO of the station or the district SP assigns the IO; changing from one IO to another needs a reason; only an active IO or SHO of the FIR's station can be IO (also checked when an FIR is registered with an IO). Every assignment is kept; the FIR page shows the IO and the IO history. The old IO leaves the case team at once. Migration V13.
+- Admin: change an account's role, rank or police station with a reason (Next 3, without the password reset). The admin log keeps what changed ("role io to sho; station A to B"); the officer's older tokens end; the answer says how many FIRs still name the officer as IO, so the SHO can give those cases to someone else. The admin cannot change their own account. Migration V12.
+- Checked against the running core app and the web app in a real browser with fictional users: SHO registers an FIR and assigns the IO, IO adds an accused, records an arrest and the first remand (last day 11 Nov shown), records a release on bail; the custody deadline leaves the deadline list.
+- Tests: gateway 16, xlit 77, db 28, packs 3, core 44, web 49; web build and lint pass.
+
+Deliberately skipped / not checked
+- The officer chooses the highest punishment (60 or 90 days); the app does not work it out from the sections, because the national pack has no punishment table yet (question 3).
+- A wrong arrest memo, remand date, release or chargesheet cannot be withdrawn or corrected yet (all kept as written). A wrong first remand date gives a wrong deadline until a correction step exists.
+- A re-arrest after release (for example bail cancelled) is a new arrest memo; its own remand starts a new 60/90 count. Whether the earlier custody days should be added is not handled (question 2).
+- Closure reports (no accused named) are not recorded; a chargesheet must name at least one accused.
+- Admin password reset still waits for question 4 of session 9. No edit of an account's name, no edit of a station.
+- When an IO is transferred to another station, their FIRs are not moved automatically; the SHO must give them to another IO.
+- The fresh demo database has no state pack; I added the "IN" row by hand for the browser check (question 5 of session 9 still open).
+
+Next
+1. Correction of a wrong arrest memo, remand date, release or chargesheet: a new record that names the one it replaces, with a reason (same pattern as 63(4) certificates).
+2. Read access rules once question 1 is answered.
+3. Admin password reset (if question 4 of session 9 is yes).
+4. AI draft for the follow-up notice (if question 4 of session 8 is yes).
+5. Highest punishment from the sections, if question 3 is yes.
+
+Blocked
+- Live Claude/Gemini calls still wait for API keys (unchanged; using `fake`).
+- Read access (question 1), password reset (session 9 question 4), follow-up notice draft (session 8 question 4).
+
+Questions for Sumit
+1. Still open: who may read a case? Every signed-in user can still open any FIR (victim details and the arrested person's relative stay hidden).
+2. For the prosecutor: when an accused is released and re-arrested in the same case, should the 60/90 days count again from the new remand, or add the earlier custody days?
+3. Should I add the highest punishment for each section to the national pack (e.g. BNS 318(4) up to 7 years), so the app suggests 60 or 90 days and warns if the officer picks differently? A prosecutor should check the table.
+4. For the prosecutor: is it right that the BNSS 193(2) two-month limit ends when the first chargesheet is filed, even if some accused are still under investigation?
+5. Can an SHO be made IO of a case at their own station (allowed now), or only officers with the IO role?
+
 ## 25 Oct 2026, session 9 (weekend, Sunday 21:05 run, second session tonight)
 Started from `setup/seed` at b0211f6 (session 8). All suites green before any change.
 
