@@ -74,3 +74,21 @@ test('with no accused yet, the form is not shown', async () => {
   render(<Arrests firId="f1" version={0} onSaved={() => {}} />)
   expect(await screen.findByText(/only an accused can be arrested/)).toBeTruthy()
 })
+
+test('a release is recorded once; released and chargesheeted arrests say the limit has stopped', async () => {
+  const writes = stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+    { ...base, id: 'a1', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-10', released_on: '2026-09-20', release_basis: 'bail', chargesheet_filed_on: null },
+    { ...base, id: 'a2', person_label: 'A2', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-10', released_on: null, release_basis: null, chargesheet_filed_on: '2026-11-12' },
+  ] }, { status: 204, body: null })
+  render(<Arrests firId="f1" version={0} onSaved={() => {}} />)
+  expect(await screen.findByText(/Released on bail on 2026-09-20: the custody limit no longer runs/)).toBeTruthy()
+  expect(screen.getByText(/Chargesheet naming A2 filed on 2026-11-12, after the last day/)).toBeTruthy()
+  const forms = screen.getAllByText('Record release from custody')
+  expect(forms).toHaveLength(1)
+  const form = forms[0].closest('details')!
+  type('Released on', '2026-11-01', within(form))
+  fireEvent.change(within(form).getByLabelText('Released'), { target: { value: 'default_bail' } })
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0]).toEqual({ url: '/api/firs/f1/arrests/a2/release', body: { releasedOn: '2026-11-01', basis: 'default_bail' } })
+})
