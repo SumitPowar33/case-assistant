@@ -66,7 +66,7 @@ class AuthApiTest {
     void onlyTheStateAdminCreatesUsersAndTheyCanSignIn() throws Exception {
         String admin = "Bearer " + json.readTree(login("admin.one", ADMIN_PW, 200)).get("token").asText();
         String user = """
-                {"username":"si.fictional","password":"fictional-io-pass-22","fullName":"SI Fictional","rank":"SI","role":"io"}""";
+                {"username":"si.fictional","password":"fictional-io-pass-22","fullName":"APP Fictional","rank":"APP","role":"prosecutor"}""";
         mvc.perform(post("/api/users").header("Authorization", admin).contentType(MediaType.APPLICATION_JSON).content(user))
                 .andExpect(status().isCreated());
         mvc.perform(post("/api/users").header("Authorization", admin).contentType(MediaType.APPLICATION_JSON).content(user))

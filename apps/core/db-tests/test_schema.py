@@ -250,3 +250,20 @@ def test_account_holders_and_accused_links_stay_inside_their_case(db):
                   VALUES (%s,%s,'kyc_identification',%s,%s)""", (fir, acc, item, io))
     with pytest.raises(psycopg.errors.RaiseException):
         db.execute("DELETE FROM account_holder")
+
+
+def test_admin_log_needs_reasons_and_is_kept_as_written(db):
+    st, io, fir = seed_case(db)
+    admin = one(db, "INSERT INTO app_user(full_name,rank,role) VALUES ('Demo Admin','Admin','state_admin') RETURNING id")[0]
+    with pytest.raises(psycopg.errors.CheckViolation):  # disabling needs a reason of 10+ characters
+        db.execute("INSERT INTO admin_action(actor_id,action,user_id,reason) VALUES (%s,'user_disabled',%s,'  short  ')", (admin, io))
+    with pytest.raises(psycopg.errors.CheckViolation):  # a station action names a station, not a user
+        db.execute("INSERT INTO admin_action(actor_id,action,user_id) VALUES (%s,'station_created',%s)", (admin, io))
+    with pytest.raises(psycopg.errors.CheckViolation):  # a user action names a user
+        db.execute("INSERT INTO admin_action(actor_id,action,station_id) VALUES (%s,'user_created',%s)", (admin, st))
+    db.execute("INSERT INTO admin_action(actor_id,action,user_id,reason) VALUES (%s,'user_unlocked',%s,'Officer called from the station')", (admin, io))
+    db.execute("INSERT INTO sign_in_attempt(username_tried,user_id,outcome) VALUES ('demo.io',%s,'unlocked_by_admin')", (io,))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE admin_action SET reason = 'changed afterwards'")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM admin_action")

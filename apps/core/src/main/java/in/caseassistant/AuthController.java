@@ -3,7 +3,6 @@ package in.caseassistant;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Duration;
 import java.time.Instant;
@@ -18,7 +17,6 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -30,7 +28,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Sign-in, "who am I", and user accounts. Only the state admin creates users. The first admin comes from
+ * Sign-in, "who am I" and the user's own password. Accounts are managed in {@link AdminController}. The first admin comes from
  * BOOTSTRAP_ADMIN_USERNAME / BOOTSTRAP_ADMIN_PASSWORD at start-up, so no password is ever in the code.
  */
 @RestController
@@ -44,10 +42,6 @@ class AuthController implements ApplicationRunner {
     static final int MAX_WRONG = 5;
     static final Duration LOCK = Duration.ofMinutes(15);
     static final ZoneId IST = ZoneId.of("Asia/Kolkata");
-
-    record NewUser(@NotBlank @Pattern(regexp = "[a-z0-9._-]{3,40}") String username,
-                   @NotBlank @Size(min = 12, max = 200) String password, @NotBlank String fullName,
-                   @NotBlank String rank, @NotBlank String role, UUID stationId) {}
 
     private final JdbcClient db;
     private final PasswordEncoder passwords;
@@ -138,13 +132,15 @@ class AuthController implements ApplicationRunner {
 
     /**
      * When the username is locked: the 5 latest wrong passwords since the last success fall within 15 minutes,
-     * and the latest is less than 15 minutes old. Attempts made while locked do not count.
+     * and the latest is less than 15 minutes old. Attempts made while locked do not count; an unlock by the
+     * state admin clears earlier wrong passwords like a successful sign-in.
      */
     Optional<Instant> lockedUntil(String username) {
         List<OffsetDateTime> wrong = db.sql("""
                 select at from sign_in_attempt
                 where username_tried = ? and outcome in ('wrong_password','wrong_current_password')
-                  and at > coalesce((select max(at) from sign_in_attempt where username_tried = ? and outcome in ('ok','password_changed')), '-infinity')
+                  and at > coalesce((select max(at) from sign_in_attempt where username_tried = ?
+                                     and outcome in ('ok','password_changed','unlocked_by_admin')), '-infinity')
                 order by at desc limit ?""").params(username, username, MAX_WRONG).query(OffsetDateTime.class).list();
         if (wrong.size() < MAX_WRONG) return Optional.empty();
         Instant latest = wrong.get(0).toInstant(), fifth = wrong.get(MAX_WRONG - 1).toInstant();
@@ -152,7 +148,7 @@ class AuthController implements ApplicationRunner {
         return Duration.between(fifth, latest).compareTo(LOCK) <= 0 && Instant.now().isBefore(until) ? Optional.of(until) : Optional.empty();
     }
 
-    private void record(String username, UUID userId, String outcome, HttpServletRequest req) {
+    void record(String username, UUID userId, String outcome, HttpServletRequest req) {
         db.sql("insert into sign_in_attempt (username_tried, user_id, outcome, client_ip) values (left(coalesce(?, '(no username)'), 80), ?, ?, ?)")
                 .params(username, userId, outcome, req.getRemoteAddr()).update();
     }
@@ -162,18 +158,6 @@ class AuthController implements ApplicationRunner {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", String.valueOf(seconds))
                 .body(Map.of("error", "Too many wrong passwords. Try again after "
                         + DateTimeFormatter.ofPattern("HH:mm").format(until.atZone(IST)) + " IST."));
-    }
-
-    @PostMapping("/users")
-    ResponseEntity<Map<String, UUID>> createUser(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody NewUser u) {
-        if (!team.hasRole(CaseTeam.user(jwt), "state_admin"))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the state admin creates users.");
-        UUID id = db.sql("""
-                insert into app_user (username, password_hash, full_name, rank, role, station_id)
-                values (?,?,?,?,?,?) returning id""")
-                .params(u.username, passwords.encode(u.password), u.fullName, u.rank, u.role, u.stationId)
-                .query(UUID.class).single();
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", id));
     }
 
     @Override
@@ -189,10 +173,5 @@ class AuthController implements ApplicationRunner {
                 insert into app_user (username, password_hash, full_name, rank, role)
                 values (?, ?, 'State Admin', 'Admin', 'state_admin') on conflict (username) do nothing""")
                 .params(username.trim().toLowerCase(), passwords.encode(password)).update();
-    }
-
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    ResponseEntity<Map<String, String>> rejected() {
-        return ResponseEntity.badRequest().body(Map.of("error", "The database rejected this user (a rule or a duplicate username)."));
     }
 }
