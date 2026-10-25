@@ -3,6 +3,7 @@ import { fmt } from './formats'
 import Readiness from './Readiness'
 import Notices from './Notices'
 import Certificates from './Certificates'
+import Arrests from './Arrests'
 import { AddEvidenceForm, AddPersonForm } from './Forms'
 import { useState } from 'react'
 
@@ -44,6 +45,7 @@ export default function FirDetail({ id }: { id: string }) {
           <li key={p.id}>{p.label} ({p.role}){p.age_years ? `, ${p.age_years}` : ''}: {p.display_name}{p.identity_masked ? ' (identity protected)' : ''}</li>
         ))}</ul>}
       </Section>
+      <Arrests firId={id} version={version} onSaved={saved} />
       <Section<Deadline> title="Deadlines" path={`/firs/${id}/deadlines`} version={version}>
         {(rows) => <ul>{rows.map((d, i) => <li key={i}>{d.kind}: by {d.due_on} <small>({d.basis})</small></li>)}</ul>}
       </Section>
