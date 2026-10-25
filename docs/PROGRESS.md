@@ -2,7 +2,43 @@
 
 Working branch: `setup/seed` (open a PR to `master` when ready: https://github.com/SumitPowar33/case-assistant/pull/new/setup/seed)
 
-Nightly sessions: 21:05, 23:35 and 02:05 IST.
+Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
+
+## 25 Oct 2026, session 8 (weekend, Sunday 21:05)
+No weekly review tonight: this week's review was done on Saturday 24 Oct. I re-read last night's sign-in and readiness code before building on it (notes below).
+
+Done
+- AI gateway checks every token with the core app (Next 2). After the signature check, the gateway asks the core app (`GET /api/me`, address in `CORE_URL`, default `http://localhost:8080`) whether the token still belongs to an active user whose password has not changed since. A disabled user or a token from before a password change is refused (401). A yes is remembered for 30 seconds (by a hash of the token, never the token itself), so a disabled user stops working at the gateway within 30 seconds. If the core app cannot be reached the gateway refuses (503): it never lets a token through unchecked. The role used for "state admin only" is now the role the core app has now, not the one written in the token. Checked live: core app + gateway, password changed, old token refused at the gateway, new token works.
+- Notices in the web app (Next 1). Write a notice (kind, addressee, items to produce one per line, text with the TypingField), save it as a draft or sign and send at once. "Sign and send this notice" for drafts; the signer is always the signed-in officer. "Log a reply": the officer ticks which of the outstanding items the reply brought; the list shows each item as received or not received yet. Notices without an items list get one check, "Reply answers the notice fully".
+- Core API for that: `POST .../notices/{id}/send` (drafts only, once); the notices list now gives the items as a real list (an item may contain ";"), the items still missing and the signer's name; a reply cannot be logged against a draft or cancelled notice (409); a reply due date before the issue day (IST) is refused (migration V9).
+- 63(4) certificates in the web app (Next 1). Under each electronic item: its certificates (part, signer, device, place, IST time, whether the hash matches the seizure SHA-256, corrections and what replaced what) and "Add a 63(4) certificate". A correction picks the current certificate it replaces (same part only) and needs a reason of 10+ characters; replaced certificates cannot be replaced again. New `GET .../evidence/{item}/certificates`.
+- Checked in a real browser with fictional demo users and a fictional case: write, send, reply (one item missing shown), add a Part A certificate (hash matches; item still not court-ready without Part B).
+- Tests: gateway 16, xlit 77, db 25, packs 3, core 34, web 34; web build and lint pass.
+
+Review notes on last night's code (no change needed)
+- Sign-in lock, password stamp in the token and withdrawals behave as described; the stamp is compared at millisecond precision on both sides, so it cannot drift.
+- The reply rule still matches items by exact text; the web form now sends the exact item names, so this is safe as long as replies come through the form.
+
+Deliberately skipped / not checked
+- The 30-second memory in the gateway means a just-disabled user can still use AI features for up to 30 seconds. Every gateway call costs one call to the core app after that.
+- No form for arrests yet; no cancel of a notice; no edit of a draft notice (write a new one). AI drafting of notices is not wired into the form yet (the gateway is ready; needs a prompt template and the accept/edit/reject step).
+- A certificate whose hash does not match is saved (that is what the paper says); the screen and the readiness check show it as not matching. The officer must sort it out with a correction.
+- Read access is still open to every signed-in user (question 1).
+
+Next
+1. State admin screens: users (create, disable), stations, sign-in log, unlock.
+2. AI draft of a BNSS 94 notice in the notice form, through the gateway, with accept/edit/reject logged and `ai_request_id` saved on the notice.
+3. Web form for arrests (BNSS 35 memo; feeds the 60/90-day deadline).
+4. Read access rules once question 1 is answered.
+
+Blocked
+- Live Claude/Gemini calls still wait for API keys (unchanged; using `fake`).
+
+Questions for Sumit
+1. Still open: who may read a case? Now every signed-in user can open any FIR (victim details stay hidden).
+2. Still open: should the SHO or SP approve when an IO accepts or withdraws a gap?
+3. Is 30 seconds right for how long the AI gateway trusts a checked sign-in? Shorter is safer but makes every AI call slower.
+4. When a notice reply brings only some items, should the app suggest a follow-up notice for the rest (as a draft for the officer)?
 
 ## 25 Oct 2026, session 7 (weekend, 02:05, last of the night)
 Tonight in short
