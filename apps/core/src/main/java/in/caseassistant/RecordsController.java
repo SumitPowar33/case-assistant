@@ -123,7 +123,7 @@ class RecordsController {
                   to_json(array(select i from unnest(n.items_requested) i where not exists (
                     select 1 from notice_reply r, jsonb_array_elements(r.checks) x
                     where r.notice_id = n.id and x->>'item' = i and (x->>'present')::boolean)))::text as items_missing,
-                  n.status, n.issued_at, n.reply_due_on, u.full_name as signed_by_name,
+                  n.status, n.issued_at, n.reply_due_on, u.full_name as signed_by_name, n.ai_request_id is not null as ai_drafted,
                   (select count(*) from notice_reply r where r.notice_id = n.id) as replies
                 from notice n left join app_user u on u.id = n.signed_by
                 where n.fir_id = ? order by n.issued_at nulls first, n.id""")

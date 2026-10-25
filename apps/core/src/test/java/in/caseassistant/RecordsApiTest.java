@@ -139,7 +139,12 @@ class RecordsApiTest {
                 .andExpect(jsonPath("$[0].items_requested[0]").value("statement; Jan-Mar"))
                 .andExpect(jsonPath("$[0].items_missing.length()").value(1))
                 .andExpect(jsonPath("$[0].items_missing[0]").value("statement; Jan-Mar"))
-                .andExpect(jsonPath("$[0].signed_by_name").value("SI Asha Rao"));
+                .andExpect(jsonPath("$[0].signed_by_name").value("SI Asha Rao"))
+                .andExpect(jsonPath("$[0].ai_drafted").value(false));
+        send("/notices", "{\"kind\":\"BNSS_94\",\"addressee\":\"Fictional Telecom\",\"itemsRequested\":[\"CDR\"],\"body\":\"Checked AI draft.\",\"aiRequestId\":\"%s\"}"
+                .formatted(UUID.randomUUID()), 201);
+        mvc.perform(get("/api/firs/" + fir + "/notices").header("Authorization", auth))
+                .andExpect(jsonPath("$[?(@.addressee=='Fictional Telecom')].ai_drafted").value(org.hamcrest.Matchers.contains(true)));
         org.assertj.core.api.Assertions.assertThat(db.sql("select signed_by from notice where id = ?::uuid").param(id).query(UUID.class).single()).isEqualTo(io);
     }
 
