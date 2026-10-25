@@ -29,8 +29,10 @@ class RecordsController {
                      String addressPermanent, String nationality, boolean identityMasked) {}
 
     record NewArrest(@NotNull UUID personId, @NotNull OffsetDateTime arrestedAt, @NotBlank String place,
-                     @NotEmpty List<String> grounds, @NotBlank String informedName, String informedContact,
-                     @NotNull UUID arrestingOfficer, LocalDate firstRemandOn, @NotBlank String maxPunishment) {}
+                     @NotEmpty List<@NotBlank String> grounds, @NotBlank String informedName, String informedContact,
+                     LocalDate firstRemandOn, @NotBlank String maxPunishment) {}
+
+    record FirstRemand(@NotNull LocalDate firstRemandOn) {}
 
     record NewEvidence(@NotBlank String label, @NotBlank String description, @NotBlank String kind,
                        @NotNull OffsetDateTime seizedAt, @NotBlank String seizureMemo, String esakshyaId,
@@ -87,17 +89,88 @@ class RecordsController {
                 .query(UUID.class).single());
     }
 
+    private static final java.time.ZoneId IST = java.time.ZoneId.of("Asia/Kolkata");
+
+    private static void badRequest(String message) {
+        throw new org.springframework.web.server.ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    }
+
+    /** The BNSS 187(3) 60/90 days run from the first remand, so it can never be before the arrest day (IST). */
+    private static void checkRemand(LocalDate remand, OffsetDateTime arrestedAt) {
+        if (remand != null && remand.isBefore(arrestedAt.atZoneSameInstant(IST).toLocalDate()))
+            badRequest("The first remand cannot be before the day of arrest.");
+    }
+
+    /**
+     * Arrest memo (BNSS 35; grounds told to the person, BNSS 47; a relative or friend informed, BNSS 48).
+     * The signed-in officer records it and is named as the arresting officer. Only an accused of this case can be
+     * arrested; the time cannot be in the future. The memo is kept as written (database trigger, V11).
+     */
     @PostMapping("/arrests")
     ResponseEntity<Map<String, UUID>> arrest(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody NewArrest a) {
-        team.requireTeam(CaseTeam.user(jwt), firId);
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
         requireRow("person", a.personId, firId);
+        if (!db.sql("select role = 'accused' from person where id = ?").param(a.personId).query(Boolean.class).single())
+            badRequest("Only an accused can be arrested. Change the person's role first.");
+        if (a.arrestedAt.isAfter(OffsetDateTime.now().plusMinutes(5))) badRequest("The time of arrest cannot be in the future.");
+        checkRemand(a.firstRemandOn, a.arrestedAt);
         return created(db.sql("""
                 insert into arrest (person_id, arrested_at, place, grounds, informed_name, informed_contact,
-                  arresting_officer, first_remand_on, max_punishment)
-                values (?,?,?,?,?,?,?,?,?) returning id""")
-                .params(a.personId, a.arrestedAt, a.place, a.grounds.toArray(new String[0]), a.informedName,
-                        a.informedContact, a.arrestingOfficer, a.firstRemandOn, a.maxPunishment)
+                  arresting_officer, first_remand_on, max_punishment, recorded_by, remand_recorded_by, remand_recorded_at)
+                values (?,?,?,?,?,?,?,?,?,?,?,?) returning id""")
+                .params(a.personId, a.arrestedAt, a.place, a.grounds.stream().map(String::trim).toArray(String[]::new), a.informedName,
+                        a.informedContact, me, a.firstRemandOn, a.maxPunishment, me,
+                        a.firstRemandOn == null ? null : me, a.firstRemandOn == null ? null : OffsetDateTime.now())
                 .query(UUID.class).single());
+    }
+
+    /**
+     * Arrests in this case, oldest first, each with its own BNSS 187(3) last day once the first remand is known.
+     * The relative or friend who was informed is a private person: their name and contact go only to the case team.
+     */
+    @GetMapping("/arrests")
+    List<Map<String, Object>> arrests(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId) {
+        requireFir(firId);
+        boolean onTeam = team.includes(CaseTeam.user(jwt), firId);
+        return db.sql("""
+                select a.id, a.person_id, p.label as person_label, a.arrested_at, a.place, to_json(a.grounds)::text as grounds,
+                  a.informed_name, a.informed_contact, u.full_name as arresting_officer_name, a.max_punishment, a.first_remand_on,
+                  case when a.first_remand_on is not null then chargesheet_last_day(a.first_remand_on, a.max_punishment) end as chargesheet_last_day,
+                  r.full_name as remand_recorded_by_name
+                from arrest a join person p on p.id = a.person_id
+                  join app_user u on u.id = a.arresting_officer left join app_user r on r.id = a.remand_recorded_by
+                where p.fir_id = ? order by a.arrested_at, a.id""")
+                .param(firId).query().listOfRows().stream().map(row -> {
+                    Map<String, Object> out = new java.util.LinkedHashMap<>(row);
+                    try {
+                        out.put("grounds", JSON.readValue((String) row.get("grounds"), List.class));
+                    } catch (java.io.IOException e) {
+                        throw new IllegalStateException(e);
+                    }
+                    if (!onTeam) {
+                        out.put("informed_name", null);
+                        out.put("informed_contact", null);
+                    }
+                    return out;
+                }).toList();
+    }
+
+    /** The first remand is usually recorded the day after the arrest memo. It can be recorded once and is then fixed. */
+    @PostMapping("/arrests/{arrestId}/first-remand")
+    ResponseEntity<Void> firstRemand(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @PathVariable UUID arrestId,
+                                     @Valid @RequestBody FirstRemand f) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        var arrestedAt = db.sql("select a.arrested_at from arrest a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
+                .params(arrestId, firId).query(OffsetDateTime.class).optional()
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
+        checkRemand(f.firstRemandOn, arrestedAt);
+        int n = db.sql("update arrest set first_remand_on = ?, remand_recorded_by = ?, remand_recorded_at = now() where id = ? and first_remand_on is null")
+                .params(f.firstRemandOn, me, arrestId).update();
+        if (n == 0) throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
+                "The first remand of this arrest is already recorded; it cannot be changed.");
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/evidence")

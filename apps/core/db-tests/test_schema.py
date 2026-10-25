@@ -128,8 +128,9 @@ def test_chargesheet_last_day(db, remand, punishment, expected):
 def test_deadlines_view(db):
     st, io, fir = seed_case(db, sexual=True)
     a2 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A2','Demo Accused') RETURNING id", fir)[0]
-    db.execute("""INSERT INTO arrest(person_id,arrested_at,place,grounds,informed_name,arresting_officer,first_remand_on,max_punishment)
-                  VALUES (%s,'2026-09-12 07:00+05:30','Demo place','{proper investigation}','Demo relative',%s,'2026-09-12','less_than_10_years')""", (a2, io))
+    db.execute("""INSERT INTO arrest(person_id,arrested_at,place,grounds,informed_name,arresting_officer,first_remand_on,max_punishment,
+                  remand_recorded_by,remand_recorded_at)
+                  VALUES (%s,'2026-09-12 07:00+05:30','Demo place','{proper investigation}','Demo relative',%s,'2026-09-12','less_than_10_years',%s,now())""", (a2, io, io))
     db.execute("""INSERT INTO notice(fir_id,kind,addressee,items_requested,body,signed_by,issued_at,reply_due_on,status)
                   VALUES (%s,'BNSS_94','Bank of Demo','{statements}','Demo body',%s,now(),'2026-10-30','sent')""", (fir, io))
     rows = dict(db.execute("SELECT kind, due_on FROM case_deadline").fetchall())
@@ -137,6 +138,31 @@ def test_deadlines_view(db):
     assert rows["sexual_offence_investigation"] == dt.date(2026, 10, 18)
     assert rows["victim_progress_update"] == dt.date(2026, 11, 16)
     assert rows["notice_reply:Bank of Demo"] == dt.date(2026, 10, 30)
+
+
+ARREST = """INSERT INTO arrest(person_id,arrested_at,place,grounds,informed_name,arresting_officer,max_punishment,recorded_by)
+             VALUES (%s,'2026-09-12 00:30+05:30','Demo place','{proper investigation}','Demo relative',%s,'life',%s) RETURNING id"""
+
+
+def test_arrest_only_of_an_accused_and_kept_as_written(db):
+    st, io, fir = seed_case(db)
+    w1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'witness','W1','Demo Witness') RETURNING id", fir)[0]
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute(ARREST, (w1, io, io))
+    a1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A1','Demo Accused') RETURNING id", fir)[0]
+    arrest = one(db, ARREST, a1, io, io)[0]
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE arrest SET max_punishment='less_than_10_years'")
+    with pytest.raises(psycopg.errors.CheckViolation):  # 11 Sep is before the arrest day in IST (12 Sep, 00:30 IST = 11 Sep UTC)
+        db.execute("UPDATE arrest SET first_remand_on='2026-09-11', remand_recorded_by=%s, remand_recorded_at=now()", (io,))
+    with pytest.raises(psycopg.errors.CheckViolation):  # who recorded the remand is needed
+        db.execute("UPDATE arrest SET first_remand_on='2026-09-13'")
+    db.execute("UPDATE arrest SET first_remand_on='2026-09-12', remand_recorded_by=%s, remand_recorded_at=now()", (io,))
+    assert one(db, "SELECT due_on FROM case_deadline WHERE kind='chargesheet_custody'")[0] == dt.date(2026, 12, 10)
+    with pytest.raises(psycopg.errors.RaiseException):  # only once
+        db.execute("UPDATE arrest SET first_remand_on='2026-09-13', remand_recorded_at=now()")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM arrest WHERE id=%s", (arrest,))
 
 
 def test_notice_must_be_signed_before_sent(db):

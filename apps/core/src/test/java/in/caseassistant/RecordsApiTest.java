@@ -55,11 +55,50 @@ class RecordsApiTest {
         String pid = idOf(send("/people", "{\"role\":\"accused\",\"label\":\"A1\",\"identityKnown\":true,\"fullName\":\"Fictional Accused\"}", 201));
         String arrest = """
                 {"personId":"%s","arrestedAt":"2026-09-12T08:00:00Z","place":"Testpur","grounds":["to prevent further offence"],
-                 "informedName":"Fictional Relative","arrestingOfficer":"%s","firstRemandOn":"2026-09-12","maxPunishment":"less_than_10_years"}""".formatted(pid, io);
+                 "informedName":"Fictional Relative","firstRemandOn":"2026-09-12","maxPunishment":"less_than_10_years"}""".formatted(pid);
         send("/arrests", arrest, 201);
         mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", auth)).andExpect(jsonPath("$[?(@.kind=='chargesheet_custody')].due_on").value("2026-11-10"));
+        mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", auth))
+                .andExpect(jsonPath("$[0].person_label").value("A1"))
+                .andExpect(jsonPath("$[0].arresting_officer_name").value("SI Asha Rao"))   // the signed-in officer
+                .andExpect(jsonPath("$[0].grounds[0]").value("to prevent further offence"))
+                .andExpect(jsonPath("$[0].chargesheet_last_day").value("2026-11-10"))
+                .andExpect(jsonPath("$[0].informed_name").value("Fictional Relative"));
         send("/arrests", arrest.replace("[\"to prevent further offence\"]", "[]"), 400);
+        send("/arrests", arrest.replace("[\"to prevent further offence\"]", "[\" \"]"), 400);
         send("/arrests", arrest.replace(pid, UUID.randomUUID().toString()), 404);
+        send("/arrests", arrest.replace("2026-09-12T08:00:00Z", "2099-01-01T08:00:00Z"), 400);   // in the future
+        send("/arrests", arrest.replace("\"2026-09-12\"", "\"2026-09-11\""), 400);             // remand before arrest
+        String witness = idOf(send("/people", "{\"role\":\"witness\",\"label\":\"W1\",\"identityKnown\":true,\"fullName\":\"Fictional Witness\"}", 201));
+        mvc.perform(post("/api/firs/" + fir + "/arrests").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+                .content(arrest.replace(pid, witness))).andExpect(status().isBadRequest())
+                .andExpect(status().reason(org.hamcrest.Matchers.startsWith("Only an accused can be arrested")));
+    }
+
+    @Test
+    void firstRemandIsRecordedOnceAndDecidesTheDeadline() throws Exception {
+        String pid = idOf(send("/people", "{\"role\":\"accused\",\"label\":\"A2\",\"identityKnown\":false}", 201));
+        // 00:30 IST on 12 Sep is still 11 Sep in UTC: the arrest day is 12 Sep.
+        String arrest = idOf(send("/arrests", """
+                {"personId":"%s","arrestedAt":"2026-09-12T00:30:00+05:30","place":"Testpur","grounds":["proper investigation"],
+                 "informedName":"Fictional Friend","informedContact":"Fictional contact","maxPunishment":"life"}""".formatted(pid), 201));
+        mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", auth)).andExpect(jsonPath("$[?(@.kind=='chargesheet_custody')]").isEmpty());
+        send("/arrests/" + arrest + "/first-remand", "{\"firstRemandOn\":\"2026-09-11\"}", 400);
+        send("/arrests/" + UUID.randomUUID() + "/first-remand", "{\"firstRemandOn\":\"2026-09-13\"}", 404);
+        send("/arrests/" + arrest + "/first-remand", "{\"firstRemandOn\":\"2026-09-13\"}", 204);
+        send("/arrests/" + arrest + "/first-remand", "{\"firstRemandOn\":\"2026-09-14\"}", 409);
+        mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", auth))
+                .andExpect(jsonPath("$[0].chargesheet_last_day").value("2026-12-11"))   // 90 days, 13 Sep is day 1
+                .andExpect(jsonPath("$[0].remand_recorded_by_name").value("SI Asha Rao"));
+        // someone outside the case team does not see who was informed
+        UUID other = db.sql("insert into app_user (full_name, rank, role) values ('Fictional Prosecutor','APP','prosecutor') returning id")
+                .query(UUID.class).single();
+        mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", TestAuth.bearer(tokens, other)))
+                .andExpect(jsonPath("$[0].person_label").value("A2"))
+                .andExpect(jsonPath("$[0].informed_name").doesNotExist())
+                .andExpect(jsonPath("$[0].informed_contact").doesNotExist());
+        mvc.perform(post("/api/firs/" + fir + "/arrests/" + arrest + "/first-remand").header("Authorization", TestAuth.bearer(tokens, other))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"firstRemandOn\":\"2026-09-13\"}")).andExpect(status().isForbidden());
     }
 
     @Test
