@@ -1,6 +1,8 @@
 import { useLoad } from './useLoad'
 import { fmt } from './formats'
 import Readiness from './Readiness'
+import Notices from './Notices'
+import Certificates from './Certificates'
 import { AddEvidenceForm, AddPersonForm } from './Forms'
 import { useState } from 'react'
 
@@ -47,9 +49,11 @@ export default function FirDetail({ id }: { id: string }) {
       </Section>
       <Section<Evidence> title="Evidence" path={`/firs/${id}/evidence`} version={version} form={<AddEvidenceForm firId={id} onSaved={saved} />}>
         {(rows) => <ul>{rows.map((e) => (
-          <li key={e.id}>{e.label} ({e.kind}){e.kind === 'electronic' && (e.court_ready ? ' · court-ready' : ' · not court-ready yet (BSA 63(4))')}</li>
+          <li key={e.id}>{e.label} ({e.kind}){e.kind === 'electronic' && (e.court_ready ? ' · court-ready' : ' · not court-ready yet (BSA 63(4))')}
+            {e.kind === 'electronic' && <Certificates firId={id} item={e} onSaved={saved} />}</li>
         ))}</ul>}
       </Section>
+      <Notices firId={id} />
       <Readiness key={version} firId={id} />
     </>
   )

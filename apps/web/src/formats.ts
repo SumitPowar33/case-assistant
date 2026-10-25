@@ -24,3 +24,6 @@ export function istIso(local: string): string {
 
 /** Dates and times are shown in India time whatever the computer's clock zone is. */
 export const fmt = (iso: string) => new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) + ' IST'
+
+/** A form field's trimmed text, or null when empty. */
+export const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null

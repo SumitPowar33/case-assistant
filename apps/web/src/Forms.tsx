@@ -2,9 +2,9 @@ import { useContext, useState, type FormEvent, type ReactNode } from 'react'
 import { currentSession, send } from './api'
 import TypingField from './TypingField'
 import { TypingContext } from './typing'
-import { istIso, parseSections } from './formats'
+import { istIso, parseSections, text } from './formats'
 
-function Form({ title, submit, onSaved, children }: {
+export function Form({ title, submit, onSaved, children }: {
   title: string; submit: (f: FormData) => Promise<unknown>; onSaved: (result: unknown) => void; children: ReactNode
 }) {
   const [error, setError] = useState('')
@@ -33,8 +33,6 @@ function Form({ title, submit, onSaved, children }: {
     </details>
   )
 }
-
-const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null
 
 /** Register a new FIR at the signed-in officer's own station. */
 export function NewFirForm() {
