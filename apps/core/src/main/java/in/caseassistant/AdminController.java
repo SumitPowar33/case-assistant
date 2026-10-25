@@ -40,6 +40,9 @@ class AdminController {
 
     record Reason(@NotBlank @Size(min = 10, max = 2000) String reason) {}
 
+    record Change(@NotBlank @Pattern(regexp = "io|front_desk|sho|sp|prosecutor|malkhana|state_admin") String role,
+                  @NotBlank @Size(max = 60) String rank, UUID stationId, @NotBlank @Size(min = 10, max = 2000) String reason) {}
+
     record NewStation(@NotBlank @Pattern(regexp = "[A-Z]{2,3}") String stateCode, @NotBlank @Size(max = 120) String district,
                       @NotBlank @Size(max = 200) String name, @Size(max = 40) String cctnsCode) {}
 
@@ -62,8 +65,12 @@ class AdminController {
     }
 
     private void log(UUID actor, String action, UUID userId, UUID stationId, String reason) {
-        db.sql("insert into admin_action (actor_id, action, user_id, station_id, reason) values (?,?,?,?,?)")
-                .params(actor, action, userId, stationId, reason == null ? null : reason.trim()).update();
+        log(actor, action, userId, stationId, reason, null);
+    }
+
+    private void log(UUID actor, String action, UUID userId, UUID stationId, String reason, String detail) {
+        db.sql("insert into admin_action (actor_id, action, user_id, station_id, reason, detail) values (?,?,?,?,?,?)")
+                .params(actor, action, userId, stationId, reason == null ? null : reason.trim(), detail).update();
     }
 
     /** Every account with its station and whether it is locked now; never a password hash. */
@@ -124,6 +131,43 @@ class AdminController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Changes an account's role, rank or police station (a transfer or a promotion), with a reason. The admin log
+     * keeps what changed. The officer's older tokens end, so they sign in again and see their new role. Case access
+     * follows at once (it is read from the account, not the token). FIRs that still name the officer as IO are
+     * counted in the answer, because a transferred IO stays IO of them until the cases are given to someone else.
+     * The admin cannot change their own account, so one state admin always remains.
+     */
+    @PutMapping("/users/{id}")
+    @Transactional
+    Map<String, Object> change(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody Change c) {
+        UUID me = requireAdmin(jwt);
+        if (me.equals(id)) throw new ResponseStatusException(HttpStatus.CONFLICT, "You cannot change your own account.");
+        UUID station = STATION_ROLES.contains(c.role) || c.role.equals("prosecutor") ? c.stationId : null;
+        if (STATION_ROLES.contains(c.role) && station == null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose the police station for this role.");
+        var old = db.sql("""
+                select u.role, u.rank, u.station_id, s.name as station_name from app_user u
+                left join police_station s on s.id = u.station_id where u.id = ? for update of u""")
+                .param(id).query().listOfRows().stream().findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such account."));
+        String newStationName = station == null ? null
+                : db.sql("select name from police_station where id = ?").param(station).query(String.class).optional()
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such police station."));
+        var detail = new java.util.ArrayList<String>();
+        if (!old.get("role").equals(c.role)) detail.add("role " + old.get("role") + " to " + c.role);
+        if (!old.get("rank").equals(c.rank.trim())) detail.add("rank " + old.get("rank") + " to " + c.rank.trim());
+        if (!java.util.Objects.equals(old.get("station_id"), station))
+            detail.add("station " + java.util.Objects.requireNonNullElse(old.get("station_name"), "none") + " to "
+                    + java.util.Objects.requireNonNullElse(newStationName, "none"));
+        if (detail.isEmpty()) throw new ResponseStatusException(HttpStatus.CONFLICT, "Nothing to change.");
+        db.sql("update app_user set role = ?, rank = ?, station_id = ?, password_changed_at = clock_timestamp() where id = ?")
+                .params(c.role, c.rank.trim(), station, id).update();
+        log(me, "user_changed", id, null, c.reason, String.join("; ", detail));
+        long firsAsIo = db.sql("select count(*) from fir where io_id = ?").param(id).query(Long.class).single();
+        return Map.of("changed", String.join("; ", detail), "firsAsIo", firsAsIo);
+    }
+
     /** Ends a sign-in lock before its 15 minutes are up (the officer has been reached and it was them). */
     @PostMapping("/users/{id}/unlock")
     @Transactional
@@ -172,7 +216,7 @@ class AdminController {
     List<Map<String, Object>> actions(@AuthenticationPrincipal Jwt jwt) {
         requireAdmin(jwt);
         return db.sql("""
-                select a.action, a.reason, a.at, actor.full_name as actor_name, u.username, u.full_name as user_name, s.name as station_name
+                select a.action, a.reason, a.detail, a.at, actor.full_name as actor_name, u.username, u.full_name as user_name, s.name as station_name
                 from admin_action a join app_user actor on actor.id = a.actor_id
                 left join app_user u on u.id = a.user_id left join police_station s on s.id = a.station_id
                 order by a.at desc limit 200""").query().listOfRows();

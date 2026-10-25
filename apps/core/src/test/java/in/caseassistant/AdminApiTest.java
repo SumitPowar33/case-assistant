@@ -150,4 +150,48 @@ class AdminApiTest {
         assertThatThrownBy(() -> db.sql("update admin_action set reason = 'changed later'").update()).hasMessageContaining("kept as written");
         assertThatThrownBy(() -> db.sql("delete from admin_action").update()).hasMessageContaining("kept as written");
     }
+
+    ResultActions put(String bearer, String path, String body) throws Exception {
+        return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path)
+                .header("Authorization", bearer).contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    void aTransferChangesRoleOrStationWithAReasonLogsItAndEndsOldTokens() throws Exception {
+        UUID io = createIo();
+        String old = "Bearer " + token("si.fictional", IO_PW);
+        UUID other = UUID.fromString(json.readTree(post(admin, "/api/stations",
+                        "{\"stateCode\":\"IN\",\"district\":\"Demo District\",\"name\":\"Demo City PS\"}")
+                .andReturn().getResponse().getContentAsString()).get("id").asText());
+        db.sql("""
+                insert into fir (station_id, fir_year, fir_no, gd_entry_no, registered_at, information_received_at,
+                  contents_original, contents_language, action_taken, io_id)
+                values (?,2026,7,'GD-1',now(),now(),'Fictional complaint','en','investigate',?)""").params(station, io).update();
+        String change = "{\"role\":\"%s\",\"rank\":\"%s\",\"stationId\":%s,\"reason\":\"%s\"}";
+        String to = "\"" + other + "\"";
+        put(admin, "/api/users/" + io, change.formatted("sho", "PI", to, "short")).andExpect(status().isBadRequest());
+        put(admin, "/api/users/" + io, change.formatted("sho", "PI", "null", "Fictional transfer order 12")).andExpect(status().isBadRequest())
+                .andExpect(status().reason("Choose the police station for this role."));
+        put(admin, "/api/users/" + io, change.formatted("sho", "PI", "\"" + UUID.randomUUID() + "\"", "Fictional transfer order 12"))
+                .andExpect(status().isBadRequest());
+        put(old, "/api/users/" + io, change.formatted("sho", "PI", to, "Fictional transfer order 12")).andExpect(status().isForbidden());
+        put(admin, "/api/users/" + io, change.formatted("io", "SI", "\"" + station + "\"", "Fictional transfer order 12"))
+                .andExpect(status().isConflict()).andExpect(status().reason("Nothing to change."));
+        put(admin, "/api/users/" + UUID.randomUUID(), change.formatted("io", "SI", to, "Fictional transfer order 12")).andExpect(status().isNotFound());
+        put(admin, "/api/users/" + io, change.formatted("sho", "PI", to, "Fictional transfer order 12")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.changed").value("role io to sho; rank SI to PI; station Demo Cyber PS to Demo City PS"))
+                .andExpect(jsonPath("$.firsAsIo").value(1));
+        mvc.perform(get("/api/me").header("Authorization", old)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/me").header("Authorization", "Bearer " + token("si.fictional", IO_PW)))
+                .andExpect(jsonPath("$.role").value("sho"));
+        mvc.perform(get("/api/admin-actions").header("Authorization", admin))
+                .andExpect(jsonPath("$[0].action").value("user_changed"))
+                .andExpect(jsonPath("$[0].reason").value("Fictional transfer order 12"))
+                .andExpect(jsonPath("$[0].detail").value("role io to sho; rank SI to PI; station Demo Cyber PS to Demo City PS"));
+        // a state admin keeps no station; the admin cannot change their own account
+        put(admin, "/api/users/" + io, change.formatted("state_admin", "PI", to, "Fictional posting to headquarters")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.changed").value("role sho to state_admin; station Demo City PS to none"));
+        UUID me = db.sql("select id from app_user where username = 'admin.one'").query(UUID.class).single();
+        put(admin, "/api/users/" + me, change.formatted("io", "SI", to, "Fictional change of own role")).andExpect(status().isConflict());
+    }
 }
