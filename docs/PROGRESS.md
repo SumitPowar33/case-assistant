@@ -4,6 +4,46 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 25 Oct 2026, session 9 (weekend, Sunday 21:05 run, second session tonight)
+Started from `setup/seed` at b0211f6 (session 8). All suites green before any change.
+
+Done
+- State admin screens (Next 1). New "Admin" page (state admin only) and `AdminController`:
+  - Accounts: list (station, active / locked until / disabled; never a password hash), create, disable, enable, unlock. Disable, enable and unlock need a written reason (10+ characters). The admin cannot disable their own account, so one active state admin always remains.
+  - Disabling also ends every token issued before it for good: if the account is enabled again, the officer must sign in again (old tokens do not come back to life).
+  - Unlock ends a sign-in lock before its 15 minutes are up; it is written to the sign-in log as "unlocked by the state admin" and counts like a successful sign-in for the lock rule. Only a locked account can be unlocked.
+  - Station roles (IO, front desk, SHO, SP, malkhana) must have a police station when the account is created (before, an IO without a station could be created and could never register an FIR).
+  - Police stations: list (any signed-in user; no case data in it) and add (state admin; the state must be a loaded state pack; CCTNS code unique). `GET /api/state-packs` lists the packs.
+  - Admin log: every account and station change, who made it, when, and the reason; kept as written (database trigger). `GET /api/admin-actions`. Migration V10.
+  - `POST /api/users` moved from `AuthController` to `AdminController`; `AuthController` now only signs in, says who you are and changes your own password.
+- AI draft of a notice (Next 2). In "Write a notice", "Draft the text with AI" asks the AI gateway (feature `notice_draft`, prompt version `notice_draft/notice@1`, template in `apps/web/src/noticePrompt.ts`). Only the notice's own facts are sent: kind, FIR number and sections, the items, and the addressee only for BNSS 94 (usually a bank or telecom company). Never the complaint text, never names of people: for BNSS 35(3), 179 and follow-up notices the addressee is left as a blank for the officer. The draft is shown apart in a dashed box marked "AI draft - check before use"; it goes into the notice text only when the officer clicks "Use this draft", and they can edit it. When the notice is saved, its `ai_request_id` is kept and the gateway's audit log gets the decision: accepted (used unchanged), edited, or rejected (discarded or not used). The notice list says "text drafted with AI, checked by the officer". Gateway errors now show the gateway's reason (for example "ANTHROPIC_API_KEY is not set").
+- Checked in a real browser with fictional demo users: admin adds a station and an IO, five wrong passwords lock the IO, admin unlocks with a reason, disables with a reason; IO drafts a BNSS 94 notice with the `fake` provider, edits it, saves; gateway audit shows `ai_request` then `edited`, chain intact.
+- Tests: gateway 16, xlit 77, db 26, packs 3, core 39, web 41; web build and lint pass.
+
+Deliberately skipped / not checked
+- No admin password reset for a forgotten password, no edit of an account (name, rank, role, station) and no edit of a station. A wrong account can be disabled and a new one made.
+- The account list asks the lock state once per account (one small query each); fine for a demo, slow for thousands of accounts.
+- The AI prompt is built in the browser. A signed-in officer could send other text to `notice_draft`; it is still audit-logged (hash, prompt version, user). Moving prompt building to the server is a later step if wanted.
+- The core app does not check that an `ai_request_id` really exists in the gateway (the two do not talk about AI requests). If the decision cannot be logged after the notice is saved, the officer sees a message; the notice is not saved twice.
+- A draft that was asked for and then left (page closed without saving) has no decision in the log.
+- With no API keys, the default provider (Claude) answers 502; the state admin must switch `notice_draft` to `fake` for a keyless demo.
+
+Next
+1. Web form for arrests (BNSS 35 memo; feeds the 60/90-day deadline).
+2. Read access rules once question 1 is answered.
+3. Admin: reset a forgotten password (officer must change it at next sign-in), edit an account's role or station (with reason, logged).
+4. AI draft for the follow-up notice when a reply brings only some items (if question 4 of session 8 is yes).
+
+Blocked
+- Live Claude/Gemini calls still wait for API keys (unchanged; using `fake`).
+
+Questions for Sumit
+1. Still open: who may read a case? Every signed-in user can still open any FIR (victim details stay hidden).
+2. Still open: should the SHO or SP approve when an IO accepts or withdraws a gap?
+3. Is it right to send a bank's or telecom company's name to the AI in a BNSS 94 draft, but never a person's name?
+4. Should the state admin be able to reset a forgotten password, or should that go through the SP?
+5. A station can only be added for a state whose pack is loaded (only the national pack "IN" exists). Should I load Maharashtra ("MH") as the first state pack so demo stations can be in Maharashtra?
+
 ## 25 Oct 2026, session 8 (weekend, Sunday 21:05)
 No weekly review tonight: this week's review was done on Saturday 24 Oct. I re-read last night's sign-in and readiness code before building on it (notes below).
 
