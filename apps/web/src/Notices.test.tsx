@@ -63,7 +63,7 @@ test('a BNSS 94 notice needs items; sending now needs the issue time and is sent
   await vi.waitFor(() => expect(writes).toHaveLength(1))
   expect(writes[0].body).toEqual({ kind: 'BNSS_94', addressee: 'Nodal Officer, Fictional Telecom',
     itemsRequested: ['CDR 01-09-2026 to 30-09-2026', 'BSA 63(4) certificate Part A'], body: 'Please produce the records listed.',
-    status: 'sent', issuedAt: '2026-10-05T10:00:00+05:30', replyDueOn: '2026-10-12' })
+    aiRequestId: null, status: 'sent', issuedAt: '2026-10-05T10:00:00+05:30', replyDueOn: '2026-10-12' })
 })
 
 test('a draft can be signed and sent; it offers no reply form', async () => {
@@ -77,6 +77,69 @@ test('a draft can be signed and sent; it offers no reply form', async () => {
   fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
   await vi.waitFor(() => expect(writes).toHaveLength(1))
   expect(writes[0]).toEqual({ url: '/api/firs/f1/notices/n1/send', body: { issuedAt: '2026-10-06T11:30:00+05:30', replyDueOn: null } })
+})
+
+const AI_TEXT = 'Notice under BNSS 94 in FIR No. 214/2026. Produce: CDR. [REPLY DUE DATE]'
+/** Core and AI gateway both answer; every write is recorded with where it went. */
+function stubWithAi(draft = AI_TEXT) {
+  const writes: { url: string; body: Record<string, unknown> }[] = []
+  let n = 0
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method && init.method !== 'GET') {
+      const body = JSON.parse(init.body as string)
+      writes.push({ url, body })
+      if (url === '/ai/v1/generate') {
+        n += 1
+        return { ok: true, status: 200, json: async () => ({ request_id: `r${n}`, draft: `${draft}${n > 1 ? ' v' + n : ''}`, provider: 'fake', model: 'fake-1', label: 'AI draft - check before use' }) }
+      }
+      return { ok: true, status: url.startsWith('/ai') ? 200 : 201, json: async () => (url.startsWith('/ai') ? { logged: 1 } : { id: 'n9' }) }
+    }
+    return { ok: true, status: 200, json: async () => [] }
+  }))
+  return writes
+}
+const fir = { fir_no: 214, fir_year: 2026, sections: [{ act: 'BNS', section: '318(4)' }] }
+
+test('an AI draft is shown apart, used only when the officer chooses, and an edited draft is logged as edited', async () => {
+  const writes = stubWithAi()
+  render(<Notices firId="f1" fir={fir} />)
+  await screen.findByText('None yet.')
+  fireEvent.click(screen.getByRole('button', { name: 'Draft the text with AI' }))
+  expect((await screen.findByRole('alert')).textContent).toBe('Fill in "To" first.')
+  type('To', 'Nodal Officer, Fictional Telecom')
+  type(/Items to produce/, 'CDR')
+  fireEvent.click(screen.getByRole('button', { name: 'Draft the text with AI' }))
+  const box = await screen.findByRole('region', { name: 'AI draft' })
+  expect(within(box).getByText('AI draft - check before use')).toBeTruthy()
+  expect(writes[0].url).toBe('/ai/v1/generate')
+  expect(writes[0].body).toMatchObject({ feature: 'notice_draft', prompt_version: 'notice_draft/notice@1', case_ref: 'f1' })
+  expect(writes[0].body.prompt).toContain('FIR No. 214/2026, registered under BNS 318(4)')
+  expect((screen.getByLabelText('Text of the notice') as HTMLTextAreaElement).value).toBe('') // not copied until chosen
+  fireEvent.click(within(box).getByRole('button', { name: 'Use this draft' }))
+  expect((screen.getByLabelText('Text of the notice') as HTMLTextAreaElement).value).toBe(AI_TEXT)
+  type('Text of the notice', AI_TEXT.replace('[REPLY DUE DATE]', '12-10-2026'))
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(3))
+  expect(writes[1]).toMatchObject({ url: '/api/firs/f1/notices', body: { aiRequestId: 'r1', status: 'draft' } })
+  expect(writes[2]).toEqual({ url: '/ai/v1/decisions', body: { request_id: 'r1', decision: 'edited', feature: 'notice_draft', case_ref: 'f1', note: '' } })
+})
+
+test('a discarded draft is logged as rejected and never saved; a draft used unchanged is accepted', async () => {
+  const writes = stubWithAi()
+  render(<Notices firId="f1" fir={fir} />)
+  await screen.findByText('None yet.')
+  type('To', 'Nodal Officer, Fictional Telecom')
+  type(/Items to produce/, 'CDR')
+  fireEvent.click(screen.getByRole('button', { name: 'Draft the text with AI' }))
+  fireEvent.click(within(await screen.findByRole('region', { name: 'AI draft' })).getByRole('button', { name: 'Discard' }))
+  await vi.waitFor(() => expect(screen.queryByRole('region', { name: 'AI draft' })).toBeNull())
+  expect(writes[1].body).toMatchObject({ request_id: 'r1', decision: 'rejected' })
+  fireEvent.click(screen.getByRole('button', { name: 'Draft the text with AI' }))
+  fireEvent.click(within(await screen.findByRole('region', { name: 'AI draft' })).getByRole('button', { name: 'Use this draft' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(5))
+  expect(writes[3].body).toMatchObject({ aiRequestId: 'r2', body: AI_TEXT + ' v2' })
+  expect(writes[4].body).toMatchObject({ request_id: 'r2', decision: 'accepted' })
 })
 
 const SHA = 'b'.repeat(64)

@@ -53,7 +53,7 @@ export default function FirDetail({ id }: { id: string }) {
             {e.kind === 'electronic' && <Certificates firId={id} item={e} onSaved={saved} />}</li>
         ))}</ul>}
       </Section>
-      <Notices firId={id} />
+      <Notices firId={id} fir={fir} />
       <Readiness key={version} firId={id} />
     </>
   )

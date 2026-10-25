@@ -61,8 +61,11 @@ export async function send<T>(path: string, method: 'POST' | 'PUT', body: unknow
 // The AI gateway (services/ai-gateway) is served under /ai.
 export async function ai<T>(path: string, init?: { method: string; body: unknown }): Promise<T> {
   const res = await call(`/ai${path}`, init)
-  if (res.status === 403) throw new Error('Only the state admin can change AI settings.')
-  if (!res.ok) throw new Error(`The AI gateway answered ${res.status} for ${path}`)
+  if (!res.ok) {
+    // the gateway's own reason, e.g. "ANTHROPIC_API_KEY is not set" or "only the state admin can do this"
+    const detail = ((await res.json().catch(() => ({}))) as { detail?: unknown }).detail
+    throw new Error(`The AI gateway answered ${res.status}${typeof detail === 'string' ? `: ${detail}` : ` for ${path}`}`)
+  }
   return res.json() as Promise<T>
 }
 
