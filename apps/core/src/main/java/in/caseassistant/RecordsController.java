@@ -34,6 +34,11 @@ class RecordsController {
 
     record FirstRemand(@NotNull LocalDate firstRemandOn) {}
 
+    record Release(@NotNull LocalDate releasedOn, @NotBlank @Pattern(regexp = "bail|default_bail|other") String basis) {}
+
+    record NewChargesheet(@NotNull LocalDate filedOn, @NotBlank @Size(max = 200) String court,
+                          @NotBlank @Size(max = 60) String reportNo, @NotEmpty List<@NotNull UUID> accusedIds) {}
+
     record NewEvidence(@NotBlank String label, @NotBlank String description, @NotBlank String kind,
                        @NotNull OffsetDateTime seizedAt, @NotBlank String seizureMemo, String esakshyaId,
                        String sealNo, String sha256) {}
@@ -137,7 +142,8 @@ class RecordsController {
                 select a.id, a.person_id, p.label as person_label, a.arrested_at, a.place, to_json(a.grounds)::text as grounds,
                   a.informed_name, a.informed_contact, u.full_name as arresting_officer_name, a.max_punishment, a.first_remand_on,
                   case when a.first_remand_on is not null then chargesheet_last_day(a.first_remand_on, a.max_punishment) end as chargesheet_last_day,
-                  r.full_name as remand_recorded_by_name
+                  r.full_name as remand_recorded_by_name, a.released_on, a.release_basis,
+                  chargesheet_filed_for(a.person_id) as chargesheet_filed_on
                 from arrest a join person p on p.id = a.person_id
                   join app_user u on u.id = a.arresting_officer left join app_user r on r.id = a.remand_recorded_by
                 where p.fir_id = ? order by a.arrested_at, a.id""")
@@ -171,6 +177,69 @@ class RecordsController {
         if (n == 0) throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
                 "The first remand of this arrest is already recorded; it cannot be changed.");
         return ResponseEntity.noContent().build();
+    }
+
+    private static LocalDate todayIst() {
+        return LocalDate.now(IST);
+    }
+
+    /**
+     * Release from custody (bail, default bail under BNSS 187(3), or otherwise), recorded once. From then on the
+     * 60/90-day custody limit no longer runs for this accused.
+     */
+    @PostMapping("/arrests/{arrestId}/release")
+    ResponseEntity<Void> release(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @PathVariable UUID arrestId,
+                                 @Valid @RequestBody Release r) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        var arrestedAt = db.sql("select a.arrested_at from arrest a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
+                .params(arrestId, firId).query(OffsetDateTime.class).optional()
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (r.releasedOn.isBefore(arrestedAt.atZoneSameInstant(IST).toLocalDate())) badRequest("The release cannot be before the day of arrest.");
+        if (r.releasedOn.isAfter(todayIst())) badRequest("The release date cannot be in the future.");
+        int n = db.sql("""
+                update arrest set released_on = ?, release_basis = ?, release_recorded_by = ?, release_recorded_at = now()
+                where id = ? and released_on is null""").params(r.releasedOn, r.basis, me, arrestId).update();
+        if (n == 0) throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
+                "The release from this arrest is already recorded; it cannot be changed.");
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * A chargesheet (police report, BNSS 193(3)) filed in court, naming the accused it covers. Kept as written; a
+     * supplementary chargesheet is a new one. It ends the custody limit for the accused it names and the BNSS 193(2)
+     * two-month limit of the case.
+     */
+    @PostMapping("/chargesheets")
+    @org.springframework.transaction.annotation.Transactional
+    ResponseEntity<Map<String, UUID>> chargesheet(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody NewChargesheet c) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        requireFir(firId);
+        if (c.filedOn.isAfter(todayIst())) badRequest("The filing date cannot be in the future.");
+        var registered = db.sql("select ist_date(registered_at) from fir where id = ?").param(firId).query(LocalDate.class).single();
+        if (c.filedOn.isBefore(registered)) badRequest("A chargesheet cannot be filed before the FIR was registered.");
+        for (UUID p : c.accusedIds) {
+            requireRow("person", p, firId);
+            if (!db.sql("select role = 'accused' from person where id = ?").param(p).query(Boolean.class).single())
+                badRequest("A chargesheet names only accused.");
+        }
+        UUID id = db.sql("insert into chargesheet (fir_id, filed_on, court, report_no, recorded_by) values (?,?,?,?,?) returning id")
+                .params(firId, c.filedOn, c.court.trim(), c.reportNo.trim(), me).query(UUID.class).single();
+        for (UUID p : new java.util.LinkedHashSet<>(c.accusedIds))
+            db.sql("insert into chargesheet_accused (chargesheet_id, person_id) values (?,?)").params(id, p).update();
+        return created(id);
+    }
+
+    @GetMapping("/chargesheets")
+    List<Map<String, Object>> chargesheets(@PathVariable UUID firId) {
+        requireFir(firId);
+        return db.sql("""
+                select c.id, c.filed_on, c.court, c.report_no, u.full_name as recorded_by_name,
+                  array_to_string(array(select p.label from chargesheet_accused ca join person p on p.id = ca.person_id
+                    where ca.chargesheet_id = c.id order by p.label), ', ') as accused
+                from chargesheet c join app_user u on u.id = c.recorded_by where c.fir_id = ? order by c.filed_on, c.recorded_at""")
+                .param(firId).query().listOfRows();
     }
 
     @PostMapping("/evidence")

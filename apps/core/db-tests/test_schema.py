@@ -165,6 +165,43 @@ def test_arrest_only_of_an_accused_and_kept_as_written(db):
         db.execute("DELETE FROM arrest WHERE id=%s", (arrest,))
 
 
+def test_release_and_chargesheet_stop_the_custody_limit(db):
+    st, io, fir = seed_case(db, sexual=True)
+    remanded = """INSERT INTO arrest(person_id,arrested_at,place,grounds,informed_name,arresting_officer,max_punishment,
+                  first_remand_on,remand_recorded_by,remand_recorded_at)
+                  VALUES (%s,%s,'Demo place','{proper investigation}','Demo relative',%s,%s,%s,%s,now()) RETURNING id"""
+    a1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A1','Demo One') RETURNING id", fir)[0]
+    a2 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A2','Demo Two') RETURNING id", fir)[0]
+    r1 = one(db, remanded, a1, "2026-09-01 10:00+05:30", io, "less_than_10_years", "2026-09-01", io)[0]   # last day 30 Oct
+    one(db, remanded, a2, "2026-09-12 10:00+05:30", io, "less_than_10_years", "2026-09-12", io)         # last day 10 Nov
+    due = lambda kind: [r[0] for r in db.execute("SELECT due_on FROM case_deadline WHERE kind=%s", (kind,))]
+    assert due("chargesheet_custody") == [dt.date(2026, 10, 30)]
+    with pytest.raises(psycopg.errors.CheckViolation):   # release before the arrest day
+        db.execute("UPDATE arrest SET released_on='2026-08-31', release_basis='bail', release_recorded_by=%s, release_recorded_at=now() WHERE id=%s", (io, r1))
+    with pytest.raises(psycopg.errors.CheckViolation):   # a release needs its basis
+        db.execute("UPDATE arrest SET released_on='2026-09-05', release_recorded_by=%s, release_recorded_at=now() WHERE id=%s", (io, r1))
+    db.execute("UPDATE arrest SET released_on='2026-09-05', release_basis='bail', release_recorded_by=%s, release_recorded_at=now() WHERE id=%s", (io, r1))
+    assert due("chargesheet_custody") == [dt.date(2026, 11, 10)]   # A1 is out on bail: A2's limit is next
+    with pytest.raises(psycopg.errors.RaiseException):   # the release is recorded once
+        db.execute("UPDATE arrest SET released_on='2026-09-06', release_recorded_at=now() WHERE id=%s", (r1,))
+    with pytest.raises(psycopg.errors.RaiseException):   # the memo itself stays as written
+        db.execute("UPDATE arrest SET place='Elsewhere' WHERE id=%s", (r1,))
+    assert due("sexual_offence_investigation") == [dt.date(2026, 10, 18)]
+    with pytest.raises(psycopg.errors.RaiseException):   # before the FIR was registered (18 Aug)
+        db.execute("INSERT INTO chargesheet(fir_id,filed_on,court,report_no,recorded_by) VALUES (%s,'2026-08-17','Demo Court','CS-1',%s)", (fir, io))
+    cs = one(db, "INSERT INTO chargesheet(fir_id,filed_on,court,report_no,recorded_by) VALUES (%s,'2026-10-15','Demo Court','CS-1',%s) RETURNING id", fir, io)[0]
+    w1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'witness','W1','Demo Witness') RETURNING id", fir)[0]
+    with pytest.raises(psycopg.errors.RaiseException):   # only accused of this case
+        db.execute("INSERT INTO chargesheet_accused VALUES (%s,%s)", (cs, w1))
+    db.execute("INSERT INTO chargesheet_accused VALUES (%s,%s)", (cs, a2))
+    assert due("chargesheet_custody") == [] and due("sexual_offence_investigation") == []
+    assert due("victim_progress_update") == [dt.date(2026, 11, 16)]
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE chargesheet SET filed_on='2026-10-16'")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM chargesheet_accused")
+
+
 def test_notice_must_be_signed_before_sent(db):
     st, io, fir = seed_case(db)
     with pytest.raises(psycopg.errors.CheckViolation):
