@@ -9,7 +9,7 @@ type Account = {
 type Station = { id: string; state_code: string; district: string; name: string; cctns_code: string | null }
 type StatePack = { code: string; name: string; status: string }
 type SignIn = { username_tried: string; outcome: string; client_ip: string | null; at: string }
-type AdminAction = { action: string; reason: string | null; at: string; actor_name: string; username: string | null; user_name: string | null; station_name: string | null }
+type AdminAction = { action: string; reason: string | null; detail: string | null; at: string; actor_name: string; username: string | null; user_name: string | null; station_name: string | null }
 
 const ROLES: Record<string, string> = {
   io: 'Investigating officer', front_desk: 'Front desk', sho: 'SHO', sp: 'SP', malkhana: 'Malkhana (evidence store)',
@@ -23,7 +23,7 @@ const OUTCOMES: Record<string, string> = {
 }
 const ACTIONS: Record<string, string> = {
   user_created: 'Account created', user_disabled: 'Account disabled', user_enabled: 'Account enabled',
-  user_unlocked: 'Account unlocked', station_created: 'Station added',
+  user_unlocked: 'Account unlocked', user_changed: 'Account changed', station_created: 'Station added',
 }
 
 /** The state admin's page: accounts, stations, the sign-in log and the admin log. The server refuses anyone else. */
@@ -43,11 +43,14 @@ export default function AdminPage() {
     return () => { live = false }
   }, [version])
 
-  async function act(e: FormEvent<HTMLFormElement>, run: (f: FormData) => Promise<unknown>, message: string) {
+  async function act(e: FormEvent<HTMLFormElement>, run: (f: FormData) => Promise<unknown>, message?: string) {
     e.preventDefault()
     setError(''); setDone('')
     const form = e.currentTarget
-    try { await run(new FormData(form)); form.reset(); setDone(message); setVersion((v) => v + 1) } catch (err) { setError((err as Error).message) }
+    try {
+      const result = await run(new FormData(form))
+      form.reset(); setDone(message ?? String(result)); setVersion((v) => v + 1)
+    } catch (err) { setError((err as Error).message) }
   }
 
   function createUser(f: FormData) {
@@ -59,6 +62,18 @@ export default function AdminPage() {
       username: String(f.get('username')).trim().toLowerCase(), password: f.get('password'), fullName: text(f, 'fullName'),
       rank: text(f, 'rank'), role, stationId: STATION_ROLES.includes(role) || role === 'prosecutor' ? stationId : null,
     })
+  }
+
+  /** A transfer or promotion: new role, rank or station, with a reason. The officer must sign in again. */
+  async function changeAccount(a: Account, f: FormData) {
+    const role = String(f.get('role'))
+    const stationId = text(f, 'station')
+    if (STATION_ROLES.includes(role) && !stationId) throw new Error('Choose the police station for this role.')
+    const r = await send<{ changed: string; firsAsIo: number }>(`/users/${a.id}`, 'PUT', {
+      role, rank: text(f, 'rank'), stationId: STATION_ROLES.includes(role) || role === 'prosecutor' ? stationId : null, reason: f.get('reason'),
+    })
+    return `${a.full_name}: ${r!.changed}. They must sign in again.`
+      + (r!.firsAsIo ? ` They are still the IO of ${r!.firsAsIo} FIR${r!.firsAsIo === 1 ? '' : 's'}; give those cases to another officer.` : '')
   }
 
   if (!accounts) return <section><h1>State admin</h1>{error ? <p role="alert">{error}</p> : <p>Loading…</p>}</section>
@@ -80,6 +95,18 @@ export default function AdminPage() {
               {a.id === currentSession()?.user.id ? <em>you</em> : a.active
                 ? <WithReason label="Disable" who={a.full_name} onSubmit={(e) => act(e, (f) => send(`/users/${a.id}/disable`, 'POST', { reason: f.get('reason') }), `${a.full_name} is disabled. Their sign-ins have ended.`)} />
                 : <WithReason label="Enable" who={a.full_name} onSubmit={(e) => act(e, (f) => send(`/users/${a.id}/enable`, 'POST', { reason: f.get('reason') }), `${a.full_name} is enabled and must sign in again.`)} />}
+              {a.id !== currentSession()?.user.id && (
+                <details className="inline">
+                  <summary>Change<span className="visually-hidden"> {a.full_name}</span></summary>
+                  <form className="record-form" onSubmit={(e) => act(e, (f) => changeAccount(a, f))}>
+                    <label>New role for {a.full_name} <select name="role" defaultValue={a.role}>{Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+                    <label>Rank <input name="rank" required maxLength={60} defaultValue={a.rank} /></label>
+                    <label>Police station <select name="station" defaultValue={a.station_id ?? ''}><option value="">— none —</option>
+                      {stations.map((s) => <option key={s.id} value={s.id}>{s.name}, {s.district} ({s.state_code})</option>)}</select></label>
+                    <label>Reason (for example the transfer order) <input name="reason" minLength={10} maxLength={2000} required /></label>
+                    <button type="submit">Change {a.full_name}</button>
+                  </form>
+                </details>)}
               {a.active && a.locked_until && <WithReason label="Unlock" who={a.full_name} onSubmit={(e) => act(e, (f) => send(`/users/${a.id}/unlock`, 'POST', { reason: f.get('reason') }), `${a.full_name} is unlocked.`)} />}
             </td>
           </tr>))}
@@ -128,7 +155,7 @@ export default function AdminPage() {
       {actions.length === 0 ? <p>Nothing yet.</p> : (
         <ul>{actions.map((l, n) => (
           <li key={n}>{fmt(l.at)}: {ACTIONS[l.action] ?? l.action}{l.user_name ? `: ${l.user_name}${l.username ? ` (${l.username})` : ''}` : ''}
-            {l.station_name ? `: ${l.station_name}` : ''} by {l.actor_name}{l.reason ? `. Reason: “${l.reason}”` : ''}</li>))}
+            {l.station_name ? `: ${l.station_name}` : ''}{l.detail ? ` (${l.detail})` : ''} by {l.actor_name}{l.reason ? `. Reason: “${l.reason}”` : ''}</li>))}
         </ul>)}
     </section>
   )

@@ -80,3 +80,17 @@ test('your own account cannot be disabled from here; a server refusal is shown',
   fireEvent.click(screen.getByRole('button', { name: 'Disable SI Fictional' }))
   expect((await screen.findByRole('alert')).textContent).toBe('This account is already disabled.')
 })
+
+test('a transfer changes role, rank or station with a reason and warns about FIRs the officer is still IO of', async () => {
+  const writes = stub({ status: 200, body: { changed: 'role io to sho; rank SI to PI', firsAsIo: 2 } })
+  render(<AdminPage />)
+  const row = (await screen.findByText('SI Fictional (SI)')).closest('tr')!
+  expect(within(screen.getByText('State Admin (Admin)').closest('tr')!).queryByText('Change', { selector: 'summary' })).toBeNull()
+  fireEvent.change(within(row).getByLabelText('New role for SI Fictional'), { target: { value: 'sho' } })
+  type('Rank', 'PI', within(row))
+  type(/^Reason \(for example/, 'Fictional transfer order 12', within(row))
+  fireEvent.click(within(row).getByRole('button', { name: 'Change SI Fictional' }))
+  expect((await screen.findByRole('status')).textContent).toBe(
+    'SI Fictional: role io to sho; rank SI to PI. They must sign in again. They are still the IO of 2 FIRs; give those cases to another officer.')
+  expect(writes).toEqual([{ url: '/api/users/u1', body: { role: 'sho', rank: 'PI', stationId: 's1', reason: 'Fictional transfer order 12' } }])
+})
