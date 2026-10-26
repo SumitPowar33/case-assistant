@@ -6,6 +6,7 @@ import Certificates from './Certificates'
 import Arrests from './Arrests'
 import IoAssignment from './IoAssignment'
 import Chargesheets from './Chargesheets'
+import ClosureReport from './ClosureReport'
 import { AddEvidenceForm, AddPersonForm } from './Forms'
 import { useState } from 'react'
 
@@ -50,6 +51,7 @@ export default function FirDetail({ id }: { id: string }) {
       </Section>
       <Arrests firId={id} version={version} onSaved={saved} />
       <Chargesheets firId={id} version={version} onSaved={saved} />
+      <ClosureReport firId={id} version={version} onSaved={saved} />
       <Section<Deadline> title="Deadlines" path={`/firs/${id}/deadlines`} version={version}>
         {(rows) => <ul>{rows.map((d, i) => <li key={i}>{d.kind}: by {d.due_on} <small>({d.basis})</small></li>)}</ul>}
       </Section>
