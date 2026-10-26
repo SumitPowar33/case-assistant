@@ -41,6 +41,10 @@ class RecordsController {
                             LocalDate releasedOn, @Pattern(regexp = "bail|default_bail|other") String releaseBasis,
                             @NotBlank String reason) {}
 
+    /** A correction of the memo restates place, grounds told and the person informed; it replaces the newest version. */
+    record MemoCorrection(@NotBlank String place, @NotEmpty List<@NotBlank String> grounds, @NotBlank String informedName,
+                          String informedContact, @NotBlank String reason) {}
+
     record ChargesheetCorrection(@NotNull LocalDate filedOn, @NotBlank @Size(max = 200) String court,
                                  @NotBlank @Size(max = 60) String reportNo, @NotEmpty List<@NotNull UUID> accusedIds,
                                  @NotBlank String reason) {}
@@ -149,12 +153,12 @@ class RecordsController {
         requireFir(firId);
         boolean onTeam = team.includes(CaseTeam.user(jwt), firId);
         return db.sql("""
-                select a.id, a.person_id, p.label as person_label, a.arrested_at, a.place, to_json(a.grounds)::text as grounds,
-                  a.informed_name, a.informed_contact, u.full_name as arresting_officer_name, c.max_punishment, c.first_remand_on,
+                select a.id, a.person_id, p.label as person_label, a.arrested_at, m.place, to_json(m.grounds)::text as grounds,
+                  m.informed_name, m.informed_contact, m.memo_correction_id is not null as memo_corrected, u.full_name as arresting_officer_name, c.max_punishment, c.first_remand_on,
                   case when c.first_remand_on is not null then chargesheet_last_day(c.first_remand_on, c.max_punishment) end as chargesheet_last_day,
                   r.full_name as remand_recorded_by_name, c.released_on, c.release_basis,
                   chargesheet_filed_for(a.person_id) as chargesheet_filed_on, c.correction_id is not null as corrected
-                from arrest a join arrest_current c on c.id = a.id join person p on p.id = a.person_id
+                from arrest a join arrest_current c on c.id = a.id join arrest_memo_current m on m.id = a.id join person p on p.id = a.person_id
                   join app_user u on u.id = a.arresting_officer left join app_user r on r.id = a.remand_recorded_by
                 where p.fir_id = ? order by a.arrested_at, a.id""")
                 .param(firId).query().listOfRows().stream().map(row -> {
@@ -315,6 +319,55 @@ class RecordsController {
                 from arrest_correction c join arrest a on a.id = c.arrest_id join person p on p.id = a.person_id
                   join app_user u on u.id = c.recorded_by
                 where p.fir_id = ? order by c.recorded_at, c.id""").param(firId).query().listOfRows();
+    }
+
+    /**
+     * Fixes a wrong place, grounds or informed person on the arrest memo. The memo stays as written; the correction
+     * restates the three, with a written reason, and the newest one counts. The person arrested and the time of
+     * arrest cannot be corrected here.
+     */
+    @PostMapping("/arrests/{arrestId}/memo-corrections")
+    ResponseEntity<Map<String, UUID>> correctMemo(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId,
+                                                  @PathVariable UUID arrestId, @Valid @RequestBody MemoCorrection c) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        db.sql("select 1 from arrest a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
+                .params(arrestId, firId).query(Integer.class).optional()
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
+        requireReason(c.reason);
+        UUID newest = db.sql("select id from arrest_memo_correction c where arrest_id = ? and not exists (select 1 from arrest_memo_correction n where n.supersedes = c.id)")
+                .param(arrestId).query(UUID.class).optional().orElse(null);
+        return ResponseEntity.status(201).body(Map.of("id", db.sql("""
+                insert into arrest_memo_correction (arrest_id, supersedes, place, grounds, informed_name, informed_contact, reason, recorded_by)
+                values (?,?,?,?,?,?,?,?) returning id""")
+                .params(arrestId, newest, c.place.trim(), c.grounds.stream().map(String::trim).toArray(String[]::new), c.informedName.trim(),
+                        c.informedContact, c.reason.trim(), me)
+                .query(UUID.class).single()));
+    }
+
+    /** Every memo correction in this case, oldest first. The informed person is private: only the case team sees them. */
+    @GetMapping("/arrests/memo-corrections")
+    List<Map<String, Object>> memoCorrections(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId) {
+        requireFir(firId);
+        boolean onTeam = team.includes(CaseTeam.user(jwt), firId);
+        return db.sql("""
+                select c.id, c.arrest_id, c.place, to_json(c.grounds)::text as grounds, c.informed_name, c.informed_contact,
+                  c.reason, c.recorded_at, u.full_name as recorded_by_name
+                from arrest_memo_correction c join arrest a on a.id = c.arrest_id join person p on p.id = a.person_id
+                  join app_user u on u.id = c.recorded_by
+                where p.fir_id = ? order by c.recorded_at, c.id""").param(firId).query().listOfRows().stream().map(row -> {
+                    Map<String, Object> out = new java.util.LinkedHashMap<>(row);
+                    try {
+                        out.put("grounds", JSON.readValue((String) row.get("grounds"), List.class));
+                    } catch (java.io.IOException e) {
+                        throw new IllegalStateException(e);
+                    }
+                    if (!onTeam) {
+                        out.put("informed_name", null);
+                        out.put("informed_contact", null);
+                    }
+                    return out;
+                }).toList();
     }
 
     @GetMapping("/chargesheets")

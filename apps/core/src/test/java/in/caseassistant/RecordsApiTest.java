@@ -177,6 +177,30 @@ class RecordsApiTest {
     }
 
     @Test
+    void wrongPlaceGroundsOrInformedPersonAreFixedByMemoCorrectionsThatKeepTheOldMemo() throws Exception {
+        String a1 = idOf(send("/people", "{\"role\":\"accused\",\"label\":\"A1\",\"identityKnown\":false}", 201));
+        String arrest = idOf(send("/arrests", """
+                {"personId":"%s","arrestedAt":"2026-10-02T10:00:00+05:30","place":"Testpur","grounds":["proper investigation"],
+                 "informedName":"Fictional Relative","informedContact":"000","maxPunishment":"less_than_10_years"}""".formatted(a1), 201));
+        String fix = "{\"place\":\"%s\",\"grounds\":[%s],\"informedName\":\"Fictional Friend\",\"reason\":\"%s\"}";
+        String why = "place was the market, not the road";
+        send("/arrests/" + arrest + "/memo-corrections", fix.formatted("Testpur Market", "\"to prevent escape\"", "typo"), 400);
+        send("/arrests/" + arrest + "/memo-corrections", fix.formatted("Testpur Market", "", why), 400);       // no grounds
+        send("/arrests/" + arrest + "/memo-corrections", fix.formatted(" ", "\"to prevent escape\"", why), 400);   // no place
+        send("/arrests/" + UUID.randomUUID() + "/memo-corrections", fix.formatted("Testpur Market", "\"to prevent escape\"", why), 404);
+        send("/arrests/" + arrest + "/memo-corrections", fix.formatted("Testpur Market", "\"to prevent escape\"", why), 201);
+        send("/arrests/" + arrest + "/memo-corrections", fix.formatted("Testpur Bus Stand", "\"to prevent escape\",\"proper investigation\"", "second look at the memo"), 201);
+        mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", auth))
+                .andExpect(jsonPath("$[0].memo_corrected").value(true)).andExpect(jsonPath("$[0].place").value("Testpur Bus Stand"))
+                .andExpect(jsonPath("$[0].grounds.length()").value(2)).andExpect(jsonPath("$[0].informed_name").value("Fictional Friend"))
+                .andExpect(jsonPath("$[0].informed_contact").doesNotExist());
+        mvc.perform(get("/api/firs/" + fir + "/arrests/memo-corrections").header("Authorization", auth))
+                .andExpect(jsonPath("$.length()").value(2)).andExpect(jsonPath("$[0].place").value("Testpur Market")).andExpect(jsonPath("$[0].reason").value(why));
+        mvc.perform(post("/api/firs/" + fir + "/arrests/" + arrest + "/memo-corrections").header("Authorization", TestAuth.bearer(tokens, UUID.randomUUID()))
+                .contentType(MediaType.APPLICATION_JSON).content(fix.formatted("X", "\"y\"", why))).andExpect(status().is4xxClientError());
+    }
+
+    @Test
     void electronicEvidenceNeedsHashAndBecomesCourtReadyWithBothCertificates() throws Exception {
         String base = "\"label\":\"E-01\",\"description\":\"Fictional phone\",\"kind\":\"electronic\",\"seizedAt\":\"2026-10-02T10:00:00Z\",\"seizureMemo\":\"SM-1\"";
         send("/evidence", "{" + base + "}", 400);

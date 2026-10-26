@@ -379,3 +379,30 @@ def test_admin_log_needs_reasons_and_is_kept_as_written(db):
         db.execute("UPDATE admin_action SET reason = 'changed afterwards'")
     with pytest.raises(psycopg.errors.RaiseException):
         db.execute("DELETE FROM admin_action")
+
+
+def test_memo_corrections_replace_without_changing_the_memo(db):
+    st, io, fir = seed_case(db)
+    a1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A1','Demo One') RETURNING id", fir)[0]
+    ar = one(db, """INSERT INTO arrest(person_id,arrested_at,place,grounds,informed_name,arresting_officer,max_punishment)
+                    VALUES (%s,'2026-09-01 10:00+05:30','Demo place','{x}','Demo relative',%s,'life') RETURNING id""", a1, io)[0]
+    now = lambda: one(db, "SELECT place, grounds, informed_name, memo_correction_id FROM arrest_memo_current WHERE id=%s", ar)
+    assert now() == ("Demo place", ["x"], "Demo relative", None)
+    ins = "INSERT INTO arrest_memo_correction(arrest_id,supersedes,place,grounds,informed_name,reason,recorded_by) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id"
+    with pytest.raises(psycopg.errors.CheckViolation):   # a reason is needed
+        db.execute(ins, (ar, None, "Demo market", ["y"], "Demo friend", "typo", io))
+    with pytest.raises(psycopg.errors.CheckViolation):   # grounds are needed
+        db.execute(ins, (ar, None, "Demo market", [], "Demo friend", "grounds were left out", io))
+    c1 = one(db, ins, ar, None, "Demo market", ["y"], "Demo friend", "place was the market", io)[0]
+    assert now()[:3] == ("Demo market", ["y"], "Demo friend")
+    assert one(db, "SELECT place FROM arrest WHERE id=%s", ar)[0] == "Demo place"   # the memo is untouched
+    with pytest.raises(psycopg.errors.UniqueViolation):   # the first correction can only be made once
+        db.execute(ins, (ar, None, "Demo lane", ["y"], "Demo friend", "second first correction", io))
+    one(db, ins, ar, c1, "Demo lane", ["y", "z"], "Demo friend", "place was the lane", io)
+    assert now()[:2] == ("Demo lane", ["y", "z"])
+    with pytest.raises(psycopg.errors.UniqueViolation):   # c1 has already been replaced
+        db.execute(ins, (ar, c1, "Demo lane", ["y"], "Demo friend", "replacing it a second time", io))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE arrest_memo_correction SET reason='something else entirely'")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM arrest_memo_correction")
