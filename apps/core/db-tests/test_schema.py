@@ -406,3 +406,23 @@ def test_memo_corrections_replace_without_changing_the_memo(db):
         db.execute("UPDATE arrest_memo_correction SET reason='something else entirely'")
     with pytest.raises(psycopg.errors.RaiseException):
         db.execute("DELETE FROM arrest_memo_correction")
+
+
+def test_closure_report_is_kept_once_and_ends_only_the_two_month_limit(db):
+    st, io, fir = seed_case(db, sexual=True)
+    ins = "INSERT INTO closure_report(fir_id,filed_on,court,report_no,ground,reason,recorded_by) VALUES (%s,%s,'Demo Court','FR-1',%s,%s,%s)"
+    with pytest.raises(psycopg.errors.RaiseException):   # before the FIR was registered (18 Aug)
+        db.execute(ins, (fir, "2026-08-17", "untraced", "accused not traced", io))
+    with pytest.raises(psycopg.errors.CheckViolation):   # a ground from the list
+        db.execute(ins, (fir, "2026-10-01", "guilty", "accused not traced", io))
+    with pytest.raises(psycopg.errors.CheckViolation):   # a written reason
+        db.execute(ins, (fir, "2026-10-01", "untraced", "short", io))
+    assert one(db, "SELECT count(*) FROM case_deadline WHERE kind='sexual_offence_investigation'")[0] == 1
+    db.execute(ins, (fir, "2026-10-01", "untraced", "accused not traced", io))
+    assert one(db, "SELECT count(*) FROM case_deadline WHERE kind='sexual_offence_investigation'")[0] == 0
+    with pytest.raises(psycopg.errors.UniqueViolation):   # once per case
+        db.execute(ins, (fir, "2026-10-02", "untraced", "accused not traced", io))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE closure_report SET court='Elsewhere'")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM closure_report")

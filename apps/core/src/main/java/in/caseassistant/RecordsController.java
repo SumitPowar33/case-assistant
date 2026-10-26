@@ -52,6 +52,10 @@ class RecordsController {
     record NewChargesheet(@NotNull LocalDate filedOn, @NotBlank @Size(max = 200) String court,
                           @NotBlank @Size(max = 60) String reportNo, @NotEmpty List<@NotNull UUID> accusedIds) {}
 
+    record NewClosure(@NotNull LocalDate filedOn, @NotBlank @Size(max = 200) String court, @NotBlank @Size(max = 60) String reportNo,
+                      @NotBlank @Pattern(regexp = "untraced|insufficient_evidence|false_complaint|civil_nature|other") String ground,
+                      @NotBlank @Size(min = 10, max = 2000) String reason, LocalDate informantInformedOn) {}
+
     record NewEvidence(@NotBlank String label, @NotBlank String description, @NotBlank String kind,
                        @NotNull OffsetDateTime seizedAt, @NotBlank String seizureMemo, String esakshyaId,
                        String sealNo, String sha256) {}
@@ -368,6 +372,45 @@ class RecordsController {
                     }
                     return out;
                 }).toList();
+    }
+
+    /**
+     * The closure (final) report: the investigation ends without a chargesheet. Once per case, kept as written. It ends the
+     * BNSS 193(2) limit but not the custody limit. It cannot be recorded while a current chargesheet exists.
+     */
+    @PostMapping("/closure-report")
+    @org.springframework.transaction.annotation.Transactional
+    ResponseEntity<Map<String, UUID>> closure(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody NewClosure c) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        requireFir(firId);
+        if (c.filedOn.isAfter(todayIst())) badRequest("The filing date cannot be in the future.");
+        if (c.informantInformedOn != null && (c.informantInformedOn.isBefore(c.filedOn) || c.informantInformedOn.isAfter(todayIst())))
+            badRequest("The informant must be told on or after the filing day, and not in the future.");
+        var registered = db.sql("select ist_date(registered_at) from fir where id = ?").param(firId).query(LocalDate.class).single();
+        if (c.filedOn.isBefore(registered)) badRequest("A closure report cannot be filed before the FIR was registered.");
+        if (db.sql("select exists (select 1 from chargesheet c where c.fir_id = ? and not exists (select 1 from chargesheet n where n.supersedes = c.id))")
+                .param(firId).query(Boolean.class).single())
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
+                    "A chargesheet is already filed in this case; a closure report cannot be recorded with it.");
+        try {
+            return created(db.sql("""
+                    insert into closure_report (fir_id, filed_on, court, report_no, ground, reason, informant_informed_on, recorded_by)
+                    values (?,?,?,?,?,?,?,?) returning id""")
+                    .params(firId, c.filedOn, c.court.trim(), c.reportNo.trim(), c.ground, c.reason.trim(), c.informantInformedOn, me)
+                    .query(UUID.class).single());
+        } catch (DataIntegrityViolationException e) {
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT, "A closure report is already recorded for this case.");
+        }
+    }
+
+    @GetMapping("/closure-report")
+    List<Map<String, Object>> closureReport(@PathVariable UUID firId) {
+        requireFir(firId);
+        return db.sql("""
+                select r.id, r.filed_on, r.court, r.report_no, r.ground, r.reason, r.informant_informed_on, u.full_name as recorded_by_name
+                from closure_report r join app_user u on u.id = r.recorded_by where r.fir_id = ?""")
+                .param(firId).query().listOfRows();
     }
 
     @GetMapping("/chargesheets")

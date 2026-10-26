@@ -102,6 +102,38 @@ class RecordsApiTest {
     }
 
     @Test
+    void closureReportIsRecordedOnceEndsTheTwoMonthLimitButNotTheCustodyLimit() throws Exception {
+        db.sql("update fir set sexual_offence = true").update();
+        String a1 = idOf(send("/people", "{\"role\":\"accused\",\"label\":\"A1\",\"identityKnown\":false}", 201));
+        send("/arrests", """
+                {"personId":"%s","arrestedAt":"2026-10-02T10:00:00+05:30","place":"Testpur","grounds":["proper investigation"],
+                 "informedName":"Fictional Relative","firstRemandOn":"2026-10-02","maxPunishment":"less_than_10_years"}""".formatted(a1), 201);
+        mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", auth))
+                .andExpect(jsonPath("$[?(@.kind=='sexual_offence_investigation')]").isNotEmpty());
+        String c = "{\"filedOn\":\"%s\",\"court\":\"Fictional JMFC Court\",\"reportNo\":\"FR-1\",\"ground\":\"%s\",\"reason\":\"%s\"%s}";
+        send("/closure-report", c.formatted("2026-09-30", "untraced", "accused could not be traced", ""), 400);          // before the FIR
+        send("/closure-report", c.formatted("2099-10-20", "untraced", "accused could not be traced", ""), 400);       // future
+        send("/closure-report", c.formatted("2026-10-20", "guilty", "accused could not be traced", ""), 400);         // not a listed ground
+        send("/closure-report", c.formatted("2026-10-20", "untraced", "short", ""), 400);                              // reason too short
+        send("/closure-report", c.formatted("2026-10-20", "untraced", "accused could not be traced", ",\"informantInformedOn\":\"2026-10-19\""), 400);
+        send("/closure-report", c.formatted("2026-10-20", "untraced", "accused could not be traced", ",\"informantInformedOn\":\"2026-10-21\""), 201);
+        send("/closure-report", c.formatted("2026-10-22", "untraced", "accused could not be traced", ""), 409);        // once per case
+        mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", auth))
+                .andExpect(jsonPath("$[?(@.kind=='sexual_offence_investigation')]").isEmpty())
+                .andExpect(jsonPath("$[?(@.kind=='chargesheet_custody')]").isNotEmpty());
+        mvc.perform(get("/api/firs/" + fir + "/closure-report").header("Authorization", auth))
+                .andExpect(jsonPath("$[0].ground").value("untraced")).andExpect(jsonPath("$[0].informant_informed_on").value("2026-10-21"))
+                .andExpect(jsonPath("$[0].recorded_by_name").value("SI Asha Rao"));
+    }
+
+    @Test
+    void closureReportIsRefusedWhileAChargesheetStands() throws Exception {
+        String a1 = idOf(send("/people", "{\"role\":\"accused\",\"label\":\"A1\",\"identityKnown\":false}", 201));
+        send("/chargesheets", "{\"filedOn\":\"2026-10-20\",\"court\":\"Fictional JMFC Court\",\"reportNo\":\"CS-1\",\"accusedIds\":[\"" + a1 + "\"]}", 201);
+        send("/closure-report", "{\"filedOn\":\"2026-10-21\",\"court\":\"Fictional JMFC Court\",\"reportNo\":\"FR-1\",\"ground\":\"other\",\"reason\":\"written reason here\"}", 409);
+    }
+
+    @Test
     void releaseAndChargesheetEndTheCustodyLimitAndAreRecordedOnce() throws Exception {
         String memo = """
                 {"personId":"%s","arrestedAt":"%s","place":"Testpur","grounds":["proper investigation"],
