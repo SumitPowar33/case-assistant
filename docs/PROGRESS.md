@@ -4,6 +4,43 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 27 Oct 2026, session 13 (scheduled nightly build, last of the night)
+Tonight in short
+- Session 11: corrections of a wrong arrest remand date, punishment class, release and chargesheet (old record always kept, reason required).
+- Session 12: correction of the arrest memo itself (place, grounds told, person informed).
+- Session 13 (this one): the closure report, so a case that ends without a chargesheet can be recorded.
+
+Started from `setup/seed` at 45873b3 (session 12). Local PostgreSQL had to be started and the test role created first. Items 1-4 of Next still wait for Sumit, so I took item 5 (closure report).
+
+Done
+- Closure report (migration V17, `POST/GET /api/firs/{id}/closure-report`). Recorded once per case and kept as written (database trigger; no edit, no delete). It holds the filing date, court, report number, a ground from a fixed list (accused not traced, not enough evidence, complaint found false, civil in nature, other), a written reason of 10+ characters and, if already done, the date the informant was told (not before the filing day, not in the future). The filing date cannot be before the FIR or in the future. Only the case team can record it.
+  - Effect: it ends the BNSS 193(2) two-month limit (investigation is over). It does NOT end the custody limit: an accused still in custody stays on the deadline list until the release is recorded.
+  - It is refused (409) while a current chargesheet exists in the case.
+  - Web: "Closure report" section on the FIR page: a form while none is recorded, the recorded report afterwards.
+- Tests: gateway 16, xlit 77, db 31, packs 3, core 48 (2 new closure tests; the migration check now expects V17), web 54 (2 new); web build and lint pass.
+
+Deliberately skipped / not checked
+- Not checked in a real browser (unit tests with stubbed requests and the real database tests only). The browser check of the corrections screens from session 12's Next 5 is still not done.
+- No correction of a closure report and no "Magistrate accepted / ordered further investigation" step; a wrong entry cannot be fixed yet. A chargesheet can still be recorded after a closure report (further investigation); I did not block it.
+- The 90-day victim update deadline is not changed by a closure report; the informant date is only stored.
+- No new dependency.
+
+Next
+1. Read access rules once question 1 is answered.
+2. Admin password reset (if question 4 of session 9 is yes).
+3. AI draft for the follow-up notice (if question 4 of session 8 is yes).
+4. Highest punishment from the sections, if question 3 is yes.
+5. If all of 1-4 are still waiting: correction of a closure report and the Magistrate's decision on it (accepted / further investigation ordered), then a browser check of the corrections and closure screens.
+
+Blocked
+- Live Claude/Gemini calls wait for API keys (using `fake`).
+- Items 1-4 above wait for Sumit's answers.
+
+Questions for Sumit
+1. Still open (sessions 9-12): who may read a case; re-arrest day counting; highest punishment table; BNSS 193(2) end rule; SHO as IO; whether an IO's correction needs SHO confirmation; whether a correction is allowed after the chargesheet is filed; whether the time of arrest may ever be corrected.
+2. Should a closure report also stop the custody limit, or keep it until the release is recorded (what I did)?
+3. Should the Magistrate's decision on a closure report (accepted, or further investigation ordered) be recorded in the app?
+
 ## 26 Oct 2026, session 12 (scheduled nightly build)
 Started from `setup/seed` at 9cd7eb5 (session 11). Local PostgreSQL had to be started and the test user created first.
 
