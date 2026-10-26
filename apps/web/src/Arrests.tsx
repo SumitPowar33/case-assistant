@@ -9,7 +9,11 @@ type Arrest = {
   id: string; person_label: string; arrested_at: string; place: string; grounds: string[]; informed_name: string | null
   informed_contact: string | null; arresting_officer_name: string; max_punishment: string; first_remand_on: string | null
   chargesheet_last_day: string | null; remand_recorded_by_name: string | null
-  released_on: string | null; release_basis: string | null; chargesheet_filed_on: string | null
+  released_on: string | null; release_basis: string | null; chargesheet_filed_on: string | null; corrected: boolean
+}
+type Correction = {
+  id: string; arrest_id: string; first_remand_on: string | null; max_punishment: string; released_on: string | null
+  release_basis: string | null; reason: string; recorded_at: string; recorded_by_name: string
 }
 type Person = { id: string; role: string; label: string; display_name: string }
 
@@ -41,6 +45,29 @@ function ReleaseForm({ firId, arrest, onSaved }: { firId: string; arrest: Arrest
       <label>Released on <input name="released" type="date" required /></label>
       <label>How released <select name="basis">{Object.entries(RELEASE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       <p><small>Check it against the court's order. It cannot be changed after saving.</small></p>
+    </Form>
+  )
+}
+
+/**
+ * Fixes a wrong remand date, punishment class or release. The earlier entries stay on record; the newest counts.
+ * Clear the release date to say the person was not released.
+ */
+function CorrectionForm({ firId, arrest, onSaved }: { firId: string; arrest: Arrest; onSaved: () => void }) {
+  return (
+    <Form title="Correct the remand, punishment or release" onSaved={onSaved}
+      submit={(f) => send(`/firs/${firId}/arrests/${arrest.id}/corrections`, 'POST', {
+        firstRemandOn: text(f, 'remand'), maxPunishment: f.get('punishment'), releasedOn: text(f, 'released'),
+        releaseBasis: text(f, 'released') ? f.get('basis') : null, reason: text(f, 'reason'),
+      })}>
+      <label>Date of first remand <input name="remand" type="date" defaultValue={arrest.first_remand_on ?? ''} /></label>
+      <label>Highest punishment for the offences <select name="punishment" defaultValue={arrest.max_punishment}>
+        {Object.entries(PUNISHMENTS).map(([k, v]) => <option key={k} value={k}>{v} ({days(k)} days to chargesheet)</option>)}
+      </select></label>
+      <label>Released on (leave empty if not released) <input name="released" type="date" defaultValue={arrest.released_on ?? ''} /></label>
+      <label>How released <select name="basis" defaultValue={arrest.release_basis ?? 'bail'}>{Object.entries(RELEASE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+      <label>Why this is being corrected <input name="reason" required minLength={10} /></label>
+      <p><small>The earlier entry stays on record with your reason. The deadline is worked out again from what you save here.</small></p>
     </Form>
   )
 }
@@ -84,6 +111,7 @@ function ArrestForm({ firId, accused, onSaved }: { firId: string; accused: Perso
 export default function Arrests({ firId, version, onSaved }: { firId: string; version: number; onSaved: () => void }) {
   const { data, error } = useLoad<Arrest[]>(`/firs/${firId}/arrests`, version)
   const { data: people } = useLoad<Person[]>(`/firs/${firId}/people`, version)
+  const { data: fixes } = useLoad<Correction[]>(`/firs/${firId}/arrests/corrections`, version)
   return (
     <section>
       <h2>Arrests</h2>
@@ -98,8 +126,12 @@ export default function Arrests({ firId, version, onSaved }: { firId: string; ve
               ? <>First remand {a.first_remand_on}{a.remand_recorded_by_name ? ` (recorded by ${a.remand_recorded_by_name})` : ''}: chargesheet within {days(a.max_punishment)} days, last day <strong>{a.chargesheet_last_day}</strong> <small>(BNSS 187(3))</small></>
               : <>First remand not recorded yet: the chargesheet deadline starts from it.</>}
             {limitStatus(a) && <><br />{limitStatus(a)}</>}
-            {!a.first_remand_on && <RemandForm firId={firId} arrest={a} onSaved={onSaved} />}
-            {!a.released_on && <ReleaseForm firId={firId} arrest={a} onSaved={onSaved} />}
+            {(fixes ?? []).filter((c) => c.arrest_id === a.id).map((c) => (
+              <small key={c.id}><br />Corrected {fmt(c.recorded_at)} by {c.recorded_by_name}: remand {c.first_remand_on ?? 'none'}, {PUNISHMENTS[c.max_punishment]}, {c.released_on ? `released ${c.released_on}` : 'not released'}. Reason: {c.reason}</small>
+            ))}
+            {!a.corrected && !a.first_remand_on && <RemandForm firId={firId} arrest={a} onSaved={onSaved} />}
+            {!a.corrected && !a.released_on && <ReleaseForm firId={firId} arrest={a} onSaved={onSaved} />}
+            <CorrectionForm firId={firId} arrest={a} onSaved={onSaved} />
           </li>
         ))}</ul>
       )}

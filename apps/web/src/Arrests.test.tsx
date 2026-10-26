@@ -92,3 +92,25 @@ test('a release is recorded once; released and chargesheeted arrests say the lim
   await vi.waitFor(() => expect(writes).toHaveLength(1))
   expect(writes[0]).toEqual({ url: '/api/firs/f1/arrests/a2/release', body: { releasedOn: '2026-11-01', basis: 'default_bail' } })
 })
+
+test('a correction sends all four facts with a reason; it can say the person was not released', async () => {
+  const writes = stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+    { ...base, id: 'a1', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-10', released_on: '2026-09-20', release_basis: 'bail', chargesheet_filed_on: null, corrected: false },
+  ], '/firs/f1/arrests/corrections': [
+    { id: 'c1', arrest_id: 'a1', first_remand_on: '2026-09-12', max_punishment: 'less_than_10_years', released_on: null, release_basis: null,
+      reason: 'release was on the wrong arrest', recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' },
+  ] }, { status: 201, body: { id: 'c2' } })
+  const saved = vi.fn()
+  render(<Arrests firId="f1" version={0} onSaved={saved} />)
+  expect(await screen.findByText(/Reason: release was on the wrong arrest/)).toBeTruthy()
+  const form = screen.getByText('Correct the remand, punishment or release').closest('details')!
+  expect((within(form).getByLabelText(/Date of first remand/) as HTMLInputElement).value).toBe('2026-09-12')   // starts from what is recorded
+  type(/Date of first remand/, '2026-09-13', within(form))
+  type(/Released on/, '', within(form))
+  fireEvent.change(within(form).getByLabelText(/Highest punishment/), { target: { value: 'life' } })
+  type(/Why this is being corrected/, 'remand order shows the 13th', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(saved).toHaveBeenCalled())
+  expect(writes).toEqual([{ url: '/api/firs/f1/arrests/a1/corrections', body: {
+    firstRemandOn: '2026-09-13', maxPunishment: 'life', releasedOn: null, releaseBasis: null, reason: 'remand order shows the 13th' } }])
+})
