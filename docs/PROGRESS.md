@@ -4,6 +4,35 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 26 Oct 2026, session 12 (scheduled nightly build)
+Started from `setup/seed` at 9cd7eb5 (session 11). Local PostgreSQL had to be started and the test user created first.
+
+Done
+- Correction of the arrest memo itself (Next 5): place, grounds told to the person (BNSS 47) and the relative/friend informed (BNSS 48). Same pattern as the other corrections: the memo is never edited; a correction is a new row with a reason of 10+ characters, the newest counts, the old ones stay. Migration V16 (`arrest_memo_correction`, view `arrest_memo_current`). The person arrested, the time and the arresting officer cannot be corrected (the time sets the IST day the custody limit is checked against).
+  - `POST .../arrests/{id}/memo-corrections`, `GET .../arrests/memo-corrections`. The arrest list now shows the current memo and says `memo_corrected`. The informed person's name and contact are hidden from people outside the case team, in the list and in the history.
+  - Web: "Correct the place, grounds or informed person" on each arrest (starts from the current memo; grounds use the typing field) and the memo correction history with reasons.
+- Tests: gateway 16, xlit 77, db 30, packs 3, core 46, web 52; web build and lint pass.
+
+Deliberately skipped / not checked
+- Not checked in a real browser (unit tests with stubbed requests and the real database tests only).
+- No new dependency. The memo correction is open to any case-team member, like the other corrections.
+- The correction history shows all memo corrections of an arrest, not only the newest.
+
+Next
+1. Read access rules once question 1 is answered.
+2. Admin password reset (if question 4 of session 9 is yes).
+3. AI draft for the follow-up notice (if question 4 of session 8 is yes).
+4. Highest punishment from the sections, if question 3 is yes.
+5. If all of 1-4 are still waiting: a browser check of the corrections screens, then a closure report (record that a case was closed without a chargesheet).
+
+Blocked
+- Live Claude/Gemini calls wait for API keys (using `fake`).
+- Items 1-4 above wait for Sumit's answers.
+
+Questions for Sumit
+1. Still open (sessions 9-11): who may read a case; re-arrest day counting; highest punishment table; BNSS 193(2) end rule; SHO as IO; whether an IO's correction needs SHO confirmation; whether a correction is allowed after the chargesheet is filed.
+2. Should the time of arrest (not only place and grounds) ever be correctable? It would move the custody-limit day, so I left it out.
+
 ## 26 Oct 2026, session 11 (scheduled nightly build)
 Started from `setup/seed` at e7733d0 (session 10). Local PostgreSQL had to be started and the test user created first.
 
