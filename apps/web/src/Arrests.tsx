@@ -9,11 +9,15 @@ type Arrest = {
   id: string; person_label: string; arrested_at: string; place: string; grounds: string[]; informed_name: string | null
   informed_contact: string | null; arresting_officer_name: string; max_punishment: string; first_remand_on: string | null
   chargesheet_last_day: string | null; remand_recorded_by_name: string | null
-  released_on: string | null; release_basis: string | null; chargesheet_filed_on: string | null; corrected: boolean
+  released_on: string | null; release_basis: string | null; chargesheet_filed_on: string | null; corrected: boolean; memo_corrected: boolean
 }
 type Correction = {
   id: string; arrest_id: string; first_remand_on: string | null; max_punishment: string; released_on: string | null
   release_basis: string | null; reason: string; recorded_at: string; recorded_by_name: string
+}
+type MemoFix = {
+  id: string; arrest_id: string; place: string; grounds: string[]; informed_name: string | null; informed_contact: string | null
+  reason: string; recorded_at: string; recorded_by_name: string
 }
 type Person = { id: string; role: string; label: string; display_name: string }
 
@@ -72,6 +76,31 @@ function CorrectionForm({ firId, arrest, onSaved }: { firId: string; arrest: Arr
   )
 }
 
+/**
+ * Fixes a wrong place, grounds or informed person on the memo. The memo stays on record; the newest version counts.
+ * The person arrested and the time of arrest cannot be changed here.
+ */
+function MemoCorrectionForm({ firId, arrest, onSaved }: { firId: string; arrest: Arrest; onSaved: () => void }) {
+  const [grounds, setGrounds] = useState(arrest.grounds.join('\n'))
+  return (
+    <Form title="Correct the place, grounds or informed person" onSaved={onSaved}
+      submit={(f) => {
+        if (!lines(grounds).length) throw new Error('Write the grounds of arrest told to the person (BNSS 47).')
+        return send(`/firs/${firId}/arrests/${arrest.id}/memo-corrections`, 'POST', {
+          place: text(f, 'place'), grounds: lines(grounds), informedName: text(f, 'informed'), informedContact: text(f, 'contact'),
+          reason: text(f, 'reason'),
+        })
+      }}>
+      <label>Place of arrest <input name="place" required defaultValue={arrest.place} /></label>
+      <TypingField label="Grounds of arrest told to the person (one per line)" value={grounds} onChange={setGrounds} multiline />
+      <label>Relative or friend informed (BNSS 48) <input name="informed" required defaultValue={arrest.informed_name ?? ''} /></label>
+      <label>Their phone or address <input name="contact" defaultValue={arrest.informed_contact ?? ''} /></label>
+      <label>Why this is being corrected <input name="reason" required minLength={10} /></label>
+      <p><small>The earlier memo stays on record with your reason. The person arrested and the time of arrest cannot be changed.</small></p>
+    </Form>
+  )
+}
+
 /** The custody limit stops when the accused is released or a chargesheet naming them is filed. */
 function limitStatus(a: Arrest) {
   if (a.chargesheet_filed_on) return `Chargesheet naming ${a.person_label} filed on ${a.chargesheet_filed_on}${a.chargesheet_last_day && a.chargesheet_filed_on > a.chargesheet_last_day ? ', after the last day' : ''}.`
@@ -103,7 +132,7 @@ function ArrestForm({ firId, accused, onSaved }: { firId: string; accused: Perso
         {Object.entries(PUNISHMENTS).map(([k, v]) => <option key={k} value={k}>{v} ({days(k)} days to chargesheet)</option>)}
       </select></label>
       <label>Date of first remand (if already known) <input name="remand" type="date" /></label>
-      <p><small>You are recorded as the arresting officer. The memo cannot be changed after saving.</small></p>
+      <p><small>You are recorded as the arresting officer. A wrong place, ground or informed person can be corrected later with a reason.</small></p>
     </Form>
   )
 }
@@ -111,6 +140,7 @@ function ArrestForm({ firId, accused, onSaved }: { firId: string; accused: Perso
 export default function Arrests({ firId, version, onSaved }: { firId: string; version: number; onSaved: () => void }) {
   const { data, error } = useLoad<Arrest[]>(`/firs/${firId}/arrests`, version)
   const { data: people } = useLoad<Person[]>(`/firs/${firId}/people`, version)
+  const { data: memoFixes } = useLoad<MemoFix[]>(`/firs/${firId}/arrests/memo-corrections`, version)
   const { data: fixes } = useLoad<Correction[]>(`/firs/${firId}/arrests/corrections`, version)
   return (
     <section>
@@ -129,9 +159,13 @@ export default function Arrests({ firId, version, onSaved }: { firId: string; ve
             {(fixes ?? []).filter((c) => c.arrest_id === a.id).map((c) => (
               <small key={c.id}><br />Corrected {fmt(c.recorded_at)} by {c.recorded_by_name}: remand {c.first_remand_on ?? 'none'}, {PUNISHMENTS[c.max_punishment]}, {c.released_on ? `released ${c.released_on}` : 'not released'}. Reason: {c.reason}</small>
             ))}
+            {(memoFixes ?? []).filter((c) => c.arrest_id === a.id).map((c) => (
+              <small key={c.id}><br />Memo corrected {fmt(c.recorded_at)} by {c.recorded_by_name}: place {c.place}; grounds {c.grounds.join('; ')}{c.informed_name ? `; informed ${c.informed_name}` : ''}. Reason: {c.reason}</small>
+            ))}
             {!a.corrected && !a.first_remand_on && <RemandForm firId={firId} arrest={a} onSaved={onSaved} />}
             {!a.corrected && !a.released_on && <ReleaseForm firId={firId} arrest={a} onSaved={onSaved} />}
             <CorrectionForm firId={firId} arrest={a} onSaved={onSaved} />
+            <MemoCorrectionForm firId={firId} arrest={a} onSaved={onSaved} />
           </li>
         ))}</ul>
       )}

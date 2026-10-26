@@ -114,3 +114,24 @@ test('a correction sends all four facts with a reason; it can say the person was
   expect(writes).toEqual([{ url: '/api/firs/f1/arrests/a1/corrections', body: {
     firstRemandOn: '2026-09-13', maxPunishment: 'life', releasedOn: null, releaseBasis: null, reason: 'remand order shows the 13th' } }])
 })
+
+test('a memo correction starts from the memo, sends place, grounds and informed person with a reason, and shows the history', async () => {
+  const writes = stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+    { ...base, id: 'a1', first_remand_on: null, chargesheet_last_day: null, released_on: null, release_basis: null, chargesheet_filed_on: null, corrected: false, memo_corrected: true },
+  ], '/firs/f1/arrests/memo-corrections': [
+    { id: 'm1', arrest_id: 'a1', place: 'Testpur Market', grounds: ['proper investigation'], informed_name: 'Fictional Friend', informed_contact: null,
+      reason: 'place was the market', recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' },
+  ] })
+  const saved = vi.fn()
+  render(<Arrests firId="f1" version={0} onSaved={saved} />)
+  expect(await screen.findByText(/Reason: place was the market/)).toBeTruthy()
+  const form = screen.getByText('Correct the place, grounds or informed person').closest('details')!
+  expect((within(form).getByLabelText(/Place of arrest/) as HTMLInputElement).value).toBe('Testpur')   // starts from the memo
+  type(/Place of arrest/, 'Testpur Bus Stand', within(form))
+  type(/Why this is being corrected/, 'place was the bus stand', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(saved).toHaveBeenCalled())
+  expect(writes).toEqual([{ url: '/api/firs/f1/arrests/a1/memo-corrections', body: {
+    place: 'Testpur Bus Stand', grounds: ['to prevent further offence', 'proper investigation'], informedName: 'Fictional Relative',
+    informedContact: null, reason: 'place was the bus stand' } }])
+})
