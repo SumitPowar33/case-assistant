@@ -4,6 +4,40 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 26 Oct 2026, session 11 (scheduled nightly build)
+Started from `setup/seed` at e7733d0 (session 10). Local PostgreSQL had to be started and the test user created first.
+
+Done
+- Corrections of a wrong arrest remand date, punishment class, release or chargesheet (Next 1). Nothing is ever edited or deleted; a correction is a new record with a written reason (10+ characters), same pattern as 63(4) certificates. Migration V15.
+  - Arrest: a correction restates the four facts the custody limit uses (first remand, highest punishment, release date and basis) and replaces the newest earlier version. Leaving the release empty says the person was not released (so a release entered on the wrong arrest can be undone). The memo itself stays as written. The deadline list and the arrest list use the newest version; once an arrest has a correction, the old "record the first remand / release" buttons are closed and only corrections work. `POST .../arrests/{id}/corrections`, `GET .../arrests/corrections` (history). The arrest list says `corrected`.
+  - Chargesheet: a correction is a new chargesheet (date, court, number, accused named) that replaces the current one. The old entry stays, shown struck through with "replaced by a later entry"; only the current entries stop the 60/90-day limit and the BNSS 193(2) limit. A chargesheet can be replaced once; the newest is corrected next. `POST .../chargesheets/{id}/corrections`.
+  - Only the case team can correct; the same date rules as before apply (remand and release not before the arrest day, release and filing not in the future).
+  - Web: "Correct the remand, punishment or release" on each arrest (starts from what is recorded, shows the correction history with reasons) and "Correct this chargesheet entry" on each current chargesheet.
+- Tests: gateway 16, xlit 77, db 29, packs 3, core 45, web 51; web build and lint pass.
+
+Deliberately skipped / not checked
+- Not checked in a real browser this run (only unit tests with stubbed requests and the real database tests).
+- A correction of the arrest memo itself (place, grounds, time, the person) is not possible; only the four deadline facts. A wrong memo would need a separate rule.
+- A chargesheet cannot be withdrawn without naming a replacement; a closure report is still not recorded.
+- Corrections of the arrest are not limited to a role (any case-team member can correct); the reason and name are kept.
+- The correction history shows all corrections of an arrest, not only the newest.
+
+Next
+1. Read access rules once question 1 is answered.
+2. Admin password reset (if question 4 of session 9 is yes).
+3. AI draft for the follow-up notice (if question 4 of session 8 is yes).
+4. Highest punishment from the sections, if question 3 is yes.
+5. If all of 1-4 are still waiting: correction of the arrest memo itself (place, grounds, informed person) with a reason, and a browser check of the corrections.
+
+Blocked
+- Live Claude/Gemini calls wait for API keys (using `fake`).
+- Items 1-4 above wait for Sumit's answers.
+
+Questions for Sumit
+1. Still open (session 10, questions 1-5): who may read a case; re-arrest day counting; highest punishment table; BNSS 193(2) end rule; SHO as IO.
+2. Corrections today can be made by any member of the case team. Should an IO's correction of a remand date or release need the SHO to confirm it?
+3. Should a correction be allowed after the chargesheet is filed, or only before?
+
 ## 26 Oct 2026, session 10 (weekend, Sunday night, 02:05 IST run, last of the night)
 Tonight in short
 - Session 8 (21:05): AI gateway checks every token with the core app (disabled users and old tokens refused); web forms for notices, replies and 63(4) certificates.
