@@ -36,6 +36,15 @@ class RecordsController {
 
     record Release(@NotNull LocalDate releasedOn, @NotBlank @Pattern(regexp = "bail|default_bail|other") String basis) {}
 
+    /** A correction restates the facts the 60/90-day limit depends on; it replaces the newest earlier version. */
+    record ArrestCorrection(LocalDate firstRemandOn, @NotBlank @Pattern(regexp = "death|life|10_years_or_more|less_than_10_years") String maxPunishment,
+                            LocalDate releasedOn, @Pattern(regexp = "bail|default_bail|other") String releaseBasis,
+                            @NotBlank String reason) {}
+
+    record ChargesheetCorrection(@NotNull LocalDate filedOn, @NotBlank @Size(max = 200) String court,
+                                 @NotBlank @Size(max = 60) String reportNo, @NotEmpty List<@NotNull UUID> accusedIds,
+                                 @NotBlank String reason) {}
+
     record NewChargesheet(@NotNull LocalDate filedOn, @NotBlank @Size(max = 200) String court,
                           @NotBlank @Size(max = 60) String reportNo, @NotEmpty List<@NotNull UUID> accusedIds) {}
 
@@ -70,6 +79,7 @@ class RecordsController {
     private void requireRow(String table, UUID id, UUID firId) {
         String sql = switch (table) {
             case "person" -> "select exists (select 1 from person where id = ? and fir_id = ?)";
+            case "chargesheet" -> "select exists (select 1 from chargesheet where id = ? and fir_id = ?)";
             case "notice" -> "select exists (select 1 from notice where id = ? and fir_id = ?)";
             default -> "select exists (select 1 from evidence_item where id = ? and fir_id = ?)";
         };
@@ -140,11 +150,11 @@ class RecordsController {
         boolean onTeam = team.includes(CaseTeam.user(jwt), firId);
         return db.sql("""
                 select a.id, a.person_id, p.label as person_label, a.arrested_at, a.place, to_json(a.grounds)::text as grounds,
-                  a.informed_name, a.informed_contact, u.full_name as arresting_officer_name, a.max_punishment, a.first_remand_on,
-                  case when a.first_remand_on is not null then chargesheet_last_day(a.first_remand_on, a.max_punishment) end as chargesheet_last_day,
-                  r.full_name as remand_recorded_by_name, a.released_on, a.release_basis,
-                  chargesheet_filed_for(a.person_id) as chargesheet_filed_on
-                from arrest a join person p on p.id = a.person_id
+                  a.informed_name, a.informed_contact, u.full_name as arresting_officer_name, c.max_punishment, c.first_remand_on,
+                  case when c.first_remand_on is not null then chargesheet_last_day(c.first_remand_on, c.max_punishment) end as chargesheet_last_day,
+                  r.full_name as remand_recorded_by_name, c.released_on, c.release_basis,
+                  chargesheet_filed_for(a.person_id) as chargesheet_filed_on, c.correction_id is not null as corrected
+                from arrest a join arrest_current c on c.id = a.id join person p on p.id = a.person_id
                   join app_user u on u.id = a.arresting_officer left join app_user r on r.id = a.remand_recorded_by
                 where p.fir_id = ? order by a.arrested_at, a.id""")
                 .param(firId).query().listOfRows().stream().map(row -> {
@@ -172,10 +182,13 @@ class RecordsController {
                 .params(arrestId, firId).query(OffsetDateTime.class).optional()
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
         checkRemand(f.firstRemandOn, arrestedAt);
-        int n = db.sql("update arrest set first_remand_on = ?, remand_recorded_by = ?, remand_recorded_at = now() where id = ? and first_remand_on is null")
+        int n = db.sql("""
+                update arrest set first_remand_on = ?, remand_recorded_by = ?, remand_recorded_at = now()
+                where id = ? and first_remand_on is null
+                and not exists (select 1 from arrest_correction where arrest_id = arrest.id)""")
                 .params(f.firstRemandOn, me, arrestId).update();
         if (n == 0) throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
-                "The first remand of this arrest is already recorded; it cannot be changed.");
+                "The first remand of this arrest is already recorded; to fix it, add a correction.");
         return ResponseEntity.noContent().build();
     }
 
@@ -199,9 +212,10 @@ class RecordsController {
         if (r.releasedOn.isAfter(todayIst())) badRequest("The release date cannot be in the future.");
         int n = db.sql("""
                 update arrest set released_on = ?, release_basis = ?, release_recorded_by = ?, release_recorded_at = now()
-                where id = ? and released_on is null""").params(r.releasedOn, r.basis, me, arrestId).update();
+                where id = ? and released_on is null
+                and not exists (select 1 from arrest_correction where arrest_id = arrest.id)""").params(r.releasedOn, r.basis, me, arrestId).update();
         if (n == 0) throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
-                "The release from this arrest is already recorded; it cannot be changed.");
+                "The release from this arrest is already recorded; to fix it, add a correction.");
         return ResponseEntity.noContent().build();
     }
 
@@ -219,23 +233,96 @@ class RecordsController {
         if (c.filedOn.isAfter(todayIst())) badRequest("The filing date cannot be in the future.");
         var registered = db.sql("select ist_date(registered_at) from fir where id = ?").param(firId).query(LocalDate.class).single();
         if (c.filedOn.isBefore(registered)) badRequest("A chargesheet cannot be filed before the FIR was registered.");
-        for (UUID p : c.accusedIds) {
+        return created(insertChargesheet(me, firId, c.filedOn, c.court, c.reportNo, c.accusedIds, null, null));
+    }
+
+    private UUID insertChargesheet(UUID me, UUID firId, LocalDate filedOn, String court, String reportNo, List<UUID> accused,
+                                   UUID supersedes, String reason) {
+        for (UUID p : accused) {
             requireRow("person", p, firId);
             if (!db.sql("select role = 'accused' from person where id = ?").param(p).query(Boolean.class).single())
                 badRequest("A chargesheet names only accused.");
         }
-        UUID id = db.sql("insert into chargesheet (fir_id, filed_on, court, report_no, recorded_by) values (?,?,?,?,?) returning id")
-                .params(firId, c.filedOn, c.court.trim(), c.reportNo.trim(), me).query(UUID.class).single();
-        for (UUID p : new java.util.LinkedHashSet<>(c.accusedIds))
+        UUID id = db.sql("""
+                insert into chargesheet (fir_id, filed_on, court, report_no, recorded_by, supersedes, correction_reason)
+                values (?,?,?,?,?,?,?) returning id""")
+                .params(firId, filedOn, court.trim(), reportNo.trim(), me, supersedes, reason == null ? null : reason.trim())
+                .query(UUID.class).single();
+        for (UUID p : new java.util.LinkedHashSet<>(accused))
             db.sql("insert into chargesheet_accused (chargesheet_id, person_id) values (?,?)").params(id, p).update();
-        return created(id);
+        return id;
+    }
+
+    /**
+     * Fixes a wrong chargesheet entry (court, number, date or the accused it names): a new chargesheet that replaces
+     * the current one, with a written reason. The old one stays on record; the deadlines use only the new one.
+     */
+    @PostMapping("/chargesheets/{chargesheetId}/corrections")
+    @org.springframework.transaction.annotation.Transactional
+    ResponseEntity<Map<String, UUID>> correctChargesheet(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId,
+                                                         @PathVariable UUID chargesheetId, @Valid @RequestBody ChargesheetCorrection c) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        requireRow("chargesheet", chargesheetId, firId);
+        requireReason(c.reason);
+        if (c.filedOn.isAfter(todayIst())) badRequest("The filing date cannot be in the future.");
+        if (db.sql("select exists (select 1 from chargesheet where supersedes = ?)").param(chargesheetId).query(Boolean.class).single())
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
+                    "This chargesheet has already been replaced; correct the newest one.");
+        return created(insertChargesheet(me, firId, c.filedOn, c.court, c.reportNo, c.accusedIds, chargesheetId, c.reason));
+    }
+
+    private static void requireReason(String reason) {
+        if (reason.trim().length() < 10) badRequest("Say why, in at least 10 characters.");
+    }
+
+    /**
+     * Fixes a wrong remand date, punishment class or release of an arrest. The arrest memo itself stays as written; a
+     * correction restates the four facts the custody limit uses, with a written reason, and the newest one counts.
+     * Leaving the release out says the person was not released.
+     */
+    @PostMapping("/arrests/{arrestId}/corrections")
+    ResponseEntity<Map<String, UUID>> correctArrest(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId,
+                                                    @PathVariable UUID arrestId, @Valid @RequestBody ArrestCorrection c) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        var arrestedAt = db.sql("select a.arrested_at from arrest a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
+                .params(arrestId, firId).query(OffsetDateTime.class).optional()
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
+        requireReason(c.reason);
+        checkRemand(c.firstRemandOn, arrestedAt);
+        if ((c.releasedOn == null) != (c.releaseBasis == null)) badRequest("A release needs both its date and how it happened.");
+        if (c.releasedOn != null) {
+            if (c.releasedOn.isBefore(arrestedAt.atZoneSameInstant(IST).toLocalDate())) badRequest("The release cannot be before the day of arrest.");
+            if (c.releasedOn.isAfter(todayIst())) badRequest("The release date cannot be in the future.");
+        }
+        UUID newest = db.sql("select id from arrest_correction c where arrest_id = ? and not exists (select 1 from arrest_correction n where n.supersedes = c.id)")
+                .param(arrestId).query(UUID.class).optional().orElse(null);
+        return created(db.sql("""
+                insert into arrest_correction (arrest_id, supersedes, first_remand_on, max_punishment, released_on, release_basis, reason, recorded_by)
+                values (?,?,?,?,?,?,?,?) returning id""")
+                .params(arrestId, newest, c.firstRemandOn, c.maxPunishment, c.releasedOn, c.releaseBasis, c.reason.trim(), me)
+                .query(UUID.class).single());
+    }
+
+    /** Every correction of every arrest in this case, oldest first, so the history can be read. */
+    @GetMapping("/arrests/corrections")
+    List<Map<String, Object>> arrestCorrections(@PathVariable UUID firId) {
+        requireFir(firId);
+        return db.sql("""
+                select c.id, c.arrest_id, c.first_remand_on, c.max_punishment, c.released_on, c.release_basis, c.reason,
+                  c.recorded_at, u.full_name as recorded_by_name
+                from arrest_correction c join arrest a on a.id = c.arrest_id join person p on p.id = a.person_id
+                  join app_user u on u.id = c.recorded_by
+                where p.fir_id = ? order by c.recorded_at, c.id""").param(firId).query().listOfRows();
     }
 
     @GetMapping("/chargesheets")
     List<Map<String, Object>> chargesheets(@PathVariable UUID firId) {
         requireFir(firId);
         return db.sql("""
-                select c.id, c.filed_on, c.court, c.report_no, u.full_name as recorded_by_name,
+                select c.id, c.filed_on, c.court, c.report_no, u.full_name as recorded_by_name, c.supersedes, c.correction_reason,
+                  exists (select 1 from chargesheet n where n.supersedes = c.id) as replaced,
                   array_to_string(array(select p.label from chargesheet_accused ca join person p on p.id = ca.person_id
                     where ca.chargesheet_id = c.id order by p.label), ', ') as accused
                 from chargesheet c join app_user u on u.id = c.recorded_by where c.fir_id = ? order by c.filed_on, c.recorded_at""")

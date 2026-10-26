@@ -135,6 +135,48 @@ class RecordsApiTest {
     }
 
     @Test
+    void wrongRemandReleaseAndChargesheetAreFixedByCorrectionsThatKeepTheOldRecord() throws Exception {
+        String a1 = idOf(send("/people", "{\"role\":\"accused\",\"label\":\"A1\",\"identityKnown\":false}", 201));
+        String arrest = idOf(send("/arrests", """
+                {"personId":"%s","arrestedAt":"2026-10-02T10:00:00+05:30","place":"Testpur","grounds":["proper investigation"],
+                 "informedName":"Fictional Relative","firstRemandOn":"2026-10-02","maxPunishment":"less_than_10_years"}""".formatted(a1), 201));
+        var deadline = jsonPath("$[?(@.kind=='chargesheet_custody')].due_on");
+        mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", auth)).andExpect(deadline.value("2026-11-30"));
+        String fix = "{\"firstRemandOn\":%s,\"maxPunishment\":\"%s\",\"releasedOn\":%s,\"releaseBasis\":%s,\"reason\":\"%s\"}";
+        String why = "remand was on the 4th";
+        send("/arrests/" + arrest + "/corrections", fix.formatted("\"2026-10-01\"", "life", "null", "null", why), 400);              // before the arrest
+        send("/arrests/" + arrest + "/corrections", fix.formatted("\"2026-10-04\"", "life", "null", "null", "typo"), 400);         // reason too short
+        send("/arrests/" + arrest + "/corrections", fix.formatted("\"2026-10-04\"", "life", "\"2026-10-09\"", "null", why), 400);  // release needs a basis
+        send("/arrests/" + arrest + "/corrections", fix.formatted("\"2026-10-04\"", "life", "\"2099-10-09\"", "\"bail\"", why), 400); // future
+        send("/arrests/" + UUID.randomUUID() + "/corrections", fix.formatted("\"2026-10-04\"", "life", "null", "null", why), 404);
+        send("/arrests/" + arrest + "/corrections", fix.formatted("\"2026-10-04\"", "life", "null", "null", why), 201);
+        mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", auth)).andExpect(deadline.value("2027-01-01"));   // 90 days from 4 Oct
+        send("/arrests/" + arrest + "/corrections", fix.formatted("\"2026-10-04\"", "life", "\"2026-10-09\"", "\"bail\"", "release was entered on the right day"), 201);
+        mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", auth)).andExpect(jsonPath("$[?(@.kind=='chargesheet_custody')]").isEmpty());
+        send("/arrests/" + arrest + "/release", "{\"releasedOn\":\"2026-10-10\",\"basis\":\"bail\"}", 409);   // use a correction now
+        mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", auth))
+                .andExpect(jsonPath("$[0].corrected").value(true)).andExpect(jsonPath("$[0].released_on").value("2026-10-09"))
+                .andExpect(jsonPath("$[0].first_remand_on").value("2026-10-04"));
+        mvc.perform(get("/api/firs/" + fir + "/arrests/corrections").header("Authorization", auth))
+                .andExpect(jsonPath("$.length()").value(2)).andExpect(jsonPath("$[0].reason").value(why));
+
+        String cs = "{\"filedOn\":\"2026-10-20\",\"court\":\"Fictional JMFC Court\",\"reportNo\":\"CS-1\",\"accusedIds\":[\"%s\"]}";
+        String first = idOf(send("/chargesheets", cs.formatted(a1), 201));
+        String csFix = "{\"filedOn\":\"2026-10-21\",\"court\":\"Fictional JMFC Court\",\"reportNo\":\"CS-1\",\"accusedIds\":[%s],\"reason\":\"%s\"}";
+        send("/chargesheets/" + first + "/corrections", csFix.formatted("\"" + a1 + "\"", "typo"), 400);
+        send("/chargesheets/" + first + "/corrections", csFix.formatted("", "date was the 21st, not the 20th"), 400);    // names nobody
+        send("/chargesheets/" + UUID.randomUUID() + "/corrections", csFix.formatted("\"" + a1 + "\"", "date was the 21st, not the 20th"), 404);
+        send("/chargesheets/" + first + "/corrections", csFix.formatted("\"" + a1 + "\"", "date was the 21st, not the 20th"), 201);
+        send("/chargesheets/" + first + "/corrections", csFix.formatted("\"" + a1 + "\"", "replacing it a second time"), 409);
+        mvc.perform(get("/api/firs/" + fir + "/chargesheets").header("Authorization", auth))
+                .andExpect(jsonPath("$.length()").value(2)).andExpect(jsonPath("$[0].replaced").value(true))
+                .andExpect(jsonPath("$[1].replaced").value(false)).andExpect(jsonPath("$[1].filed_on").value("2026-10-21"));
+        mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", auth)).andExpect(jsonPath("$[0].chargesheet_filed_on").value("2026-10-21"));
+        mvc.perform(post("/api/firs/" + fir + "/arrests/" + arrest + "/corrections").header("Authorization", TestAuth.bearer(tokens, UUID.randomUUID()))
+                .contentType(MediaType.APPLICATION_JSON).content(fix.formatted("null", "life", "null", "null", why))).andExpect(status().is4xxClientError());
+    }
+
+    @Test
     void electronicEvidenceNeedsHashAndBecomesCourtReadyWithBothCertificates() throws Exception {
         String base = "\"label\":\"E-01\",\"description\":\"Fictional phone\",\"kind\":\"electronic\",\"seizedAt\":\"2026-10-02T10:00:00Z\",\"seizureMemo\":\"SM-1\"";
         send("/evidence", "{" + base + "}", 400);

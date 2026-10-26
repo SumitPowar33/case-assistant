@@ -202,6 +202,55 @@ def test_release_and_chargesheet_stop_the_custody_limit(db):
         db.execute("DELETE FROM chargesheet_accused")
 
 
+def test_corrections_replace_without_changing_the_old_record(db):
+    st, io, fir = seed_case(db, sexual=True)
+    a1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A1','Demo One') RETURNING id", fir)[0]
+    ar = one(db, """INSERT INTO arrest(person_id,arrested_at,place,grounds,informed_name,arresting_officer,max_punishment,
+                    first_remand_on,remand_recorded_by,remand_recorded_at)
+                    VALUES (%s,'2026-09-01 10:00+05:30','Demo place','{x}','Demo relative',%s,'less_than_10_years','2026-09-02',%s,now())
+                    RETURNING id""", a1, io, io)[0]
+    due = lambda kind: [r[0] for r in db.execute("SELECT due_on FROM case_deadline WHERE kind=%s", (kind,))]
+    current = lambda: one(db, "SELECT first_remand_on, max_punishment, released_on FROM arrest_current WHERE id=%s", ar)
+    assert due("chargesheet_custody") == [dt.date(2026, 10, 31)] and current()[2] is None
+    ins = "INSERT INTO arrest_correction(arrest_id,supersedes,first_remand_on,max_punishment,released_on,release_basis,reason,recorded_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id"
+    with pytest.raises(psycopg.errors.CheckViolation):   # remand before the arrest day
+        db.execute(ins, (ar, None, "2026-08-31", "life", None, None, "wrong date typed", io))
+    with pytest.raises(psycopg.errors.CheckViolation):   # a reason is needed
+        db.execute(ins, (ar, None, "2026-09-03", "life", None, None, "typo", io))
+    c1 = one(db, ins, ar, None, "2026-09-03", "life", None, None, "remand was on the 3rd, not the 2nd", io)[0]
+    assert current() == (dt.date(2026, 9, 3), "life", None)
+    assert due("chargesheet_custody") == [dt.date(2026, 12, 1)]   # 90 days from 3 Sep
+    assert one(db, "SELECT first_remand_on FROM arrest WHERE id=%s", ar)[0] == dt.date(2026, 9, 2)   # the memo is untouched
+    with pytest.raises(psycopg.errors.UniqueViolation):   # the first correction can only be made once
+        db.execute(ins, (ar, None, "2026-09-04", "life", None, None, "second first correction", io))
+    c2 = one(db, ins, ar, c1, "2026-09-03", "life", "2026-09-10", "bail", "release was recorded in error before", io)[0]
+    assert current()[2] == dt.date(2026, 9, 10) and due("chargesheet_custody") == []
+    one(db, ins, ar, c2, "2026-09-03", "life", None, None, "release was recorded on the wrong arrest", io)
+    assert current()[2] is None and due("chargesheet_custody") == [dt.date(2026, 12, 1)]
+    with pytest.raises(psycopg.errors.UniqueViolation):   # c2 has already been replaced
+        db.execute(ins, (ar, c2, "2026-09-03", "life", None, None, "replacing it a second time", io))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE arrest_correction SET reason='something else entirely'")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM arrest_correction")
+
+    cs = one(db, "INSERT INTO chargesheet(fir_id,filed_on,court,report_no,recorded_by) VALUES (%s,'2026-10-15','Demo Court','CS-1',%s) RETURNING id", fir, io)[0]
+    db.execute("INSERT INTO chargesheet_accused VALUES (%s,%s)", (cs, a1))
+    assert due("chargesheet_custody") == [] and due("sexual_offence_investigation") == []
+    cins = "INSERT INTO chargesheet(fir_id,filed_on,court,report_no,recorded_by,supersedes,correction_reason) VALUES (%s,%s,'Demo Court','CS-1',%s,%s,%s) RETURNING id"
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute(cins, (fir, "2026-10-16", io, cs, "typo"))
+    cs2 = one(db, cins, fir, "2026-10-16", io, cs, "filing date was wrong, it was the 16th")[0]
+    with pytest.raises(psycopg.errors.UniqueViolation):   # one chargesheet is replaced once
+        db.execute(cins, (fir, "2026-10-17", io, cs, "replacing it a second time"))
+    with pytest.raises(psycopg.errors.UniqueViolation):   # a plain new chargesheet cannot reuse a number
+        db.execute("INSERT INTO chargesheet(fir_id,filed_on,court,report_no,recorded_by) VALUES (%s,'2026-10-16','Demo Court','CS-1',%s)", (fir, io))
+    # The replacement names nobody yet, so the accused is not covered and the limit runs again.
+    assert due("chargesheet_custody") == [dt.date(2026, 12, 1)]
+    db.execute("INSERT INTO chargesheet_accused VALUES (%s,%s)", (cs2, a1))
+    assert due("chargesheet_custody") == [] and one(db, "SELECT chargesheet_filed_for(%s)", a1)[0] == dt.date(2026, 10, 16)
+
+
 def test_notice_must_be_signed_before_sent(db):
     st, io, fir = seed_case(db)
     with pytest.raises(psycopg.errors.CheckViolation):
