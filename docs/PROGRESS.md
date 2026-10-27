@@ -4,6 +4,36 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 27 Oct 2026, session 14 (scheduled nightly build, 21:05 IST)
+Started from `setup/seed` at 1f62454 (session 13). Local PostgreSQL had to be started and the test role created first. Items 1-4 of Next still wait for Sumit, so I took item 5.
+
+Done
+- Correction of a closure report and the Magistrate's decision on it (migration V18). A correction restates the whole report (date, court, number, ground, reason, informant date) with a written reason of 10+ characters; the first report is never edited, the newest correction counts, older ones stay (same pattern as the other corrections). The same date rules as the first entry apply. `POST/GET /api/firs/{id}/closure-report/corrections`; `GET .../closure-report` now returns the current values, `corrected`, and the decision.
+- The Magistrate's decision (accepted, or further investigation ordered) with the date (not before the filing day, not in the future) and an optional order number/note. Recorded once and kept as written (database trigger); `POST .../closure-report/decision`. It changes no deadline, and a chargesheet can still be recorded afterwards.
+- Web: on the FIR page the closure section now shows the current report, the decision (or a form to record it), a "Correct this closure report" form that starts from the current values, and the correction history with reasons.
+- Tests: gateway 16, xlit 77, db 32 (1 new), packs 3, core 49 (1 new; migration check now expects V18), web 56 (2 new); web build and lint pass.
+
+Deliberately skipped / not checked
+- Not checked in a real browser (unit tests with stubbed requests and real database tests only). The browser check of the corrections and closure screens is still open.
+- A wrong decision cannot be corrected (kept as written). "Further investigation ordered" does not re-open the 193(2) two-month limit and does not remove the closure report; I did not guess the rule (question 2).
+- A correction is open to any case-team member, like the other corrections. No new dependency.
+
+Next
+1. Read access rules once question 1 is answered.
+2. Admin password reset (if question 4 of session 9 is yes).
+3. AI draft for the follow-up notice (if question 4 of session 8 is yes).
+4. Highest punishment from the sections, if question 3 is yes.
+5. If all of 1-4 are still waiting: a browser check of the corrections, closure and decision screens; then ask Sumit what the next real feature should be (the planned items are used up).
+
+Blocked
+- Live Claude/Gemini calls wait for API keys (using `fake`).
+- Items 1-4 above wait for Sumit's answers.
+
+Questions for Sumit
+1. Still open (sessions 9-13): who may read a case; re-arrest day counting; highest punishment table; BNSS 193(2) end rule; SHO as IO; whether an IO's correction needs SHO confirmation; whether a correction is allowed after the chargesheet is filed; whether the time of arrest may be corrected; whether a closure report should also stop the custody limit.
+2. When the Magistrate orders further investigation after a closure report, should the 193(2) two-month limit start again (and from which day)? Today nothing changes.
+3. I am running out of planned items that do not need your answers. Please answer the open questions above, or name the next feature you want.
+
 ## 27 Oct 2026, session 13 (scheduled nightly build, last of the night)
 Tonight in short
 - Session 11: corrections of a wrong arrest remand date, punishment class, release and chargesheet (old record always kept, reason required).
