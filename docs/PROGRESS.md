@@ -4,6 +4,39 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 27 Oct 2026, session 15 (scheduled nightly build)
+Started from `setup/seed` at f203574 (session 14). Local PostgreSQL had to be started and the test role created first. Items 1-4 of Next still wait for Sumit, so I took item 5 (browser check). No code changed tonight.
+
+Done
+- Real-browser check (headless Chromium against the running core app, a local dev database and the Vite web app; fictional case, SI Asha Rao as IO, one accused arrested). All of these worked with no browser console errors:
+  - Closure report: form opens, report recorded and shown.
+  - Correction of the closure report: form starts from the current values; saving shows the new number (CR-1A) and a history line with the reason.
+  - Magistrate's decision: recorded once and shown ("Magistrate accepted the report on 2026-10-25. Order 7"); the decision form disappears afterwards.
+  - Arrest memo correction: form starts from the current place; saving shows the new place and a "Memo corrected ... Reason: ..." line.
+- Core tests re-run on the real database: green. Other suites unchanged since session 14.
+
+Small things noticed (not changed)
+- After saving, the correction forms stay open (plain collapsible sections). Harmless.
+- The check was by script, not by eye: layout and Marathi/Hindi typing in the corrected fields were not looked at.
+
+Deliberately skipped / not checked
+- Release, chargesheet corrections and the deadline list were not re-checked in a browser (earlier sessions covered them with stubbed tests only).
+
+Next
+1. Read access rules once question 1 is answered.
+2. Admin password reset (if question 4 of session 9 is yes).
+3. AI draft for the follow-up notice (if question 4 of session 8 is yes).
+4. Highest punishment from the sections, if question 3 is yes.
+5. The planned items are used up. Waiting for Sumit to name the next feature; I will not invent features meanwhile.
+
+Blocked
+- Live Claude/Gemini calls wait for API keys (using `fake`).
+- Items 1-4 wait for Sumit's answers.
+
+Questions for Sumit
+1. Please answer the open questions from sessions 9-14 (listed in session 14), or name the next feature.
+2. Should correction forms close by themselves after a save?
+
 ## 27 Oct 2026, session 14 (scheduled nightly build, 21:05 IST)
 Started from `setup/seed` at 1f62454 (session 13). Local PostgreSQL had to be started and the test role created first. Items 1-4 of Next still wait for Sumit, so I took item 5.
 
