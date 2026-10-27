@@ -37,9 +37,38 @@ test('the closure report is sent with its ground and reason; an empty informed d
 
 test('a recorded closure report is shown and the form is gone', async () => {
   stub([{ id: 'r1', filed_on: '2026-10-20', court: 'Fictional JMFC Court', report_no: 'FR-1', ground: 'insufficient_evidence',
-    reason: 'no witness supports the complaint', informant_informed_on: null, recorded_by_name: 'SI Fictional' }], [])
+    reason: 'no witness supports the complaint', informant_informed_on: null, recorded_by_name: 'SI Fictional', corrected: false, decision: null, decided_on: null, decision_note: null }], [])
   render(<ClosureReport firId="f1" version={0} onSaved={vi.fn()} />)
   expect(await screen.findByText(/FR-1: filed on 2026-10-20 in Fictional JMFC Court\. Not enough evidence\. Reason: no witness supports the complaint/)).toBeTruthy()
   expect(screen.getByText(/not yet recorded as told/)).toBeTruthy()
   expect(screen.queryByText(/Record a closure report/)).toBeNull()
+})
+
+const recorded = { id: 'r1', filed_on: '2026-10-20', court: 'Fictional JMFC Court', report_no: 'FR-1', ground: 'untraced', reason: 'accused could not be traced',
+  informant_informed_on: null, recorded_by_name: 'SI Fictional', corrected: false, decision: null, decided_on: null, decision_note: null }
+
+test('the Magistrate decision and a correction are sent with their reasons', async () => {
+  const writes: { url: string; body: unknown }[] = []
+  stub([recorded], writes)
+  render(<ClosureReport firId="f1" version={0} onSaved={vi.fn()} />)
+  const dec = (await screen.findByText(/Record the Magistrate's decision/)).closest('details')!
+  fireEvent.change(within(dec).getByLabelText('Decision'), { target: { value: 'further_investigation' } })
+  fireEvent.change(within(dec).getByLabelText('Decided on'), { target: { value: '2026-10-22' } })
+  fireEvent.click(within(dec).getByRole('button', { name: 'Save' }))
+  const fix = screen.getByText(/Correct this closure report/).closest('details')!
+  fireEvent.change(within(fix).getByLabelText('Report number'), { target: { value: 'FR-1A' } })
+  fireEvent.change(within(fix).getByLabelText('Why this is being corrected'), { target: { value: 'report number was wrong' } })
+  fireEvent.click(within(fix).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(2))
+  expect(writes[0]).toEqual({ url: '/api/firs/f1/closure-report/decision', body: { decision: 'further_investigation', decidedOn: '2026-10-22', note: null } })
+  expect(writes[1]).toEqual({ url: '/api/firs/f1/closure-report/corrections', body: {
+    filedOn: '2026-10-20', court: 'Fictional JMFC Court', reportNo: 'FR-1A', ground: 'untraced', reason: 'accused could not be traced',
+    informantInformedOn: null, correctionReason: 'report number was wrong' } })
+})
+
+test('a recorded decision is shown and its form is gone', async () => {
+  stub([{ ...recorded, decision: 'accepted', decided_on: '2026-10-22', decision_note: 'order 5' }], [])
+  render(<ClosureReport firId="f1" version={0} onSaved={vi.fn()} />)
+  expect(await screen.findByText(/Magistrate accepted the report on 2026-10-22\. order 5/)).toBeTruthy()
+  expect(screen.queryByText(/Record the Magistrate's decision/)).toBeNull()
 })
