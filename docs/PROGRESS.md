@@ -4,6 +4,35 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 27 Oct 2026, session 16 (scheduled nightly build, last of the night)
+Tonight in short
+- Session 13: closure report (case ends without a chargesheet).
+- Session 14: correction of a closure report and the Magistrate's decision on it.
+- Session 15: browser check of the corrections and closure screens (all worked, no errors).
+- Session 16 (this one): no new feature. Every item left in Next needs an answer from Sumit, and I will not invent features meanwhile.
+
+Started from `setup/seed` at 74e1367 (session 15). I only re-ran the tests that need no database: gateway 16 (needed its Python packages installed first), xlit 77, packs 3, web 56. All green. The core and database suites were not re-run tonight (no code changed since session 15, where they were green).
+
+Deliberately skipped / not checked
+- No code, no new dependency, nothing committed except these notes.
+
+Next
+1. Read access rules once question 1 is answered.
+2. Admin password reset (if question 4 of session 9 is yes).
+3. AI draft for the follow-up notice (if question 4 of session 8 is yes).
+4. Highest punishment from the sections, if question 3 is yes.
+5. Otherwise: Sumit names the next feature.
+
+Blocked
+- Live Claude/Gemini calls wait for API keys (using `fake`).
+- Items 1-4 wait for Sumit's answers.
+
+Questions for Sumit
+1. Please answer the open questions listed in session 14 (who may read a case; re-arrest day counting; highest punishment table; BNSS 193(2) end rule; SHO as IO; IO correction needing SHO confirmation; correction after the chargesheet; correcting the time of arrest; closure report and the custody limit).
+2. After the Magistrate orders further investigation, should the 193(2) limit start again, and from which day?
+3. Should correction forms close by themselves after a save?
+4. If you cannot answer these soon, which new feature should the nightly sessions build instead?
+
 ## 27 Oct 2026, session 15 (scheduled nightly build)
 Started from `setup/seed` at f203574 (session 14). Local PostgreSQL had to be started and the test role created first. Items 1-4 of Next still wait for Sumit, so I took item 5 (browser check). No code changed tonight.
 
