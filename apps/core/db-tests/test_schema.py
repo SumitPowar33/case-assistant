@@ -426,3 +426,29 @@ def test_closure_report_is_kept_once_and_ends_only_the_two_month_limit(db):
         db.execute("UPDATE closure_report SET court='Elsewhere'")
     with pytest.raises(psycopg.errors.RaiseException):
         db.execute("DELETE FROM closure_report")
+
+
+def test_closure_correction_replaces_the_report_and_the_decision_is_kept_once(db):
+    st, io, fir = seed_case(db, sexual=True)
+    closure = one(db, "INSERT INTO closure_report(fir_id,filed_on,court,report_no,ground,reason,recorded_by) VALUES (%s,'2026-10-01','Demo Court','FR-1','untraced','accused not traced',%s) RETURNING id", fir, io)[0]
+    ins = "INSERT INTO closure_correction(closure_id,supersedes,filed_on,court,report_no,ground,reason,correction_reason,recorded_by) VALUES (%s,%s,%s,'Demo Court','FR-1A','other','corrected report text',%s,%s) RETURNING id"
+    with pytest.raises(psycopg.errors.CheckViolation):   # a written reason
+        db.execute(ins, (closure, None, "2026-10-01", "short", io))
+    with pytest.raises(psycopg.errors.CheckViolation):   # before the FIR was registered (18 Aug)
+        db.execute(ins, (closure, None, "2026-08-17", "wrong report number entered", io))
+    first = one(db, ins, closure, None, "2026-10-02", "wrong report number entered", io)[0]
+    assert one(db, "SELECT report_no, ground, corrected FROM closure_report_current WHERE id=%s", closure) == ("FR-1A", "other", True)
+    with pytest.raises(psycopg.errors.UniqueViolation):   # the first correction replaces nothing, only once
+        db.execute(ins, (closure, None, "2026-10-02", "wrong report number entered", io))
+    one(db, ins, closure, first, "2026-10-03", "date was wrong as well", io)
+    assert one(db, "SELECT filed_on FROM closure_report_current WHERE id=%s", closure)[0].isoformat() == "2026-10-03"
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE closure_correction SET court='Elsewhere'")
+    dec = "INSERT INTO closure_decision(closure_id,decision,decided_on,recorded_by) VALUES (%s,%s,'2026-10-05',%s)"
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute(dec, (closure, "guilty", io))
+    db.execute(dec, (closure, "accepted", io))
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        db.execute(dec, (closure, "further_investigation", io))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM closure_decision")

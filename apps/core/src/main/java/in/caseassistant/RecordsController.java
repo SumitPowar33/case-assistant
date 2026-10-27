@@ -56,6 +56,14 @@ class RecordsController {
                       @NotBlank @Pattern(regexp = "untraced|insufficient_evidence|false_complaint|civil_nature|other") String ground,
                       @NotBlank @Size(min = 10, max = 2000) String reason, LocalDate informantInformedOn) {}
 
+    record ClosureCorrection(@NotNull LocalDate filedOn, @NotBlank @Size(max = 200) String court, @NotBlank @Size(max = 60) String reportNo,
+                             @NotBlank @Pattern(regexp = "untraced|insufficient_evidence|false_complaint|civil_nature|other") String ground,
+                             @NotBlank @Size(min = 10, max = 2000) String reason, LocalDate informantInformedOn,
+                             @NotBlank String correctionReason) {}
+
+    record ClosureDecision(@NotBlank @Pattern(regexp = "accepted|further_investigation") String decision, @NotNull LocalDate decidedOn,
+                           @Size(max = 2000) String note) {}
+
     record NewEvidence(@NotBlank String label, @NotBlank String description, @NotBlank String kind,
                        @NotNull OffsetDateTime seizedAt, @NotBlank String seizureMemo, String esakshyaId,
                        String sealNo, String sha256) {}
@@ -384,11 +392,7 @@ class RecordsController {
         UUID me = CaseTeam.user(jwt);
         team.requireTeam(me, firId);
         requireFir(firId);
-        if (c.filedOn.isAfter(todayIst())) badRequest("The filing date cannot be in the future.");
-        if (c.informantInformedOn != null && (c.informantInformedOn.isBefore(c.filedOn) || c.informantInformedOn.isAfter(todayIst())))
-            badRequest("The informant must be told on or after the filing day, and not in the future.");
-        var registered = db.sql("select ist_date(registered_at) from fir where id = ?").param(firId).query(LocalDate.class).single();
-        if (c.filedOn.isBefore(registered)) badRequest("A closure report cannot be filed before the FIR was registered.");
+        checkClosureDates(firId, c.filedOn, c.informantInformedOn);
         if (db.sql("select exists (select 1 from chargesheet c where c.fir_id = ? and not exists (select 1 from chargesheet n where n.supersedes = c.id))")
                 .param(firId).query(Boolean.class).single())
             throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
@@ -404,13 +408,82 @@ class RecordsController {
         }
     }
 
+    private void checkClosureDates(UUID firId, LocalDate filedOn, LocalDate informedOn) {
+        if (filedOn.isAfter(todayIst())) badRequest("The filing date cannot be in the future.");
+        if (informedOn != null && (informedOn.isBefore(filedOn) || informedOn.isAfter(todayIst())))
+            badRequest("The informant must be told on or after the filing day, and not in the future.");
+        var registered = db.sql("select ist_date(registered_at) from fir where id = ?").param(firId).query(LocalDate.class).single();
+        if (filedOn.isBefore(registered)) badRequest("A closure report cannot be filed before the FIR was registered.");
+    }
+
+    private UUID closureId(UUID firId) {
+        return db.sql("select id from closure_report where fir_id = ?").param(firId).query(UUID.class).optional()
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND, "No closure report in this case."));
+    }
+
+    /** The closure report as it stands now (newest correction counts), with the Magistrate's decision if recorded. */
     @GetMapping("/closure-report")
     List<Map<String, Object>> closureReport(@PathVariable UUID firId) {
         requireFir(firId);
         return db.sql("""
-                select r.id, r.filed_on, r.court, r.report_no, r.ground, r.reason, r.informant_informed_on, u.full_name as recorded_by_name
-                from closure_report r join app_user u on u.id = r.recorded_by where r.fir_id = ?""")
+                select r.id, c.filed_on, c.court, c.report_no, c.ground, c.reason, c.informant_informed_on, c.corrected,
+                  u.full_name as recorded_by_name, d.decision, d.decided_on, d.note as decision_note
+                from closure_report r join closure_report_current c on c.id = r.id join app_user u on u.id = r.recorded_by
+                  left join closure_decision d on d.closure_id = r.id
+                where r.fir_id = ?""")
                 .param(firId).query().listOfRows();
+    }
+
+    /** A correction restates the whole report with a written reason; the newest counts and the older ones stay. */
+    @PostMapping("/closure-report/corrections")
+    @org.springframework.transaction.annotation.Transactional
+    ResponseEntity<Map<String, UUID>> correctClosure(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody ClosureCorrection c) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        requireFir(firId);
+        UUID closure = closureId(firId);
+        requireReason(c.correctionReason);
+        checkClosureDates(firId, c.filedOn, c.informantInformedOn);
+        UUID newest = db.sql("select id from closure_correction c where closure_id = ? and not exists (select 1 from closure_correction n where n.supersedes = c.id)")
+                .param(closure).query(UUID.class).optional().orElse(null);
+        return created(db.sql("""
+                insert into closure_correction (closure_id, supersedes, filed_on, court, report_no, ground, reason, informant_informed_on, correction_reason, recorded_by)
+                values (?,?,?,?,?,?,?,?,?,?) returning id""")
+                .params(closure, newest, c.filedOn, c.court.trim(), c.reportNo.trim(), c.ground, c.reason.trim(), c.informantInformedOn,
+                        c.correctionReason.trim(), me).query(UUID.class).single());
+    }
+
+    /** Every correction of the closure report, oldest first. */
+    @GetMapping("/closure-report/corrections")
+    List<Map<String, Object>> closureCorrections(@PathVariable UUID firId) {
+        requireFir(firId);
+        return db.sql("""
+                select c.id, c.filed_on, c.court, c.report_no, c.ground, c.reason, c.informant_informed_on, c.correction_reason,
+                  c.recorded_at, u.full_name as recorded_by_name
+                from closure_correction c join closure_report r on r.id = c.closure_id join app_user u on u.id = c.recorded_by
+                where r.fir_id = ? order by c.recorded_at, c.id""").param(firId).query().listOfRows();
+    }
+
+    /**
+     * The Magistrate's decision on the closure report: accepted, or further investigation ordered. Recorded once, kept as written.
+     * It changes no deadline; a chargesheet may still be recorded afterwards.
+     */
+    @PostMapping("/closure-report/decision")
+    ResponseEntity<Map<String, UUID>> closureDecision(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody ClosureDecision d) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        requireFir(firId);
+        UUID closure = closureId(firId);
+        var filed = db.sql("select filed_on from closure_report_current where id = ?").param(closure).query(LocalDate.class).single();
+        if (d.decidedOn.isAfter(todayIst()) || d.decidedOn.isBefore(filed)) badRequest("The decision date must be between the filing day and today.");
+        try {
+            return created(db.sql("""
+                    insert into closure_decision (closure_id, decision, decided_on, note, recorded_by) values (?,?,?,?,?) returning id""")
+                    .params(closure, d.decision, d.decidedOn, d.note == null || d.note.isBlank() ? null : d.note.trim(), me)
+                    .query(UUID.class).single());
+        } catch (DataIntegrityViolationException e) {
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT, "A decision is already recorded for this closure report.");
+        }
     }
 
     @GetMapping("/chargesheets")

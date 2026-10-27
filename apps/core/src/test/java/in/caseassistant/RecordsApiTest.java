@@ -127,6 +127,32 @@ class RecordsApiTest {
     }
 
     @Test
+    void closureReportCanBeCorrectedAndTheMagistratesDecisionRecordedOnce() throws Exception {
+        String c = "{\"filedOn\":\"%s\",\"court\":\"Fictional JMFC Court\",\"reportNo\":\"%s\",\"ground\":\"untraced\",\"reason\":\"accused could not be traced\"%s}";
+        String fix = "{\"filedOn\":\"%s\",\"court\":\"Fictional JMFC Court\",\"reportNo\":\"FR-1A\",\"ground\":\"other\",\"reason\":\"corrected written reason\",\"correctionReason\":\"%s\"}";
+        send("/closure-report/corrections", fix.formatted("2026-10-20", "report number was wrong"), 404);          // nothing to correct yet
+        send("/closure-report/decision", "{\"decision\":\"accepted\",\"decidedOn\":\"2026-10-22\"}", 404);
+        send("/closure-report", c.formatted("2026-10-20", "FR-1", ""), 201);
+        send("/closure-report/corrections", fix.formatted("2026-10-20", "short"), 400);                         // reason too short
+        send("/closure-report/corrections", fix.formatted("2099-10-20", "report number was wrong"), 400);      // future
+        send("/closure-report/corrections", fix.formatted("2026-09-30", "report number was wrong"), 400);      // before the FIR
+        send("/closure-report/corrections", fix.formatted("2026-10-20", "report number was wrong"), 201);
+        send("/closure-report/corrections", fix.formatted("2026-10-21", "the date was also wrong"), 201);
+        mvc.perform(get("/api/firs/" + fir + "/closure-report").header("Authorization", auth))
+                .andExpect(jsonPath("$[0].report_no").value("FR-1A")).andExpect(jsonPath("$[0].filed_on").value("2026-10-21"))
+                .andExpect(jsonPath("$[0].corrected").value(true)).andExpect(jsonPath("$[0].decision").doesNotExist());
+        mvc.perform(get("/api/firs/" + fir + "/closure-report/corrections").header("Authorization", auth))
+                .andExpect(jsonPath("$.length()").value(2)).andExpect(jsonPath("$[0].correction_reason").value("report number was wrong"));
+        send("/closure-report/decision", "{\"decision\":\"guilty\",\"decidedOn\":\"2026-10-22\"}", 400);
+        send("/closure-report/decision", "{\"decision\":\"accepted\",\"decidedOn\":\"2026-10-20\"}", 400);   // before the (corrected) filing day
+        send("/closure-report/decision", "{\"decision\":\"accepted\",\"decidedOn\":\"2099-10-22\"}", 400);
+        send("/closure-report/decision", "{\"decision\":\"further_investigation\",\"decidedOn\":\"2026-10-22\",\"note\":\"order no. 5 of the fictional court\"}", 201);
+        send("/closure-report/decision", "{\"decision\":\"accepted\",\"decidedOn\":\"2026-10-23\"}", 409);   // once
+        mvc.perform(get("/api/firs/" + fir + "/closure-report").header("Authorization", auth))
+                .andExpect(jsonPath("$[0].decision").value("further_investigation")).andExpect(jsonPath("$[0].decision_note").value("order no. 5 of the fictional court"));
+    }
+
+    @Test
     void closureReportIsRefusedWhileAChargesheetStands() throws Exception {
         String a1 = idOf(send("/people", "{\"role\":\"accused\",\"label\":\"A1\",\"identityKnown\":false}", 201));
         send("/chargesheets", "{\"filedOn\":\"2026-10-20\",\"court\":\"Fictional JMFC Court\",\"reportNo\":\"CS-1\",\"accusedIds\":[\"" + a1 + "\"]}", 201);
