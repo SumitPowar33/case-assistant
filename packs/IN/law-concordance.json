@@ -1,0 +1,8 @@
+{
+  "status": "draft",
+  "note": "Advisory only. The BNS replaced the IPC for offences on or after 1 July 2024; older offences stay under the IPC. A prosecutor must check this table. The importer shows it as a hint and never converts a section.",
+  "IPC": {
+    "34": "3(5)", "120B": "61", "302": "103", "304": "105", "307": "109", "354": "74", "363": "137",
+    "376": "64", "379": "303", "380": "305", "392": "309", "406": "316", "420": "318", "498A": "85", "506": "351"
+  }
+}

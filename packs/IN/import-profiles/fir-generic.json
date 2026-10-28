@@ -1,0 +1,24 @@
+{
+  "id": "fir-generic",
+  "label": "FIR list (CSV), generic",
+  "entity": "fir",
+  "note": "Column names the importer recognises, lower case. A state module can add a profile with its own names.",
+  "fields": {
+    "fir_no": {"required": true, "aliases": ["fir_no", "fir no", "fir number", "fir_number", "crime no", "crime_no", "crime number"]},
+    "fir_year": {"aliases": ["fir_year", "year", "fir year", "crime year"]},
+    "registered_at": {"required": true, "aliases": ["registered_at", "registered on", "registration date", "date of registration", "reg date", "fir date"]},
+    "information_received_at": {"aliases": ["information_received_at", "information received", "date of information", "received at", "complaint date"]},
+    "gd_entry_no": {"aliases": ["gd_entry_no", "gd no", "gd entry", "gd entry no", "general diary no", "gd number"]},
+    "sections": {"aliases": ["sections", "section", "acts and sections", "acts_sections", "law sections", "sections of law"]},
+    "complaint_text": {"aliases": ["complaint_text", "complaint", "contents", "brief facts", "gist", "fir contents"]},
+    "io_username": {"aliases": ["io_username", "io", "io username", "investigating officer", "io login"]},
+    "complainant_name": {"aliases": ["complainant_name", "complainant", "informant", "name of complainant"]},
+    "victim_names": {"aliases": ["victim_names", "victim", "victims", "name of victim"]},
+    "accused_names": {"aliases": ["accused_names", "accused", "name of accused"]},
+    "witness_names": {"aliases": ["witness_names", "witness", "witnesses"]},
+    "status": {"aliases": ["status", "case status", "case_status"]},
+    "zero_fir": {"aliases": ["zero_fir", "zero fir"]},
+    "outside_limits_place": {"aliases": ["outside_limits_place", "place outside limits", "original ps", "jurisdiction ps"]},
+    "source_key": {"aliases": ["source_key", "id", "old id", "old_id", "record id", "legacy id", "source id"]}
+  }
+}

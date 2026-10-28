@@ -2,6 +2,7 @@ package in.caseassistant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -97,6 +98,17 @@ class SecurityMatrixTest {
             checked++;
         }
         assertThat(checked).isGreaterThan(15);
+    }
+
+    @Test
+    void loadingExistingRecordsIsRefusedToAnOrdinaryOfficerAndBatchesAreInvisibleToThem() throws Exception {
+        assertThat(all().stream().map(Route::key)).contains("GET /api/imports/profiles", "POST /api/imports/inspect", "POST /api/imports",
+                "POST /api/imports/{id}/commit", "POST /api/imports/{id}/undo", "POST /api/imports/{id}/discard");
+        mvc.perform(request(HttpMethod.GET, "/api/imports/profiles").header("Authorization", outsider)).andExpect(status().isForbidden());
+        mvc.perform(request(HttpMethod.POST, "/api/imports/inspect").header("Authorization", outsider).contentType("application/json")
+                .content("{\"profile\":\"fir-generic\",\"csv\":\"a\\nb\"}")).andExpect(status().isForbidden());
+        for (String tail : new String[] {"", "/rows", "/errors.csv"})
+            mvc.perform(request(HttpMethod.GET, "/api/imports/" + UUID.randomUUID() + tail).header("Authorization", outsider)).andExpect(status().isNotFound());
     }
 
     @Test

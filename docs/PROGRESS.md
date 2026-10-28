@@ -4,6 +4,38 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 28 Oct 2026, session 20 (Sumit present: loading existing data)
+Sumit asked for an integration screen to load existing data, researched and designed in depth. Design and research: `docs/INTEGRATION-IMPORT.md`.
+
+Decisions (Claude's, after research; Sumit can overrule)
+- File-based CSV import first: CCTNS has no public API or schema and every state runs its own system. A direct connector comes later per state.
+- Four deliberate steps (choose and match columns, check, approve with the authority, undo while untouched). Insert-only: an existing FIR is never changed. Missing facts are marked, never invented.
+- New permission `import.run` (SHO own station, SP own district, state admin own state, platform admin any).
+
+Done
+- V22: `import_batch`, `import_row`, FIR columns (`import_batch_id`, `source_key`, `source_hash`, `concluded`), IPC 376 now masks victims and starts the 193(2) clock, concluded cases have no live deadlines.
+- Core: `Csv`, `FirImport` (row checks), `ImportController` (profiles, inspect, stage, rows, errors.csv, commit, discard, undo, history), `CaseTeam.canAt`; `/api/me` and login return `can_import`. Pack data: `import-profiles/fir-generic.json`, `law-concordance.json` (draft, hint only).
+- Web: "Load data" page (`ImportPage`).
+- Tests: `CsvTest`, `FirImportTest`, `ImportApiTest` (14 cases incl. permissions, duplicates, undo guard, purge), security matrix additions, db tests, pack tests, web tests. Found and fixed a real bug on the way (jsonb reorders keys, which made the repeat-file fingerprint differ).
+- Stopped tracking `apps/web/coverage` (generated); added to `.gitignore`.
+- Full suite `scripts/test-all.sh`: all PASS.
+
+Deliberately skipped / not checked
+- Only the FIR file is built; people, arrests, chargesheets, evidence come later, keyed by FIR. No fuzzy duplicate-person matching across FIRs (the audits' main finding). No four-eyes rule (the same person may stage and approve). No retention purge of old batches. No Excel files. Not seen in a real browser.
+- Risk: the IPC 376 rule treats every IPC 376 sub-section as 193(2)/masked; IPC 354 and others are not included. Prosecutor to confirm. The IPC-to-BNS table is a draft hint.
+- Risk: undo relies on the database catalogue to find dependent tables; tables that reference FIRs without a foreign key would not be seen.
+
+Next
+1. Import phase 2: people/arrests/chargesheets files keyed by FIR, and duplicate-person warnings.
+2. Web screens: policies and the role list. Jurisdiction as data and paging for the FIR list.
+3. Correction of time of arrest; end-to-end browser test; `ai.cloud_allowed` policy.
+
+Questions for Sumit
+1. Should approving an import need a second person (the stager cannot approve their own batch)? I left it as one person for now.
+2. Which real export format will your first state give us (columns, file type)? I can add a matching profile as soon as I see a sample with fictional or masked values.
+3. Which old IPC sections beyond 376 must keep victim masking (for example 354 series)?
+4. (Still open from session 19) Apply the testing prompt to the weekday 11:35 pm schedule?
+
 ## 28 Oct 2026, session 19 (Sumit present: tenancy, roles, policies, tests)
 Sumit asked me to research and decide on multi-account permissions, an Odoo-like way to customise, per-state/district/station policy, thinking ahead, and a full test phase every day. Full design: `docs/ARCHITECTURE-TENANCY.md` and `docs/TESTING.md`.
 

@@ -85,6 +85,7 @@ class AuthController implements ApplicationRunner {
         if (!ok) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Wrong username or password."));
         var user = new LinkedHashMap<>(row.get());
         user.remove("password_hash");
+        user.put("can_import", team.can((UUID) user.get("id"), "import.run"));
         var changedAt = (java.sql.Timestamp) user.remove("password_changed_at");
         var life = policies.sessionLife((UUID) user.get("station_id"));
         String token = SecurityConfig.issue(tokens, (UUID) user.get("id"), (String) user.get("role"), (String) user.get("full_name"), changedAt, life);
@@ -93,8 +94,10 @@ class AuthController implements ApplicationRunner {
 
     @GetMapping("/me")
     Map<String, Object> me(@AuthenticationPrincipal Jwt jwt) {
-        return db.sql("select id, username, full_name, rank, role, station_id, ui_language from app_user where id = ?")
-                .param(CaseTeam.user(jwt)).query().singleRow();
+        var me = new LinkedHashMap<>(db.sql("select id, username, full_name, rank, role, station_id, ui_language from app_user where id = ?")
+                .param(CaseTeam.user(jwt)).query().singleRow());
+        me.put("can_import", team.can(CaseTeam.user(jwt), "import.run"));
+        return me;
     }
 
     /** Changes the signed-in user's own password. Every older token stops working; a fresh one is returned. */

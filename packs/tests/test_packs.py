@@ -83,3 +83,36 @@ def test_policies_have_a_default_inside_their_bounds():
         for key, p in data["policies"].items():
             assert re.fullmatch(r"[a-z][a-z_.]{1,59}", key), key
             assert p["label"] and p["min"] <= p["default"] <= p["max"], key
+
+
+IMPORT_FIELDS = {"fir_no", "fir_year", "registered_at", "information_received_at", "gd_entry_no", "sections", "complaint_text",
+                 "io_username", "complainant_name", "victim_names", "accused_names", "witness_names", "status", "zero_fir",
+                 "outside_limits_place", "source_key"}  # must match what FirImport.check reads
+
+
+def test_import_profiles_name_known_fields_and_do_not_share_aliases():
+    files = sorted(ROOT.glob("*/import-profiles/*.json"))
+    assert files
+    for path in files:
+        p = json.loads(path.read_text(encoding="utf-8"))
+        assert p["entity"] == "fir" and p["id"] == path.stem and p["label"]
+        assert set(p["fields"]) <= IMPORT_FIELDS, path
+        assert {"fir_no", "registered_at"} <= {k for k, f in p["fields"].items() if f.get("required")}, "FIR number and date stay required"
+        seen = {}
+        for field, f in p["fields"].items():
+            assert f["aliases"], field
+            for alias in f["aliases"]:
+                key = re.sub(r"[\s_\-]+", "", alias.lower())
+                assert seen.setdefault(key, field) == field, f"alias {alias!r} is used for two fields"
+
+
+def test_law_concordance_is_a_labelled_draft_hint():
+    for path in ROOT.glob("*/law-concordance.json"):
+        t = json.loads(path.read_text(encoding="utf-8"))
+        assert t["status"] == "draft" and "Advisory" in t["note"]
+        assert t["IPC"] and all(re.fullmatch(r"\d+[A-Z]?", k) and re.fullmatch(r"\d+(\(\d+\))?", v) for k, v in t["IPC"].items())
+
+
+def test_only_supervising_roles_and_the_state_admin_may_load_records():
+    roles = json.loads((ROOT / "IN/roles.json").read_text(encoding="utf-8"))["roles"]
+    assert {c for c, r in roles.items() if "import.run" in r["permissions"]} == {"sho", "sp", "state_admin"}

@@ -113,6 +113,27 @@ class CaseTeam {
                 + Roles.in(roles.with(permission)) + ")").param(userId).query(Boolean.class).single();
     }
 
+    /**
+     * Whether the user holds a permission at a police station: the station's own staff (a role scoped to the station),
+     * the district's staff (scoped to the district), or the state admin for any station of their own state (the
+     * platform admin, who has no station, for any state).
+     */
+    boolean canAt(UUID userId, String permission, UUID stationId) {
+        var u = db.sql("""
+                select u.role, u.station_id, m.state_code as my_state, m.district as my_district, t.state_code, t.district
+                from app_user u left join police_station m on m.id = u.station_id, police_station t
+                where u.id = ? and u.active and t.id = ?""").params(userId, stationId).query().listOfRows().stream().findFirst().orElse(null);
+        if (u == null || !roles.has((String) u.get("role"), permission)) return false;
+        if (u.get("my_state") == null) return true;
+        if (!u.get("my_state").equals(u.get("state_code"))) return false;
+        if (roles.has((String) u.get("role"), "admin.manage")) return true;
+        return switch (roles.caseScope((String) u.get("role"))) {
+            case "station" -> stationId.equals(u.get("station_id"));
+            case "district" -> u.get("district").equals(u.get("my_district"));
+            default -> false;
+        };
+    }
+
     boolean identityProtected(UUID firId) {
         return db.sql("select identity_protected_case(?)").param(firId).query(Boolean.class).single();
     }

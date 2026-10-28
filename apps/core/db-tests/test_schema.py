@@ -504,3 +504,34 @@ def test_policy_settings_are_kept_and_the_strictest_unit_value_applies(db):
         db.execute(ins, ("station", "Demo City", st, "30", io))
     with pytest.raises(psycopg.errors.CheckViolation):   # a reason is needed
         db.execute("INSERT INTO policy_setting(level,state_code,key,value,reason,set_by) VALUES ('state','IN','x','1','short',%s)", (io,))
+
+
+def test_legacy_ipc_376_is_masked_and_timed_like_a_bns_rape_section(db):
+    st, io, fir = seed_case(db)
+    db.execute("INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'victim','V1','Demo Victim')", (fir,))
+    assert one(db, "SELECT identity_protected_case(%s), bnss_193_2_applies(%s)", fir, fir) == (False, False)
+    db.execute("INSERT INTO fir_section(fir_id,act,section) VALUES (%s,'IPC','376(2)(n)')", (fir,))
+    assert one(db, "SELECT identity_protected_case(%s), bnss_193_2_applies(%s)", fir, fir) == (True, True)
+    assert one(db, "SELECT display_name FROM person_public WHERE fir_id=%s", fir)[0] == "Victim V1"
+    db.execute("INSERT INTO fir_section(fir_id,act,section) VALUES (%s,'IPC','379')", (fir,))
+    assert one(db, "SELECT identity_protected_case(%s)", fir)[0] is True
+
+
+def test_concluded_imported_cases_have_no_live_deadlines(db):
+    st, io, fir = seed_case(db, sexual=True)
+    assert one(db, "SELECT count(*) FROM case_deadline WHERE fir_id=%s", fir)[0] == 2
+    db.execute("UPDATE fir SET concluded = true WHERE id=%s", (fir,))
+    assert one(db, "SELECT count(*) FROM case_deadline WHERE fir_id=%s", fir)[0] == 0
+
+
+def test_import_batches_are_kept_and_staged_rows_go_with_their_batch(db):
+    st, io, fir = seed_case(db)
+    b = one(db, """INSERT INTO import_batch(station_id,entity,profile,filename,file_sha256,complaint_language,rows_total,created_by)
+                   VALUES (%s,'fir','fir-generic','f.csv','00','en',1,%s) RETURNING id""", st, io)[0]
+    db.execute("INSERT INTO import_row(batch_id,row_no,status) VALUES (%s,1,'ok')", (b,))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM import_batch WHERE id=%s", (b,))
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("UPDATE import_batch SET authority_note='short' WHERE id=%s", (b,))
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("UPDATE import_batch SET status='imported' WHERE id=%s", (b,))  # approval needs an approver
