@@ -1,0 +1,328 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for ClosureReport.tsx</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="prettify.css" />
+    <link rel="stylesheet" href="base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="index.html">All files</a> ClosureReport.tsx</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>60/60</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">85% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>17/20</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>4/4</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>60/60</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { send } from './api'
+import { Form } from './Forms'
+import { text } from './formats'
+import { useLoad } from './useLoad'
+&nbsp;
+type Closure = { id: string; filed_on: string; court: string; report_no: string; ground: string; reason: string
+  informant_informed_on: string | null; recorded_by_name: string; corrected: boolean
+  decision: string | null; decided_on: string | null; decision_note: string | null }
+type Correction = { id: string; report_no: string; filed_on: string; correction_reason: string; recorded_by_name: string }
+&nbsp;
+const DECISION: Record&lt;string, string&gt; = { accepted: 'Magistrate accepted the report', further_investigation: 'Magistrate ordered further investigation' }
+&nbsp;
+const GROUND: Record&lt;string, string&gt; = {
+  untraced: 'Accused not traced', insufficient_evidence: 'Not enough evidence', false_complaint: 'Complaint found false',
+  civil_nature: 'Matter is civil in nature', other: 'Other (explain in the reason)',
+}
+&nbsp;
+/**
+ * The closure (final) report: the investigation ends without a chargesheet. The first entry is kept as written; a correction
+ * is a new entry with a reason and the newest counts. The Magistrate's decision is recorded once and changes no deadline.
+ */
+export default function ClosureReport({ firId, version, onSaved }: { firId: string; version: number; onSaved: () =&gt; void }) {
+  const { data, error } = useLoad&lt;Closure[]&gt;(`/firs/${firId}/closure-report`, version)
+  const c = data?.[0]
+  const history = useLoad&lt;Correction[]&gt;(`/firs/${firId}/closure-report/corrections`, version)
+  return (
+    &lt;section&gt;
+      &lt;h2&gt;Closure report&lt;/h2&gt;
+      {error ? &lt;p role="alert"&gt;{error}&lt;/p&gt; : !data ? &lt;p&gt;Loading…&lt;/p&gt; : c ? (
+        &lt;&gt;
+          &lt;p&gt;{c.report_no}: filed on {c.filed_on} in {c.court}. {GROUND[c.ground]}. Reason: {c.reason}{' '}
+            &lt;small&gt;(recorded by {c.recorded_by_name}; informant {c.<span class="branch-0 cbranch-no" title="branch not covered" >informant_informed_on ? `told on ${c.informant_informed_on}` : '</span>not yet recorded as told'}{c.<span class="branch-0 cbranch-no" title="branch not covered" >corrected ? '; corrected, see below' : '</span>'})&lt;/small&gt;&lt;/p&gt;
+          {c.decision
+            ? &lt;p&gt;{DECISION[c.decision]} on {c.decided_on}.{c.decision_note ? ` ${c.decision_note<span class="branch-0 cbranch-no" title="branch not covered" >}` : ''}&lt;</span>/p&gt;
+            : (
+              &lt;Form title="Record the Magistrate's decision" onSaved={onSaved}
+                submit={(f) =&gt; send(`/firs/${firId}/closure-report/decision`, 'POST', {
+                  decision: text(f, 'decision'), decidedOn: text(f, 'decided'), note: text(f, 'note'),
+                })}&gt;
+                &lt;label&gt;Decision &lt;select name="decision"&gt;{Object.entries(DECISION).map(([k, v]) =&gt; &lt;option key={k} value={k}&gt;{v}&lt;/option&gt;)}&lt;/select&gt;&lt;/label&gt;
+                &lt;label&gt;Decided on &lt;input name="decided" type="date" required /&gt;&lt;/label&gt;
+                &lt;label&gt;Order number or note &lt;input name="note" maxLength={2000} /&gt;&lt;/label&gt;
+                &lt;p&gt;&lt;small&gt;Recorded once and kept as written. It changes no deadline; a chargesheet can still be recorded if further investigation is ordered.&lt;/small&gt;&lt;/p&gt;
+              &lt;/Form&gt;
+            )}
+          &lt;Form title="Correct this closure report" onSaved={onSaved}
+            submit={(f) =&gt; send(`/firs/${firId}/closure-report/corrections`, 'POST', {
+              filedOn: text(f, 'filed'), court: text(f, 'court'), reportNo: text(f, 'no'), ground: text(f, 'ground'),
+              reason: text(f, 'reason'), informantInformedOn: text(f, 'informed'), correctionReason: text(f, 'why'),
+            })}&gt;
+            &lt;label&gt;Filed on &lt;input name="filed" type="date" required defaultValue={c.filed_on} /&gt;&lt;/label&gt;
+            &lt;label&gt;Court &lt;input name="court" required maxLength={200} defaultValue={c.court} /&gt;&lt;/label&gt;
+            &lt;label&gt;Report number &lt;input name="no" required maxLength={60} defaultValue={c.report_no} /&gt;&lt;/label&gt;
+            &lt;label&gt;Ground &lt;select name="ground" defaultValue={c.ground}&gt;{Object.entries(GROUND).map(([k, v]) =&gt; &lt;option key={k} value={k}&gt;{v}&lt;/option&gt;)}&lt;/select&gt;&lt;/label&gt;
+            &lt;label&gt;Reason in your words &lt;textarea name="reason" required minLength={10} maxLength={2000} defaultValue={c.reason} /&gt;&lt;/label&gt;
+            &lt;label&gt;Informant told on (if already done) &lt;input name="informed" type="date" defaultValue={c.informant_informed_on ?? ''} /&gt;&lt;/label&gt;
+            &lt;label&gt;Why this is being corrected &lt;input name="why" required minLength={10} /&gt;&lt;/label&gt;
+            &lt;p&gt;&lt;small&gt;The earlier entry stays on record with your reason; the newest counts.&lt;/small&gt;&lt;/p&gt;
+          &lt;/Form&gt;
+          {!!history.data?.length &amp;&amp; (
+            &lt;ul&gt;{history.data.map((h) =&gt; &lt;li key={h.id}&gt;{h.report_no} / {h.filed_on}: {h.correction_reason} &lt;small&gt;({h.recorded_by_name})&lt;/small&gt;&lt;/li&gt;)}&lt;/ul&gt;
+          )}
+        &lt;/&gt;
+      ) : (
+        &lt;Form title="Record a closure report (no chargesheet will be filed)" onSaved={onSaved}
+          submit={(f) =&gt; send(`/firs/${firId}/closure-report`, 'POST', {
+            filedOn: text(f, 'filed'), court: text(f, 'court'), reportNo: text(f, 'no'), ground: text(f, 'ground'),
+            reason: text(f, 'reason'), informantInformedOn: text(f, 'informed'),
+          })}&gt;
+          &lt;label&gt;Filed on &lt;input name="filed" type="date" required /&gt;&lt;/label&gt;
+          &lt;label&gt;Court &lt;input name="court" required maxLength={200} /&gt;&lt;/label&gt;
+          &lt;label&gt;Report number &lt;input name="no" required maxLength={60} /&gt;&lt;/label&gt;
+          &lt;label&gt;Ground &lt;select name="ground"&gt;{Object.entries(GROUND).map(([k, v]) =&gt; &lt;option key={k} value={k}&gt;{v}&lt;/option&gt;)}&lt;/select&gt;&lt;/label&gt;
+          &lt;label&gt;Reason in your words &lt;textarea name="reason" required minLength={10} maxLength={2000} /&gt;&lt;/label&gt;
+          &lt;label&gt;Informant told on (if already done) &lt;input name="informed" type="date" /&gt;&lt;/label&gt;
+          &lt;p&gt;&lt;small&gt;Kept as written and recorded once. It ends the two-month limit of BNSS 193(2) but not the custody limit; record the release of anyone still in custody. Not possible while a chargesheet stands.&lt;/small&gt;&lt;/p&gt;
+        &lt;/Form&gt;
+      )}
+    &lt;/section&gt;
+  )
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-28T17:08:55.225Z
+            </div>
+        <script src="prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="sorter.js"></script>
+        <script src="block-navigation.js"></script>
+    </body>
+</html>
+    

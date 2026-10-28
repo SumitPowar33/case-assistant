@@ -31,8 +31,15 @@ At the end of each session, note in PROGRESS.md anything you deliberately skippe
 - `packages/xlit` – English-letters to Indian-script typing engine. Tests: `node packages/xlit/xlit.test.js`.
 - `apps/core` – Java 21 / Spring Boot main app; Flyway migrations in `src/main/resources/db/migration`. Tests (need PostgreSQL): `mvn -f apps/core/pom.xml test` and `python -m pytest -q apps/core/db-tests`.
 - `apps/web` – React + TypeScript (Vite). Tests: `npm test` and `npm run build` in that folder.
-- `packs` – state packs and playbooks. Tests: `python -m pytest -q packs/tests`.
-- `docs/` – plan, progress, research.
+- `packs` – modules, one folder per state or the nation (`IN`): `roles.json`, `policies.json`, `punishments.json`, `playbooks/`. Data, not code. A module may add roles, permissions and policies, never remove or loosen the national ones. Tests: `python -m pytest -q packs/tests`.
+- `tests/repo_rules` – the hard rules of this file checked on the whole repo: `python -m pytest -q tests/repo_rules`.
+- `docs/` – plan, progress, research, `ARCHITECTURE-TENANCY.md` (accounts, roles, policies, modules: read before touching access), `TESTING.md` (what every change must test).
+
+## Testing rule (Sumit, 28 Oct 2026)
+Every piece of code gets tests (unit, functional, database, security as `docs/TESTING.md` lists), and **the whole suite runs every day**: `scripts/test-all.sh` (add `--no-db` only when PostgreSQL cannot start; say so in PROGRESS.md). Run it before you start (baseline) and before every commit. Coverage gates (core 95/80, web 95/78, gateway 90) may only go up. A bug gets a regression test first. A new route is covered by `SecurityMatrixTest`; list it there if it is public or admin-only.
+
+## Who may see and do what
+Case access comes from the role's data in `packs/*/roles.json` (case team = the named IO plus roles scoped to the station or district). A state admin works only inside their own state; an admin without a station is the platform admin. A state, district or station may only tighten a policy (`policies.json`), never loosen what is above it. Do not hard-code role names in new code: use a permission from `roles.json`.
 
 ## End of every session
 Update `docs/PROGRESS.md`: what was done, what is next, questions for Sumit (numbered, short).

@@ -2,7 +2,20 @@ name: ci
 on:
   push:
   pull_request:
+  schedule:
+    - cron: "30 20 * * *"   # every night 02:00 IST: the whole suite on the branch's latest state
 jobs:
+  repo-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest==8.3.4
+      - run: python -m pytest -q tests/repo_rules
   ai-gateway:
     runs-on: ubuntu-latest
     defaults:
@@ -14,7 +27,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt -r requirements-dev.txt
-      - run: python -m pytest -q
+      - run: python -m pytest -q --cov=app --cov-branch --cov-fail-under=90
   xlit:
     runs-on: ubuntu-latest
     steps:
@@ -72,7 +85,7 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-      - run: mvn -B -f apps/core/pom.xml test
+      - run: mvn -B -f apps/core/pom.xml verify   # tests + coverage gate (lines 95%, branches 80%)
   web:
     runs-on: ubuntu-latest
     defaults:
@@ -86,5 +99,6 @@ jobs:
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
-      - run: npm test
+      - run: npm run coverage   # tests + coverage gate
+      - run: npm run lint
       - run: npm run build

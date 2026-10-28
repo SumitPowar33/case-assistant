@@ -123,10 +123,11 @@ class FirApiTest {
         assign(sho, fir, to.formatted(io2, "")).andExpect(status().isBadRequest()).andExpect(status().reason(org.hamcrest.Matchers.startsWith("Give the reason")));
         assign(sho, fir, to.formatted(io2, ",\"reason\":\"Fictional leave of IO\"")).andExpect(status().isNoContent());
         // the old IO is off the case team at once; the new one is on it
-        mvc.perform(get("/api/firs/" + fir + "/io-candidates").header("Authorization", TestAuth.bearer(tokens, io1))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/firs/" + fir + "/io-candidates").header("Authorization", TestAuth.bearer(tokens, io1))).andExpect(status().isNotFound());
         mvc.perform(get("/api/firs/" + fir + "/io-candidates").header("Authorization", TestAuth.bearer(tokens, io2)))
                 .andExpect(jsonPath("$[*].full_name").value(org.hamcrest.Matchers.contains("PI Fictional SHO", "SI Fictional One", "SI Fictional Two")));
-        mvc.perform(get("/api/firs/" + fir + "/io-history").header("Authorization", clerk))
+        mvc.perform(get("/api/firs/" + fir + "/io-history").header("Authorization", clerk)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/firs/" + fir + "/io-history").header("Authorization", TestAuth.bearer(tokens, io2)))
                 .andExpect(jsonPath("$[0].from_name").value("SI Fictional One"))
                 .andExpect(jsonPath("$[0].to_name").value("SI Fictional Two"))
                 .andExpect(jsonPath("$[0].reason").value("Fictional leave of IO"))
