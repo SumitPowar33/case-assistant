@@ -35,13 +35,14 @@ const base = {
 
 test('an arrest shows its own chargesheet last day; one without a remand asks for it', async () => {
   const writes = stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
-    { ...base, id: 'a1', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-10', remand_recorded_by_name: 'SI Fictional' },
+    { ...base, id: 'a1', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-10', earlier_custody_days: 5, remand_recorded_by_name: 'SI Fictional' },
     { ...base, id: 'a2', max_punishment: 'life', first_remand_on: null, chargesheet_last_day: null },
   ] }, { status: 204, body: null })
   const saved = vi.fn()
   render(<Arrests firId="f1" version={0} onSaved={saved} />)
   expect(await screen.findByText('2026-11-10')).toBeTruthy()
   expect(screen.getByText(/chargesheet within 60 days/)).toBeTruthy()
+  expect(screen.getByText(/5 days already spent in custody before an earlier release are counted/)).toBeTruthy()
   expect(screen.getAllByText(/arrested 12 Sept? 2026, 8:00 am IST at Testpur by SI Fictional/i)).toHaveLength(2)
   expect(screen.getByText(/First remand not recorded yet/)).toBeTruthy()
   const form = screen.getByText('Record the first remand').closest('details')!

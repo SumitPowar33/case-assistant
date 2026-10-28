@@ -167,7 +167,7 @@ class RecordsController {
         return db.sql("""
                 select a.id, a.person_id, p.label as person_label, a.arrested_at, m.place, to_json(m.grounds)::text as grounds,
                   m.informed_name, m.informed_contact, m.memo_correction_id is not null as memo_corrected, u.full_name as arresting_officer_name, c.max_punishment, c.first_remand_on,
-                  case when c.first_remand_on is not null then chargesheet_last_day(c.first_remand_on, c.max_punishment) end as chargesheet_last_day,
+                  arrest_last_day(a.id) as chargesheet_last_day, earlier_custody_days(a.id) as earlier_custody_days,
                   r.full_name as remand_recorded_by_name, c.released_on, c.release_basis,
                   chargesheet_filed_for(a.person_id) as chargesheet_filed_on, c.correction_id is not null as corrected
                 from arrest a join arrest_current c on c.id = a.id join arrest_memo_current m on m.id = a.id join person p on p.id = a.person_id

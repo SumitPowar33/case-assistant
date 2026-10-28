@@ -4,6 +4,48 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 28 Oct 2026, session 18 (Sumit present, answered questions one by one)
+Started from `setup/seed` at 9007bb2 (session 17). Sumit answered the open questions in chat; I built what they unblocked.
+
+Sumit's answers (decisions)
+1. Who may read a case: the case team only (IO, SHO of the station, SP of the district). Others get "not found".
+2. Re-arrest: earlier custody days are added (they count towards the 60/90 days).
+3. Highest punishment: suggest from the sections and warn on a different choice; a prosecutor checks the table.
+4. BNSS 193(2) end rule: Sumit asked me to research. The Act's text (sub-sections 2, 3, 9) only ties the two months to completing the investigation; it says nothing about several accused. I kept today's rule (the first chargesheet ends the limit) and flag it for the prosecutor.
+5. SHO may be the IO: yes (already how it works).
+6. IO's correction needs no SHO confirmation (already how it works).
+7. Corrections are allowed after the chargesheet, with reason and history (already how it works).
+8. The time of arrest may be corrected, with a reason, visible to SHO/SP. NOT built yet (Next 1).
+9. A closure report does not stop the custody limit (already how it works).
+
+Done
+- Read access (code only, no migration): `ReadAccess` interceptor makes every GET under `/api/firs/{id}/...` need the case team (404 otherwise); evidence also lets the station's malkhana staff in. `GET /api/firs` lists only FIRs you may read; `GET /api/firs/{id}` is for the case team and the front desk of the FIR's station (they register it). Writes were already team-only.
+- Highest punishment: `packs/IN/punishments.json` (draft table of 17 sections, flagged for a prosecutor), `GET /api/firs/{id}/punishment-hint` suggests the heaviest class only when every section is in the table (BNS 3(5) has no penalty of its own and is ignored). The arrest form shows the suggestion and a warning when the chosen class differs; the officer decides. No new dependency.
+- Re-arrest (migration V19): `earlier_custody_days` and `arrest_last_day`; days from first remand to release (both included) of each earlier arrest of the same person are taken off the 60/90, never going before the new first remand. Used by the deadline list and the arrest list; the arrest list says how many days were counted.
+- Tests: core (with changed and 2 new tests), db 33 (1 new), packs 4 (1 new), web 58 (2 new), web build and lint pass; gateway 16, xlit 77.
+
+Deliberately skipped / not checked
+- Not seen in a real browser. The punishment table was written from memory of the BNS: please have a prosecutor check every line before it is trusted.
+- The front desk of a station can read FIRs of that station (needed to register); I did not give them the records under it.
+- Re-arrest counts only earlier arrests that have both a first remand and a release recorded.
+- Read-access duplicates the team test in SQL once (`CaseTeam.CAN_READ_FIR`); I left `includes` as it was.
+
+Next
+1. Correction of the time of arrest, with a reason (the custody deadline is worked out again, with a visible note).
+2. Admin password reset (needs session 13 question 4).
+3. AI draft for the follow-up notice (needs session 8 question 4).
+4. Re-check read access and the arrest form in a real browser.
+
+Blocked
+- Live Claude/Gemini calls wait for API keys (using `fake`).
+
+Questions for Sumit
+1. Still unanswered: after the Magistrate orders further investigation, does the 193(2) limit start again, and from which day?
+2. Should the state admin reset a forgotten password, or the SP? (session 13 question 4)
+3. Is it right to send a bank's or telecom company's name to the AI in a BNSS 94 draft, but never a person's name? (session 13 question 3)
+4. Should I load Maharashtra ("MH") as the first state pack? (session 13 question 5)
+5. When a notice reply brings only some items, should the app suggest a follow-up notice draft? (session 8 question 4)
+
 ## 28 Oct 2026, session 17 (scheduled nightly build)
 Started from `setup/seed` at 4fe9464 (session 16). No answers from Sumit yet, no GitHub issues or comments, so every item in Next is still blocked. I built nothing and invented no feature.
 

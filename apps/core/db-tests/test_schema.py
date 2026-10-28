@@ -452,3 +452,19 @@ def test_closure_correction_replaces_the_report_and_the_decision_is_kept_once(db
         db.execute(dec, (closure, "further_investigation", io))
     with pytest.raises(psycopg.errors.RaiseException):
         db.execute("DELETE FROM closure_decision")
+
+
+def test_a_re_arrest_counts_the_earlier_custody_days(db):
+    st, io, fir = seed_case(db)
+    remanded = """INSERT INTO arrest(person_id,arrested_at,place,grounds,informed_name,arresting_officer,max_punishment,
+                  first_remand_on,remand_recorded_by,remand_recorded_at)
+                  VALUES (%s,%s,'Demo place','{proper investigation}','Demo relative',%s,'less_than_10_years',%s,%s,now()) RETURNING id"""
+    a1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A1','Demo One') RETURNING id", fir)[0]
+    first = one(db, remanded, a1, "2026-09-01 10:00+05:30", io, "2026-09-01", io)[0]
+    day = lambda arrest: one(db, "SELECT arrest_last_day(%s), earlier_custody_days(%s)", arrest, arrest)
+    assert day(first) == (dt.date(2026, 10, 30), 0)
+    db.execute("UPDATE arrest SET released_on='2026-09-05', release_basis='bail', release_recorded_by=%s, release_recorded_at=now() WHERE id=%s", (io, first))
+    second = one(db, remanded, a1, "2026-10-01 10:00+05:30", io, "2026-10-01", io)[0]
+    assert day(second) == (dt.date(2026, 11, 24), 5)   # 1-5 Sep (5 days) already spent: 29 Nov less 5 days
+    assert [r[0] for r in db.execute("SELECT due_on FROM case_deadline WHERE kind='chargesheet_custody'")] == [dt.date(2026, 11, 24)]
+    assert day(first) == (dt.date(2026, 10, 30), 0)   # an earlier arrest is not changed by a later one

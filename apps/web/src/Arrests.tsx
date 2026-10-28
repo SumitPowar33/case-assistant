@@ -8,7 +8,7 @@ import { useLoad } from './useLoad'
 type Arrest = {
   id: string; person_label: string; arrested_at: string; place: string; grounds: string[]; informed_name: string | null
   informed_contact: string | null; arresting_officer_name: string; max_punishment: string; first_remand_on: string | null
-  chargesheet_last_day: string | null; remand_recorded_by_name: string | null
+  chargesheet_last_day: string | null; earlier_custody_days: number; remand_recorded_by_name: string | null
   released_on: string | null; release_basis: string | null; chargesheet_filed_on: string | null; corrected: boolean; memo_corrected: boolean
 }
 type Correction = {
@@ -168,7 +168,7 @@ export default function Arrests({ firId, version, onSaved }: { firId: string; ve
             {a.informed_name && <><br />Informed: {a.informed_name}{a.informed_contact ? ` (${a.informed_contact})` : ''}</>}
             <br />Highest punishment: {PUNISHMENTS[a.max_punishment] ?? a.max_punishment}
             <br />{a.first_remand_on
-              ? <>First remand {a.first_remand_on}{a.remand_recorded_by_name ? ` (recorded by ${a.remand_recorded_by_name})` : ''}: chargesheet within {days(a.max_punishment)} days, last day <strong>{a.chargesheet_last_day}</strong> <small>(BNSS 187(3))</small></>
+              ? <>First remand {a.first_remand_on}{a.remand_recorded_by_name ? ` (recorded by ${a.remand_recorded_by_name})` : ''}: chargesheet within {days(a.max_punishment)} days, last day <strong>{a.chargesheet_last_day}</strong> <small>(BNSS 187(3){a.earlier_custody_days > 0 ? `; ${a.earlier_custody_days} days already spent in custody before an earlier release are counted` : ''})</small></>
               : <>First remand not recorded yet: the chargesheet deadline starts from it.</>}
             {limitStatus(a) && <><br />{limitStatus(a)}</>}
             {(fixes ?? []).filter((c) => c.arrest_id === a.id).map((c) => (
