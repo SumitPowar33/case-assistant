@@ -4,6 +4,29 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 28 Oct 2026, session 17 (scheduled nightly build)
+Started from `setup/seed` at 4fe9464 (session 16). No answers from Sumit yet, no GitHub issues or comments, so every item in Next is still blocked. I built nothing and invented no feature.
+
+Tests re-run (no database needed): gateway 16 (install both requirements.txt and requirements-dev.txt first), xlit 77, packs 3, web 56. All green. Core and database suites not re-run (no code changed since session 15).
+
+Deliberately skipped / not checked
+- No code, no new dependency, nothing committed except these notes.
+
+Next
+1. Read access rules once question 1 is answered.
+2. Admin password reset (if question 4 of session 9 is yes).
+3. AI draft for the follow-up notice (if question 4 of session 8 is yes).
+4. Highest punishment from the sections, if question 3 is yes.
+5. Otherwise: Sumit names the next feature.
+
+Blocked
+- Live Claude/Gemini calls wait for API keys (using `fake`).
+- Items 1-4 wait for Sumit's answers.
+
+Questions for Sumit
+1. Please answer the open questions listed in session 14, or name the next feature. Until then the nightly sessions will only re-run tests.
+2. Should I pause the nightly schedule until you reply?
+
 ## 27 Oct 2026, session 16 (scheduled nightly build, last of the night)
 Tonight in short
 - Session 13: closure report (case ends without a chargesheet).
