@@ -100,6 +100,11 @@ class FirImport {
         return out;
     }
 
+    /** A name reduced to what two spellings of it share: case, spaces, dots and commas ignored. Used to warn, never to merge. */
+    static String sameName(String name) {
+        return name.toLowerCase(Locale.ROOT).replaceAll("[\\s.,]+", " ").trim();
+    }
+
     private static String norm(String s) {
         return s.toLowerCase(Locale.ROOT).replaceAll("[\\s_\\-]+", "");
     }

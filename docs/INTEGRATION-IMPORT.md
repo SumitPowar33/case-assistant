@@ -26,8 +26,10 @@ Audit reports on CCTNS found: the same accused or complainant under several IDs;
 - **Audit.** Each batch keeps who staged it, who approved it and the authority, file name and SHA-256, counts, who undid it and why. Batches cannot be deleted.
 - **Privacy (DPDP Act).** The police exemption covers only notified bodies, and purpose limitation, storage limitation and security safeguards still apply: import only what the file needs, restrict who can do it, log it, purge staging. Real data only after a data agreement.
 
+- **Same-name accused.** At check time an accused whose name (case, spaces, dots and commas ignored) matches an accused of another FIR of the same station, or of an earlier row of the same file, gets a warning naming that FIR. Nothing is merged and the row can still be imported. Other stations and other roles are not compared.
+
 ## FIR file columns
 `fir_no`, `registered_at` (required); `fir_year`, `information_received_at`, `gd_entry_no`, `sections` (`IPC 420/34; BNS 318(4)`), `complaint_text`, `io_username`, `complainant_name`, `victim_names`, `accused_names`, `witness_names` (names separated by `;`), `status`, `zero_fir`, `outside_limits_place`, `source_key`. A state module adds a profile with its own column names in `packs/{state}/import-profiles/`.
 
 ## Not built yet
-Separate files for arrests, chargesheets, evidence and notices keyed by FIR; fuzzy duplicate people across FIRs (the audits' main finding); a four-eyes option (stager is not the approver); a direct state-database connector; Excel files; paging beyond 500 rows in the screen; purge of old batches after a retention period.
+Separate files for arrests, chargesheets, evidence and notices keyed by FIR; fuzzy (spelling-variant) duplicate people and duplicates across stations (only exact normalised names are flagged); a four-eyes option (stager is not the approver); a direct state-database connector; Excel files; paging beyond 500 rows in the screen; purge of old batches after a retention period.

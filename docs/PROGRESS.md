@@ -4,6 +4,27 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 28 Oct 2026, session 21 (scheduled nightly build, Sumit away)
+Started from `setup/seed` at d30c844. Baseline `scripts/test-all.sh` was green (PostgreSQL started locally; the Java tests use the default JDBC URL, the Python db tests need `DATABASE_URL=postgresql://...`).
+
+Done
+- Import phase 2, first slice: duplicate-person warning. When a file is checked, an accused whose name matches an accused of another FIR of the same station (or of an earlier row of the same file) gets a warning naming that FIR. Names are compared with case, spaces, dots and commas ignored. Nothing is merged and the row can still be imported; the message holds no personal data. Code: `ImportController.stage`, `FirImport.sameName`. No migration, no new dependency.
+- Tests: 2 new API tests (flagged across FIRs and within the file, not merged; other station not flagged). Doc updated (`docs/INTEGRATION-IMPORT.md`). Full suite: all PASS.
+
+Deliberately skipped / not checked
+- Not built: separate people/arrest/chargesheet files keyed by FIR (needs your answer to question 1). Spelling-variant matching and matching across stations are not done; only exact normalised names. Only the accused role is compared (common witness and complainant names would only add noise).
+- Risk: common names will produce warnings that are false alarms; the officer decides.
+
+Next
+1. Import phase 2 proper: arrests (and people details) file keyed by FIR, once you confirm the columns.
+2. Web screens: policies and the role list. Jurisdiction as data and paging for the FIR list.
+3. Correction of time of arrest; end-to-end browser test; `ai.cloud_allowed` policy.
+
+Questions for Sumit
+1. For the next import file, should I start with arrests (who, when, remand dates, release) keyed by FIR number and year? Or chargesheets first?
+2. Should a same-name warning also compare complainants/witnesses, or accused only (as now)?
+3. (Still open) Second person to approve an import? Weekday 11:35 pm schedule testing prompt?
+
 ## 28 Oct 2026, session 20 (Sumit present: loading existing data)
 Sumit asked for an integration screen to load existing data, researched and designed in depth. Design and research: `docs/INTEGRATION-IMPORT.md`.
 

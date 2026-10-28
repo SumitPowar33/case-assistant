@@ -91,6 +91,29 @@ class ImportApiTest {
     }
 
     @Test
+    void anAccusedWithTheSameNameAsOneInAnotherFirIsFlaggedNotMerged() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD)).andExpect(status().isOk());
+        String next = HEAD + "5,10/03/2024 10:00,IPC 379,Fictional theft,,,,fictional  ACCUSED one.,GD-5,open\n"
+                + "6,11/03/2024 10:00,IPC 379,Fictional theft,,,,Fictional Accused One,GD-6,open\n"
+                + "7,12/03/2024 10:00,IPC 379,Fictional theft,,,,Fictional Other Person,GD-7,open\n";
+        UUID b = stage(sho1, s1, next);
+        mvc.perform(get("/api/imports/" + b).header("Authorization", sho1)).andExpect(jsonPath("$.rows_warning").value(2)).andExpect(jsonPath("$.rows_ok").value(1));
+        mvc.perform(get("/api/imports/" + b + "/rows?status=warning").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[?(@.field=='accused_names')].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("FIR 2024/1"))))
+                .andExpect(jsonPath("$[1].messages[?(@.field=='accused_names')].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("FIR 2024/1"))));
+        commit(sho1, b).andExpect(status().isOk()).andExpect(jsonPath("$.rows_imported").value(3));
+        assertThat(db.sql("select count(*) from person where full_name = 'Fictional Accused One'").query(Long.class).single()).isEqualTo(2);
+        assertThat(db.sql("select count(*) from person where role = 'accused' and import_batch_id = ?").param(b).query(Long.class).single()).isEqualTo(3);
+    }
+
+    @Test
+    void theSameNameInAnotherStationIsNotFlagged() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD)).andExpect(status().isOk());
+        UUID b = stage(sho2, s2, HEAD + "1,10/03/2024 10:00,IPC 379,Fictional theft,,,,Fictional Accused One,GD-5,open\n");
+        mvc.perform(get("/api/imports/" + b).header("Authorization", sho2)).andExpect(jsonPath("$.rows_warning").value(0)).andExpect(jsonPath("$.rows_ok").value(1));
+    }
+
+    @Test
     void theColumnsAreSuggestedFromTheHeader() throws Exception {
         send(sho1, "/api/imports/inspect", Map.of("profile", "fir-generic", "csv", GOOD)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.rows").value(2)).andExpect(jsonPath("$.suggested.fir_no").value("FIR No"))

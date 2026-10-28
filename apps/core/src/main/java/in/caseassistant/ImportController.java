@@ -98,6 +98,11 @@ class ImportController {
         var known = new HashMap<String, String>();
         db.sql("select fir_year || '/' || fir_no as k, coalesce(source_hash, '') as h from fir where station_id = ?").param(s.stationId)
                 .query().listOfRows().forEach(r -> known.put((String) r.get("k"), (String) r.get("h")));
+        var accusedBy = new HashMap<String, String>();   // normalised name -> FIR of this station that already has an accused of that name
+        db.sql("""
+                select p.full_name as n, f.fir_year || '/' || f.fir_no as k from person p join fir f on f.id = p.fir_id
+                where f.station_id = ? and p.role = 'accused' order by f.registered_at""").param(s.stationId)
+                .query().listOfRows().forEach(r -> accusedBy.putIfAbsent(FirImport.sameName((String) r.get("n")), (String) r.get("k")));
         var ios = new HashMap<String, UUID>();
         var seen = new HashMap<String, Integer>();
         var staged = new ArrayList<Object[]>();
@@ -131,6 +136,19 @@ class ImportController {
                                 ? new FirImport.Message("info", "fir_no", "Already imported with the same content; skipped.")
                                 : new FirImport.Message("warning", "fir_no", "An FIR with this number already exists and differs; it is not changed. Skipped."));
                     }
+                }
+            }
+            if (status.equals("ok") || status.equals("warning")) {
+                String key = r.parsed().get("firYear") + "/" + r.parsed().get("firNo");
+                var others = new java.util.TreeSet<String>();
+                for (Object n : (List<?>) r.parsed().get("accused")) {
+                    String earlier = accusedBy.putIfAbsent(FirImport.sameName((String) n), key);
+                    if (earlier != null && !earlier.equals(key)) others.add(earlier);
+                }
+                if (!others.isEmpty()) {
+                    msgs.add(new FirImport.Message("warning", "accused_names", "An accused has the same name as an accused in FIR "
+                            + String.join(", ", others) + ". It may be the same person; check before relying on either record. Nothing is merged."));
+                    status = "warning";
                 }
             }
             count[switch (status) { case "ok" -> 0; case "warning" -> 1; case "error" -> 2; default -> 3; }]++;
