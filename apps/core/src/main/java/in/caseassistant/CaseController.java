@@ -24,10 +24,19 @@ class CaseController {
 
     private final JdbcClient db;
     private final CaseTeam team;
+    private final Punishments punishments;
 
-    CaseController(JdbcClient db, CaseTeam team) {
+    CaseController(JdbcClient db, CaseTeam team, Punishments punishments) {
         this.db = db;
         this.team = team;
+        this.punishments = punishments;
+    }
+
+    /** Suggests the highest-punishment class (so 60 or 90 days) from the FIR's sections. The officer still chooses. */
+    @GetMapping("/punishment-hint")
+    Map<String, Object> punishmentHint(@PathVariable UUID firId) {
+        return punishments.hint(db.sql("select act, section from fir_section where fir_id = ? order by act, section")
+                .param(firId).query().listOfRows());
     }
 
     @GetMapping("/deadlines")

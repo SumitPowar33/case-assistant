@@ -1,0 +1,25 @@
+{
+  "status": "draft",
+  "review_note": "Draft by Claude from memory of the BNS. A prosecutor must check every line against the Act before anyone relies on it. It only suggests; the officer decides.",
+  "classes": "death = death or life-or-death; life = life imprisonment; 10_years_or_more = a minimum term of ten years or more (BNSS 187(3), 90 days); less_than_10_years = anything lighter (60 days)",
+  "sections": {
+    "BNS 103(1)": "death",
+    "BNS 66": "death",
+    "BNS 105": "life",
+    "BNS 310(2)": "life",
+    "BNS 64(1)": "10_years_or_more",
+    "BNS 65(1)": "10_years_or_more",
+    "BNS 70(1)": "10_years_or_more",
+    "BNS 115(2)": "less_than_10_years",
+    "BNS 137(2)": "less_than_10_years",
+    "BNS 303(2)": "less_than_10_years",
+    "BNS 305": "less_than_10_years",
+    "BNS 309(4)": "less_than_10_years",
+    "BNS 316(2)": "less_than_10_years",
+    "BNS 318(4)": "less_than_10_years",
+    "BNS 319(2)": "less_than_10_years",
+    "BNS 351(2)": "less_than_10_years",
+    "IT Act 66D": "less_than_10_years"
+  },
+  "no_penalty_of_their_own": ["BNS 3(5)"]
+}

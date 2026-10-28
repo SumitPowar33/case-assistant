@@ -50,3 +50,12 @@ def test_no_ai_judgement_words():
     banned = re.compile(r"\b(guilty|credib\w*|truthful|liar|probability of guilt|risk score)\b", re.I)
     for path in PLAYBOOKS:
         assert not banned.search(path.read_text(encoding="utf-8")), path.name
+
+
+def test_punishment_tables_use_known_classes():
+    classes = {"death", "life", "10_years_or_more", "less_than_10_years"}  # must match V1__core.sql
+    for path in ROOT.glob("*/punishments.json"):
+        t = json.loads(path.read_text(encoding="utf-8"))
+        assert t["status"] != "draft" or t.get("review_note"), "draft tables must say who reviews them"
+        assert t["sections"] and set(t["sections"].values()) <= classes
+        assert not set(t["sections"]) & set(t.get("no_penalty_of_their_own", []))

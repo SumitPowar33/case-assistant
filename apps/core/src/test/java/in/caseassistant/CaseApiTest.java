@@ -63,6 +63,20 @@ class CaseApiTest {
     }
 
     @Test
+    void punishmentHintIsTheHeaviestKnownSectionAndEmptyWhenOneIsUnknown() throws Exception {
+        String url = "/api/firs/" + fir + "/punishment-hint";
+        for (String s : new String[] {"318(4)", "3(5)"}) db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', ?)").params(fir, s).update();
+        mvc.perform(get(url).header("Authorization", sho)).andExpect(jsonPath("$.suggested").value("less_than_10_years"))
+                .andExpect(jsonPath("$.sections.length()").value(1));
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '103(1)')").param(fir).update();
+        mvc.perform(get(url).header("Authorization", sho)).andExpect(jsonPath("$.suggested").value("death"));
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '999(9)')").param(fir).update();
+        mvc.perform(get(url).header("Authorization", sho)).andExpect(jsonPath("$.suggested").doesNotExist())
+                .andExpect(jsonPath("$.unknown[0]").value("BNS 999(9)"));
+        mvc.perform(get(url).header("Authorization", outsider)).andExpect(status().isNotFound());
+    }
+
+    @Test
     void electronicItemIsNotCourtReadyWithoutCertificates() throws Exception {
         mvc.perform(get("/api/firs/" + fir + "/evidence").header("Authorization", malkhana))
                 .andExpect(jsonPath("$[0].court_ready").value(false));

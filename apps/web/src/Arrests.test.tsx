@@ -15,7 +15,9 @@ function stub(lists: Record<string, unknown>, write: { status: number; body: unk
       writes.push({ url, body: JSON.parse(init.body as string) })
       return { ok: write.status < 300, status: write.status, json: async () => write.body }
     }
-    return { ok: true, status: 200, json: async () => lists[url.replace('/api', '')] ?? [] }
+    const rows = lists[url.replace('/api', '')]
+    if (!rows && url.endsWith('/punishment-hint')) return { ok: false, status: 404, json: async () => ({}) }
+    return { ok: true, status: 200, json: async () => rows ?? [] }
   }))
   return writes
 }
@@ -67,6 +69,23 @@ test('the arrest form offers only accused, needs grounds and sends India time', 
   expect(writes[0]).toEqual({ url: '/api/firs/f1/arrests', body: {
     personId: 'p1', arrestedAt: '2026-09-12T08:00:00+05:30', place: 'Testpur', grounds: ['to prevent further offence', 'proper investigation'],
     informedName: 'Fictional Relative', informedContact: null, maxPunishment: 'less_than_10_years', firstRemandOn: null } })
+})
+
+test('the form suggests the punishment class from the sections and warns when the choice differs', async () => {
+  stub({ '/firs/f1/people': people, '/firs/f1/punishment-hint': { suggested: 'death', sections: [{ section: 'BNS 103(1)', class: 'death' }], unknown: [] } })
+  render(<Arrests firId="f1" version={0} onSaved={() => {}} />)
+  const form = (await screen.findByText('Record an arrest (BNSS 35 memo)')).closest('details')!
+  expect((await within(form).findByRole('note')).textContent).toMatch(/BNS 103\(1\).*suggests death \(90 days\)/)
+  expect(within(form).getByRole('alert').textContent).toMatch(/differs/)
+  type('Highest punishment for the offences', 'death', within(form))
+  expect(within(form).queryByRole('alert')).toBeNull()
+})
+
+test('with an unknown section there is no suggestion, only a note', async () => {
+  stub({ '/firs/f1/people': people, '/firs/f1/punishment-hint': { suggested: null, sections: [], unknown: ['BNS 999(9)'] } })
+  render(<Arrests firId="f1" version={0} onSaved={() => {}} />)
+  const form = (await screen.findByText('Record an arrest (BNSS 35 memo)')).closest('details')!
+  expect((await within(form).findByRole('note')).textContent).toMatch(/No suggestion: BNS 999\(9\)/)
 })
 
 test('with no accused yet, the form is not shown', async () => {

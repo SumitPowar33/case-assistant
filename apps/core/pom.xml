@@ -30,7 +30,7 @@
       <resource>
         <directory>../../packs</directory>
         <targetPath>packs</targetPath>
-        <includes><include>*/playbooks/*.json</include></includes>
+        <includes><include>*/playbooks/*.json</include><include>*/punishments.json</include></includes>
       </resource>
     </resources>
     <plugins>

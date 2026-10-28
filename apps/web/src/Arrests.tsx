@@ -20,6 +20,7 @@ type MemoFix = {
   reason: string; recorded_at: string; recorded_by_name: string
 }
 type Person = { id: string; role: string; label: string; display_name: string }
+type Hint = { suggested: string | null; sections: { section: string; class: string }[]; unknown: string[] }
 
 /** BNSS 187(3): 90 days for the first three, 60 days for the last. */
 const PUNISHMENTS: Record<string, string> = {
@@ -108,9 +109,21 @@ function limitStatus(a: Arrest) {
   return null
 }
 
+/** Suggests the class from the FIR's sections (draft table, to be checked by a prosecutor) and warns if the choice differs. The officer decides. */
+function PunishmentHint({ hint, chosen }: { hint: Hint; chosen: string }) {
+  if (!hint.suggested) return hint.unknown.length ? <p role="note"><small>No suggestion: {hint.unknown.join(', ')} not in the punishment table yet. Check the Act yourself.</small></p> : null
+  return (
+    <p role="note"><small>
+      From the sections ({hint.sections.map((s) => s.section).join(', ')}) the table suggests {PUNISHMENTS[hint.suggested]} ({days(hint.suggested)} days). The table is a draft; check it.
+      {chosen !== hint.suggested && <strong role="alert"> You chose {PUNISHMENTS[chosen]} ({days(chosen)} days), which differs. Check the sections before saving.</strong>}
+    </small></p>
+  )
+}
+
 /** Arrest memo (BNSS 35). The signed-in officer is recorded as the arresting officer; only an accused can be arrested. */
-function ArrestForm({ firId, accused, onSaved }: { firId: string; accused: Person[]; onSaved: () => void }) {
+function ArrestForm({ firId, accused, hint, onSaved }: { firId: string; accused: Person[]; hint: Hint | null; onSaved: () => void }) {
   const [grounds, setGrounds] = useState('')
+  const [punishment, setPunishment] = useState('less_than_10_years')
   if (!accused.length) return <p>Add the person as an accused first; only an accused can be arrested.</p>
   return (
     <Form title="Record an arrest (BNSS 35 memo)" onSaved={() => { setGrounds(''); onSaved() }}
@@ -128,9 +141,10 @@ function ArrestForm({ firId, accused, onSaved }: { firId: string; accused: Perso
       <TypingField label="Grounds of arrest told to the person (one per line)" value={grounds} onChange={setGrounds} multiline />
       <label>Relative or friend informed (BNSS 48) <input name="informed" required /></label>
       <label>Their phone or address <input name="contact" /></label>
-      <label>Highest punishment for the offences <select name="punishment" defaultValue="less_than_10_years">
+      <label>Highest punishment for the offences <select name="punishment" value={punishment} onChange={(e) => setPunishment(e.target.value)}>
         {Object.entries(PUNISHMENTS).map(([k, v]) => <option key={k} value={k}>{v} ({days(k)} days to chargesheet)</option>)}
       </select></label>
+      {hint && <PunishmentHint hint={hint} chosen={punishment} />}
       <label>Date of first remand (if already known) <input name="remand" type="date" /></label>
       <p><small>You are recorded as the arresting officer. A wrong place, ground or informed person can be corrected later with a reason.</small></p>
     </Form>
@@ -142,6 +156,7 @@ export default function Arrests({ firId, version, onSaved }: { firId: string; ve
   const { data: people } = useLoad<Person[]>(`/firs/${firId}/people`, version)
   const { data: memoFixes } = useLoad<MemoFix[]>(`/firs/${firId}/arrests/memo-corrections`, version)
   const { data: fixes } = useLoad<Correction[]>(`/firs/${firId}/arrests/corrections`, version)
+  const { data: hint } = useLoad<Hint>(`/firs/${firId}/punishment-hint`, version)
   return (
     <section>
       <h2>Arrests</h2>
@@ -169,7 +184,7 @@ export default function Arrests({ firId, version, onSaved }: { firId: string; ve
           </li>
         ))}</ul>
       )}
-      {people && <ArrestForm firId={firId} accused={people.filter((p) => p.role === 'accused')} onSaved={onSaved} />}
+      {people && <ArrestForm firId={firId} accused={people.filter((p) => p.role === 'accused')} hint={hint ?? null} onSaved={onSaved} />}
     </section>
   )
 }
