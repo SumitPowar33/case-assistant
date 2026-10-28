@@ -61,7 +61,7 @@ class ReadinessApiTest {
     }
 
     ResultActions report() throws Exception {
-        return call(get("/api/firs/" + fir + "/readiness"), clerk, null).andExpect(status().isOk());
+        return call(get("/api/firs/" + fir + "/readiness"), io, null).andExpect(status().isOk());
     }
 
     String link(String charge, String ing, UUID item) {

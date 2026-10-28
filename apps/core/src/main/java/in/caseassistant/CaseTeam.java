@@ -61,12 +61,29 @@ class CaseTeam {
     }
 
     /** Evidence custody: the case team, or the malkhana (evidence store) staff of the FIR's station. */
-    void requireCustodian(UUID userId, UUID firId) {
-        boolean malkhana = db.sql("""
+    boolean isCustodian(UUID userId, UUID firId) {
+        return includes(userId, firId) || userId != null && db.sql("""
                 select exists (select 1 from app_user u join fir f on f.id = ?
                   where u.id = ? and u.active and u.role = 'malkhana' and u.station_id = f.station_id)""")
                 .params(firId, userId).query(Boolean.class).single();
-        if (!malkhana) requireTeam(userId, firId);
+    }
+
+    void requireCustodian(UUID userId, UUID firId) {
+        if (!isCustodian(userId, firId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the case team can do this.");
+    }
+
+    /** SQL test on table "fir" (one ? = user id): the case team, or the front desk of the FIR's station. */
+    static final String CAN_READ_FIR = """
+            exists (select 1 from app_user u join police_station fs on fs.id = fir.station_id
+              left join police_station us on us.id = u.station_id
+              where u.id = ? and u.active and (fir.io_id = u.id
+                or (u.role in ('sho', 'front_desk') and u.station_id = fir.station_id)
+                or (u.role = 'sp' and us.state_code = fs.state_code and us.district = fs.district)))""";
+
+    /** Reading the FIR itself: the case team, or the front desk of its station (who register it). */
+    boolean canReadFir(UUID userId, UUID firId) {
+        return userId != null && db.sql("select exists (select 1 from fir where id = ? and " + CAN_READ_FIR + ")")
+                .params(firId, userId).query(Boolean.class).single();
     }
 
     /** Registering an FIR: front desk, IO or SHO posted at that station. */

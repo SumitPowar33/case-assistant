@@ -41,15 +41,16 @@ class FirController {
     }
 
     @GetMapping
-    List<Map<String, Object>> list() {
+    List<Map<String, Object>> list(@AuthenticationPrincipal Jwt jwt) {
         return db.sql("select id, fir_year, fir_no, registered_at, is_zero_fir, action_taken, sexual_offence "
-                        + "from fir order by registered_at desc")
-                .query().listOfRows();
+                        + "from fir where " + CaseTeam.CAN_READ_FIR + " order by registered_at desc")
+                .param(CaseTeam.user(jwt)).query().listOfRows();
     }
 
     /** The complaint text names the victim, so it is withheld from anyone outside the case team on protected cases. */
     @GetMapping("/{id}")
     Map<String, Object> one(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+        if (!team.canReadFir(CaseTeam.user(jwt), id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         var fir = db.sql("select * from fir where id = ?").param(id).query().listOfRows().stream().findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         var out = new java.util.LinkedHashMap<>(fir);

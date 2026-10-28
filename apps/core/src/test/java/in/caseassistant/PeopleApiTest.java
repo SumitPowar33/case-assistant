@@ -28,7 +28,7 @@ class PeopleApiTest {
         station = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Testpur City') returning id")
                 .query(UUID.class).single();
         io = db.sql("insert into app_user (full_name, rank, role) values ('Officer Asha Rao','SI','io') returning id").query(UUID.class).single();
-        clerk = db.sql("insert into app_user (full_name, rank, role) values ('Clerk Dev Nair','HC','front_desk') returning id").query(UUID.class).single();
+        clerk = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'Clerk Dev Nair','HC','front_desk') returning id").param(station).query(UUID.class).single();
         fir = db.sql("""
                 insert into fir (station_id, fir_year, fir_no, gd_entry_no, registered_at, information_received_at,
                   contents_original, contents_language, action_taken, io_id, sexual_offence)
@@ -46,10 +46,8 @@ class PeopleApiTest {
     }
 
     @Test
-    void everyoneElseSeesTheMaskedVictim() throws Exception {
-        mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, clerk))).andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].display_name").value("Victim V1"))
-                .andExpect(jsonPath("$[0].phone").doesNotExist());
+    void everyoneElseCannotReadTheCase() throws Exception {
+        mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, clerk))).andExpect(status().isNotFound());
         mvc.perform(get("/api/firs/" + fir + "/people")).andExpect(status().isUnauthorized());
     }
 
@@ -60,12 +58,13 @@ class PeopleApiTest {
         UUID sameDistrict = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Testpur Rural') returning id")
                 .query(UUID.class).single();
         String[][] cases = {{"sho", station.toString(), "Meera Test"}, {"sp", sameDistrict.toString(), "Meera Test"},
-                {"sho", sameDistrict.toString(), "Victim V1"}, {"sp", otherDistrict.toString(), "Victim V1"}};
+                {"sho", sameDistrict.toString(), null}, {"sp", otherDistrict.toString(), null}};
         for (String[] c : cases) {
             UUID u = db.sql("insert into app_user (station_id, full_name, rank, role) values (?::uuid,'Fictional Officer','Insp',?) returning id")
                     .params(c[1], c[0]).query(UUID.class).single();
-            mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, u)))
-                    .andExpect(jsonPath("$[0].display_name").value(c[2]));
+            var res = mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, u)));
+            if (c[2] == null) res.andExpect(status().isNotFound());
+            else res.andExpect(jsonPath("$[0].display_name").value(c[2]));
         }
         db.sql("update app_user set active = false where id = ?").param(io).update();
         mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, io)))
@@ -80,9 +79,6 @@ class PeopleApiTest {
                 .andExpect(jsonPath("$.contents_original").value("Fictional complaint"))
                 .andExpect(jsonPath("$.contents_withheld").value(false));
         db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '64(1)')").param(fir).update();
-        mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, clerk)))
-                .andExpect(jsonPath("$[0].display_name").value("Victim V1"))
-                .andExpect(jsonPath("$[0].identity_masked").value(true));
         mvc.perform(get("/api/firs/" + fir + "/people").header("Authorization", TestAuth.bearer(tokens, io)))
                 .andExpect(jsonPath("$[0].display_name").value("Meera Test"))
                 .andExpect(jsonPath("$[0].identity_masked").value(true));
@@ -91,5 +87,19 @@ class PeopleApiTest {
                 .andExpect(jsonPath("$.contents_withheld").value(true));
         mvc.perform(get("/api/firs/" + fir).header("Authorization", TestAuth.bearer(tokens, io)))
                 .andExpect(jsonPath("$.contents_original").value("Fictional complaint"));
+    }
+
+    @Test
+    void firAndFirListAreOnlyForTheCaseTeamAndTheFrontDeskOfTheStation() throws Exception {
+        UUID other = db.sql("insert into police_station (state_code, district, name) values ('IN','Otherpur','Otherpur City') returning id")
+                .query(UUID.class).single();
+        String stranger = TestAuth.bearer(tokens, db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'SI Fictional Far','SI','io') returning id")
+                .param(other).query(UUID.class).single());
+        mvc.perform(get("/api/firs/" + fir).header("Authorization", stranger)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/firs").header("Authorization", stranger)).andExpect(jsonPath("$.length()").value(0));
+        for (UUID who : new UUID[] {io, clerk}) {
+            mvc.perform(get("/api/firs/" + fir).header("Authorization", TestAuth.bearer(tokens, who))).andExpect(status().isOk());
+            mvc.perform(get("/api/firs").header("Authorization", TestAuth.bearer(tokens, who))).andExpect(jsonPath("$.length()").value(1));
+        }
     }
 }

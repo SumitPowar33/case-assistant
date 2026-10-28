@@ -90,13 +90,11 @@ class RecordsApiTest {
         mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", auth))
                 .andExpect(jsonPath("$[0].chargesheet_last_day").value("2026-12-11"))   // 90 days, 13 Sep is day 1
                 .andExpect(jsonPath("$[0].remand_recorded_by_name").value("SI Asha Rao"));
-        // someone outside the case team does not see who was informed
+        // someone outside the case team cannot read the case at all (404), and cannot write to it
         UUID other = db.sql("insert into app_user (full_name, rank, role) values ('Fictional Prosecutor','APP','prosecutor') returning id")
                 .query(UUID.class).single();
         mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", TestAuth.bearer(tokens, other)))
-                .andExpect(jsonPath("$[0].person_label").value("A2"))
-                .andExpect(jsonPath("$[0].informed_name").doesNotExist())
-                .andExpect(jsonPath("$[0].informed_contact").doesNotExist());
+                .andExpect(status().isNotFound());
         mvc.perform(post("/api/firs/" + fir + "/arrests/" + arrest + "/first-remand").header("Authorization", TestAuth.bearer(tokens, other))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"firstRemandOn\":\"2026-09-13\"}")).andExpect(status().isForbidden());
     }
