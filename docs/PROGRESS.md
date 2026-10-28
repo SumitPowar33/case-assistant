@@ -4,6 +4,44 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 28 Oct 2026, session 19 (Sumit present: tenancy, roles, policies, tests)
+Sumit asked me to research and decide on multi-account permissions, an Odoo-like way to customise, per-state/district/station policy, thinking ahead, and a full test phase every day. Full design: `docs/ARCHITECTURE-TENANCY.md` and `docs/TESTING.md`.
+
+Decisions (Claude's, after research; Sumit can overrule)
+- A tenant is one state's installation (own servers and database in production). Inside it: state, district, station.
+- Roles and permissions are data in `packs/*/roles.json` (Odoo groups / access rights / record rules, reduced). A pack can add roles and permissions, never remove or widen.
+- Modules are pack folders: data only, validated at start-up. No code uploaded at run time on police servers.
+- Each state, district and station can tighten a policy (never loosen), with a reason; the strictest applies; history kept. Live: `victim_update_days`, `session_hours`.
+
+Done
+- Found and fixed two real leaks: a state admin could manage every state's accounts and stations; the IO history of any FIR was readable by any signed-in user. Promoting someone to state admin no longer removes their station.
+- V20 roles table filled from the packs; V21 policy settings and the policy-aware victim-update deadline; `Roles`, `Policies`, `PolicyController`, `ReadAccess` (case records readable only by the case team, evidence also by malkhana, FIR also by the station front desk).
+- Earlier today: read access (case team only), punishment-table suggestion and warning, re-arrest custody days (V19).
+- Tests: new `SecurityMatrixTest` (every route), `RolesTest`, `PoliciesTest`, `PolicyApiTest`, state-scoping test, db tests, pack tests, `tests/repo_rules`. Coverage gates now enforced: core 95/80 (today 97/85), web 95/78 (99/81), gateway 90 (94). `scripts/test-all.sh` runs everything: all PASS. CI now runs the gates and a nightly run.
+- Schedule: four of the six nightly prompts now include a testing phase (baseline, build with tests, final run, coverage). The weekday 11:35 pm prompt was NOT changed (the update was declined); see question 1.
+
+Deliberately skipped / not checked
+- No web screens yet for roles or policies (API only). Not seen in a real browser.
+- Policies are tighten-only integers; no other types yet. `ai.cloud_allowed` and the other ideas in section 5 of the tenancy doc are not built.
+- The end-to-end browser test, upgrade test, load test and mutation tests (docs/TESTING.md, "Not covered yet") are not written.
+- `GET /api/stations` and `/api/state-packs` are still open to every signed-in user (names only).
+
+Next
+1. Web screens: policies (view, tighten with reason) and the role list for the admin.
+2. Jurisdiction as data (district table with ids) and paging for the FIR list.
+3. Correction of the time of arrest, with a reason.
+4. End-to-end browser test, then the upgrade test.
+5. `ai.cloud_allowed` policy enforced in the AI gateway.
+
+Blocked
+- Live Claude/Gemini calls wait for API keys (using `fake`).
+
+Questions for Sumit
+1. Weekday 11:35 pm schedule still has the old prompt because you declined that one change. Should I apply the testing-phase prompt to it too?
+2. Should SHOs be allowed to set their own station's policies (now yes), or only the SP and state admin?
+3. Which policies do you want first beyond the two live ones (examples: supervisor review every N days, AI cloud on/off, minimum password length)?
+4. Still open: after the Magistrate orders further investigation, does the 193(2) limit start again?
+
 ## 28 Oct 2026, session 18 (Sumit present, answered questions one by one)
 Started from `setup/seed` at 9007bb2 (session 17). Sumit answered the open questions in chat; I built what they unblocked.
 
