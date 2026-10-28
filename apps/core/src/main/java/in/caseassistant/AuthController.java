@@ -47,18 +47,20 @@ class AuthController implements ApplicationRunner {
     private final PasswordEncoder passwords;
     private final JwtEncoder tokens;
     private final CaseTeam team;
+    private final Policies policies;
     private final String bootstrapUser;
     private final String bootstrapPassword;
     /** Checked when the username is unknown, so a wrong username takes as long as a wrong password. */
     private final String dummyHash;
 
-    AuthController(JdbcClient db, PasswordEncoder passwords, JwtEncoder tokens, CaseTeam team,
+    AuthController(JdbcClient db, PasswordEncoder passwords, JwtEncoder tokens, CaseTeam team, Policies policies,
                    @Value("${BOOTSTRAP_ADMIN_USERNAME:}") String bootstrapUser,
                    @Value("${BOOTSTRAP_ADMIN_PASSWORD:}") String bootstrapPassword) {
         this.db = db;
         this.passwords = passwords;
         this.tokens = tokens;
         this.team = team;
+        this.policies = policies;
         this.bootstrapUser = bootstrapUser;
         this.bootstrapPassword = bootstrapPassword;
         this.dummyHash = passwords.encode(UUID.randomUUID().toString());
@@ -84,8 +86,9 @@ class AuthController implements ApplicationRunner {
         var user = new LinkedHashMap<>(row.get());
         user.remove("password_hash");
         var changedAt = (java.sql.Timestamp) user.remove("password_changed_at");
-        String token = SecurityConfig.issue(tokens, (UUID) user.get("id"), (String) user.get("role"), (String) user.get("full_name"), changedAt);
-        return ResponseEntity.ok(Map.of("token", token, "expiresInSeconds", SecurityConfig.TOKEN_LIFE.toSeconds(), "user", user));
+        var life = policies.sessionLife((UUID) user.get("station_id"));
+        String token = SecurityConfig.issue(tokens, (UUID) user.get("id"), (String) user.get("role"), (String) user.get("full_name"), changedAt, life);
+        return ResponseEntity.ok(Map.of("token", token, "expiresInSeconds", life.toSeconds(), "user", user));
     }
 
     @GetMapping("/me")
@@ -115,14 +118,15 @@ class AuthController implements ApplicationRunner {
         var changedAt = db.sql("update app_user set password_hash = ?, password_changed_at = clock_timestamp() where id = ? returning password_changed_at")
                 .params(passwords.encode(c.newPassword), id).query(java.sql.Timestamp.class).single();
         record(username, id, "password_changed", req);
-        String token = SecurityConfig.issue(tokens, id, (String) u.get("role"), (String) u.get("full_name"), changedAt);
-        return ResponseEntity.ok(Map.of("token", token, "expiresInSeconds", SecurityConfig.TOKEN_LIFE.toSeconds()));
+        var life = policies.sessionLife(db.sql("select station_id from app_user where id = ?").param(id).query(UUID.class).optional().orElse(null));
+        String token = SecurityConfig.issue(tokens, id, (String) u.get("role"), (String) u.get("full_name"), changedAt, life);
+        return ResponseEntity.ok(Map.of("token", token, "expiresInSeconds", life.toSeconds()));
     }
 
     /** The sign-in log, newest first; state admin only. Passwords are never recorded. */
     @GetMapping("/sign-ins")
     List<Map<String, Object>> signIns(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String username) {
-        if (!team.hasRole(CaseTeam.user(jwt), "state_admin"))
+        if (!team.can(CaseTeam.user(jwt), "admin.manage"))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the state admin reads the sign-in log.");
         return db.sql("""
                 select username_tried, outcome, client_ip, at from sign_in_attempt

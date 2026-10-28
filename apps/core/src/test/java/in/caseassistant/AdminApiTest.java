@@ -188,10 +188,55 @@ class AdminApiTest {
                 .andExpect(jsonPath("$[0].action").value("user_changed"))
                 .andExpect(jsonPath("$[0].reason").value("Fictional transfer order 12"))
                 .andExpect(jsonPath("$[0].detail").value("role io to sho; rank SI to PI; station Demo Cyber PS to Demo City PS"));
-        // a state admin keeps no station; the admin cannot change their own account
+        // a state admin keeps the station given, so stays inside that state; the admin cannot change their own account
         put(admin, "/api/users/" + io, change.formatted("state_admin", "PI", to, "Fictional posting to headquarters")).andExpect(status().isOk())
-                .andExpect(jsonPath("$.changed").value("role sho to state_admin; station Demo City PS to none"));
+                .andExpect(jsonPath("$.changed").value("role sho to state_admin"));
         UUID me = db.sql("select id from app_user where username = 'admin.one'").query(UUID.class).single();
         put(admin, "/api/users/" + me, change.formatted("io", "SI", to, "Fictional change of own role")).andExpect(status().isConflict());
+    }
+
+    @Test
+    void anUnknownRoleIsRefusedAndTheRoleListComesFromThePacks() throws Exception {
+        post(admin, "/api/users", ("{\"username\":\"who.is\",\"password\":\"fictional-io-pass-22\",\"fullName\":\"Fictional Who\","
+                + "\"rank\":\"SI\",\"role\":\"wizard\",\"stationId\":\"%s\"}").formatted(station)).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/roles").header("Authorization", admin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(7))
+                .andExpect(jsonPath("$[?(@.code=='sho')].station_required").value(true))
+                .andExpect(jsonPath("$[?(@.code=='state_admin')].permissions[*]").value(Matchers.hasItem("admin.manage")));
+        post(admin, "/api/users", ("{\"username\":\"io.plain\",\"password\":\"fictional-io-pass-22\",\"fullName\":\"SI Fictional Plain\","
+                + "\"rank\":\"SI\",\"role\":\"io\",\"stationId\":\"%s\"}").formatted(station)).andExpect(status().isCreated());
+        mvc.perform(get("/api/roles").header("Authorization", "Bearer " + token("io.plain", IO_PW))).andExpect(status().isForbidden());
+    }
+
+    /** A state admin (one with a station) works only in their own state; the platform admin (no station) works in all. */
+    @Test
+    void aStateAdminCannotTouchAnotherStatesAccountsOrStations() throws Exception {
+        db.sql("insert into state_pack (code, name, version, languages) values ('MH','Maharashtra','1',array['mr'])").update();
+        UUID mhStation = UUID.fromString(json.readTree(post(admin, "/api/stations",
+                "{\"stateCode\":\"MH\",\"district\":\"Demo District\",\"name\":\"Demo MH PS\"}")
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText());
+        String ioBody = "{\"username\":\"%s\",\"password\":\"fictional-io-pass-22\",\"fullName\":\"SI Fictional %s\",\"rank\":\"SI\",\"role\":\"io\",\"stationId\":\"%s\"}";
+        post(admin, "/api/users", ioBody.formatted("io.in", "In", station)).andExpect(status().isCreated());
+        UUID mhIo = UUID.fromString(json.readTree(post(admin, "/api/users", ioBody.formatted("io.mh", "Mh", mhStation))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText());
+        post(admin, "/api/users", ("{\"username\":\"admin.in\",\"password\":\"fictional-admin-pass-2\",\"fullName\":\"Admin Fictional In\","
+                + "\"rank\":\"Admin\",\"role\":\"state_admin\",\"stationId\":\"%s\"}").formatted(station)).andExpect(status().isCreated());
+        String inAdmin = "Bearer " + token("admin.in", "fictional-admin-pass-2");
+
+        mvc.perform(get("/api/users").header("Authorization", inAdmin)).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.username=='io.mh')]").isEmpty()).andExpect(jsonPath("$[?(@.username=='io.in')]").isNotEmpty());
+        mvc.perform(get("/api/users").header("Authorization", admin)).andExpect(jsonPath("$[?(@.username=='io.mh')]").isNotEmpty());
+        post(inAdmin, "/api/stations", "{\"stateCode\":\"MH\",\"district\":\"Other\",\"name\":\"Sneaky PS\"}").andExpect(status().isForbidden());
+        post(inAdmin, "/api/stations", "{\"stateCode\":\"IN\",\"district\":\"Demo District\",\"name\":\"Demo Second PS\"}").andExpect(status().isCreated());
+        post(inAdmin, "/api/users", ioBody.formatted("io.sneak", "Sneak", mhStation)).andExpect(status().isBadRequest());
+        post(inAdmin, "/api/users", ioBody.formatted("io.nostation", "None", "").replace("\"stationId\":\"\"", "\"stationId\":null"))
+                .andExpect(status().isBadRequest());
+        for (String action : new String[] {"disable", "enable", "unlock"})
+            post(inAdmin, "/api/users/" + mhIo + "/" + action, REASON).andExpect(status().isNotFound());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/users/" + mhIo).header("Authorization", inAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"io\",\"rank\":\"PSI\",\"stationId\":\"%s\",\"reason\":\"Fictional promotion order\"}".formatted(station)))
+                .andExpect(status().isNotFound());
+        assertThat(db.sql("select active from app_user where id = ?").param(mhIo).query(Boolean.class).single()).isTrue();
     }
 }

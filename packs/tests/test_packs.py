@@ -59,3 +59,27 @@ def test_punishment_tables_use_known_classes():
         assert t["status"] != "draft" or t.get("review_note"), "draft tables must say who reviews them"
         assert t["sections"] and set(t["sections"].values()) <= classes
         assert not set(t["sections"]) & set(t.get("no_penalty_of_their_own", []))
+
+
+def test_roles_files_use_declared_permissions_and_valid_scopes():
+    files = sorted(ROOT.glob("*/roles.json"))
+    assert files
+    declared = set()
+    for path in files:
+        declared |= set(json.loads(path.read_text(encoding="utf-8"))["permissions"])
+    for path in files:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for code, role in data["roles"].items():
+            assert re.fullmatch(r"[a-z][a-z_]{1,29}", code), code
+            assert role["case_scope"] in {"none", "station", "district"}, code
+            assert isinstance(role["station_required"], bool) and role["label"]
+            assert set(role["permissions"]) <= declared, code
+
+
+def test_policies_have_a_default_inside_their_bounds():
+    for path in ROOT.glob("*/policies.json"):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["policies"]
+        for key, p in data["policies"].items():
+            assert re.fullmatch(r"[a-z][a-z_.]{1,59}", key), key
+            assert p["label"] and p["min"] <= p["default"] <= p["max"], key

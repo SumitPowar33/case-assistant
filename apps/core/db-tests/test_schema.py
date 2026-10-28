@@ -468,3 +468,39 @@ def test_a_re_arrest_counts_the_earlier_custody_days(db):
     assert day(second) == (dt.date(2026, 11, 24), 5)   # 1-5 Sep (5 days) already spent: 29 Nov less 5 days
     assert [r[0] for r in db.execute("SELECT due_on FROM case_deadline WHERE kind='chargesheet_custody'")] == [dt.date(2026, 11, 24)]
     assert day(first) == (dt.date(2026, 10, 30), 0)   # an earlier arrest is not changed by a later one
+
+
+def test_roles_are_a_table_and_an_account_needs_a_known_role(db):
+    assert {r[0] for r in db.execute("SELECT code FROM role")} >= {"io", "front_desk", "sho", "sp", "malkhana", "prosecutor", "state_admin"}
+    db.execute("INSERT INTO role VALUES ('inspector_mh','Inspector (Maharashtra)')")
+    db.execute("INSERT INTO app_user(full_name,rank,role) VALUES ('Fictional One','Insp','inspector_mh')")
+    with pytest.raises(psycopg.errors.ForeignKeyViolation):
+        db.execute("INSERT INTO app_user(full_name,rank,role) VALUES ('Fictional Two','Insp','wizard')")
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("INSERT INTO role VALUES ('Bad-Code','x')")
+
+
+def test_policy_settings_are_kept_and_the_strictest_unit_value_applies(db):
+    st, io, fir = seed_case(db)
+    other = one(db, "INSERT INTO police_station(state_code,district,name) VALUES ('IN','Demo City','Demo Second PS') RETURNING id")[0]
+    far = one(db, "INSERT INTO police_station(state_code,district,name) VALUES ('IN','Far District','Demo Far PS') RETURNING id")[0]
+    ins = "INSERT INTO policy_setting(level,state_code,district,station_id,key,value,reason,set_by) VALUES (%s,'IN',%s,%s,'victim_update_days',%s,'Fictional order 1 of 2026',%s)"
+    days = lambda s: one(db, "SELECT effective_policy_days(%s,'victim_update_days',90)", s)[0]
+    assert days(st) == 90
+    db.execute(ins, ("district", "Demo City", None, "60", io))
+    assert (days(st), days(other), days(far)) == (60, 60, 90)
+    db.execute(ins, ("station", None, st, "30", io))
+    assert (days(st), days(other)) == (30, 60)
+    db.execute(ins, ("station", None, st, "45", io))    # a newer setting of the same unit replaces its older one
+    assert days(st) == 45
+    db.execute(ins, ("state", None, None, "20", io))
+    assert (days(st), days(other), days(far)) == (20, 20, 20)
+    assert one(db, "SELECT effective_policy_days(%s,'victim_update_days',10)", st)[0] == 10   # never above the fallback
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE policy_setting SET value = '99'")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM policy_setting")
+    with pytest.raises(psycopg.errors.CheckViolation):   # a station setting names a station and no district
+        db.execute(ins, ("station", "Demo City", st, "30", io))
+    with pytest.raises(psycopg.errors.CheckViolation):   # a reason is needed
+        db.execute("INSERT INTO policy_setting(level,state_code,key,value,reason,set_by) VALUES ('state','IN','x','1','short',%s)", (io,))

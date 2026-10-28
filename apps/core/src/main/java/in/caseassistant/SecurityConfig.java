@@ -97,9 +97,14 @@ class SecurityConfig {
     }
 
     static String issue(JwtEncoder encoder, UUID userId, String role, String name, java.sql.Timestamp passwordChangedAt) {
+        return issue(encoder, userId, role, name, passwordChangedAt, TOKEN_LIFE);
+    }
+
+    /** {@code life} comes from the unit's "session_hours" policy (see {@link Policies}); never longer than TOKEN_LIFE. */
+    static String issue(JwtEncoder encoder, UUID userId, String role, String name, java.sql.Timestamp passwordChangedAt, Duration life) {
         Instant now = Instant.now();
         var builder = JwtClaimsSet.builder().issuer("case-assistant").subject(userId.toString())
-                .issuedAt(now).expiresAt(now.plus(TOKEN_LIFE)).claim("role", role).claim("name", name);
+                .issuedAt(now).expiresAt(now.plus(life.compareTo(TOKEN_LIFE) > 0 ? TOKEN_LIFE : life)).claim("role", role).claim("name", name);
         if (passwordChangedAt != null) builder.claim(PASSWORD_STAMP, passwordStamp(passwordChangedAt));
         JwtClaimsSet claims = builder.build();
         return encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();

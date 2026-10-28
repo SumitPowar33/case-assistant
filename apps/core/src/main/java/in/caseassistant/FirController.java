@@ -43,7 +43,7 @@ class FirController {
     @GetMapping
     List<Map<String, Object>> list(@AuthenticationPrincipal Jwt jwt) {
         return db.sql("select id, fir_year, fir_no, registered_at, is_zero_fir, action_taken, sexual_offence "
-                        + "from fir where " + CaseTeam.CAN_READ_FIR + " order by registered_at desc")
+                        + "from fir where " + team.canReadFirSql() + " order by registered_at desc")
                 .param(CaseTeam.user(jwt)).query().listOfRows();
     }
 
@@ -97,7 +97,7 @@ class FirController {
         team.requireTeam(CaseTeam.user(jwt), id);
         return db.sql("""
                 select u.id, u.full_name, u.rank, u.role from app_user u join fir f on f.station_id = u.station_id
-                where f.id = ? and u.active and u.role in ('io', 'sho') order by u.full_name""").param(id).query().listOfRows();
+                where f.id = ? and u.active and u.role in """ + team.caseLeadRoles() + " order by u.full_name").param(id).query().listOfRows();
     }
 
     /**

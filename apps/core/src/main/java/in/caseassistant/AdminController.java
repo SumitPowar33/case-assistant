@@ -8,7 +8,6 @@ import jakarta.validation.constraints.Size;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -29,18 +28,15 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api")
 class AdminController {
-    /** Roles that work at a police station; their case access follows the station (see {@link CaseTeam}). */
-    static final Set<String> STATION_ROLES = Set.of("io", "front_desk", "sho", "sp", "malkhana");
-
     record NewUser(@NotBlank @Pattern(regexp = "[a-z0-9._-]{3,40}") String username,
                    @NotBlank @Size(min = 12, max = 200) String password, @NotBlank @Size(max = 200) String fullName,
                    @NotBlank @Size(max = 60) String rank,
-                   @NotBlank @Pattern(regexp = "io|front_desk|sho|sp|prosecutor|malkhana|state_admin") String role,
+                   @NotBlank @Pattern(regexp = "[a-z][a-z_]{1,29}") String role,
                    UUID stationId) {}
 
     record Reason(@NotBlank @Size(min = 10, max = 2000) String reason) {}
 
-    record Change(@NotBlank @Pattern(regexp = "io|front_desk|sho|sp|prosecutor|malkhana|state_admin") String role,
+    record Change(@NotBlank @Pattern(regexp = "[a-z][a-z_]{1,29}") String role,
                   @NotBlank @Size(max = 60) String rank, UUID stationId, @NotBlank @Size(min = 10, max = 2000) String reason) {}
 
     record NewStation(@NotBlank @Pattern(regexp = "[A-Z]{2,3}") String stateCode, @NotBlank @Size(max = 120) String district,
@@ -50,8 +46,10 @@ class AdminController {
     private final PasswordEncoder passwords;
     private final CaseTeam team;
     private final AuthController auth;
+    private final Roles roles;
 
-    AdminController(JdbcClient db, PasswordEncoder passwords, CaseTeam team, AuthController auth) {
+    AdminController(JdbcClient db, PasswordEncoder passwords, CaseTeam team, AuthController auth, Roles roles) {
+        this.roles = roles;
         this.db = db;
         this.passwords = passwords;
         this.team = team;
@@ -60,8 +58,45 @@ class AdminController {
 
     private UUID requireAdmin(Jwt jwt) {
         UUID me = CaseTeam.user(jwt);
-        if (!team.hasRole(me, "state_admin")) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the state admin can do this.");
+        if (!team.can(me, "admin.manage")) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the state admin can do this.");
         return me;
+    }
+
+    /**
+     * The state this admin works in: the state of their police station. An admin with no station is the platform
+     * admin of the installation (the first account) and works in every state. A state admin can never see or change
+     * another state's accounts or stations.
+     */
+    private String scope(UUID me) {
+        return db.sql("select s.state_code from app_user u left join police_station s on s.id = u.station_id where u.id = ?")
+                .param(me).query(String.class).optional().orElse(null);
+    }
+
+    private void requireKnownRole(String role) {
+        if (!roles.exists(role)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such role.");
+    }
+
+    /** The roles an account can have (from the packs): code, label, whether a station is needed, permissions. */
+    @GetMapping("/roles")
+    List<Map<String, Object>> roles(@AuthenticationPrincipal Jwt jwt) {
+        requireAdmin(jwt);
+        return roles.list();
+    }
+
+    private void requireAccountInScope(String scope, UUID userId) {
+        if (scope != null && !db.sql("""
+                select exists (select 1 from app_user u join police_station s on s.id = u.station_id
+                  where u.id = ? and s.state_code = ?)""").params(userId, scope).query(Boolean.class).single())
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such account.");
+    }
+
+    /** A state admin must place every account at a station of their own state. */
+    private void requireStationInScope(String scope, UUID stationId) {
+        if (scope == null) return;
+        if (stationId == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose the police station for this account.");
+        if (!db.sql("select exists (select 1 from police_station where id = ? and state_code = ?)").params(stationId, scope)
+                .query(Boolean.class).single())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such police station in your state.");
     }
 
     private void log(UUID actor, String action, UUID userId, UUID stationId, String reason) {
@@ -76,11 +111,12 @@ class AdminController {
     /** Every account with its station and whether it is locked now; never a password hash. */
     @GetMapping("/users")
     List<Map<String, Object>> users(@AuthenticationPrincipal Jwt jwt) {
-        requireAdmin(jwt);
+        String scope = scope(requireAdmin(jwt));
         var rows = db.sql("""
                 select u.id, u.username, u.full_name, u.rank, u.role, u.station_id, s.name as station_name, s.district, u.active
-                from app_user u left join police_station s on s.id = u.station_id order by u.active desc, u.full_name""")
-                .query().listOfRows();
+                from app_user u left join police_station s on s.id = u.station_id
+                where (?::text is null or s.state_code = ?) order by u.active desc, u.full_name""")
+                .params(scope, scope).query().listOfRows();
         return rows.stream().map(r -> {
             var m = new LinkedHashMap<>(r);
             String username = (String) r.get("username");
@@ -93,8 +129,10 @@ class AdminController {
     @Transactional
     ResponseEntity<Map<String, UUID>> createUser(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody NewUser u) {
         UUID me = requireAdmin(jwt);
-        if (STATION_ROLES.contains(u.role) && u.stationId == null)
+        requireKnownRole(u.role);
+        if (roles.stationRequired(u.role) && u.stationId == null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose the police station for this role.");
+        requireStationInScope(scope(me), u.stationId);
         UUID id = db.sql("""
                 insert into app_user (username, password_hash, full_name, rank, role, station_id)
                 values (?,?,?,?,?,?) returning id""")
@@ -114,6 +152,7 @@ class AdminController {
     ResponseEntity<Void> disable(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody Reason r) {
         UUID me = requireAdmin(jwt);
         if (me.equals(id)) throw new ResponseStatusException(HttpStatus.CONFLICT, "You cannot disable your own account.");
+        requireAccountInScope(scope(me), id);
         int n = db.sql("update app_user set active = false, password_changed_at = clock_timestamp() where id = ? and active")
                 .param(id).update();
         if (n == 0) throw notFoundOr(id, "This account is already disabled.");
@@ -125,6 +164,7 @@ class AdminController {
     @Transactional
     ResponseEntity<Void> enable(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody Reason r) {
         UUID me = requireAdmin(jwt);
+        requireAccountInScope(scope(me), id);
         if (db.sql("update app_user set active = true where id = ? and not active").param(id).update() == 0)
             throw notFoundOr(id, "This account is already active.");
         log(me, "user_enabled", id, null, r.reason);
@@ -143,9 +183,13 @@ class AdminController {
     Map<String, Object> change(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody Change c) {
         UUID me = requireAdmin(jwt);
         if (me.equals(id)) throw new ResponseStatusException(HttpStatus.CONFLICT, "You cannot change your own account.");
-        UUID station = STATION_ROLES.contains(c.role) || c.role.equals("prosecutor") ? c.stationId : null;
-        if (STATION_ROLES.contains(c.role) && station == null)
+        String scope = scope(me);
+        requireAccountInScope(scope, id);
+        requireKnownRole(c.role);
+        UUID station = c.stationId;
+        if (roles.stationRequired(c.role) && station == null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose the police station for this role.");
+        requireStationInScope(scope, station);
         var old = db.sql("""
                 select u.role, u.rank, u.station_id, s.name as station_name from app_user u
                 left join police_station s on s.id = u.station_id where u.id = ? for update of u""")
@@ -174,6 +218,7 @@ class AdminController {
     ResponseEntity<Void> unlock(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody Reason r,
                                 HttpServletRequest req) {
         UUID me = requireAdmin(jwt);
+        requireAccountInScope(scope(me), id);
         String username = db.sql("select username from app_user where id = ?").param(id).query(String.class).optional()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such account."));
         if (username == null || auth.lockedUntil(username).isEmpty())
@@ -204,6 +249,9 @@ class AdminController {
     @Transactional
     ResponseEntity<Map<String, UUID>> createStation(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody NewStation s) {
         UUID me = requireAdmin(jwt);
+        String scope = scope(me);
+        if (scope != null && !scope.equals(s.stateCode))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "A state admin adds stations only in their own state.");
         String cctns = s.cctnsCode == null || s.cctnsCode.isBlank() ? null : s.cctnsCode.trim();
         UUID id = db.sql("insert into police_station (state_code, district, name, cctns_code) values (?,?,?,?) returning id")
                 .params(s.stateCode, s.district.trim(), s.name.trim(), cctns).query(UUID.class).single();

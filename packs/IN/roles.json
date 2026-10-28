@@ -1,0 +1,26 @@
+{
+  "module": "IN",
+  "permissions": {
+    "fir.register": "Register an FIR at the user's own police station",
+    "fir.read_station": "Open the FIRs of the user's own police station (not their records)",
+    "case.lead": "May be made Investigating Officer of an FIR of the user's station",
+    "evidence.custody": "Hold and hand over evidence of the user's station (malkhana)",
+    "admin.manage": "Manage accounts and stations (inside the admin's own state)",
+    "policy.set": "Tighten the policies of the user's own unit (station or district, by the role's case_scope)"
+  },
+  "roles": {
+    "io": {"label": "Investigating Officer", "station_required": true, "case_scope": "none",
+           "permissions": ["fir.register", "case.lead"]},
+    "front_desk": {"label": "Front desk", "station_required": true, "case_scope": "none",
+                   "permissions": ["fir.register", "fir.read_station"]},
+    "sho": {"label": "Station House Officer", "station_required": true, "case_scope": "station",
+            "permissions": ["fir.register", "case.lead", "policy.set"]},
+    "sp": {"label": "Superintendent of Police", "station_required": true, "case_scope": "district",
+           "permissions": ["policy.set"]},
+    "malkhana": {"label": "Malkhana (evidence store)", "station_required": true, "case_scope": "none",
+                 "permissions": ["evidence.custody"]},
+    "prosecutor": {"label": "Prosecutor", "station_required": false, "case_scope": "none", "permissions": []},
+    "state_admin": {"label": "State admin", "station_required": false, "case_scope": "none",
+                    "permissions": ["admin.manage"]}
+  }
+}
