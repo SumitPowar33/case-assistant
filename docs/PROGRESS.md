@@ -4,6 +4,36 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 28 Oct 2026, session 22 (scheduled nightly build, last of the night, Sumit away)
+Started from `setup/seed` at the session 21 commit. PostgreSQL was started and the `caseapp` role and `caseapp_test`/`caseapp_dev` databases were created (the sandbox starts empty each night). Baseline `scripts/test-all.sh`: all 7 lines PASS.
+
+Tonight in short
+- Session 21 (earlier tonight): import duplicate-person warning for accused names.
+- Session 22 (this one): web screens for policies and the role list. Next item 1 (arrests import) was skipped because it waits for your answer to question 1.
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core. Coverage: core 97% lines / 89% branches, web 99% statements / 83% branches / 94% functions, gateway 94%. I raised two gates because coverage had risen: core branches 80 to 85, web branches 78 to 80.
+
+Done
+- Policies page (`PoliciesPage`, link "Policies" for every signed-in user): shows the value in force at your own station with its allowed range, a form to make a policy stricter for a state, district or station (with a written reason), and the recent changes you may see. The server still decides who may set what and refuses a looser value; its message is shown. No new endpoint, no new dependency.
+- Role list on the admin page (read only, from `GET /api/roles`: role, whether a station is needed, permissions). It reads the packs, so no role names are hard-coded.
+- Tests: `PoliciesPage.test.tsx` (5), one role-list test in `AdminPage.test.tsx`, one routing test in `App.test.tsx`; the new page has 100% coverage.
+
+Deliberately skipped / not checked
+- Not seen in a real browser. The policy form lets any signed-in user open the page and see policies; saving is refused by the server for anyone without the right (the history list then shows only what they may manage). No hide-the-form logic by permission yet.
+- Not built: jurisdiction as data, paging for the FIR list, correction of time of arrest, end-to-end browser test, `ai.cloud_allowed`. No time left for older-code test additions beyond the above.
+
+Next
+1. Import phase 2: arrests file keyed by FIR, once you confirm the columns (question 1 below).
+2. Jurisdiction as data (district table with ids) and paging for the FIR list.
+3. Correction of time of arrest; end-to-end browser test; `ai.cloud_allowed` policy.
+
+Blocked
+- Item 1 waits for your answer. Live Claude/Gemini calls wait for API keys (using `fake`).
+
+Questions for Sumit
+1. Arrests first (who, when, remand dates, release, keyed by FIR number and year), or chargesheets first?
+2. Should the policy form be hidden for people who cannot set policies, or is the server refusal enough for now?
+3. (Still open) Second person to approve an import? Weekday 11:35 pm schedule testing prompt?
+
 ## 28 Oct 2026, session 21 (scheduled nightly build, Sumit away)
 Started from `setup/seed` at d30c844. Baseline `scripts/test-all.sh` was green (PostgreSQL started locally; the Java tests use the default JDBC URL, the Python db tests need `DATABASE_URL=postgresql://...`).
 

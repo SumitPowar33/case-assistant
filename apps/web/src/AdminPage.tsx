@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { currentSession, get, send } from './api'
 import { fmt, text } from './formats'
+import { useLoad } from './useLoad'
 
 type Account = {
   id: string; username: string | null; full_name: string; rank: string; role: string; station_id: string | null
@@ -149,6 +150,8 @@ export default function AdminPage() {
           </form>)}
       </details>
 
+      <RoleList />
+
       <SignInLog version={version} />
 
       <h2>Admin log</h2>
@@ -197,6 +200,21 @@ function SignInLog({ version }: { version: number }) {
           <thead><tr><th>When</th><th>Username tried</th><th>Result</th><th>From</th></tr></thead>
           <tbody>{rows.map((r, n) => <tr key={n}><td>{fmt(r.at)}</td><td>{r.username_tried}</td><td>{OUTCOMES[r.outcome] ?? r.outcome}</td><td>{r.client_ip ?? '—'}</td></tr>)}</tbody>
         </table>))}
+    </>
+  )
+}
+
+/** The roles from the packs and what each may do (read only; packs change roles, not this screen). */
+function RoleList() {
+  const { data: roles, error } = useLoad<{ code: string; label: string; station_required: boolean; permissions: string[] }[]>('/roles')
+  return (
+    <>
+      <h2>Roles and permissions</h2>
+      {error ? <p role="alert">{error}</p> : !roles ? <p>Loading…</p> : (
+        <table>
+          <thead><tr><th scope="col">Role</th><th scope="col">Needs a station</th><th scope="col">Permissions</th></tr></thead>
+          <tbody>{roles.map((r) => <tr key={r.code}><th scope="row">{r.label}</th><td>{r.station_required ? 'Yes' : 'No'}</td><td>{r.permissions.join(', ') || '—'}</td></tr>)}</tbody>
+        </table>)}
     </>
   )
 }

@@ -103,3 +103,12 @@ test('a 401 ends the session and shows the sign-in form; sign out does too', asy
   fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
   expect(screen.getByRole('heading', { name: 'Sign in' })).toBeTruthy()
 })
+
+test('the Policies link opens the policies page for any signed-in user', async () => {
+  mockApi()
+  Object.assign(routes, { '/api/policies': [], '/api/policy-settings': [], '/api/stations': [], '/api/state-packs': [] })
+  window.location.hash = '#/policies'
+  render(<App />)
+  expect(screen.getByRole('link', { name: 'Policies' }).getAttribute('href')).toBe('#/policies')
+  expect(await screen.findByRole('heading', { name: 'Policies' })).toBeTruthy()
+})

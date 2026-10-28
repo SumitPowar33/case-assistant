@@ -18,6 +18,7 @@ const lists: Record<string, unknown> = {
   '/stations': [{ id: 's1', state_code: 'IN', district: 'Demo District', name: 'Demo Cyber PS', cctns_code: null }],
   '/state-packs': [{ code: 'IN', name: 'National', status: 'draft' }],
   '/admin-actions': [{ action: 'user_disabled', reason: 'Fictional transfer out', at: '2026-10-25T10:00:00Z', actor_name: 'State Admin', username: 'hc.away', user_name: 'HC Away', station_name: null }],
+  '/roles': [{ code: 'io', label: 'Investigating officer', station_required: true, permissions: ['case.write'] }, { code: 'state_admin', label: 'State admin', station_required: false, permissions: [] }],
   '/sign-ins': [{ username_tried: 'si.fictional', outcome: 'wrong_password', client_ip: '127.0.0.1', at: '2026-10-25T15:45:00Z' }],
 }
 
@@ -93,4 +94,12 @@ test('a transfer changes role, rank or station with a reason and warns about FIR
   expect((await screen.findByRole('status')).textContent).toBe(
     'SI Fictional: role io to sho; rank SI to PI. They must sign in again. They are still the IO of 2 FIRs; give those cases to another officer.')
   expect(writes).toEqual([{ url: '/api/users/u1', body: { role: 'sho', rank: 'PI', stationId: 's1', reason: 'Fictional transfer order 12' } }])
+})
+
+test('the role list from the packs is shown read-only', async () => {
+  stub()
+  render(<AdminPage />)
+  const row = (await screen.findByText('Investigating officer', { selector: 'th' })).closest('tr')!
+  expect(within(row).getByText('case.write')).toBeTruthy()
+  expect(within(screen.getByText('State admin', { selector: 'th' }).closest('tr')!).getByText('—')).toBeTruthy()
 })
