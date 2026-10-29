@@ -4,6 +4,30 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 29 Oct 2026, session 24 (scheduled nightly build, Sumit away)
+Started from `setup/seed` at 1eeb2bc. The sandbox was empty: started PostgreSQL, created role `caseapp` (superuser) and databases `caseapp_test`/`caseapp_dev`, installed `psycopg[binary]` and the gateway requirements, `npm ci`. Baseline `scripts/test-all.sh`: all 7 lines PASS.
+
+Done
+- Jurisdiction as data (V23): new `district` table (id, state, name; unique per state ignoring letter case and spaces). `police_station.district_id` and `policy_setting.district_id` replace the free-text district; state codes in policies now reference `state_pack`. Old rows are moved by the migration (two spellings of one district become one). The SP's reach (`CaseTeam`), district policies (`Policies`, `PolicyController`, `effective_policy_days`) and station creation all use the id. The API still takes and returns the district name (web unchanged); `district_id_of(state, name)` finds or creates it.
+- Tests: db tests for name matching, rename keeping stations and policies, and the V23 backfill from V22 data; API tests for a district named in another letter case, rename keeping a policy, and a second spelling at station creation not making a second district. `MigrationTest` expects version 23.
+- Final `scripts/test-all.sh`: all 7 lines PASS. No coverage gate raised.
+
+Deliberately skipped / not checked
+- No screen to rename or list districts yet (a rename is a database action only). No new dependency. The web screens were not run in a browser. Seed packs do not list districts; they are created with the first station.
+
+Next
+1. Import phase 2: arrests file keyed by FIR (needs question 1 below).
+2. Correction of time of arrest; end-to-end browser test; `ai.cloud_allowed` policy.
+
+Blocked
+- Item 1 waits for your answer. Live Claude/Gemini calls wait for API keys (using `fake`).
+
+Questions for Sumit
+1. (Open) Arrests first or chargesheets first for the import files?
+2. (Open) Hide the policy form for people who cannot set policies?
+3. (Open) Second person to approve an import?
+4. Should a state admin be able to rename a district from the admin page?
+
 ## 29 Oct 2026, session 23 (scheduled nightly build, Sumit away)
 Started from `setup/seed` at 349c122. The sandbox was empty: started PostgreSQL, created role `caseapp` and databases `caseapp_test`/`caseapp_dev`, installed `psycopg[binary]`, the gateway `requirements.txt` (note: `requirements-dev.txt` alone lacks fastapi/httpx) and `npm ci`. Baseline `scripts/test-all.sh`: all 7 lines PASS. (Hint: do not export `DATABASE_URL` as a postgresql:// URL for the whole shell; Spring reads it and fails with "url must start with jdbc".)
 
