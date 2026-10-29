@@ -16,10 +16,10 @@ Rule of this project (Sumit, 28 Oct 2026): **every piece of code gets tests, and
 | Integration (gateway to core) | `services/ai-gateway/tests` | Token checks, audit hash chain, provider switching | `python -m pytest -q` |
 
 ## Coverage gates (they only go up)
-| Part | Gate | Today (28 Oct) |
+| Part | Gate | Today (29 Oct) |
 |---|---|---|
-| Core (JaCoCo, `mvn verify`) | lines 95%, branches 85% | 97% / 89% |
-| Web (vitest) | statements 95%, branches 80%, functions 88% | 99% / 83% / 94% |
+| Core (JaCoCo, `mvn verify`) | lines 95%, branches 90% | 97.7% / 91.5% |
+| Web (vitest) | statements 95%, branches 82%, functions 88% | 99% / 83.7% / 94% |
 | AI gateway (pytest-cov) | 90% incl. branches | 94% |
 The gate fails the build below the number. When coverage rises by 2 points or more, raise the gate in the same commit.
 

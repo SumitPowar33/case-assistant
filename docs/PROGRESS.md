@@ -4,6 +4,37 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 29 Oct 2026, session 25 (scheduled nightly build, last of the night, Sumit away)
+Started from `setup/seed` at 69e0d83 (sandbox empty again: started PostgreSQL, created role `caseapp` and the two databases, installed packages, `npm ci`). Baseline `scripts/test-all.sh`: all 7 lines PASS.
+
+Tonight in short
+- Session 23: paging for the FIR list.
+- Session 24: jurisdiction as data (V23), arrests import (V24), chargesheets import (V25), second-approver policy, policy form hidden for people who cannot set policies.
+- Session 25 (this one): correction of time of arrest (V26), plus extra tests for older code.
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core. Coverage: core 97.7% lines / 91.5% branches, web 99.3% statements / 83.7% branches / 94% functions, gateway 94%. Core branch gate raised 88 to 90 (coverage had risen more than 2 points).
+
+Done
+- Next item 1, my pick: **correction of time of arrest** (V26, table `arrest_time_correction`). Same pattern as the other corrections: the memo keeps the time as first written; a new row with a written reason (10+ characters) replaces the newest one. The view `arrest_current` now gives the time in force (plus `time_correction_id`), so the order of arrests of one person (earlier custody days, V19) and the checks on remand and release use the corrected time. The database refuses a time in the future or one whose IST day is after a first remand or release already on record, and the remand/release correction trigger now compares with the corrected day. API: `POST /api/firs/{id}/arrests/{arrestId}/time-corrections` (case team only), `GET .../arrests/time-corrections` (history); the arrest list shows the corrected time and `time_corrected`. Web: "Correct the time of arrest" form and the history line on each arrest. An imported arrest that is later corrected cannot be undone (the existing undo guard sees the new table through its foreign key).
+- Tests: `RecordsApiTest` (time correction: bad reason, future, after the remand on record, unknown arrest, history, later remand correction uses the new day, outsider refused), `test_schema.py` (kept as written, one first correction, chain, trigger rules, remand check), `Arrests.test.tsx` (+1), `MigrationTest` now expects V26.
+- Older code: `PolicyApiTest` (no station named, no/blank/unknown state, no district, a state admin of another state, inactive or unknown user, a role with no reach) and `ImportApiTest` (over-long arrest and chargesheet rows, mapping that misses required fields or names a column that is not in the file).
+
+Deliberately skipped / not checked
+- Not seen in a real browser. The duplicate check of imports (same accused and IST day) still uses the time as first written; it only matters for rows loaded later.
+- Not built: evidence and notices files; end-to-end browser test (Playwright, first item of "Not covered yet" in docs/TESTING.md); upgrade test; contract test web-to-core. Remaining uncovered core branches are mostly impossible error handlers (JSON write failures) and a race (a row changed between check and approval).
+
+Next
+1. End-to-end browser test of the Load data screen (FIRs, arrests, chargesheets in order) with Playwright.
+2. `ai.cloud_allowed` policy and the gateway refusing a cloud provider when it is off.
+3. Evidence and notices files keyed by FIR, if you want them (question 3 below).
+
+Blocked
+- Live Claude/Gemini calls wait for API keys (using `fake`).
+
+Questions for Sumit
+1. Should the second-approver policy (`import_self_approval` = 0) be switched on for the state or district you will pilot in?
+2. Can you get a sample (fictional or masked) export from a pilot department's CCTNS or state system, so I can write a real state profile?
+3. Evidence and notices import files: build them, or leave imports as they are (FIRs, arrests, chargesheets) and move to the browser test and `ai.cloud_allowed`?
+
 ## 29 Oct 2026, session 24 (scheduled nightly build, Sumit away)
 Started from `setup/seed` at 1eeb2bc. The sandbox was empty: started PostgreSQL, created role `caseapp` (superuser) and databases `caseapp_test`/`caseapp_dev`, installed `psycopg[binary]` and the gateway requirements, `npm ci`. Baseline `scripts/test-all.sh`: all 7 lines PASS.
 
@@ -20,7 +51,7 @@ Done
 Deliberately skipped / not checked
 - Not seen in a real browser. The "language of the complaint text" box still shows for arrest and chargesheet files (it is ignored there). No screen to rename a district (database only); I judged it low value, so question 4 of the earlier list is dropped unless you want it.
 - Imported arrests: a row with a first remand and no release date in an open case is treated as still in custody (the row warns about it); if the old export simply omits release dates, the officer must add them, or the deadline list will show false deadlines. A person whose session was opened before this release has no `can_set_policy` until they sign in again, so they will not see the policy form until then.
-- Not built: evidence and notices files; fuzzy duplicate people; a real state export profile (needs a sample layout from a department); correction of time of arrest; end-to-end browser test; `ai.cloud_allowed`.
+- Not built: evidence and notices files; fuzzy duplicate people; a real state export profile (needs a sample layout from a department); end-to-end browser test; `ai.cloud_allowed`.
 
 Next
 1. Evidence and notices files keyed by FIR (same pattern), or correction of time of arrest: your pick.
@@ -49,7 +80,7 @@ Deliberately skipped / not checked
 Next
 1. Import phase 2: arrests file keyed by FIR (needs question 1 of session 22).
 2. Jurisdiction as data (district table with ids; stations point at it).
-3. Correction of time of arrest; end-to-end browser test; `ai.cloud_allowed` policy.
+3. end-to-end browser test; `ai.cloud_allowed` policy.
 
 Blocked
 - Item 1 waits for your answer. Live Claude/Gemini calls wait for API keys (using `fake`).
@@ -79,7 +110,7 @@ Deliberately skipped / not checked
 Next
 1. Import phase 2: arrests file keyed by FIR, once you confirm the columns (question 1 below).
 2. Jurisdiction as data (district table with ids) and paging for the FIR list.
-3. Correction of time of arrest; end-to-end browser test; `ai.cloud_allowed` policy.
+3. end-to-end browser test; `ai.cloud_allowed` policy.
 
 Blocked
 - Item 1 waits for your answer. Live Claude/Gemini calls wait for API keys (using `fake`).
@@ -103,7 +134,7 @@ Deliberately skipped / not checked
 Next
 1. Import phase 2 proper: arrests (and people details) file keyed by FIR, once you confirm the columns.
 2. Web screens: policies and the role list. Jurisdiction as data and paging for the FIR list.
-3. Correction of time of arrest; end-to-end browser test; `ai.cloud_allowed` policy.
+3. end-to-end browser test; `ai.cloud_allowed` policy.
 
 Questions for Sumit
 1. For the next import file, should I start with arrests (who, when, remand dates, release) keyed by FIR number and year? Or chargesheets first?
@@ -134,7 +165,7 @@ Deliberately skipped / not checked
 Next
 1. Import phase 2: people/arrests/chargesheets files keyed by FIR, and duplicate-person warnings.
 2. Web screens: policies and the role list. Jurisdiction as data and paging for the FIR list.
-3. Correction of time of arrest; end-to-end browser test; `ai.cloud_allowed` policy.
+3. end-to-end browser test; `ai.cloud_allowed` policy.
 
 Questions for Sumit
 1. Should approving an import need a second person (the stager cannot approve their own batch)? I left it as one person for now.
