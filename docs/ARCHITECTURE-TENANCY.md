@@ -48,7 +48,7 @@ Each state, district and station may have its own policy, but only **in the stri
 
 Who may set a policy: the state admin for their state; the SP for their district and its stations; the SHO for their own station (role permission `policy.set` plus the role's case scope). `GET /api/policies` shows each policy with its value in force; `POST /api/policy-settings` sets one; `GET /api/policy-settings` shows the history of the units you manage.
 
-Live now: `victim_update_days` (changes the due date on the deadline list and says "earlier by unit policy") and `session_hours` (length of a sign-in). Policies are added only when the code that obeys them is added in the same change.
+Live now: `victim_update_days` (changes the due date on the deadline list and says "earlier by unit policy") and `session_hours` (length of a sign-in). `import_self_approval` (1 = the person who checked an import file may also approve it; a unit may set 0, then a second authorised person must approve). Policies are added only when the code that obeys them is added in the same change.
 
 ## 5. Other factors thought through, in order of when to deal with them
 Done on 28 Oct 2026 because they were found while doing this: a state admin could manage every state's accounts and stations (fixed, tested); the IO history of any FIR was readable by any signed-in user (fixed; the new security test walks every route so a new one cannot miss the rule); roles were a fixed database list (now a table filled from the packs); promoting someone to state admin silently removed their station, which would have made them an all-state admin (the station is now kept).

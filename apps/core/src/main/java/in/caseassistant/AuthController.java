@@ -86,6 +86,7 @@ class AuthController implements ApplicationRunner {
         var user = new LinkedHashMap<>(row.get());
         user.remove("password_hash");
         user.put("can_import", team.can((UUID) user.get("id"), "import.run"));
+        user.put("can_set_policy", team.can((UUID) user.get("id"), "policy.set") || team.can((UUID) user.get("id"), "admin.manage"));
         var changedAt = (java.sql.Timestamp) user.remove("password_changed_at");
         var life = policies.sessionLife((UUID) user.get("station_id"));
         String token = SecurityConfig.issue(tokens, (UUID) user.get("id"), (String) user.get("role"), (String) user.get("full_name"), changedAt, life);
@@ -97,6 +98,7 @@ class AuthController implements ApplicationRunner {
         var me = new LinkedHashMap<>(db.sql("select id, username, full_name, rank, role, station_id, ui_language from app_user where id = ?")
                 .param(CaseTeam.user(jwt)).query().singleRow());
         me.put("can_import", team.can(CaseTeam.user(jwt), "import.run"));
+        me.put("can_set_policy", team.can(CaseTeam.user(jwt), "policy.set") || team.can(CaseTeam.user(jwt), "admin.manage"));
         return me;
     }
 

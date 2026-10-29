@@ -23,6 +23,7 @@ Audit reports on CCTNS found: the same accused or complainant under several IDs;
 - **Concluded cases** (`status` closed, disposed, chargesheeted, ...) are stored with `concluded = true` and get no live deadlines.
 - **Who.** Permission `import.run` (SHO for own station, SP for own district, state admin for own state, platform admin for any), checked per station by `CaseTeam.canAt`. Others get 403, and a batch is a 404 to anyone who may not load for its station.
 - **Limits.** 5,000 rows and 5 MB per file; UTF-8; separator comma, semicolon, tab or bar found from the header.
+- **Second approver.** Policy `import_self_approval` (default 1). A state, district or station may set it to 0; then the person who checked a file cannot approve it, another authorised person must (403 otherwise).
 - **Audit.** Each batch keeps who staged it, who approved it and the authority, file name and SHA-256, counts, who undid it and why. Batches cannot be deleted.
 - **Privacy (DPDP Act).** The police exemption covers only notified bodies, and purpose limitation, storage limitation and security safeguards still apply: import only what the file needs, restrict who can do it, log it, purge staging. Real data only after a data agreement.
 
@@ -43,4 +44,4 @@ Same screen, same four steps; choose the layout "Arrests (CSV), generic". Load t
 - **Undo.** Deletes the batch's arrests (the only case in which the database lets an arrest memo be deleted: its batch is already marked undone). Refused when a correction exists, or when someone has recorded a first remand or release on an imported arrest after the approval. An FIR batch cannot be undone while arrests hang on its people.
 
 ## Not built yet
-Separate files for chargesheets, evidence and notices keyed by FIR (arrests are done); fuzzy (spelling-variant) duplicate people and duplicates across stations (only exact normalised names are flagged); a four-eyes option (stager is not the approver); a direct state-database connector; Excel files; paging beyond 500 rows in the screen; purge of old batches after a retention period.
+Separate files for chargesheets, evidence and notices keyed by FIR (arrests are done); fuzzy (spelling-variant) duplicate people and duplicates across stations (only exact normalised names are flagged); a direct state-database connector; Excel files; paging beyond 500 rows in the screen; purge of old batches after a retention period.

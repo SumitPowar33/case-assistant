@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { get, send } from './api'
+import { currentSession, get, send } from './api'
 import { fmt } from './formats'
 
 type Policy = { key: string; label: string; default: number; min: number; max: number; effective: number }
@@ -56,7 +56,7 @@ export default function PoliciesPage() {
         <thead><tr><th scope="col">Policy</th><th scope="col">Value now</th><th scope="col">Allowed range</th></tr></thead>
         <tbody>{policies.map((p) => <tr key={p.key}><th scope="row">{p.label}</th><td>{p.effective}</td><td>{p.min} to {p.max}</td></tr>)}</tbody>
       </table>
-      <form onSubmit={save} aria-label="Make a policy stricter">
+      {currentSession()?.user.can_set_policy && <form onSubmit={save} aria-label="Make a policy stricter">
         <h2>Make a policy stricter</h2>
         <label>Level <select value={level} onChange={(e) => setLevel(e.target.value)}>
           <option value="state">State</option><option value="district">District</option><option value="station">Police station</option></select></label>
@@ -69,7 +69,7 @@ export default function PoliciesPage() {
         <label>New value <input name="value" type="number" required /></label>
         <label>Reason (at least 10 letters) <input name="reason" required minLength={10} /></label>
         <button type="submit">Save</button>
-      </form>
+      </form>}
       <h2>Recent changes</h2>
       {changes.length === 0 ? <p>No changes you may see.</p> : (
         <ul>{changes.map((c) => (

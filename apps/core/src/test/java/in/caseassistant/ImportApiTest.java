@@ -434,4 +434,26 @@ class ImportApiTest {
         mvc.perform(get("/api/imports/profiles").header("Authorization", sho1)).andExpect(jsonPath("$[?(@.id=='arrest-generic')].entity").value("arrest"))
                 .andExpect(jsonPath("$[?(@.id=='fir-generic')].entity").value("fir"));
     }
+
+    @Test
+    void aStationThatAsksForASecondApproverRefusesSelfApproval() throws Exception {
+        UUID b = stage(sho1, s1, GOOD);
+        send(sho1, "/api/policy-settings", Map.of("level", "station", "stationId", s1, "key", "import_self_approval", "value", 0,
+                "reason", "Fictional order on imports")).andExpect(status().isCreated());
+        commit(sho1, b).andExpect(status().isForbidden());
+        assertThat(db.sql("select status from import_batch where id = ?").param(b).query(String.class).single()).isEqualTo("staged");
+        commit(sp, b).andExpect(status().isOk());
+        // the policy can never be loosened again below it, and another station is not affected
+        send(sho1, "/api/policy-settings", Map.of("level", "station", "stationId", s1, "key", "import_self_approval", "value", 2,
+                "reason", "Fictional order on imports")).andExpect(status().isBadRequest());
+        UUID other = stage(sho2, s2, HEAD + "1,10/03/2024 10:00,IPC 379,Fictional theft,,,,Fictional Accused One,GD-5,open\n");
+        commit(sho2, other).andExpect(status().isOk());
+    }
+
+    @Test
+    void theSessionTellsWhoMaySetPolicies() throws Exception {
+        mvc.perform(get("/api/me").header("Authorization", sho1)).andExpect(jsonPath("$.can_set_policy").value(true));
+        mvc.perform(get("/api/me").header("Authorization", stateAdmin)).andExpect(jsonPath("$.can_set_policy").value(true));
+        mvc.perform(get("/api/me").header("Authorization", io)).andExpect(jsonPath("$.can_set_policy").value(false));
+    }
 }

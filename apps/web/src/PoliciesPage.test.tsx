@@ -5,7 +5,7 @@ import PoliciesPage from './PoliciesPage'
 import { setSession } from './api'
 
 // Fictional data only.
-beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'sho.one', full_name: 'SHO One', rank: 'Insp', role: 'sho', station_id: 's1' } }))
+beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'sho.one', full_name: 'SHO One', rank: 'Insp', role: 'sho', station_id: 's1', can_set_policy: true } }))
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); setSession(null) })
 
 const lists: Record<string, unknown> = {
@@ -92,4 +92,12 @@ test('a load failure is shown; an empty history says so', async () => {
   stub()
   render(<PoliciesPage />)
   expect(await screen.findByText('No changes you may see.')).toBeTruthy()
+})
+
+test('the form is not offered to someone who cannot set policies, but the values in force are shown', async () => {
+  stub()
+  setSession({ token: 't', user: { id: 'u2', username: 'io.one', full_name: 'IO One', rank: 'SI', role: 'io', station_id: 's1', can_set_policy: false } })
+  render(<PoliciesPage />)
+  expect(await screen.findByText('In force at your own station')).toBeTruthy()
+  expect(screen.queryByRole('form', { name: 'Make a policy stricter' })).toBeNull()
 })

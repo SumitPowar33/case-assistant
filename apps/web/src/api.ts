@@ -1,6 +1,6 @@
 // Every call carries the login token from the core app (POST /api/login). The AI gateway checks the same token.
 // The session lives in sessionStorage, so it ends when the browser tab closes; a 401 from either server ends it too.
-export type User = { id: string; username: string; full_name: string; rank: string; role: string; station_id: string | null; can_import?: boolean }
+export type User = { id: string; username: string; full_name: string; rank: string; role: string; station_id: string | null; can_import?: boolean; can_set_policy?: boolean }
 export type Session = { token: string; user: User }
 
 const KEY = 'case-assistant-session'

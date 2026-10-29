@@ -5,6 +5,10 @@
       "label": "Days after registration by which the victim must be updated (law: 90, BNSS 193(3)(ii)); a unit may only choose fewer",
       "default": 90, "min": 7, "max": 90
     },
+    "import_self_approval": {
+      "label": "Whether the person who checked an import file may also approve it (1 = yes, 0 = a second authorised person must approve); a unit may only choose 0",
+      "default": 1, "min": 0, "max": 1
+    },
     "session_hours": {
       "label": "Hours a sign-in lasts before the officer signs in again; a unit may only choose fewer",
       "default": 8, "min": 1, "max": 8

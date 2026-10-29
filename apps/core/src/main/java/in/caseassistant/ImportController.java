@@ -54,11 +54,13 @@ class ImportController {
     private final CaseTeam team;
     private final FirImport rules;
     private final ArrestImport arrests;
+    private final Policies policies;
     private final ObjectMapper json;
     private List<String[]> childLinks;
 
-    ImportController(JdbcClient db, CaseTeam team, FirImport rules, ArrestImport arrests, ObjectMapper json) {
+    ImportController(JdbcClient db, CaseTeam team, FirImport rules, ArrestImport arrests, Policies policies, ObjectMapper json) {
         this.db = db;
+        this.policies = policies;
         this.arrests = arrests;
         this.team = team;
         this.rules = rules;
@@ -287,6 +289,8 @@ class ImportController {
         if (!"staged".equals(db.sql("select status from import_batch where id = ?").param(id).query(String.class).single()))
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This batch is not waiting for approval.");
         UUID station = (UUID) b.get("station_id");
+        if (policies.effective(station, "import_self_approval") == 0 && me.equals(db.sql("select created_by from import_batch where id = ?").param(id).query(UUID.class).single()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "At this police station a second authorised person must approve a load that you checked.");
         boolean arrestBatch = "arrest".equals(b.get("entity"));
         int done = 0;
         for (var row : db.sql("select row_no, parsed::text as parsed from import_row where batch_id = ? and parsed is not null order by row_no")
