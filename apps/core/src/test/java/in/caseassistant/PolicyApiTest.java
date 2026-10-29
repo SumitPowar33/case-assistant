@@ -28,6 +28,7 @@ class PolicyApiTest {
     @Autowired ObjectMapper json;
     @Autowired JwtEncoder tokens;
     @Autowired AuthController auth;
+    @Autowired PolicyController controller;
     UUID s1, s2, s3;
     String stateAdmin, platformAdmin, sp, sho1, sho2, io;
 
@@ -185,5 +186,30 @@ class PolicyApiTest {
         mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON).content(login)).andExpect(jsonPath("$.expiresInSeconds").value(28800));
         set(sho1, "station", s1, null, "session_hours", 2).andExpect(status().isCreated());
         mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON).content(login)).andExpect(jsonPath("$.expiresInSeconds").value(7200));
+    }
+
+    @Test
+    void incompleteOrForeignUnitsAreRefusedAndAnInactiveOrUnknownUserManagesNothing() throws Exception {
+        set(platformAdmin, "station", null, null, "victim_update_days", 30).andExpect(status().isBadRequest());     // no station named
+        set(platformAdmin, "state", null, null, "victim_update_days", 30).andExpect(status().isCreated());
+        var body = "{\"level\":\"%s\",\"stateCode\":%s,\"key\":\"victim_update_days\",\"value\":20,\"reason\":\"Fictional internal order 8\"%s}";
+        for (String b : new String[] {body.formatted("state", "null", ""), body.formatted("district", "\" \"", ""),
+                body.formatted("state", "\"ZZ\"", ""), body.formatted("district", "\"IN\"", "")}) {                     // no state, blank state, unknown state, no district
+            mvc.perform(post("/api/policy-settings").header("Authorization", platformAdmin).contentType(MediaType.APPLICATION_JSON).content(b))
+                    .andExpect(status().isBadRequest());
+        }
+        // a state admin of another state cannot set the state "IN"
+        db.sql("insert into state_pack (code, name, version, languages) values ('XX','Other','1',array['en'])").update();
+        UUID other = db.sql("insert into police_station (state_code, district_id, name) values ('XX',district_id_of('XX','Far'),'Fictional Far PS') returning id")
+                .query(UUID.class).single();
+        String foreignAdmin = user("state_admin", other, "Fictional Far Admin");
+        set(foreignAdmin, "state", null, null, "victim_update_days", 20).andExpect(status().isForbidden());
+        // a deactivated user, or one that does not exist, manages nothing
+        UUID gone = db.sql("insert into app_user (station_id, full_name, rank, role, active) values (?,'Fictional Gone SHO','Insp','sho',false) returning id")
+                .param(s1).query(UUID.class).single();
+        assertThat(controller.mayManage(gone, "station", "IN", null, s1)).isFalse();
+        assertThat(controller.mayManage(UUID.randomUUID(), "state", "IN", null, null)).isFalse();
+        // a role that may set policies but has no station-or-district reach (platform admin has the admin right, so use an io) is refused
+        assertThat(controller.mayManage(db.sql("select id from app_user where full_name = 'Fictional IO'").query(UUID.class).single(), "station", "IN", null, s1)).isFalse();
     }
 }

@@ -541,4 +541,21 @@ class ImportApiTest {
         send(sho1, "/api/imports/inspect", Map.of("profile", "chargesheet-generic", "csv", CHEAD + "1,CS-1,20/04/2024,,A\n")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.suggested.report_no").value("Report No")).andExpect(jsonPath("$.suggested.filed_on").value("Filed On"));
     }
+
+    @Test
+    void arrestAndChargesheetRowsWithTooManyValuesAreErrorsAndAMappingMustNameRealColumns() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD)).andExpect(status().isOk());
+        UUID a = stageArrests(sho1, s1, AHEAD + "1,Fictional Accused One,06/03/2024,,,,,,,,less_than_10_years,extra\n");
+        UUID c = stageChargesheets(sho1, s1, CHEAD + "1,CS-1,10/04/2024,Fictional Court,Fictional Accused One,extra\n");
+        for (UUID b : new UUID[] {a, c})
+            mvc.perform(get("/api/imports/" + b + "/rows?status=error").header("Authorization", sho1)).andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].messages[?(@.text=='This row has more values than the header has columns.')]").exists());
+        var body = stageBody(s1, GOOD);
+        body.put("mapping", Map.of("fir_no", "FIR No"));                                                       // the other required fields are not chosen
+        send(sho1, "/api/imports", body).andExpect(status().isBadRequest());
+        var all = new LinkedHashMap<String, String>(Map.of("fir_no", "FIR No", "registered_at", "Registration Date", "sections", "Sections", "complaint_text", "Brief Facts"));
+        all.put("complainant_name", "No Such Column");                                                              // a mapped column that is not in the file
+        body.put("mapping", all);
+        send(sho1, "/api/imports", body).andExpect(status().isBadRequest());
+    }
 }
