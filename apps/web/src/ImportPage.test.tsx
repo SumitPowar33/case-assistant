@@ -138,3 +138,10 @@ test('an arrests batch is described as arrests, and its undo says so', async () 
   fireEvent.click(await screen.findByRole('button', { name: 'Open old.csv' }))
   expect(await screen.findByRole('button', { name: 'Approve and load 2 arrests' })).toBeTruthy()
 })
+
+test('a chargesheets batch is described as chargesheets', async () => {
+  stub([batch({ entity: 'chargesheet' })])
+  render(<ImportPage />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Open old.csv' }))
+  expect(await screen.findByRole('button', { name: 'Approve and load 2 chargesheets' })).toBeTruthy()
+})

@@ -1,0 +1,15 @@
+{
+  "id": "chargesheet-generic",
+  "label": "Chargesheets (CSV), generic - load the FIRs first",
+  "entity": "chargesheet",
+  "note": "One row per chargesheet (police report), keyed by FIR number and year of the chosen station. The accused it names must already be in the FIR.",
+  "fields": {
+    "fir_no": {"required": true, "aliases": ["fir_no", "fir no", "fir number", "fir_number", "crime no", "crime_no", "crime number"]},
+    "fir_year": {"aliases": ["fir_year", "year", "fir year", "crime year"]},
+    "report_no": {"required": true, "aliases": ["report_no", "report no", "chargesheet no", "charge sheet no", "chargesheet number", "cs no", "final report no", "police report no"]},
+    "filed_on": {"required": true, "aliases": ["filed_on", "filed on", "date of filing", "filing date", "chargesheet date", "charge sheet date", "date of chargesheet", "submitted on"]},
+    "court": {"aliases": ["court", "court name", "filed in court", "name of court"]},
+    "accused_names": {"required": true, "aliases": ["accused_names", "accused", "name of accused", "accused charged", "accused named", "charged"]},
+    "source_key": {"aliases": ["source_key", "id", "old id", "old_id", "record id", "legacy id", "source id"]}
+  }
+}

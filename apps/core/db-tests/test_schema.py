@@ -612,7 +612,7 @@ def test_an_imported_arrest_may_have_no_arresting_officer_but_a_typed_one_may_no
                       VALUES (%s,now(),'x','{x}','x','life',%s)""", (a2, io))
     with pytest.raises(psycopg.errors.CheckViolation):
         db.execute("""INSERT INTO import_batch(station_id,entity,profile,filename,file_sha256,complaint_language,rows_total,created_by)
-                      VALUES (%s,'chargesheet','p','a.csv','00','en',1,%s)""", (st, io))
+                      VALUES (%s,'notice','p','a.csv','00','en',1,%s)""", (st, io))
 
 
 def test_an_imported_arrest_is_deleted_only_by_the_undo_of_its_batch(db):
@@ -639,3 +639,33 @@ def test_an_imported_arrest_is_still_kept_as_written_and_a_concluded_case_has_no
     assert one(db, "SELECT count(*) FROM case_deadline WHERE kind='chargesheet_custody'")[0] == 1
     db.execute("UPDATE fir SET concluded = true WHERE id=%s", (fir,))
     assert one(db, "SELECT count(*) FROM case_deadline WHERE kind='chargesheet_custody'")[0] == 0
+
+
+def test_an_imported_chargesheet_is_deleted_only_by_the_undo_of_its_batch(db):
+    st, io, fir = seed_case(db)
+    a1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A1','Demo Accused') RETURNING id", fir)[0]
+    batch = one(db, """INSERT INTO import_batch(station_id,entity,profile,filename,file_sha256,complaint_language,rows_total,created_by)
+                       VALUES (%s,'chargesheet','chargesheet-generic','c.csv','00','en',1,%s) RETURNING id""", st, io)[0]
+    cs = one(db, "INSERT INTO chargesheet(fir_id,filed_on,court,report_no,recorded_by,import_batch_id) VALUES (%s,'2026-09-30','Demo Court','CS-1',%s,%s) RETURNING id", fir, io, batch)[0]
+    db.execute("INSERT INTO chargesheet_accused(chargesheet_id,person_id) VALUES (%s,%s)", (cs, a1))
+    typed = one(db, "INSERT INTO chargesheet(fir_id,filed_on,court,report_no,recorded_by) VALUES (%s,'2026-09-30','Demo Court','CS-2',%s) RETURNING id", fir, io)[0]
+    db.execute("INSERT INTO chargesheet_accused(chargesheet_id,person_id) VALUES (%s,%s)", (typed, a1))
+    for sql in ("DELETE FROM chargesheet_accused WHERE chargesheet_id=%s", "DELETE FROM chargesheet WHERE id=%s", "UPDATE chargesheet SET court='x' WHERE id=%s"):
+        with pytest.raises(psycopg.errors.RaiseException):   # not while the batch stands
+            db.execute(sql, (cs,))
+    db.execute("UPDATE import_batch SET status='imported', approved_by=%s WHERE id=%s", (io, batch))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM chargesheet WHERE id=%s", (cs,))
+    db.execute("UPDATE import_batch SET status='undone', undone_by=%s, undone_at=now(), undo_reason='Fictional wrong file' WHERE id=%s", (io, batch))
+    with pytest.raises(psycopg.errors.RaiseException):       # the undo may remove the batch's own records only
+        db.execute("DELETE FROM chargesheet_accused WHERE chargesheet_id=%s", (typed,))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM chargesheet WHERE id=%s", (typed,))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE chargesheet SET court='x' WHERE id=%s", (cs,))
+    db.execute("DELETE FROM chargesheet_accused WHERE chargesheet_id=%s", (cs,))
+    db.execute("DELETE FROM chargesheet WHERE id=%s", (cs,))
+    assert one(db, "SELECT count(*) FROM chargesheet")[0] == 1
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("""INSERT INTO import_batch(station_id,entity,profile,filename,file_sha256,complaint_language,rows_total,created_by)
+                      VALUES (%s,'notice','p','c.csv','00','en',1,%s)""", (st, io))

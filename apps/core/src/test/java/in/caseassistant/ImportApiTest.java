@@ -456,4 +456,89 @@ class ImportApiTest {
         mvc.perform(get("/api/me").header("Authorization", stateAdmin)).andExpect(jsonPath("$.can_set_policy").value(true));
         mvc.perform(get("/api/me").header("Authorization", io)).andExpect(jsonPath("$.can_set_policy").value(false));
     }
+
+    // ---- chargesheets file -----------------------------------------------------------------------------------------
+
+    static final String CHEAD = "FIR No,Report No,Filed On,Court,Accused\n";
+
+    UUID stageChargesheets(String who, UUID station, String csv) throws Exception {
+        var body = stageBody(station, csv);
+        body.put("profile", "chargesheet-generic");
+        body.put("filename", "old-chargesheets.csv");
+        return UUID.fromString(json.readTree(send(who, "/api/imports", body).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText());
+    }
+
+    long custodyClocks(int firNo) {
+        return db.sql("select count(*) from case_deadline where fir_id = ? and kind = 'chargesheet_custody'").param(firId(firNo)).query(Long.class).single();
+    }
+
+    @Test
+    void aChargesheetEndsTheCustodyClockOfTheAccusedItNamesAndCanBeUndone() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        commit(sho1, stageArrests(sho1, s1, AHEAD + "1,Fictional Accused One,06/03/2024 18:30,,,,,07/03/2024,,,less_than_10_years\n"));
+        assertThat(custodyClocks(1)).isEqualTo(1);
+        UUID b = stageChargesheets(sho1, s1, CHEAD
+                + "1,CS-12/2024,20/04/2024,Fictional JMFC Court,Fictional Accused One\n"
+                + "1,CS-13/2024,21/04/2024,,Fictional Stranger\n"
+                + "9,CS-14/2024,21/04/2024,,Fictional Accused One\n");
+        mvc.perform(get("/api/imports/" + b).header("Authorization", sho1)).andExpect(jsonPath("$.entity").value("chargesheet"))
+                .andExpect(jsonPath("$.rows_ok").value(1)).andExpect(jsonPath("$.rows_error").value(2));
+        assertThat(db.sql("select count(*) from chargesheet").query(Long.class).single()).as("nothing before approval").isZero();
+        commit(sho1, b).andExpect(status().isOk()).andExpect(jsonPath("$.rows_imported").value(1));
+        var cs = db.sql("select * from chargesheet").query().singleRow();
+        assertThat(cs.get("report_no")).isEqualTo("CS-12/2024");
+        assertThat(cs.get("import_batch_id")).isEqualTo(b);
+        assertThat(cs.get("recorded_by")).isNotNull();
+        assertThat(db.sql("select count(*) from chargesheet_accused").query(Long.class).single()).isEqualTo(1);
+        assertThat(custodyClocks(1)).as("the named accused is no longer counted down").isZero();
+        mvc.perform(get("/api/firs/" + firId(1) + "/chargesheets").header("Authorization", sho1)).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].accused").value("A1")).andExpect(jsonPath("$[0].court").value("Fictional JMFC Court"));
+        // the FIR and arrest batches cannot be undone while a chargesheet hangs on them; the chargesheet batch can
+        UUID firBatch = db.sql("select id from import_batch where entity = 'fir'").query(UUID.class).single();
+        send(sho1, "/api/imports/" + firBatch + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isConflict());
+        send(sho1, "/api/imports/" + b + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("undone"));
+        assertThat(db.sql("select count(*) from chargesheet").query(Long.class).single()).isZero();
+        assertThat(db.sql("select count(*) from chargesheet_accused").query(Long.class).single()).isZero();
+        assertThat(custodyClocks(1)).as("the clock is back").isEqualTo(1);
+    }
+
+    @Test
+    void theSameChargesheetAgainIsSkippedAndTwiceInOneFileIsAnError() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        String row = "1,CS-12/2024,20/04/2024,Fictional JMFC Court,Fictional Accused One; Fictional Accused Two\n";
+        commit(sho1, stageChargesheets(sho1, s1, CHEAD + row)).andExpect(status().isOk());
+        UUID again = stageChargesheets(sho1, s1, CHEAD + row);
+        mvc.perform(get("/api/imports/" + again + "/rows?status=duplicate").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("same content"))));
+        UUID differs = stageChargesheets(sho1, s1, CHEAD + "1,cs-12/2024,21/04/2024,Other Court,Fictional Accused One\n");
+        mvc.perform(get("/api/imports/" + differs + "/rows?status=duplicate").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("already recorded"))));
+        send(sho1, "/api/imports/" + again + "/commit", Map.of("authority", "Order 13/2026 of the Fictional SP")).andExpect(status().isConflict());
+        UUID twice = stageChargesheets(sho1, s1, CHEAD + "1,CS-20/2024,20/04/2024,,Fictional Accused One\n1,cs-20/2024,20/04/2024,,Fictional Accused Two\n");
+        mvc.perform(get("/api/imports/" + twice).header("Authorization", sho1)).andExpect(jsonPath("$.rows_error").value(1)).andExpect(jsonPath("$.rows_warning").value(1));
+        assertThat(db.sql("select count(*) from chargesheet").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void aChargesheetBatchCannotBeUndoneOnceItWasCorrected() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        UUID b = stageChargesheets(sho1, s1, CHEAD + "1,CS-12/2024,20/04/2024,Fictional JMFC Court,Fictional Accused One\n");
+        commit(sho1, b).andExpect(status().isOk());
+        UUID cs = db.sql("select id from chargesheet").query(UUID.class).single();
+        UUID one = db.sql("select id from person where full_name = 'Fictional Accused One'").query(UUID.class).single();
+        send(sho1, "/api/firs/" + firId(1) + "/chargesheets/" + cs + "/corrections",
+                Map.of("filedOn", "2024-04-21", "court", "Fictional Sessions Court", "reportNo", "CS-12/2024", "accusedIds", java.util.List.of(one), "reason", "Fictional wrong court")).andExpect(status().isCreated());
+        send(sho1, "/api/imports/" + b + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isConflict());
+        assertThat(db.sql("select count(*) from chargesheet").query(Long.class).single()).isEqualTo(2);
+    }
+
+    @Test
+    void chargesheetsCanOnlyBeLoadedByTheStationsOwnLeaders() throws Exception {
+        var body = stageBody(s1, CHEAD + "1,CS-1,20/04/2024,,Fictional Accused One\n");
+        body.put("profile", "chargesheet-generic");
+        send(sho2, "/api/imports", body).andExpect(status().isForbidden());
+        send(io, "/api/imports", body).andExpect(status().isForbidden());
+        send(sho1, "/api/imports/inspect", Map.of("profile", "chargesheet-generic", "csv", CHEAD + "1,CS-1,20/04/2024,,A\n")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggested.report_no").value("Report No")).andExpect(jsonPath("$.suggested.filed_on").value("Filed On"));
+    }
 }

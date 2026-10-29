@@ -18,7 +18,7 @@ const STATUS: Record<string, string> = {
 }
 
 /**
- * Loading existing FIRs, then their arrests, from CSV files, in deliberate steps: choose the file and match its columns, read the checked
+ * Loading existing FIRs, then their arrests and chargesheets, from CSV files, in deliberate steps: choose the file and match its columns, read the checked
  * result, approve it with the authority for the load. Nothing reaches the cases before the approval, and an
  * imported batch can be undone until work is recorded on it. The server decides who may do this.
  */
@@ -105,11 +105,11 @@ export default function ImportPage() {
 
   const profile = profiles.find((p) => p.id === file?.form.profile)
   const importable = batch ? batch.rows_ok + batch.rows_warning : 0
-  const things = (b: Batch) => (b.entity === 'arrest' ? 'arrests' : 'FIRs')
+  const things = (b: Batch) => (b.entity === 'arrest' ? 'arrests' : b.entity === 'chargesheet' ? 'chargesheets' : 'FIRs')
   return (
     <section aria-labelledby="import-h">
       <h2 id="import-h">Load existing records</h2>
-      <p>Load FIRs, and then their arrests, from an old register or system as CSV files. Load the FIRs first: an arrest file is matched to the FIR number and the accused already in the system.
+      <p>Load FIRs, then their arrests and chargesheets, from an old register or system as CSV files. Load the FIRs first: the other files are matched to the FIR number and the accused already in the system.
         The file is checked row by row first and nothing is added to the cases until a person approves it. Existing records are never changed.
         Use fictional data until your department has a data agreement.</p>
       {error && <p role="alert">{error}</p>}

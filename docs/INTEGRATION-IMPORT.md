@@ -43,5 +43,13 @@ Same screen, same four steps; choose the layout "Arrests (CSV), generic". Load t
 - **Recorded by.** The approving officer is recorded as having entered the memo, the remand and the release; the arresting officer is only who the file names.
 - **Undo.** Deletes the batch's arrests (the only case in which the database lets an arrest memo be deleted: its batch is already marked undone). Refused when a correction exists, or when someone has recorded a first remand or release on an imported arrest after the approval. An FIR batch cannot be undone while arrests hang on its people.
 
+## Chargesheets file (third file, 29 Oct 2026)
+Layout "Chargesheets (CSV), generic". Load the FIRs first (and the arrests, if you have them). Code: `ChargesheetImport`, migration V25, `chargesheet-generic.json`. Required columns: `fir_no`, `report_no`, `filed_on`, `accused_names` (separated by `;`, by name or by label A1, A2). Optional: `fir_year`, `court`, `source_key`.
+- A chargesheet names accused who are **already in the FIR**; nobody is created. Unknown or ambiguous names are errors; accused of the FIR that are not named get a note (their custody limit is not ended).
+- It does what a typed one does: it ends the BNSS 187(3) custody limit of the accused it names and the BNSS 193(2) limit of the case, so an old arrest followed by an old chargesheet shows no false running clock. Load the chargesheets after the arrests.
+- Errors: filing date unreadable, in the future or before the FIR day; report number missing or over 60 characters. A missing court is stored as "Not in the old record" with a warning (court names over 200 characters are cut).
+- Repeats: same FIR and report number (ignoring case and spaces) already recorded = skipped (same content "already imported", otherwise "not changed"); twice in one file = error. Corrections stay the job of the correction screen, never of an import.
+- Undo: removes the batch's chargesheets and their accused lists (again the only case in which the database lets those rows be deleted: the batch is already marked undone). Refused when a correction replaced one of them. An FIR or arrest batch cannot be undone while a chargesheet hangs on its people or FIRs.
+
 ## Not built yet
-Separate files for chargesheets, evidence and notices keyed by FIR (arrests are done); fuzzy (spelling-variant) duplicate people and duplicates across stations (only exact normalised names are flagged); a direct state-database connector; Excel files; paging beyond 500 rows in the screen; purge of old batches after a retention period.
+Separate files for evidence and notices keyed by FIR (arrests and chargesheets are done); fuzzy (spelling-variant) duplicate people and duplicates across stations (only exact normalised names are flagged); a direct state-database connector; Excel files; paging beyond 500 rows in the screen; purge of old batches after a retention period.
