@@ -8,25 +8,32 @@ Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and S
 Started from `setup/seed` at 1eeb2bc. The sandbox was empty: started PostgreSQL, created role `caseapp` (superuser) and databases `caseapp_test`/`caseapp_dev`, installed `psycopg[binary]` and the gateway requirements, `npm ci`. Baseline `scripts/test-all.sh`: all 7 lines PASS.
 
 Done
-- Jurisdiction as data (V23): new `district` table (id, state, name; unique per state ignoring letter case and spaces). `police_station.district_id` and `policy_setting.district_id` replace the free-text district; state codes in policies now reference `state_pack`. Old rows are moved by the migration (two spellings of one district become one). The SP's reach (`CaseTeam`), district policies (`Policies`, `PolicyController`, `effective_policy_days`) and station creation all use the id. The API still takes and returns the district name (web unchanged); `district_id_of(state, name)` finds or creates it.
-- Tests: db tests for name matching, rename keeping stations and policies, and the V23 backfill from V22 data; API tests for a district named in another letter case, rename keeping a policy, and a second spelling at station creation not making a second district. `MigrationTest` expects version 23.
-- Final `scripts/test-all.sh`: all 7 lines PASS. No coverage gate raised.
+- Jurisdiction as data (V23): new `district` table (id, state, name; unique per state ignoring letter case and spaces). `police_station.district_id` and `policy_setting.district_id` replace the free-text district; state codes in policies now reference `state_pack`. Old rows are moved by the migration (two spellings of one district become one). The SP's reach (`CaseTeam`), district policies and station creation use the id. The API still takes and returns the district name (web unchanged); `district_id_of(state, name)` finds or creates it.
+- Sumit answered later the same night: arrests first, decide the other open points myself. Built, in this order:
+  1. **Arrests import** (V24, `ArrestImport`, profile `arrest-generic`): a file keyed by FIR number (and year) of the chosen station, one row per arrest, same stage/check/approve/undo flow. The accused must already be in the FIR (nobody is created from this file); missing place/grounds/person informed are stored as "Not in the old record" with a warning; the arresting officer may be empty (allowed in the database only for imported arrests); the class of punishment comes from the file or, with a warning, from the FIR's sections; date-order checks; repeat key = accused + IST day. Undo deletes the batch's arrests (database allows the delete only after the batch is marked undone) and is refused after a correction, or after a remand or release was recorded on an imported arrest. V24 also fixes a real gap: the custody deadline view ignored `concluded`, so an old concluded case would have shown a 60/90-day clock.
+  2. **Chargesheets import** (V25, `ChargesheetImport`, profile `chargesheet-generic`): same idea; it names accused already in the FIR and ends their custody clock and the 193(2) clock like a typed chargesheet. Undo refused after a correction. Done so imported old arrests do not show a false running clock.
+  3. **Second approver** (your open question 3, my decision): policy `import_self_approval`, default 1 (same person may approve). A state, district or station can set it to 0 through the Policies page; then the person who checked a file cannot approve it. Default left permissive so small stations are not blocked.
+  4. **Policy form hidden** (open question 2, my decision) for people without the right to set policies (`can_set_policy` in login and `/api/me`); the values in force stay visible to everyone. The server check is unchanged.
+- Web: wording follows the file type (FIRs, arrests, chargesheets); an arrest without an officer reads "officer not in the old record".
+- Tests: unit (`ArrestImportTest` 8, `ChargesheetImportTest` 5), API (import suite now 30 tests: arrests, chargesheets, duplicates, undo guards, second approver, `can_set_policy`), database (arrest and chargesheet delete rules, V23 backfill), web (+4), pack test now checks all three layouts. Final `scripts/test-all.sh`: all 7 lines PASS. Coverage: core 97% lines / 90% branches, web 99% / 84% branches / 94% functions, gateway 94%. Raised gates: core branches 85 to 88, web branches 80 to 82.
 
 Deliberately skipped / not checked
-- No screen to rename or list districts yet (a rename is a database action only). No new dependency. The web screens were not run in a browser. Seed packs do not list districts; they are created with the first station.
+- Not seen in a real browser. The "language of the complaint text" box still shows for arrest and chargesheet files (it is ignored there). No screen to rename a district (database only); I judged it low value, so question 4 of the earlier list is dropped unless you want it.
+- Imported arrests: a row with a first remand and no release date in an open case is treated as still in custody (the row warns about it); if the old export simply omits release dates, the officer must add them, or the deadline list will show false deadlines. A person whose session was opened before this release has no `can_set_policy` until they sign in again, so they will not see the policy form until then.
+- Not built: evidence and notices files; fuzzy duplicate people; a real state export profile (needs a sample layout from a department); correction of time of arrest; end-to-end browser test; `ai.cloud_allowed`.
 
 Next
-1. Import phase 2: arrests file keyed by FIR (needs question 1 below).
-2. Correction of time of arrest; end-to-end browser test; `ai.cloud_allowed` policy.
+1. Evidence and notices files keyed by FIR (same pattern), or correction of time of arrest: your pick.
+2. End-to-end browser test of the Load data screen with the three files in order (FIRs, arrests, chargesheets).
+3. `ai.cloud_allowed` policy and the gateway refusing a cloud provider when it is off.
 
 Blocked
-- Item 1 waits for your answer. Live Claude/Gemini calls wait for API keys (using `fake`).
+- Live Claude/Gemini calls wait for API keys (using `fake`).
 
 Questions for Sumit
-1. (Open) Arrests first or chargesheets first for the import files?
-2. (Open) Hide the policy form for people who cannot set policies?
-3. (Open) Second person to approve an import?
-4. Should a state admin be able to rename a district from the admin page?
+1. Should the second-approver policy be switched on (value 0) for the state or district you will pilot in? Default stays "same person may approve".
+2. Can you get a sample (fictional or masked) export from a pilot department's CCTNS or state system? A real column layout lets me write a state profile instead of the generic ones.
+3. Next after imports: evidence and notices files, or correction of time of arrest?
 
 ## 29 Oct 2026, session 23 (scheduled nightly build, Sumit away)
 Started from `setup/seed` at 349c122. The sandbox was empty: started PostgreSQL, created role `caseapp` and databases `caseapp_test`/`caseapp_dev`, installed `psycopg[binary]`, the gateway `requirements.txt` (note: `requirements-dev.txt` alone lacks fastapi/httpx) and `npm ci`. Baseline `scripts/test-all.sh`: all 7 lines PASS. (Hint: do not export `DATABASE_URL` as a postgresql:// URL for the whole shell; Spring reads it and fails with "url must start with jdbc".)
