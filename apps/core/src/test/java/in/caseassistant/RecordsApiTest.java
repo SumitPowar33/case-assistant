@@ -257,6 +257,33 @@ class RecordsApiTest {
     }
 
     @Test
+    void wrongTimeOfArrestIsFixedByTimeCorrectionsAndLaterChecksUseTheNewTime() throws Exception {
+        String a1 = idOf(send("/people", "{\"role\":\"accused\",\"label\":\"A1\",\"identityKnown\":false}", 201));
+        String arrest = idOf(send("/arrests", """
+                {"personId":"%s","arrestedAt":"2026-10-02T10:00:00+05:30","place":"Testpur","grounds":["proper investigation"],
+                 "informedName":"Fictional Relative","maxPunishment":"less_than_10_years"}""".formatted(a1), 201));
+        send("/arrests/" + arrest + "/first-remand", "{\"firstRemandOn\":\"2026-10-03\"}", 204);
+        String fix = "{\"arrestedAt\":\"%s\",\"reason\":\"%s\"}";
+        String why = "the memo was typed a day late";
+        send("/arrests/" + arrest + "/time-corrections", fix.formatted("2026-10-01T22:00:00+05:30", "typo"), 400);            // reason too short
+        send("/arrests/" + arrest + "/time-corrections", fix.formatted("2099-10-01T22:00:00+05:30", why), 400);                // future
+        send("/arrests/" + arrest + "/time-corrections", fix.formatted("2026-10-04T10:00:00+05:30", why), 400);                // after the remand on record
+        send("/arrests/" + UUID.randomUUID() + "/time-corrections", fix.formatted("2026-10-01T22:00:00+05:30", why), 404);
+        send("/arrests/" + arrest + "/corrections", "{\"firstRemandOn\":\"2026-10-01\",\"maxPunishment\":\"life\",\"reason\":\"remand was a day earlier\"}", 400);
+        send("/arrests/" + arrest + "/time-corrections", fix.formatted("2026-10-01T22:00:00+05:30", why), 201);
+        send("/arrests/" + arrest + "/time-corrections", fix.formatted("2026-10-01T21:00:00+05:30", "second look at the memo"), 201);
+        mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", auth))
+                .andExpect(jsonPath("$[0].time_corrected").value(true)).andExpect(jsonPath("$[0].first_remand_on").value("2026-10-03"));
+        mvc.perform(get("/api/firs/" + fir + "/arrests/time-corrections").header("Authorization", auth))
+                .andExpect(jsonPath("$.length()").value(2)).andExpect(jsonPath("$[0].reason").value(why));
+        // The remand and release are now checked against the corrected day (1 Oct), not the memo's 2 Oct.
+        send("/arrests/" + arrest + "/corrections", "{\"firstRemandOn\":\"2026-10-01\",\"maxPunishment\":\"life\",\"reason\":\"remand was a day earlier\"}", 201);
+        send("/arrests/" + arrest + "/corrections", "{\"firstRemandOn\":\"2026-09-30\",\"maxPunishment\":\"life\",\"reason\":\"remand was two days earlier\"}", 400);
+        mvc.perform(post("/api/firs/" + fir + "/arrests/" + arrest + "/time-corrections").header("Authorization", TestAuth.bearer(tokens, UUID.randomUUID()))
+                .contentType(MediaType.APPLICATION_JSON).content(fix.formatted("2026-10-01T22:00:00+05:30", why))).andExpect(status().is4xxClientError());
+    }
+
+    @Test
     void electronicEvidenceNeedsHashAndBecomesCourtReadyWithBothCertificates() throws Exception {
         String base = "\"label\":\"E-01\",\"description\":\"Fictional phone\",\"kind\":\"electronic\",\"seizedAt\":\"2026-10-02T10:00:00Z\",\"seizureMemo\":\"SM-1\"";
         send("/evidence", "{" + base + "}", 400);

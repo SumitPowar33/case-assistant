@@ -156,6 +156,25 @@ test('a memo correction starts from the memo, sends place, grounds and informed 
     informedContact: null, reason: 'place was the bus stand' } }])
 })
 
+test('a time correction sends the new time in IST with a reason and shows the history', async () => {
+  const writes = stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+    { ...base, id: 'a1', first_remand_on: null, chargesheet_last_day: null, released_on: null, release_basis: null, chargesheet_filed_on: null, corrected: false, time_corrected: true },
+  ], '/firs/f1/arrests/time-corrections': [
+    { id: 't1', arrest_id: 'a1', arrested_at: '2026-09-11T16:30:00Z', reason: 'memo typed a day late', recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' },
+    { id: 't2', arrest_id: 'other', arrested_at: '2026-09-10T16:30:00Z', reason: 'belongs to another arrest', recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' },
+  ] }, { status: 201, body: { id: 't3' } })
+  const saved = vi.fn()
+  render(<Arrests firId="f1" version={0} onSaved={saved} />)
+  expect(await screen.findByText(/Reason: memo typed a day late/)).toBeTruthy()
+  expect(screen.queryByText(/belongs to another arrest/)).toBeNull()
+  const form = screen.getByText('Correct the time of arrest').closest('details')!
+  type(/Arrested \(date and time/, '2026-09-11T22:00', within(form))
+  type(/Why this is being corrected/, 'memo typed a day late', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(saved).toHaveBeenCalled())
+  expect(writes).toEqual([{ url: '/api/firs/f1/arrests/a1/time-corrections', body: { arrestedAt: '2026-09-11T22:00:00+05:30', reason: 'memo typed a day late' } }])
+})
+
 test('an imported arrest without an arresting officer says so', async () => {
   stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
     { ...base, id: 'a3', place: 'Oldpur', arresting_officer_name: null, first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-12' },

@@ -10,6 +10,7 @@ type Arrest = {
   informed_contact: string | null; arresting_officer_name: string | null; max_punishment: string; first_remand_on: string | null
   chargesheet_last_day: string | null; earlier_custody_days: number; remand_recorded_by_name: string | null
   released_on: string | null; release_basis: string | null; chargesheet_filed_on: string | null; corrected: boolean; memo_corrected: boolean
+  time_corrected: boolean
 }
 type Correction = {
   id: string; arrest_id: string; first_remand_on: string | null; max_punishment: string; released_on: string | null
@@ -19,6 +20,7 @@ type MemoFix = {
   id: string; arrest_id: string; place: string; grounds: string[]; informed_name: string | null; informed_contact: string | null
   reason: string; recorded_at: string; recorded_by_name: string
 }
+type TimeFix = { id: string; arrest_id: string; arrested_at: string; reason: string; recorded_at: string; recorded_by_name: string }
 type Person = { id: string; role: string; label: string; display_name: string }
 type Hint = { suggested: string | null; sections: { section: string; class: string }[]; unknown: string[] }
 
@@ -79,7 +81,7 @@ function CorrectionForm({ firId, arrest, onSaved }: { firId: string; arrest: Arr
 
 /**
  * Fixes a wrong place, grounds or informed person on the memo. The memo stays on record; the newest version counts.
- * The person arrested and the time of arrest cannot be changed here.
+ * The person arrested cannot be changed here; the time of arrest has its own correction.
  */
 function MemoCorrectionForm({ firId, arrest, onSaved }: { firId: string; arrest: Arrest; onSaved: () => void }) {
   const [grounds, setGrounds] = useState(arrest.grounds.join('\n'))
@@ -97,7 +99,21 @@ function MemoCorrectionForm({ firId, arrest, onSaved }: { firId: string; arrest:
       <label>Relative or friend informed (BNSS 48) <input name="informed" required defaultValue={arrest.informed_name ?? ''} /></label>
       <label>Their phone or address <input name="contact" defaultValue={arrest.informed_contact ?? ''} /></label>
       <label>Why this is being corrected <input name="reason" required minLength={10} /></label>
-      <p><small>The earlier memo stays on record with your reason. The person arrested and the time of arrest cannot be changed.</small></p>
+      <p><small>The earlier memo stays on record with your reason. The person arrested cannot be changed; use "Correct the time of arrest" for the time.</small></p>
+    </Form>
+  )
+}
+
+/** Fixes a wrong time of arrest. The memo keeps the time as written; the newest counts. The server refuses a time after a remand or release already recorded. */
+function TimeCorrectionForm({ firId, arrest, onSaved }: { firId: string; arrest: Arrest; onSaved: () => void }) {
+  return (
+    <Form title="Correct the time of arrest" onSaved={onSaved}
+      submit={(f) => send(`/firs/${firId}/arrests/${arrest.id}/time-corrections`, 'POST', {
+        arrestedAt: istIso(String(f.get('arrested'))), reason: text(f, 'reason'),
+      })}>
+      <label>Arrested (date and time, IST) <input name="arrested" type="datetime-local" required /></label>
+      <label>Why this is being corrected <input name="reason" required minLength={10} /></label>
+      <p><small>The earlier time stays on record with your reason. The date of arrest decides the earliest date a remand or release can have.</small></p>
     </Form>
   )
 }
@@ -155,6 +171,7 @@ export default function Arrests({ firId, version, onSaved }: { firId: string; ve
   const { data, error } = useLoad<Arrest[]>(`/firs/${firId}/arrests`, version)
   const { data: people } = useLoad<Person[]>(`/firs/${firId}/people`, version)
   const { data: memoFixes } = useLoad<MemoFix[]>(`/firs/${firId}/arrests/memo-corrections`, version)
+  const { data: timeFixes } = useLoad<TimeFix[]>(`/firs/${firId}/arrests/time-corrections`, version)
   const { data: fixes } = useLoad<Correction[]>(`/firs/${firId}/arrests/corrections`, version)
   const { data: hint } = useLoad<Hint>(`/firs/${firId}/punishment-hint`, version)
   return (
@@ -177,10 +194,14 @@ export default function Arrests({ firId, version, onSaved }: { firId: string; ve
             {(memoFixes ?? []).filter((c) => c.arrest_id === a.id).map((c) => (
               <small key={c.id}><br />Memo corrected {fmt(c.recorded_at)} by {c.recorded_by_name}: place {c.place}; grounds {c.grounds.join('; ')}{c.informed_name ? `; informed ${c.informed_name}` : ''}. Reason: {c.reason}</small>
             ))}
+            {(timeFixes ?? []).filter((c) => c.arrest_id === a.id).map((c) => (
+              <small key={c.id}><br />Time of arrest corrected {fmt(c.recorded_at)} by {c.recorded_by_name}: {fmt(c.arrested_at)}. Reason: {c.reason}</small>
+            ))}
             {!a.corrected && !a.first_remand_on && <RemandForm firId={firId} arrest={a} onSaved={onSaved} />}
             {!a.corrected && !a.released_on && <ReleaseForm firId={firId} arrest={a} onSaved={onSaved} />}
             <CorrectionForm firId={firId} arrest={a} onSaved={onSaved} />
             <MemoCorrectionForm firId={firId} arrest={a} onSaved={onSaved} />
+            <TimeCorrectionForm firId={firId} arrest={a} onSaved={onSaved} />
           </li>
         ))}</ul>
       )}

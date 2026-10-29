@@ -408,6 +408,41 @@ def test_memo_corrections_replace_without_changing_the_memo(db):
         db.execute("DELETE FROM arrest_memo_correction")
 
 
+def test_time_corrections_replace_the_time_and_later_checks_use_it(db):
+    st, io, fir = seed_case(db)
+    a1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A1','Demo One') RETURNING id", fir)[0]
+    ar = one(db, """INSERT INTO arrest(person_id,arrested_at,place,grounds,informed_name,arresting_officer,max_punishment,first_remand_on,
+                      remand_recorded_by,remand_recorded_at)
+                    VALUES (%s,'2026-09-01 10:00+05:30','Demo place','{x}','Demo relative',%s,'life','2026-09-02',%s,now()) RETURNING id""", a1, io, io)[0]
+    now = lambda: one(db, "SELECT ist_date(arrested_at), time_correction_id FROM arrest_current WHERE id=%s", ar)
+    assert now() == (dt.date(2026, 9, 1), None)
+    ins = "INSERT INTO arrest_time_correction(arrest_id,supersedes,arrested_at,reason,recorded_by) VALUES (%s,%s,%s,%s,%s) RETURNING id"
+    with pytest.raises(psycopg.errors.CheckViolation):   # a reason is needed
+        db.execute(ins, (ar, None, "2026-08-31 22:00+05:30", "typo", io))
+    with pytest.raises(psycopg.errors.CheckViolation):   # not in the future
+        db.execute(ins, (ar, None, "2099-01-01 10:00+05:30", "wrong year typed in", io))
+    with pytest.raises(psycopg.errors.CheckViolation):   # not after the remand already on record (2 Sep)
+        db.execute(ins, (ar, None, "2026-09-03 10:00+05:30", "memo date was later", io))
+    c1 = one(db, ins, ar, None, "2026-08-31 22:00+05:30", "arrest was the night before", io)[0]
+    assert now()[0] == dt.date(2026, 8, 31) and now()[1] == c1
+    assert one(db, "SELECT arrested_at FROM arrest WHERE id=%s", ar)[0] == one(db, "SELECT '2026-09-01 10:00+05:30'::timestamptz")[0]   # memo untouched
+    with pytest.raises(psycopg.errors.UniqueViolation):   # the first correction can only be made once
+        db.execute(ins, (ar, None, "2026-08-31 21:00+05:30", "second first correction", io))
+    one(db, ins, ar, c1, "2026-09-01 08:00+05:30", "back to the morning of 1 Sep", io)
+    assert now()[0] == dt.date(2026, 9, 1)
+    with pytest.raises(psycopg.errors.UniqueViolation):   # c1 has already been replaced
+        db.execute(ins, (ar, c1, "2026-09-01 07:00+05:30", "replacing it a second time", io))
+    with pytest.raises(psycopg.errors.CheckViolation):    # a correction must replace one of the same arrest
+        db.execute(ins, (ar, uuid.uuid4(), "2026-09-01 07:00+05:30", "replacing something else", io))
+    # A remand correction is now checked against the corrected day, not the memo's.
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("INSERT INTO arrest_correction(arrest_id,first_remand_on,max_punishment,reason,recorded_by) VALUES (%s,'2026-08-31','life','remand was earlier',%s)", (ar, io))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE arrest_time_correction SET reason='something else entirely'")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM arrest_time_correction")
+
+
 def test_closure_report_is_kept_once_and_ends_only_the_two_month_limit(db):
     st, io, fir = seed_case(db, sexual=True)
     ins = "INSERT INTO closure_report(fir_id,filed_on,court,report_no,ground,reason,recorded_by) VALUES (%s,%s,'Demo Court','FR-1',%s,%s,%s)"

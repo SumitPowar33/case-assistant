@@ -45,6 +45,9 @@ class RecordsController {
     record MemoCorrection(@NotBlank String place, @NotEmpty List<@NotBlank String> grounds, @NotBlank String informedName,
                           String informedContact, @NotBlank String reason) {}
 
+    /** A correction of the time of arrest; the newest counts. The IST day of it is what remand and release are checked against. */
+    record TimeCorrection(@NotNull OffsetDateTime arrestedAt, @NotBlank String reason) {}
+
     record ChargesheetCorrection(@NotNull LocalDate filedOn, @NotBlank @Size(max = 200) String court,
                                  @NotBlank @Size(max = 60) String reportNo, @NotEmpty List<@NotNull UUID> accusedIds,
                                  @NotBlank String reason) {}
@@ -165,14 +168,14 @@ class RecordsController {
         requireFir(firId);
         boolean onTeam = team.includes(CaseTeam.user(jwt), firId);
         return db.sql("""
-                select a.id, a.person_id, p.label as person_label, a.arrested_at, m.place, to_json(m.grounds)::text as grounds,
+                select a.id, a.person_id, p.label as person_label, c.arrested_at, c.time_correction_id is not null as time_corrected, m.place, to_json(m.grounds)::text as grounds,
                   m.informed_name, m.informed_contact, m.memo_correction_id is not null as memo_corrected, u.full_name as arresting_officer_name, c.max_punishment, c.first_remand_on,
                   arrest_last_day(a.id) as chargesheet_last_day, earlier_custody_days(a.id) as earlier_custody_days,
                   r.full_name as remand_recorded_by_name, c.released_on, c.release_basis,
                   chargesheet_filed_for(a.person_id) as chargesheet_filed_on, c.correction_id is not null as corrected
                 from arrest a join arrest_current c on c.id = a.id join arrest_memo_current m on m.id = a.id join person p on p.id = a.person_id
                   left join app_user u on u.id = a.arresting_officer left join app_user r on r.id = a.remand_recorded_by
-                where p.fir_id = ? order by a.arrested_at, a.id""")
+                where p.fir_id = ? order by c.arrested_at, a.id""")
                 .param(firId).query().listOfRows().stream().map(row -> {
                     Map<String, Object> out = new java.util.LinkedHashMap<>(row);
                     try {
@@ -194,7 +197,7 @@ class RecordsController {
                                      @Valid @RequestBody FirstRemand f) {
         UUID me = CaseTeam.user(jwt);
         team.requireTeam(me, firId);
-        var arrestedAt = db.sql("select a.arrested_at from arrest a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
+        var arrestedAt = db.sql("select a.arrested_at from arrest_current a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
                 .params(arrestId, firId).query(OffsetDateTime.class).optional()
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
         checkRemand(f.firstRemandOn, arrestedAt);
@@ -221,7 +224,7 @@ class RecordsController {
                                  @Valid @RequestBody Release r) {
         UUID me = CaseTeam.user(jwt);
         team.requireTeam(me, firId);
-        var arrestedAt = db.sql("select a.arrested_at from arrest a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
+        var arrestedAt = db.sql("select a.arrested_at from arrest_current a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
                 .params(arrestId, firId).query(OffsetDateTime.class).optional()
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
         if (r.releasedOn.isBefore(arrestedAt.atZoneSameInstant(IST).toLocalDate())) badRequest("The release cannot be before the day of arrest.");
@@ -302,7 +305,7 @@ class RecordsController {
                                                     @PathVariable UUID arrestId, @Valid @RequestBody ArrestCorrection c) {
         UUID me = CaseTeam.user(jwt);
         team.requireTeam(me, firId);
-        var arrestedAt = db.sql("select a.arrested_at from arrest a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
+        var arrestedAt = db.sql("select a.arrested_at from arrest_current a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
                 .params(arrestId, firId).query(OffsetDateTime.class).optional()
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
         requireReason(c.reason);
@@ -335,8 +338,8 @@ class RecordsController {
 
     /**
      * Fixes a wrong place, grounds or informed person on the arrest memo. The memo stays as written; the correction
-     * restates the three, with a written reason, and the newest one counts. The person arrested and the time of
-     * arrest cannot be corrected here.
+     * restates the three, with a written reason, and the newest one counts. The person arrested cannot be corrected
+     * here; the time of arrest has its own correction.
      */
     @PostMapping("/arrests/{arrestId}/memo-corrections")
     ResponseEntity<Map<String, UUID>> correctMemo(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId,
@@ -355,6 +358,39 @@ class RecordsController {
                 .params(arrestId, newest, c.place.trim(), c.grounds.stream().map(String::trim).toArray(String[]::new), c.informedName.trim(),
                         c.informedContact, c.reason.trim(), me)
                 .query(UUID.class).single()));
+    }
+
+    /**
+     * Fixes a wrong time of arrest. The memo keeps the time as written; the newest correction counts. It cannot be in
+     * the future, and its IST day cannot be after a first remand or release already on record (the database refuses it).
+     */
+    @PostMapping("/arrests/{arrestId}/time-corrections")
+    ResponseEntity<Map<String, UUID>> correctTime(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId,
+                                                  @PathVariable UUID arrestId, @Valid @RequestBody TimeCorrection c) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        db.sql("select 1 from arrest a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
+                .params(arrestId, firId).query(Integer.class).optional()
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
+        requireReason(c.reason);
+        if (c.arrestedAt.isAfter(OffsetDateTime.now().plusMinutes(5))) badRequest("The time of arrest cannot be in the future.");
+        UUID newest = db.sql("select id from arrest_time_correction c where arrest_id = ? and not exists (select 1 from arrest_time_correction n where n.supersedes = c.id)")
+                .param(arrestId).query(UUID.class).optional().orElse(null);
+        return created(db.sql("""
+                insert into arrest_time_correction (arrest_id, supersedes, arrested_at, reason, recorded_by)
+                values (?,?,?,?,?) returning id""")
+                .params(arrestId, newest, c.arrestedAt, c.reason.trim(), me).query(UUID.class).single());
+    }
+
+    /** Every correction of the time of arrest in this case, oldest first. */
+    @GetMapping("/arrests/time-corrections")
+    List<Map<String, Object>> timeCorrections(@PathVariable UUID firId) {
+        requireFir(firId);
+        return db.sql("""
+                select c.id, c.arrest_id, c.arrested_at, c.reason, c.recorded_at, u.full_name as recorded_by_name
+                from arrest_time_correction c join arrest a on a.id = c.arrest_id join person p on p.id = a.person_id
+                  join app_user u on u.id = c.recorded_by
+                where p.fir_id = ? order by c.recorded_at, c.id""").param(firId).query().listOfRows();
     }
 
     /** Every memo correction in this case, oldest first. The informed person is private: only the case team sees them. */
