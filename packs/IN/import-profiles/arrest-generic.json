@@ -1,0 +1,23 @@
+{
+  "id": "arrest-generic",
+  "label": "Arrests (CSV), generic - load the FIRs first",
+  "entity": "arrest",
+  "note": "One row per arrest, keyed by FIR number and year of the chosen station. The accused must already be in the FIR (load the FIR file first).",
+  "fields": {
+    "fir_no": {"required": true, "aliases": ["fir_no", "fir no", "fir number", "fir_number", "crime no", "crime_no", "crime number"]},
+    "fir_year": {"aliases": ["fir_year", "year", "fir year", "crime year"]},
+    "accused_name": {"required": true, "aliases": ["accused_name", "accused", "name of accused", "arrested person", "name of arrestee", "arrestee"]},
+    "accused_label": {"aliases": ["accused_label", "accused no", "accused number", "accused label", "a no"]},
+    "arrested_at": {"required": true, "aliases": ["arrested_at", "arrested on", "date of arrest", "arrest date", "arrest time", "date and time of arrest"]},
+    "place": {"aliases": ["place", "place of arrest", "arrest place"]},
+    "grounds": {"aliases": ["grounds", "grounds of arrest", "reasons for arrest", "reason of arrest"]},
+    "informed_name": {"aliases": ["informed_name", "person informed", "relative informed", "informed person", "intimated to"]},
+    "informed_contact": {"aliases": ["informed_contact", "informed contact", "contact of person informed", "relative contact"]},
+    "arresting_officer": {"aliases": ["arresting_officer", "arrested by", "arresting officer", "arresting officer username", "ao"]},
+    "first_remand_on": {"aliases": ["first_remand_on", "first remand", "date of first remand", "remand date", "produced before magistrate on", "first production"]},
+    "max_punishment": {"aliases": ["max_punishment", "punishment class", "maximum punishment", "highest punishment"]},
+    "released_on": {"aliases": ["released_on", "release date", "date of release", "bailed on", "date of bail", "released"]},
+    "release_basis": {"aliases": ["release_basis", "release type", "type of release", "bail type", "basis of release"]},
+    "source_key": {"aliases": ["source_key", "id", "old id", "old_id", "record id", "legacy id", "source id"]}
+  }
+}

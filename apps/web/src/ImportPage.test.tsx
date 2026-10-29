@@ -9,7 +9,7 @@ beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'sho.one',
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); setSession(null) })
 
 const batch = (over: Record<string, unknown> = {}) => ({
-  id: 'b1', station_name: 'Demo PS', filename: 'old.csv', status: 'staged', rows_total: 3, rows_ok: 1, rows_warning: 1, rows_error: 1, rows_duplicate: 0,
+  id: 'b1', entity: 'fir', station_name: 'Demo PS', filename: 'old.csv', status: 'staged', rows_total: 3, rows_ok: 1, rows_warning: 1, rows_error: 1, rows_duplicate: 0,
   rows_imported: null, created_at: '2026-10-28T10:00:00Z', created_by_name: 'SHO One', approved_by_name: null, authority_note: null, undo_reason: null, ...over,
 })
 const rows = [
@@ -27,7 +27,7 @@ function stub(history: unknown[] = []) {
     calls.push({ method, url, body: init?.body ? JSON.parse(init.body as string) : undefined })
     const ok = (body: unknown, status = 200) => ({ ok: true, status, json: async () => body, text: async () => String(body) })
     if (url === '/api/stations') return ok([{ id: 's1', district: 'Demo District', name: 'Demo PS' }])
-    if (url === '/api/imports/profiles') return ok([{ id: 'fir-generic', label: 'FIR list', fields: [{ name: 'fir_no', required: true }, { name: 'registered_at', required: true }, { name: 'status', required: false }] }])
+    if (url === '/api/imports/profiles') return ok([{ id: 'fir-generic', label: 'FIR list', entity: 'fir', fields: [{ name: 'fir_no', required: true }, { name: 'registered_at', required: true }, { name: 'status', required: false }] }])
     if (url === '/api/imports' && method === 'GET') return ok(history)
     if (url === '/api/imports/inspect') return ok({ headers: ['FIR No', 'Date', 'State'], suggested: { fir_no: 'FIR No' }, required: ['fir_no', 'registered_at'], rows: 3 })
     if (url === '/api/imports' && method === 'POST') return ok(batch(), 201)
@@ -122,4 +122,19 @@ test('an empty history says so, and a failed load shows the error', async () => 
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 403, json: async () => ({}) })))
   render(<ImportPage />)
   expect((await screen.findByRole('alert')).textContent).toContain('403')
+})
+
+test('an arrests batch is described as arrests, and its undo says so', async () => {
+  const calls = stub([batch({ entity: 'arrest', status: 'imported', rows_imported: 2, approved_by_name: 'SHO One' })])
+  render(<ImportPage />)
+  const form = await screen.findByRole('form', { name: 'Undo old.csv' })
+  fireEvent.change(within(form).getByLabelText('Reason to undo old.csv'), { target: { value: 'Wrong file was chosen' } })
+  fireEvent.click(within(form).getByRole('button', { name: 'Undo old.csv' }))
+  expect((await screen.findByRole('status')).textContent).toBe('The batch was undone and its arrests removed.')
+  expect(calls.some((c) => c.url.endsWith('/undo'))).toBe(true)
+  cleanup()
+  stub([batch({ entity: 'arrest' })])
+  render(<ImportPage />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Open old.csv' }))
+  expect(await screen.findByRole('button', { name: 'Approve and load 2 arrests' })).toBeTruthy()
 })

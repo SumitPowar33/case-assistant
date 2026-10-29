@@ -85,9 +85,14 @@ def test_policies_have_a_default_inside_their_bounds():
             assert p["label"] and p["min"] <= p["default"] <= p["max"], key
 
 
-IMPORT_FIELDS = {"fir_no", "fir_year", "registered_at", "information_received_at", "gd_entry_no", "sections", "complaint_text",
-                 "io_username", "complainant_name", "victim_names", "accused_names", "witness_names", "status", "zero_fir",
-                 "outside_limits_place", "source_key"}  # must match what FirImport.check reads
+IMPORT_FIELDS = {  # must match what FirImport.check and ArrestImport.check read
+    "fir": {"fir_no", "fir_year", "registered_at", "information_received_at", "gd_entry_no", "sections", "complaint_text",
+            "io_username", "complainant_name", "victim_names", "accused_names", "witness_names", "status", "zero_fir",
+            "outside_limits_place", "source_key"},
+    "arrest": {"fir_no", "fir_year", "accused_name", "accused_label", "arrested_at", "place", "grounds", "informed_name",
+               "informed_contact", "arresting_officer", "first_remand_on", "max_punishment", "released_on", "release_basis",
+               "source_key"}}
+IMPORT_REQUIRED = {"fir": {"fir_no", "registered_at"}, "arrest": {"fir_no", "accused_name", "arrested_at"}}
 
 
 def test_import_profiles_name_known_fields_and_do_not_share_aliases():
@@ -95,9 +100,9 @@ def test_import_profiles_name_known_fields_and_do_not_share_aliases():
     assert files
     for path in files:
         p = json.loads(path.read_text(encoding="utf-8"))
-        assert p["entity"] == "fir" and p["id"] == path.stem and p["label"]
-        assert set(p["fields"]) <= IMPORT_FIELDS, path
-        assert {"fir_no", "registered_at"} <= {k for k, f in p["fields"].items() if f.get("required")}, "FIR number and date stay required"
+        assert p["entity"] in IMPORT_FIELDS and p["id"] == path.stem and p["label"]
+        assert set(p["fields"]) <= IMPORT_FIELDS[p["entity"]], path
+        assert IMPORT_REQUIRED[p["entity"]] <= {k for k, f in p["fields"].items() if f.get("required")}, "key fields stay required"
         seen = {}
         for field, f in p["fields"].items():
             assert f["aliases"], field

@@ -171,7 +171,7 @@ class RecordsController {
                   r.full_name as remand_recorded_by_name, c.released_on, c.release_basis,
                   chargesheet_filed_for(a.person_id) as chargesheet_filed_on, c.correction_id is not null as corrected
                 from arrest a join arrest_current c on c.id = a.id join arrest_memo_current m on m.id = a.id join person p on p.id = a.person_id
-                  join app_user u on u.id = a.arresting_officer left join app_user r on r.id = a.remand_recorded_by
+                  left join app_user u on u.id = a.arresting_officer left join app_user r on r.id = a.remand_recorded_by
                 where p.fir_id = ? order by a.arrested_at, a.id""")
                 .param(firId).query().listOfRows().stream().map(row -> {
                     Map<String, Object> out = new java.util.LinkedHashMap<>(row);

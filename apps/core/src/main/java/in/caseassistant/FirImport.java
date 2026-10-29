@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
  * Reads one row of an old FIR list and checks it the way the audits of the old systems found they should be checked
  * (dates in order, no future dates, a real IO, sections that can be read, no repeats). It never invents a fact: what the
  * file does not say stays empty or is marked as missing. The IPC-to-BNS table is a hint only and nothing is converted.
+ * It also holds the file layouts (profiles) of every kind of file; the arrests file is checked by {@link ArrestImport}.
  */
 @Component
 class FirImport {
@@ -54,7 +55,7 @@ class FirImport {
         for (var res : resolver.getResources("classpath*:packs/*/import-profiles/*.json"))
             try (InputStream in = res.getInputStream()) {
                 JsonNode p = json.readTree(in);
-                if (p.path("entity").asText().equals("fir")) profiles.put(p.path("id").asText(), p);
+                profiles.put(p.path("id").asText(), p);
             }
         for (var res : resolver.getResources("classpath*:packs/*/law-concordance.json"))
             try (InputStream in = res.getInputStream()) {
@@ -70,13 +71,18 @@ class FirImport {
         return profiles.containsKey(id);
     }
 
+    /** What a profile loads: "fir" or "arrest". */
+    String entity(String profile) {
+        return profiles.get(profile).path("entity").asText();
+    }
+
     List<Map<String, Object>> profileList() {
         var out = new ArrayList<Map<String, Object>>();
         profiles.forEach((id, p) -> {
             var fields = new ArrayList<Map<String, Object>>();
             p.path("fields").fields().forEachRemaining(f -> fields.add(Map.of("name", f.getKey(),
                     "required", f.getValue().path("required").asBoolean(false))));
-            out.add(Map.of("id", id, "label", p.path("label").asText(id), "fields", fields));
+            out.add(Map.of("id", id, "label", p.path("label").asText(id), "entity", p.path("entity").asText(), "fields", fields));
         });
         return out;
     }

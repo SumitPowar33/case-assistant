@@ -155,3 +155,11 @@ test('a memo correction starts from the memo, sends place, grounds and informed 
     place: 'Testpur Bus Stand', grounds: ['to prevent further offence', 'proper investigation'], informedName: 'Fictional Relative',
     informedContact: null, reason: 'place was the bus stand' } }])
 })
+
+test('an imported arrest without an arresting officer says so', async () => {
+  stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+    { ...base, id: 'a3', place: 'Oldpur', arresting_officer_name: null, first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-12' },
+  ] }, { status: 204, body: null })
+  render(<Arrests firId="f1" version={0} onSaved={vi.fn()} />)
+  expect(await screen.findByText(/at Oldpur, officer not in the old record/)).toBeTruthy()
+})

@@ -3,10 +3,10 @@ import { get, getText, send } from './api'
 import { fmt, text } from './formats'
 
 type Station = { id: string; district: string; name: string }
-type Profile = { id: string; label: string; fields: { name: string; required: boolean }[] }
+type Profile = { id: string; label: string; entity: string; fields: { name: string; required: boolean }[] }
 type Inspect = { headers: string[]; suggested: Record<string, string>; required: string[]; rows: number }
 type Batch = {
-  id: string; station_name: string; filename: string; status: string; rows_total: number; rows_ok: number; rows_warning: number
+  id: string; entity: string; station_name: string; filename: string; status: string; rows_total: number; rows_ok: number; rows_warning: number
   rows_error: number; rows_duplicate: number; rows_imported: number | null; created_at: string; created_by_name: string
   approved_by_name: string | null; authority_note: string | null; undo_reason: string | null
 }
@@ -18,7 +18,7 @@ const STATUS: Record<string, string> = {
 }
 
 /**
- * Loading existing FIRs from a CSV file, in deliberate steps: choose the file and match its columns, read the checked
+ * Loading existing FIRs, then their arrests, from CSV files, in deliberate steps: choose the file and match its columns, read the checked
  * result, approve it with the authority for the load. Nothing reaches the cases before the approval, and an
  * imported batch can be undone until work is recorded on it. The server decides who may do this.
  */
@@ -100,16 +100,18 @@ export default function ImportPage() {
   async function undo(e: FormEvent<HTMLFormElement>, b: Batch) {
     e.preventDefault()
     const reason = text(new FormData(e.currentTarget), 'reason')
-    await run(async () => { await send(`/imports/${b.id}/undo`, 'POST', { reason }); setBatch(undefined) }, 'The batch was undone and its FIRs removed.')
+    await run(async () => { await send(`/imports/${b.id}/undo`, 'POST', { reason }); setBatch(undefined) }, `The batch was undone and its ${things(b)} removed.`)
   }
 
   const profile = profiles.find((p) => p.id === file?.form.profile)
   const importable = batch ? batch.rows_ok + batch.rows_warning : 0
+  const things = (b: Batch) => (b.entity === 'arrest' ? 'arrests' : 'FIRs')
   return (
     <section aria-labelledby="import-h">
       <h2 id="import-h">Load existing records</h2>
-      <p>Load FIRs from an old register or system as a CSV file. The file is checked row by row first and nothing is added to the cases until a person approves it.
-        Existing FIRs are never changed. Use fictional data until your department has a data agreement.</p>
+      <p>Load FIRs, and then their arrests, from an old register or system as CSV files. Load the FIRs first: an arrest file is matched to the FIR number and the accused already in the system.
+        The file is checked row by row first and nothing is added to the cases until a person approves it. Existing records are never changed.
+        Use fictional data until your department has a data agreement.</p>
       {error && <p role="alert">{error}</p>}
       {done && <p role="status">{done}</p>}
 
@@ -117,7 +119,7 @@ export default function ImportPage() {
         <h3>1. Choose the file</h3>
         <label>Police station <select name="station" required>{stations.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.district})</option>)}</select></label>{' '}
         <label>File layout <select name="profile">{profiles.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select></label>{' '}
-        <label>Language of the complaint text <input name="language" defaultValue="en" size={5} pattern="[a-z]{2,3}(-[A-Za-z]{2,4})?" required /></label>{' '}
+        <label>Language of the complaint text (FIR files) <input name="language" defaultValue="en" size={5} pattern="[a-z]{2,3}(-[A-Za-z]{2,4})?" required /></label>{' '}
         <label>CSV file <input name="file" type="file" accept=".csv,text/csv" /></label>{' '}
         <button type="submit">Read the file</button>
       </form>
@@ -157,14 +159,14 @@ export default function ImportPage() {
           {batch.status === 'staged' && (
             <form onSubmit={(e) => void approve(e)} aria-label="Approve">
               <h3>4. Approve</h3>
-              <p>{importable} rows will be added as new FIRs. Rows with errors and FIRs already there are skipped. Personal details stay in the system only once approved;
+              <p>{importable} rows will be added as new {things(batch)}. Rows with errors and records already there are skipped. Personal details stay in the system only once approved;
                 the checking copy is erased.</p>
               <label>Authority for this load (order or letter, at least 10 characters) <input name="authority" minLength={10} maxLength={500} size={50} required /></label>{' '}
-              <button type="submit" disabled={importable === 0}>Approve and load {importable} FIRs</button>{' '}
+              <button type="submit" disabled={importable === 0}>Approve and load {importable} {things(batch)}</button>{' '}
               <button type="button" onClick={() => void run(async () => setBatch((await send<Batch>(`/imports/${batch.id}/discard`, 'POST', {}))!), 'The batch was discarded.')}>Discard this batch</button>
             </form>
           )}
-          {batch.status === 'imported' && <p>Loaded {batch.rows_imported} FIRs, approved by {batch.approved_by_name} on the authority “{batch.authority_note}”.</p>}
+          {batch.status === 'imported' && <p>Loaded {batch.rows_imported} {things(batch)}, approved by {batch.approved_by_name} on the authority “{batch.authority_note}”.</p>}
         </div>
       )}
 

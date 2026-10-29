@@ -118,7 +118,7 @@ class ImportApiTest {
         send(sho1, "/api/imports/inspect", Map.of("profile", "fir-generic", "csv", GOOD)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.rows").value(2)).andExpect(jsonPath("$.suggested.fir_no").value("FIR No"))
                 .andExpect(jsonPath("$.suggested.io_username").value("IO")).andExpect(jsonPath("$.required[0]").exists());
-        mvc.perform(get("/api/imports/profiles").header("Authorization", sho1)).andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value("fir-generic"));
+        mvc.perform(get("/api/imports/profiles").header("Authorization", sho1)).andExpect(status().isOk()).andExpect(jsonPath("$[?(@.id=='fir-generic')]").isNotEmpty());
     }
 
     @Test
@@ -295,5 +295,143 @@ class ImportApiTest {
                 insert into import_batch (station_id, entity, profile, filename, file_sha256, complaint_language, rows_total, created_by)
                 values (?,'fir','fir-generic','f.csv','00','en',0,?) returning id""").params(s1, ioUser).query(UUID.class).single();
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> db.sql("delete from import_batch where id = ?").param(b).update()).hasMessageContaining("kept as written");
+    }
+
+    // ---- arrests file ----------------------------------------------------------------------------------------------
+
+    static final String AHEAD = "FIR No,Accused,Arrested On,Place,Grounds,Person Informed,Arrested By,First Remand,Released,Release Type,Punishment Class\n";
+    static final String ARRESTS = AHEAD
+            + "1,Fictional Accused One,06/03/2024 18:30,Fictional Chowk,Theft,Fictional Relative,io.one,07/03/2024,,,less_than_10_years\n"
+            + "1,Fictional Accused Two,06/03/2024,,,,,07/03/2024,15/03/2024,bail,less_than_10_years\n"
+            + "2,Fictional Stranger,06/03/2024,,,,,,,,less_than_10_years\n"
+            + "9,Fictional Accused One,06/03/2024,,,,,,,,less_than_10_years\n";
+
+    UUID stageArrests(String who, UUID station, String csv) throws Exception {
+        var body = stageBody(station, csv);
+        body.put("profile", "arrest-generic");
+        body.put("filename", "old-arrests.csv");
+        return UUID.fromString(json.readTree(send(who, "/api/imports", body).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText());
+    }
+
+    UUID firId(int no) {
+        return db.sql("select id from fir where fir_no = ?").param(no).query(UUID.class).single();
+    }
+
+    @Test
+    void arrestsAreCheckedAgainstTheFirsAndLoadedAsTheOldRecordHasThem() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD)).andExpect(status().isOk());
+        UUID b = stageArrests(sho1, s1, ARRESTS);
+        mvc.perform(get("/api/imports/" + b).header("Authorization", sho1)).andExpect(jsonPath("$.entity").value("arrest"))
+                .andExpect(jsonPath("$.rows_warning").value(2)).andExpect(jsonPath("$.rows_error").value(2));
+        assertThat(db.sql("select count(*) from arrest").query(Long.class).single()).as("nothing before approval").isZero();
+        mvc.perform(get("/api/imports/" + b + "/rows?status=error").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[0].text").value(org.hamcrest.Matchers.containsString("No accused of this name")))
+                .andExpect(jsonPath("$[1].messages[0].text").value(org.hamcrest.Matchers.containsString("Load the FIR file first")));
+        commit(sho1, b).andExpect(status().isOk()).andExpect(jsonPath("$.rows_imported").value(2));
+        assertThat(db.sql("select count(*) from arrest where import_batch_id = ?").param(b).query(Long.class).single()).isEqualTo(2);
+        var one = db.sql("""
+                select a.*, ist_date(a.arrested_at) as day from arrest a join person p on p.id = a.person_id where p.full_name = 'Fictional Accused One'""").query().singleRow();
+        assertThat(one.get("place")).isEqualTo("Fictional Chowk");
+        assertThat(one.get("arresting_officer")).isEqualTo(ioUser);
+        assertThat(one.get("first_remand_on").toString()).isEqualTo("2024-03-07");
+        assertThat(one.get("remand_recorded_by")).as("the approver entered it").isNotNull();
+        assertThat(one.get("released_on")).isNull();
+        assertThat(one.get("source_hash")).isNotNull();
+        var two = db.sql("select a.* from arrest a join person p on p.id = a.person_id where p.full_name = 'Fictional Accused Two'").query().singleRow();
+        assertThat(two.get("place")).isEqualTo(ArrestImport.MISSING);
+        assertThat(two.get("arresting_officer")).isNull();
+        assertThat(two.get("release_basis")).isEqualTo("bail");
+        assertThat(two.get("release_recorded_by")).isNotNull();
+        // the case page lists both, the one without an arresting officer too
+        mvc.perform(get("/api/firs/" + firId(1) + "/arrests").header("Authorization", sho1)).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[?(@.place=='Fictional Chowk')].arresting_officer_name").value("Fictional IO One"))
+                .andExpect(jsonPath("$[?(@.place=='Not in the old record')].arresting_officer_name").value((Object) null));
+        // the accused still in custody shows the 60/90-day deadline; the released one does not count
+        assertThat(db.sql("select count(*) from case_deadline where fir_id = ? and kind = 'chargesheet_custody'").param(firId(1)).query(Long.class).single()).isEqualTo(1);
+        assertThat(db.sql("select raw is null and parsed is null from import_row where batch_id = ? limit 1").param(b).query(Boolean.class).single()).isTrue();
+    }
+
+    @Test
+    void anArrestInAConcludedOldCaseStartsNoClock() throws Exception {
+        commit(sho1, stage(sho1, s1, HEAD + "3,05/03/2024 10:00,IPC 379,Fictional theft,,,,Fictional Accused Three,GD-3,disposed\n")).andExpect(status().isOk());
+        commit(sho1, stageArrests(sho1, s1, AHEAD + "3,Fictional Accused Three,06/03/2024,,,,,07/03/2024,,,less_than_10_years\n")).andExpect(status().isOk());
+        assertThat(db.sql("select count(*) from arrest").query(Long.class).single()).isEqualTo(1);
+        assertThat(db.sql("select count(*) from case_deadline where fir_id = ? and kind = 'chargesheet_custody'").param(firId(3)).query(Long.class).single()).isZero();
+    }
+
+    @Test
+    void theSameArrestAgainIsSkippedAndNeverChanged() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        commit(sho1, stageArrests(sho1, s1, ARRESTS));
+        UUID again = stageArrests(sho1, s1, ARRESTS);
+        mvc.perform(get("/api/imports/" + again).header("Authorization", sho1)).andExpect(jsonPath("$.rows_duplicate").value(2)).andExpect(jsonPath("$.rows_error").value(2));
+        mvc.perform(get("/api/imports/" + again + "/rows?status=duplicate").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("same content"))));
+        UUID differs = stageArrests(sho1, s1, AHEAD + "1,Fictional Accused One,06/03/2024 09:00,Elsewhere,,,,,,,less_than_10_years\n");
+        mvc.perform(get("/api/imports/" + differs + "/rows?status=duplicate").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("already recorded"))));
+        send(sho1, "/api/imports/" + differs + "/commit", Map.of("authority", "Order 13/2026 of the Fictional SP")).andExpect(status().isConflict());
+                assertThat(db.sql("select count(*) from arrest").query(Long.class).single()).isEqualTo(2);
+    }
+
+    @Test
+    void theSameAccusedTwiceOnOneDayInOneFileIsAnError() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        UUID b = stageArrests(sho1, s1, AHEAD + "1,Fictional Accused One,06/03/2024 09:00,,,,,,,,less_than_10_years\n1,Fictional Accused One,06/03/2024 21:00,,,,,,,,less_than_10_years\n");
+        mvc.perform(get("/api/imports/" + b).header("Authorization", sho1)).andExpect(jsonPath("$.rows_error").value(1)).andExpect(jsonPath("$.rows_warning").value(1));
+    }
+
+    @Test
+    void anArrestBatchCanBeUndoneAndLoadedAgain() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        String row = AHEAD + "1,Fictional Accused One,06/03/2024 18:30,,,,,,,,less_than_10_years\n";
+        UUID b = stageArrests(sho1, s1, row);
+        commit(sho1, b).andExpect(status().isOk());
+        // the FIR batch cannot be undone while an arrest hangs on its people
+        UUID firBatch = db.sql("select id from import_batch where entity = 'fir'").query(UUID.class).single();
+        send(sho1, "/api/imports/" + firBatch + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isConflict());
+        send(sho1, "/api/imports/" + b + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("undone")).andExpect(jsonPath("$.undo_reason").value("Wrong file uploaded"));
+        assertThat(db.sql("select count(*) from arrest").query(Long.class).single()).isZero();
+        assertThat(db.sql("select count(*) from fir").query(Long.class).single()).isEqualTo(2);
+        commit(sho1, stageArrests(sho1, s1, row)).andExpect(status().isOk());
+        assertThat(db.sql("select count(*) from arrest").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void anArrestBatchCannotBeUndoneOnceARemandWasRecordedOnAnImportedArrest() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        UUID b = stageArrests(sho1, s1, AHEAD + "1,Fictional Accused One,06/03/2024 18:30,,,,,,,,less_than_10_years\n");
+        commit(sho1, b).andExpect(status().isOk());
+        UUID arrest = db.sql("select id from arrest").query(UUID.class).single();
+        send(sho1, "/api/firs/" + firId(1) + "/arrests/" + arrest + "/first-remand", Map.of("firstRemandOn", "2024-03-07")).andExpect(status().isNoContent());
+        send(sho1, "/api/imports/" + b + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isConflict());
+        assertThat(db.sql("select status from import_batch where id = ?").param(b).query(String.class).single()).isEqualTo("imported");
+        assertThat(db.sql("select count(*) from arrest").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void anArrestBatchCannotBeUndoneOnceACorrectionWasRecorded() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        UUID b = stageArrests(sho1, s1, AHEAD + "1,Fictional Accused One,06/03/2024 18:30,,,,,07/03/2024,,,less_than_10_years\n");
+        commit(sho1, b).andExpect(status().isOk());
+        UUID arrest = db.sql("select id from arrest").query(UUID.class).single();
+        db.sql("insert into arrest_correction (arrest_id, first_remand_on, max_punishment, reason, recorded_by) values (?, '2024-03-08', 'life', 'Fictional correction reason', ?)")
+                .params(arrest, ioUser).update();
+        send(sho1, "/api/imports/" + b + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isConflict());
+        assertThat(db.sql("select count(*) from arrest").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void arrestsCanOnlyBeLoadedByTheStationsOwnLeadersAndTheProfilesAreListed() throws Exception {
+        var body = stageBody(s1, ARRESTS);
+        body.put("profile", "arrest-generic");
+        send(sho2, "/api/imports", body).andExpect(status().isForbidden());
+        send(io, "/api/imports", body).andExpect(status().isForbidden());
+        send(sho1, "/api/imports/inspect", Map.of("profile", "arrest-generic", "csv", ARRESTS)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggested.accused_name").value("Accused")).andExpect(jsonPath("$.suggested.first_remand_on").value("First Remand"))
+                .andExpect(jsonPath("$.suggested.arresting_officer").value("Arrested By"));
+        mvc.perform(get("/api/imports/profiles").header("Authorization", sho1)).andExpect(jsonPath("$[?(@.id=='arrest-generic')].entity").value("arrest"))
+                .andExpect(jsonPath("$[?(@.id=='fir-generic')].entity").value("fir"));
     }
 }

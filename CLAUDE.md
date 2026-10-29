@@ -33,7 +33,7 @@ At the end of each session, note in PROGRESS.md anything you deliberately skippe
 - `apps/web` – React + TypeScript (Vite). Tests: `npm test` and `npm run build` in that folder.
 - `packs` – modules, one folder per state or the nation (`IN`): `roles.json`, `policies.json`, `punishments.json`, `playbooks/`. Data, not code. A module may add roles, permissions and policies, never remove or loosen the national ones. Tests: `python -m pytest -q packs/tests`.
 - `tests/repo_rules` – the hard rules of this file checked on the whole repo: `python -m pytest -q tests/repo_rules`.
-- Loading existing data: CSV import in four steps (`ImportController`, `FirImport`, V22, `packs/*/import-profiles`); design in `docs/INTEGRATION-IMPORT.md`. Insert-only, approved by a person, undoable until work is recorded.
+- Loading existing data: CSV import in four steps for FIRs and for arrests (`ImportController`, `FirImport`, `ArrestImport`, V22, V24, `packs/*/import-profiles`); design in `docs/INTEGRATION-IMPORT.md`. Insert-only, approved by a person, undoable until work is recorded.
 - `docs/` – plan, progress, research, `ARCHITECTURE-TENANCY.md` (accounts, roles, policies, modules: read before touching access), `TESTING.md` (what every change must test).
 
 ## Testing rule (Sumit, 28 Oct 2026)
