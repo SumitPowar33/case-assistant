@@ -228,6 +228,9 @@ class AdminApiTest {
         mvc.perform(get("/api/users").header("Authorization", admin)).andExpect(jsonPath("$[?(@.username=='io.mh')]").isNotEmpty());
         post(inAdmin, "/api/stations", "{\"stateCode\":\"MH\",\"district\":\"Other\",\"name\":\"Sneaky PS\"}").andExpect(status().isForbidden());
         post(inAdmin, "/api/stations", "{\"stateCode\":\"IN\",\"district\":\"Demo District\",\"name\":\"Demo Second PS\"}").andExpect(status().isCreated());
+        // the same district written differently is the same district, never a second one
+        post(inAdmin, "/api/stations", "{\"stateCode\":\"IN\",\"district\":\"  demo DISTRICT \",\"name\":\"Demo Third PS\"}").andExpect(status().isCreated());
+        assertThat(db.sql("select count(*) from district where state_code = 'IN' and lower(name) = 'demo district'").query(Long.class).single()).isEqualTo(1);
         post(inAdmin, "/api/users", ioBody.formatted("io.sneak", "Sneak", mhStation)).andExpect(status().isBadRequest());
         post(inAdmin, "/api/users", ioBody.formatted("io.nostation", "None", "").replace("\"stationId\":\"\"", "\"stationId\":null"))
                 .andExpect(status().isBadRequest());

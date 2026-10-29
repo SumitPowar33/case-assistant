@@ -32,7 +32,7 @@ class PolicyApiTest {
     String stateAdmin, platformAdmin, sp, sho1, sho2, io;
 
     UUID station(String district, String name) {
-        return db.sql("insert into police_station (state_code, district, name) values ('IN',?,?) returning id").params(district, name)
+        return db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN',?),?) returning id").params(district, name)
                 .query(UUID.class).single();
     }
 
@@ -101,6 +101,16 @@ class PolicyApiTest {
         set(sp, "station", s3, null, "victim_update_days", 45).andExpect(status().isForbidden());
         set(sp, "district", null, "South", "victim_update_days", 45).andExpect(status().isForbidden());
         set(sp, "state", null, null, "victim_update_days", 45).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void aDistrictIsFoundByNameWhateverTheLetterCaseAndKeepsItsPolicyIfRenamed() throws Exception {
+        set(sp, "district", null, "north", "victim_update_days", 60).andExpect(status().isCreated());
+        assertThat(effective(s2, "victim_update_days")).isEqualTo(60);
+        db.sql("update district set name = 'North Renamed' where lower(name) = 'north'").update();
+        assertThat(effective(s2, "victim_update_days")).isEqualTo(60);
+        set(sp, "station", s2, null, "victim_update_days", 45).andExpect(status().isCreated());
+        mvc.perform(get("/api/policy-settings").header("Authorization", sp)).andExpect(jsonPath("$[?(@.level=='district')].district").value("North Renamed"));
     }
 
     @Test

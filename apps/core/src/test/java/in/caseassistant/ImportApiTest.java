@@ -37,7 +37,7 @@ class ImportApiTest {
     String sho1, sho2, sp, stateAdmin, platformAdmin, io, otherStateAdmin;
 
     UUID station(String state, String district, String name) {
-        return db.sql("insert into police_station (state_code, district, name) values (?,?,?) returning id").params(state, district, name).query(UUID.class).single();
+        return db.sql("insert into police_station (state_code, district_id, name) values (?,district_id_of(?,?),?) returning id").params(state, state, district, name).query(UUID.class).single();
     }
 
     UUID user(String role, UUID station, String name, String username) {

@@ -113,8 +113,8 @@ class AdminController {
     List<Map<String, Object>> users(@AuthenticationPrincipal Jwt jwt) {
         String scope = scope(requireAdmin(jwt));
         var rows = db.sql("""
-                select u.id, u.username, u.full_name, u.rank, u.role, u.station_id, s.name as station_name, s.district, u.active
-                from app_user u left join police_station s on s.id = u.station_id
+                select u.id, u.username, u.full_name, u.rank, u.role, u.station_id, s.name as station_name, d.name as district, u.active
+                from app_user u left join police_station s on s.id = u.station_id left join district d on d.id = s.district_id
                 where (?::text is null or s.state_code = ?) order by u.active desc, u.full_name""")
                 .params(scope, scope).query().listOfRows();
         return rows.stream().map(r -> {
@@ -235,7 +235,9 @@ class AdminController {
 
     @GetMapping("/stations")
     List<Map<String, Object>> stations() {
-        return db.sql("select id, state_code, district, name, cctns_code from police_station order by state_code, district, name")
+        return db.sql("""
+                select s.id, s.state_code, d.name as district, s.name, s.cctns_code from police_station s
+                join district d on d.id = s.district_id order by s.state_code, d.name, s.name""")
                 .query().listOfRows();
     }
 
@@ -253,8 +255,8 @@ class AdminController {
         if (scope != null && !scope.equals(s.stateCode))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "A state admin adds stations only in their own state.");
         String cctns = s.cctnsCode == null || s.cctnsCode.isBlank() ? null : s.cctnsCode.trim();
-        UUID id = db.sql("insert into police_station (state_code, district, name, cctns_code) values (?,?,?,?) returning id")
-                .params(s.stateCode, s.district.trim(), s.name.trim(), cctns).query(UUID.class).single();
+        UUID id = db.sql("insert into police_station (state_code, district_id, name, cctns_code) values (?, district_id_of(?, ?), ?, ?) returning id")
+                .params(s.stateCode, s.stateCode, s.district, s.name.trim(), cctns).query(UUID.class).single();
         log(me, "station_created", null, id, null);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", id));
     }

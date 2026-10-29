@@ -80,18 +80,18 @@ class Policies {
      * The value a unit one level up already asks for: for a state, the default; for a district, the state's; for a
      * station, the strictest of its district's and its state's.
      */
-    int above(String level, String stateCode, String district, String key) {
+    int above(String level, String stateCode, UUID districtId, String key) {
         int v = defs.get(key).defaultValue();
         if (level.equals("state")) return v;
         v = Math.min(v, newest("state", stateCode, null, key, v));
-        if (level.equals("station")) v = Math.min(v, newest("district", stateCode, district, key, v));
+        if (level.equals("station")) v = Math.min(v, newest("district", stateCode, districtId, key, v));
         return v;
     }
 
-    private int newest(String level, String stateCode, String district, String key, int none) {
+    private int newest(String level, String stateCode, UUID districtId, String key, int none) {
         return db.sql("""
                 select value::int from policy_setting where key = ? and level = ? and state_code = ?
-                  and (?::text is null or district = ?) order by set_at desc limit 1""")
-                .params(key, level, stateCode, district, district).query(Integer.class).optional().orElse(none);
+                  and (?::uuid is null or district_id = ?) order by set_at desc limit 1""")
+                .params(key, level, stateCode, districtId, districtId).query(Integer.class).optional().orElse(none);
     }
 }

@@ -27,7 +27,7 @@ class CaseTeam {
         String district = Roles.in(roles.scoped("district"));
         // "f" is the FIR, "u" the user, "fs" the FIR's station, "us" the user's station
         this.stationOrDistrict = "(u.role in " + station + " and u.station_id = f.station_id) or (u.role in " + district
-                + " and us.state_code = fs.state_code and us.district = fs.district)";
+                + " and us.district_id = fs.district_id)";
         this.stationOrDistrictOnFir = stationOrDistrict.replace("f.station_id", "fir.station_id");
     }
 
@@ -120,7 +120,7 @@ class CaseTeam {
      */
     boolean canAt(UUID userId, String permission, UUID stationId) {
         var u = db.sql("""
-                select u.role, u.station_id, m.state_code as my_state, m.district as my_district, t.state_code, t.district
+                select u.role, u.station_id, m.state_code as my_state, m.district_id as my_district, t.state_code, t.district_id
                 from app_user u left join police_station m on m.id = u.station_id, police_station t
                 where u.id = ? and u.active and t.id = ?""").params(userId, stationId).query().listOfRows().stream().findFirst().orElse(null);
         if (u == null || !roles.has((String) u.get("role"), permission)) return false;
@@ -129,7 +129,7 @@ class CaseTeam {
         if (roles.has((String) u.get("role"), "admin.manage")) return true;
         return switch (roles.caseScope((String) u.get("role"))) {
             case "station" -> stationId.equals(u.get("station_id"));
-            case "district" -> u.get("district").equals(u.get("my_district"));
+            case "district" -> u.get("district_id").equals(u.get("my_district"));
             default -> false;
         };
     }

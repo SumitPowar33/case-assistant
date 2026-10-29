@@ -52,12 +52,15 @@ class PolicyController {
     List<Map<String, Object>> history(@AuthenticationPrincipal Jwt jwt) {
         UUID me = CaseTeam.user(jwt);
         return db.sql("""
-                select p.id, p.level, p.state_code, p.district, p.station_id, s.name as station_name, p.key, p.value::int as value,
-                  p.reason, u.full_name as set_by_name, p.set_at, s.district as station_district
+                select p.id, p.level, p.state_code, d.name as district, p.station_id, s.name as station_name, p.key, p.value::int as value,
+                  p.reason, u.full_name as set_by_name, p.set_at, sd.name as station_district,
+                  coalesce(p.district_id, s.district_id) as unit_district_id
                 from policy_setting p join app_user u on u.id = p.set_by left join police_station s on s.id = p.station_id
+                left join district d on d.id = p.district_id left join district sd on sd.id = s.district_id
                 order by p.set_at desc limit 200""").query().listOfRows().stream()
                 .filter(r -> mayManage(me, (String) r.get("level"), (String) r.get("state_code"),
-                        r.get("district") != null ? (String) r.get("district") : (String) r.get("station_district"), (UUID) r.get("station_id")))
+                        (UUID) r.get("unit_district_id"), (UUID) r.get("station_id")))
+                .map(r -> { var m = new java.util.LinkedHashMap<>(r); m.remove("unit_district_id"); return (Map<String, Object>) m; })
                 .toList();
     }
 
@@ -69,21 +72,23 @@ class PolicyController {
         if (def == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such policy.");
         if (s.value < def.min() || s.value > def.max())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This policy must be between " + def.min() + " and " + def.max() + ".");
-        String state = s.stateCode, district = s.district;
+        String state = s.stateCode;
+        UUID district = null;
         UUID station = s.stationId;
         if (s.level.equals("station")) {
-            var row = db.sql("select state_code, district from police_station where id = ?").param(station == null ? UUID.randomUUID() : station)
+            var row = db.sql("select state_code, district_id from police_station where id = ?").param(station == null ? UUID.randomUUID() : station)
                     .query().listOfRows().stream().findFirst()
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such police station."));
             state = (String) row.get("state_code");
-            district = (String) row.get("district");
+            district = (UUID) row.get("district_id");
         } else {
             station = null;
             if (state == null || state.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose the state.");
-            if (s.level.equals("district") && (district == null || district.isBlank()
-                    || !db.sql("select exists (select 1 from police_station where state_code = ? and district = ?)").params(state, district)
-                            .query(Boolean.class).single()))
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such district in this state.");
+            if (s.level.equals("district")) {
+                district = s.district == null ? null : db.sql("select id from district where state_code = ? and lower(name) = lower(btrim(?))")
+                        .params(state, s.district).query(UUID.class).optional().orElse(null);
+                if (district == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such district in this state.");
+            }
             if (s.level.equals("state") && !db.sql("select exists (select 1 from state_pack where code = ?)").param(state)
                     .query(Boolean.class).single())
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such state.");
@@ -95,7 +100,7 @@ class PolicyController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "The unit above already asks for " + above
                     + " or less; a unit can only be stricter, never looser.");
         UUID id = db.sql("""
-                insert into policy_setting (level, state_code, district, station_id, key, value, reason, set_by)
+                insert into policy_setting (level, state_code, district_id, station_id, key, value, reason, set_by)
                 values (?,?,?,?,?,?,?,?) returning id""")
                 .params(s.level, state, s.level.equals("district") ? district : null, station, s.key, Integer.toString(s.value), s.reason.trim(), me)
                 .query(UUID.class).single();
@@ -103,9 +108,9 @@ class PolicyController {
     }
 
     /** Whether this user may set or read policies of a unit (see the class comment). */
-    boolean mayManage(UUID userId, String level, String stateCode, String district, UUID stationId) {
+    boolean mayManage(UUID userId, String level, String stateCode, UUID districtId, UUID stationId) {
         var u = db.sql("""
-                select u.role, s.id as station_id, s.state_code, s.district from app_user u
+                select u.role, s.id as station_id, s.state_code, s.district_id from app_user u
                 left join police_station s on s.id = u.station_id where u.id = ? and u.active""")
                 .param(userId).query().listOfRows().stream().findFirst().orElse(null);
         if (u == null) return false;
@@ -115,7 +120,7 @@ class PolicyController {
         if (!roles.has(role, "policy.set") || myState == null || !myState.equals(stateCode)) return false;
         return switch (roles.caseScope(role)) {
             case "station" -> level.equals("station") && u.get("station_id").equals(stationId);
-            case "district" -> !level.equals("state") && u.get("district").equals(district);
+            case "district" -> !level.equals("state") && u.get("district_id").equals(districtId);
             default -> false;
         };
     }

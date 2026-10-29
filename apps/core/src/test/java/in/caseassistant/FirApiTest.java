@@ -32,8 +32,8 @@ class FirApiTest {
     void setUp() {
         db.sql("truncate fir, police_station, state_pack, app_user cascade").update();
         db.sql("insert into state_pack (code, name, version, languages) values ('IN','National','1',array['en'])").update();
-        station = db.sql("insert into police_station (state_code, district, name, cctns_code) "
-                + "values ('IN','Testpur','Testpur City Station','TP001') returning id").query(UUID.class).single();
+        station = db.sql("insert into police_station (state_code, district_id, name, cctns_code) "
+                + "values ('IN',district_id_of('IN','Testpur'),'Testpur City Station','TP001') returning id").query(UUID.class).single();
         clerk = TestAuth.bearer(tokens, db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'HC Fictional Clerk','HC','front_desk') returning id")
                 .param(station).query(UUID.class).single());
     }
@@ -95,7 +95,7 @@ class FirApiTest {
 
     @Test
     void onlyStaffOfTheStationRegisterItsFirs() throws Exception {
-        UUID other = db.sql("insert into police_station (state_code, district, name) values ('IN','Otherpur','Otherpur Station') returning id")
+        UUID other = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','Otherpur'),'Otherpur Station') returning id")
                 .query(UUID.class).single();
         String outsider = TestAuth.bearer(tokens, db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'SI Fictional Outsider','SI','io') returning id")
                 .param(other).query(UUID.class).single());
@@ -123,7 +123,7 @@ class FirApiTest {
     @Test
     void theShoAssignsAndChangesTheIoWithAReasonAndEveryAssignmentIsKept() throws Exception {
         UUID io1 = user("SI Fictional One", "io", station), io2 = user("SI Fictional Two", "io", station);
-        UUID otherStation = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Other PS') returning id")
+        UUID otherStation = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','Testpur'),'Other PS') returning id")
                 .query(UUID.class).single();
         UUID elsewhere = user("SI Elsewhere", "io", otherStation);
         String sho = TestAuth.bearer(tokens, user("PI Fictional SHO", "sho", station));
@@ -154,7 +154,7 @@ class FirApiTest {
 
     @Test
     void anFirCanNameOnlyAnIoOfItsOwnStation() throws Exception {
-        UUID otherStation = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Other PS') returning id")
+        UUID otherStation = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','Testpur'),'Other PS') returning id")
                 .query(UUID.class).single();
         var b = new java.util.HashMap<>(body(6));
         b.put("ioId", user("SI Elsewhere", "io", otherStation));

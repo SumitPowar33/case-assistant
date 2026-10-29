@@ -35,7 +35,7 @@ def one(conn, sql, *args):
 
 def seed_case(conn, sexual=False):
     conn.execute("INSERT INTO state_pack VALUES ('IN','National pack','1.0','{en,hi}','pilot')")
-    st = one(conn, "INSERT INTO police_station(state_code,district,name) VALUES ('IN','Demo City','Demo City Cyber PS') RETURNING id")[0]
+    st = one(conn, "INSERT INTO police_station(state_code,district_id,name) VALUES ('IN',district_id_of('IN','Demo City'),'Demo City Cyber PS') RETURNING id")[0]
     io = one(conn, "INSERT INTO app_user(full_name,rank,role,station_id) VALUES ('A. Deshmukh','SI','io',%s) RETURNING id", st)[0]
     fir = one(conn, """INSERT INTO fir(station_id,fir_year,fir_no,gd_entry_no,registered_at,information_received_at,
                        contents_original,contents_language,action_taken,io_id,sexual_offence)
@@ -482,12 +482,13 @@ def test_roles_are_a_table_and_an_account_needs_a_known_role(db):
 
 def test_policy_settings_are_kept_and_the_strictest_unit_value_applies(db):
     st, io, fir = seed_case(db)
-    other = one(db, "INSERT INTO police_station(state_code,district,name) VALUES ('IN','Demo City','Demo Second PS') RETURNING id")[0]
-    far = one(db, "INSERT INTO police_station(state_code,district,name) VALUES ('IN','Far District','Demo Far PS') RETURNING id")[0]
-    ins = "INSERT INTO policy_setting(level,state_code,district,station_id,key,value,reason,set_by) VALUES (%s,'IN',%s,%s,'victim_update_days',%s,'Fictional order 1 of 2026',%s)"
+    other = one(db, "INSERT INTO police_station(state_code,district_id,name) VALUES ('IN',district_id_of('IN','Demo City'),'Demo Second PS') RETURNING id")[0]
+    far = one(db, "INSERT INTO police_station(state_code,district_id,name) VALUES ('IN',district_id_of('IN','Far District'),'Demo Far PS') RETURNING id")[0]
+    ins = "INSERT INTO policy_setting(level,state_code,district_id,station_id,key,value,reason,set_by) VALUES (%s,'IN',%s,%s,'victim_update_days',%s,'Fictional order 1 of 2026',%s)"
     days = lambda s: one(db, "SELECT effective_policy_days(%s,'victim_update_days',90)", s)[0]
     assert days(st) == 90
-    db.execute(ins, ("district", "Demo City", None, "60", io))
+    city = one(db, "SELECT district_id_of('IN','Demo City')")[0]
+    db.execute(ins, ("district", city, None, "60", io))
     assert (days(st), days(other), days(far)) == (60, 60, 90)
     db.execute(ins, ("station", None, st, "30", io))
     assert (days(st), days(other)) == (30, 60)
@@ -501,7 +502,7 @@ def test_policy_settings_are_kept_and_the_strictest_unit_value_applies(db):
     with pytest.raises(psycopg.errors.RaiseException):
         db.execute("DELETE FROM policy_setting")
     with pytest.raises(psycopg.errors.CheckViolation):   # a station setting names a station and no district
-        db.execute(ins, ("station", "Demo City", st, "30", io))
+        db.execute(ins, ("station", city, st, "30", io))
     with pytest.raises(psycopg.errors.CheckViolation):   # a reason is needed
         db.execute("INSERT INTO policy_setting(level,state_code,key,value,reason,set_by) VALUES ('state','IN','x','1','short',%s)", (io,))
 
@@ -535,3 +536,55 @@ def test_import_batches_are_kept_and_staged_rows_go_with_their_batch(db):
         db.execute("UPDATE import_batch SET authority_note='short' WHERE id=%s", (b,))
     with pytest.raises(psycopg.errors.CheckViolation):
         db.execute("UPDATE import_batch SET status='imported' WHERE id=%s", (b,))  # approval needs an approver
+
+
+def test_a_district_is_a_row_found_by_name_whatever_the_letter_case(db):
+    seed_case(db)
+    a = one(db, "SELECT district_id_of('IN','Demo City')")[0]
+    assert one(db, "SELECT district_id_of('IN','  demo CITY ')")[0] == a        # same district, not a second one
+    assert one(db, "SELECT count(*) FROM district WHERE lower(name) = 'demo city'")[0] == 1
+    with pytest.raises(psycopg.errors.CheckViolation):                          # a stored name is trimmed and not empty
+        db.execute("INSERT INTO district(state_code,name) VALUES ('IN',' x')")
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        db.execute("INSERT INTO district(state_code,name) VALUES ('IN','DEMO city')")
+    with pytest.raises(psycopg.errors.ForeignKeyViolation):                     # a district belongs to a loaded state
+        db.execute("SELECT district_id_of('ZZ','Nowhere')")
+    with pytest.raises(psycopg.errors.NotNullViolation):                        # a station always has a district
+        db.execute("INSERT INTO police_station(state_code,name) VALUES ('IN','Demo No District PS')")
+
+
+def test_renaming_a_district_keeps_its_stations_and_its_policies(db):
+    st, io, fir = seed_case(db)
+    d = one(db, "SELECT district_id_of('IN','Demo City')")[0]
+    db.execute("INSERT INTO policy_setting(level,state_code,district_id,key,value,reason,set_by) VALUES ('district','IN',%s,'victim_update_days','60','Fictional order 2 of 2026',%s)", (d, io))
+    db.execute("UPDATE district SET name = 'Demo City Renamed' WHERE id = %s", (d,))
+    assert one(db, "SELECT effective_policy_days(%s,'victim_update_days',90)", st)[0] == 60
+
+
+def test_migration_23_moves_text_districts_to_rows_without_losing_a_station_or_a_policy():
+    schema = "t_" + uuid.uuid4().hex[:10]
+    conn = psycopg.connect(URL, autocommit=True)
+    try:
+        conn.execute(f"CREATE SCHEMA {schema}")
+        conn.execute(f"SET search_path TO {schema}, public")
+        for m in MIGRATIONS:
+            if int(m.name[1:].split("__")[0]) < 23:
+                conn.execute(m.read_text())
+        conn.execute("INSERT INTO state_pack VALUES ('IN','National pack','1.0','{en,hi}','pilot')")
+        a = one(conn, "INSERT INTO police_station(state_code,district,name) VALUES ('IN','Demo City','Demo A PS') RETURNING id")[0]
+        b = one(conn, "INSERT INTO police_station(state_code,district,name) VALUES ('IN','demo city ','Demo B PS') RETURNING id")[0]
+        c = one(conn, "INSERT INTO police_station(state_code,district,name) VALUES ('IN','Far District','Demo C PS') RETURNING id")[0]
+        user = one(conn, "INSERT INTO app_user(full_name,rank,role,station_id) VALUES ('Fictional SP','SP','sp',%s) RETURNING id", a)[0]
+        conn.execute("INSERT INTO policy_setting(level,state_code,district,key,value,reason,set_by) VALUES ('district','IN','Demo City','victim_update_days','60','Fictional order 3 of 2026',%s)", (user,))
+        conn.execute(next(m for m in MIGRATIONS if m.name.startswith("V23__")).read_text())
+        assert one(conn, "SELECT count(*) FROM district")[0] == 2                      # the two spellings are one district
+        assert one(conn, "SELECT count(*) FROM police_station")[0] == 3
+        assert one(conn, "SELECT (SELECT district_id FROM police_station WHERE id=%s) = (SELECT district_id FROM police_station WHERE id=%s)", a, b)[0]
+        assert one(conn, "SELECT (SELECT district_id FROM police_station WHERE id=%s) <> (SELECT district_id FROM police_station WHERE id=%s)", a, c)[0]
+        assert one(conn, "SELECT effective_policy_days(%s,'victim_update_days',90)", b)[0] == 60
+        assert one(conn, "SELECT effective_policy_days(%s,'victim_update_days',90)", c)[0] == 90
+        with pytest.raises(psycopg.errors.RaiseException):                              # still kept as written
+            conn.execute("DELETE FROM policy_setting")
+    finally:
+        conn.execute(f"DROP SCHEMA {schema} CASCADE")
+        conn.close()

@@ -25,7 +25,7 @@ class PeopleApiTest {
     void setUp() {
         db.sql("truncate fir, police_station, state_pack, app_user cascade").update();
         db.sql("insert into state_pack (code, name, version, languages) values ('IN','National','1',array['en'])").update();
-        station = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Testpur City') returning id")
+        station = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','Testpur'),'Testpur City') returning id")
                 .query(UUID.class).single();
         io = db.sql("insert into app_user (full_name, rank, role) values ('Officer Asha Rao','SI','io') returning id").query(UUID.class).single();
         clerk = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'Clerk Dev Nair','HC','front_desk') returning id").param(station).query(UUID.class).single();
@@ -53,9 +53,9 @@ class PeopleApiTest {
 
     @Test
     void shoOfTheStationAndSpOfTheDistrictAreOnTheTeamOthersAreNot() throws Exception {
-        UUID otherDistrict = db.sql("insert into police_station (state_code, district, name) values ('IN','Otherpur','Otherpur City') returning id")
+        UUID otherDistrict = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','Otherpur'),'Otherpur City') returning id")
                 .query(UUID.class).single();
-        UUID sameDistrict = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Testpur Rural') returning id")
+        UUID sameDistrict = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','Testpur'),'Testpur Rural') returning id")
                 .query(UUID.class).single();
         String[][] cases = {{"sho", station.toString(), "Meera Test"}, {"sp", sameDistrict.toString(), "Meera Test"},
                 {"sho", sameDistrict.toString(), null}, {"sp", otherDistrict.toString(), null}};
@@ -91,7 +91,7 @@ class PeopleApiTest {
 
     @Test
     void firAndFirListAreOnlyForTheCaseTeamAndTheFrontDeskOfTheStation() throws Exception {
-        UUID other = db.sql("insert into police_station (state_code, district, name) values ('IN','Otherpur','Otherpur City') returning id")
+        UUID other = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','Otherpur'),'Otherpur City') returning id")
                 .query(UUID.class).single();
         String stranger = TestAuth.bearer(tokens, db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'SI Fictional Far','SI','io') returning id")
                 .param(other).query(UUID.class).single());

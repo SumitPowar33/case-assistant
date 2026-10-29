@@ -29,7 +29,7 @@ class RecordsApiTest {
     void setUp() {
         db.sql("truncate fir, police_station, state_pack, app_user cascade").update();
         db.sql("insert into state_pack (code, name, version, languages) values ('IN','National','1',array['en'])").update();
-        UUID station = db.sql("insert into police_station (state_code, district, name) values ('IN','Testpur','Testpur City') returning id")
+        UUID station = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','Testpur'),'Testpur City') returning id")
                 .query(UUID.class).single();
         io = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'SI Asha Rao','SI','io') returning id")
                 .param(station).query(UUID.class).single();
