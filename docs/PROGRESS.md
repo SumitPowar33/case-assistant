@@ -4,6 +4,30 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 29 Oct 2026, session 23 (scheduled nightly build, Sumit away)
+Started from `setup/seed` at 349c122. The sandbox was empty: started PostgreSQL, created role `caseapp` and databases `caseapp_test`/`caseapp_dev`, installed `psycopg[binary]`, the gateway `requirements.txt` (note: `requirements-dev.txt` alone lacks fastapi/httpx) and `npm ci`. Baseline `scripts/test-all.sh`: all 7 lines PASS. (Hint: do not export `DATABASE_URL` as a postgresql:// URL for the whole shell; Spring reads it and fails with "url must start with jdbc".)
+
+Done
+- Paging for the FIR list: `GET /api/firs?limit=&offset=` (default 100, limit 1 to 200, offset 0 or more, otherwise 400; newest first, id as tie-break). Web FirList shows 50 per page with Newer/Older buttons (it asks for 51 rows to know whether a next page exists). No migration, no new dependency.
+- Tests: `FirApiTest.listIsPagedNewestFirstAndRefusesBadBounds`; new `FirList.test.tsx` (3); `App.test.tsx` stub updated for the new URL.
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core. Coverage: core 97% lines / 89% branches, web 99% statements / 83.5% branches / 94% functions, gateway 94%. No gate raised (no rise of 2 points).
+
+Deliberately skipped / not checked
+- Item 1 (arrests import) still waits for your answer. Jurisdiction as data (district table) not started: it needs a migration touching stations, access scope and policies, so I did not squeeze it into the remaining time. Not seen in a real browser. No total count is returned (the web uses the extra-row trick).
+
+Next
+1. Import phase 2: arrests file keyed by FIR (needs question 1 of session 22).
+2. Jurisdiction as data (district table with ids; stations point at it).
+3. Correction of time of arrest; end-to-end browser test; `ai.cloud_allowed` policy.
+
+Blocked
+- Item 1 waits for your answer. Live Claude/Gemini calls wait for API keys (using `fake`).
+
+Questions for Sumit
+1. (Open) Arrests first or chargesheets first for the import files?
+2. (Open) Hide the policy form for people who cannot set policies?
+3. (Open) Second person to approve an import?
+
 ## 28 Oct 2026, session 22 (scheduled nightly build, last of the night, Sumit away)
 Started from `setup/seed` at the session 21 commit. PostgreSQL was started and the `caseapp` role and `caseapp_test`/`caseapp_dev` databases were created (the sandbox starts empty each night). Baseline `scripts/test-all.sh`: all 7 lines PASS.
 

@@ -8,7 +8,7 @@ const io: Session = { token: 'tok-io', user: { id: 'u1', username: 'si.fictional
 
 const fir = { id: 'f1', fir_year: 2026, fir_no: 7, registered_at: '2026-09-10T10:00:00Z', is_zero_fir: false, action_taken: 'registered', sexual_offence: false, contents_original: 'Fictional complaint text', sections: [{ act: 'BNS', section: '318' }] }
 const routes: Record<string, unknown> = {
-  '/api/firs': [fir],
+  '/api/firs?limit=51&offset=0': [fir],
   '/api/firs/f1': fir,
   '/api/firs/f1/people': [{ id: 'p1', role: 'victim', label: 'V1', display_name: 'Victim 1', age_years: 30, identity_masked: true }],
   '/api/firs/f1/deadlines': [{ kind: 'chargesheet_60', due_on: '2026-11-10', basis: 'BNSS 187(3)' }],
@@ -87,7 +87,7 @@ test('without a session only the sign-in form shows; a wrong password says so; a
   fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
   expect(await screen.findByRole('link', { name: '7/2026' })).toBeTruthy()
   expect(screen.getByText(/SI New Login/)).toBeTruthy()
-  const firCall = fetch.mock.calls.find(([url]) => url === '/api/firs')!
+  const firCall = fetch.mock.calls.find(([url]) => url === '/api/firs?limit=51&offset=0')!
   expect((firCall[1] as RequestInit).headers).toEqual({ authorization: 'Bearer tok-new' })
   expect(screen.queryByRole('link', { name: 'AI settings' })).toBeNull() // only the state admin sees it
 })

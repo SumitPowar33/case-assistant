@@ -58,6 +58,22 @@ class FirApiTest {
     }
 
     @Test
+    void listIsPagedNewestFirstAndRefusesBadBounds() throws Exception {
+        for (int i = 1; i <= 3; i++) {
+            var b = new java.util.HashMap<>(body(i));
+            b.put("registeredAt", "2026-10-0" + i + "T10:00:00Z");
+            mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON)
+                    .content(json.writeValueAsString(b))).andExpect(status().isCreated());
+        }
+        mvc.perform(get("/api/firs?limit=2").header("Authorization", clerk)).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].fir_no").value(3));
+        mvc.perform(get("/api/firs?limit=2&offset=2").header("Authorization", clerk))
+                .andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].fir_no").value(1));
+        for (String bad : new String[] {"limit=0", "limit=201", "offset=-1"})
+            mvc.perform(get("/api/firs?" + bad).header("Authorization", clerk)).andExpect(status().isBadRequest());
+    }
+
+    @Test
     void databaseRulesBecomeFriendlyErrors() throws Exception {
         var zeroWithoutPlace = new java.util.HashMap<>(body(2));
         zeroWithoutPlace.put("zeroFir", true);

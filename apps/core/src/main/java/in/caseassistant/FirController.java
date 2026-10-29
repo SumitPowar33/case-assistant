@@ -41,10 +41,13 @@ class FirController {
     }
 
     @GetMapping
-    List<Map<String, Object>> list(@AuthenticationPrincipal Jwt jwt) {
+    List<Map<String, Object>> list(@AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "100") int limit, @RequestParam(defaultValue = "0") int offset) {
+        if (limit < 1 || limit > 200 || offset < 0)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be 1 to 200 and offset 0 or more");
         return db.sql("select id, fir_year, fir_no, registered_at, is_zero_fir, action_taken, sexual_offence "
-                        + "from fir where " + team.canReadFirSql() + " order by registered_at desc")
-                .param(CaseTeam.user(jwt)).query().listOfRows();
+                        + "from fir where " + team.canReadFirSql() + " order by registered_at desc, id limit ? offset ?")
+                .params(CaseTeam.user(jwt), limit, offset).query().listOfRows();
     }
 
     /** The complaint text names the victim, so it is withheld from anyone outside the case team on protected cases. */
