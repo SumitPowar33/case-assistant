@@ -12,16 +12,45 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-1. End-to-end browser test of the Load data screen with Playwright (skip if an earlier session already did it).
-2. Maharashtra pack `packs/MH`: roles, policies (with `import_self_approval` = 0), punishments only where the state differs, playbooks, Marathi labels; pack tests; demo stations in MH.
-3. Fictional CCTNS-style import profile for MH.
-4. Evidence import file.
-5. Notices import file.
-6. `ai.cloud_allowed` policy and the gateway refusing a cloud provider when it is off.
-7. Module 1, front-desk complaint: typed intake, read-back, golden-hour checklist, then speech input.
-8. Screens in the 10 languages, then the legal glossary.
-9. Upgrade test, contract test web-to-core, load and accessibility checks.
-10. End-to-end demo case and demo script.
+Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
+1. Evidence import file.
+2. Notices import file.
+3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
+4. `ai.cloud_allowed` policy and the gateway refusing a cloud provider when it is off.
+5. Module 1, front-desk complaint: typed intake, read-back, golden-hour checklist, then speech input.
+6. Screens in the 10 languages, then the legal glossary.
+7. Upgrade test, contract test web-to-core, load and accessibility checks.
+8. End-to-end demo case and demo script.
+
+## 30 Oct 2026, session 26 (scheduled weekend build, Sumit away)
+Started from `setup/seed` at 73d2322; your answers (1dff508) arrived on the branch during the session and I followed their Next list. Sandbox empty again: started PostgreSQL, created role `caseapp` and the two databases, installed packages, `npm ci`. Baseline `scripts/test-all.sh`: all 7 lines PASS.
+
+Done
+- **End-to-end browser test** (Next item 1; first item of "Not covered yet"): `tests/e2e` (pytest + Playwright, Chromium). It drops and creates a throwaway database `caseapp_e2e`, starts the real core jar on a free port with a made-up signing key and admin password, serves the built web app with a small proxy for `/api`, and the platform admin creates the station and accounts over the API. Three tests: (1) an SHO loads FIRs, then arrests, then chargesheets through the four steps (a bad date and an unknown FIR are skipped), the FIR screen shows the people, arrests, remand, chargesheet and deadlines, undoing the chargesheets brings the 60-day custody clock back for the accused still in custody; (2) an IO sees no Load data link and is refused when typing the address; (3) Maharashtra, below. New line in `scripts/test-all.sh` (runs after core and web, uses their jar and build).
+- **Bug found by the browser test, fixed with a regression test first**: a fresh installation had no `state_pack` row, so the admin could not add any police station (the API tests hid this by inserting the row themselves). Fix: a module manifest `packs/{id}/module.json` (id = folder name, name, version, languages, `depends`; every module but `IN` depends on `IN`), checked at start-up (`Modules`), which writes each module's `state_pack` row (status untouched). Tests: `ModulesTest` (6), `AdminApiTest` (fresh install), pack test.
+- **Maharashtra module, first part** (Next item 2): `packs/MH/module.json` (Marathi, English, Hindi) and `packs/MH/policies.json` with your decision `import_self_approval` = 0 for the whole state. New mechanism, because a pack could not set a value before: a state module may give a **stricter value for its own state** (`state_values`, with a reason; only between the minimum and the national default; the national module cannot). V27 adds `pack_policy` (written from the pack files at start-up) and `effective_policy_days` now takes it into account, so deadlines and the approval check agree; the tighten-only check treats the module as the unit above the state admin, so nobody in MH can set it back to 1. Tests: `PoliciesTest` (+2), `ImportApiTest` (MH: SHO refused, SP approves, state admin cannot loosen, other states unaffected), `test_schema.py` (+1), pack tests (+2), `MigrationTest` expects V27.
+- **Made-up CCTNS-style FIR layout for MH** (Next item 3): `packs/MH/import-profiles/fir-mh-cctns-fictional.json`, labelled MADE-UP in the screen, capital-letter column names and Marathi headings (गुन्हा क्रमांक, दाखल दिनांक, आरोपी, थोडक्यात हकीकत ...). A state's layout is now **only for that state's stations**: the server refuses it elsewhere, the screen offers it only when such a station is chosen, and the station list starts at the user's own station. Profile ids must be unique across modules (start-up refusal and pack test). Tests: `FirImportTest` (+2), `ImportApiTest` (+1), `ImportPage.test.tsx` (+1), browser test 3 (Pune SHO loads the MH file, cannot approve it; the SP approves).
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 97.8% lines / 92.0% branches, web 99.3% statements / 83.9% branches / 94.4% functions, gateway 94%. No gate raised (no rise of 2 points since the last raise). `Modules` 100%, `Policies` 100% lines and branches.
+
+Deliberately skipped / not checked
+- MH roles, punishments, playbooks and Marathi labels: not written, because they are legal and organisational content I should not invent (questions 1 and 2). No demo stations in MH (question 3).
+- The Policies page still shows the national default next to the value in force; for MH it shows default 1, in force 0, without saying the state module set it. The policy history does not list module values (they are in the pack file and `pack_policy`).
+- The made-up layout is FIRs only (no MH arrests or chargesheets layout). A file with a byte-order mark sent straight to the API would not match the first column name (the browser strips it).
+- Risks seen, not changed: `GET /api/stations` lists every station of every state to any signed-in user (names only, no case data); `App.tsx` decides the Admin link by the role name `state_admin` (older code, against the "no role names" rule). Both small; question 4.
+
+Next
+1. Evidence import file (Next item 4 above), then notices import file.
+2. Rest of the MH pack once questions 1 to 3 are answered.
+3. More browser tests: register an FIR by hand, add a person, record an arrest, see the deadline list.
+
+Blocked
+- Live Claude/Gemini calls wait for API keys (using `fake`). MH roles, punishments and playbooks wait for questions 1 and 2.
+
+Questions for Sumit
+1. Maharashtra roles: should the MH module add any role of its own (for example a station duty officer, "ठाणे अंमलदार"), or keep the national roles only?
+2. Maharashtra punishments and playbooks: which state laws should come first (for example MCOCA or the Maharashtra Police Act), and who can check them as a prosecutor before they leave draft?
+3. Demo stations in MH: which fictional district and station names do you want for demos (e.g. "Fictional Pune Rural / Demo Pune PS")?
+4. May I limit `GET /api/stations` to the user's own state (the platform admin still sees all), and replace the role-name check for the Admin link with the `admin.manage` permission?
 
 ## 29 Oct 2026, session 25 (scheduled nightly build, last of the night, Sumit away)
 Started from `setup/seed` at 69e0d83 (sandbox empty again: started PostgreSQL, created role `caseapp` and the two databases, installed packages, `npm ci`). Baseline `scripts/test-all.sh`: all 7 lines PASS.
