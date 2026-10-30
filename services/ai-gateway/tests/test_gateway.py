@@ -275,3 +275,44 @@ def test_a_core_answer_without_the_ai_policy_counts_as_no_cloud():
     app = create_app(Store(":memory:"), providers, SECRET, CoreCheck("http://core", mock_client(handler)))
     c = TestClient(app, headers={"Authorization": "Bearer " + token("user-x", "io")})
     assert c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "test@1"}).status_code == 403
+
+
+# ---- providers: refusals and odd answers (fictional prompts only) ----
+import pytest
+from app.providers import ProviderError
+
+
+def call(provider):
+    return provider.complete(model="m", system="be brief", prompt="Fictional prompt", max_tokens=50)
+
+
+def test_providers_refuse_without_a_key_and_name_the_variable(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    with pytest.raises(ProviderError, match="ANTHROPIC_API_KEY"):
+        call(ClaudeProvider())
+    with pytest.raises(ProviderError, match="GEMINI_API_KEY"):
+        call(GeminiProvider())
+
+
+def test_claude_error_status_and_empty_text_are_provider_errors():
+    with pytest.raises(ProviderError, match="HTTP 529"):
+        call(ClaudeProvider("k", mock_client(lambda r: httpx.Response(529, text="overloaded"))))
+    with pytest.raises(ProviderError, match="no text"):
+        call(ClaudeProvider("k", mock_client(lambda r: httpx.Response(200, json={"content": [{"type": "tool_use"}]}))))
+
+
+def test_gemini_error_status_empty_candidates_and_system_text():
+    with pytest.raises(ProviderError, match="HTTP 429"):
+        call(GeminiProvider("k", mock_client(lambda r: httpx.Response(429, text="quota"))))
+    with pytest.raises(ProviderError, match="no text"):
+        call(GeminiProvider("k", mock_client(lambda r: httpx.Response(200, json={"candidates": []}))))
+    seen = []
+
+    def ok(r):
+        seen.append(json.loads(r.content))
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "Fictional answer"}]}}],
+                                         "usageMetadata": {"promptTokenCount": 3, "candidatesTokenCount": 2}})
+    done = call(GeminiProvider("k", mock_client(ok)))
+    assert (done.text, done.input_tokens, done.output_tokens) == ("Fictional answer", 3, 2)
+    assert seen[0]["systemInstruction"]["parts"][0]["text"] == "be brief"

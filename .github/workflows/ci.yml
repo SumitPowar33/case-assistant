@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt -r requirements-dev.txt
-      - run: python -m pytest -q --cov=app --cov-branch --cov-fail-under=90
+      - run: python -m pytest -q --cov=app --cov-branch --cov-fail-under=92
   xlit:
     runs-on: ubuntu-latest
     steps:
@@ -85,7 +85,7 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-      - run: mvn -B -f apps/core/pom.xml verify   # tests + coverage gate (lines 95%, branches 80%)
+      - run: mvn -B -f apps/core/pom.xml verify   # tests + coverage gate (lines 95%, branches 90%)
   web:
     runs-on: ubuntu-latest
     defaults:
