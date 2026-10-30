@@ -5,7 +5,7 @@ Rule of this project (Sumit, 28 Oct 2026): **every piece of code gets tests, and
 ## The suites
 | Kind | Suite | What it proves | Command |
 |---|---|---|---|
-| Repository rules | `tests/repo_rules` | The hard rules of CLAUDE.md hold on the whole repo: no model calls outside `services/ai-gateway`, no secrets, no forbidden features (guilt/credibility scoring, prediction, facial recognition), no AI attribution in commits | `python -m pytest -q tests/repo_rules` |
+| Repository rules | `tests/repo_rules` | Every route the web app calls exists in the core (contract); the hard rules of CLAUDE.md hold on the whole repo: no model calls outside `services/ai-gateway`, no secrets, no forbidden features (guilt/credibility scoring, prediction, facial recognition), no AI attribution in commits | `python -m pytest -q tests/repo_rules` |
 | Data / contract | `packs/tests` | Every pack file (roles, policies, punishment table, playbooks) is well formed and consistent with the database lists | `python -m pytest -q packs/tests` |
 | Unit | `packages/xlit`, `RolesTest`, `PoliciesTest`, web component tests, gateway tests | Pure logic: typing engine, role merge rules, policy bounds, forms | see CLAUDE.md |
 | Database / legal rules | `apps/core/db-tests` | Every migration V1..Vn on a clean schema; legal day-counting; append-only tables; constraints; upgrade from an earlier release | `python -m pytest -q apps/core/db-tests` |
@@ -50,7 +50,7 @@ The gate fails the build below the number. When coverage rises by 2 points or mo
 ## Not covered yet (planned, in this order)
 1. **End-to-end browser test**: done 30 Oct 2026 (`tests/e2e`: Load data screen, and a case typed by hand in `test_case_flow.py`). Add a browser test with every new screen.
 2. **Upgrade test**: done 31 Oct 2026 (`apps/core/db-tests/test_upgrade.py`: a case with a masked victim stored at V25 and V29 takes every later migration unchanged). Bump `BASES` when a release is tagged. Still to add: run the API tests on an upgraded dump.
-3. **Contract test between the web app and the core** (generated from the same route list as `SecurityMatrixTest`) so a renamed field fails a test, not a screen.
+3. **Contract test between the web app and the core**: routes and methods done 31 Oct 2026 (`tests/repo_rules/test_web_core_contract.py` reads the calls in `apps/web/src` and the mappings in the Java controllers, so a renamed or removed route fails a test, not a screen). Still to do: the field names of requests and answers (generate them from the same route list as `SecurityMatrixTest`).
 4. **Load test** of the list endpoints once paging exists.
 5. **Accessibility check** of the main screens (axe) and Indian-language rendering checks.
 6. **Mutation testing** (PIT for the core, Stryker for the web) once a month on the legal-rule code, to see whether the tests would notice a wrong number.
