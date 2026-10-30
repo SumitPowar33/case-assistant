@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs every test suite with its coverage gate and prints one summary. Used by the nightly build sessions and by CI.
 # Needs PostgreSQL for the core and database suites (DATABASE_URL, default: caseapp@localhost/caseapp_test).
-# Usage: scripts/test-all.sh [--no-db]   (--no-db skips the two suites that need PostgreSQL)
+# Usage: scripts/test-all.sh [--no-db]   (--no-db skips the three suites that need PostgreSQL)
 set -u
 cd "$(dirname "$0")/.."
 NO_DB=0; [ "${1:-}" = "--no-db" ] && NO_DB=1
@@ -18,6 +18,8 @@ run "web (tests, coverage gate, lint, build)"   bash -c 'cd apps/web && npm run 
 if [ $NO_DB = 0 ]; then
   run "database rules (migrations V1..Vn)"      python -m pytest -q apps/core/db-tests
   run "core (unit + API + security, coverage gate)" mvn -B -q -f apps/core/pom.xml verify
+  # after core and web: it uses the jar and the built web app they just made, and its own throwaway database
+  run "e2e browser (real core + web, Chromium)"  python -m pytest -q tests/e2e
 fi
 echo; echo "=== summary ==="; printf '%s\n' "${RESULTS[@]}"
 rm -f "/tmp/test-all-$$.log"

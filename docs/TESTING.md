@@ -13,12 +13,13 @@ Rule of this project (Sumit, 28 Oct 2026): **every piece of code gets tests, and
 | Security | `SecurityMatrixTest` | Walks **every route**: nothing answers without a token (except login); a signed-in outsider reads no case record (404); admin routes refuse ordinary officers | same as above |
 | Access / tenancy | `AdminApiTest`, `PolicyApiTest`, `PeopleApiTest`, `FirApiTest` | State admin bounded to own state; policies tighten-only; case team reads | same |
 | Web | `apps/web/src/*.test.tsx` | Screens with stubbed requests; lint; production build | `npm run coverage && npm run lint && npm run build` |
+| End-to-end browser | `tests/e2e` | The real core jar on a throwaway database (`caseapp_e2e`), the built web app and Chromium (Playwright): Load data with FIRs, arrests and chargesheets, the records on the FIR screen, undo, refusal of an officer without the right | `python -m pytest -q tests/e2e` (after `mvn verify` and `npm run build`) |
 | Integration (gateway to core) | `services/ai-gateway/tests` | Token checks, audit hash chain, provider switching | `python -m pytest -q` |
 
 ## Coverage gates (they only go up)
 | Part | Gate | Today (29 Oct) |
 |---|---|---|
-| Core (JaCoCo, `mvn verify`) | lines 95%, branches 90% | 97.7% / 91.5% |
+| Core (JaCoCo, `mvn verify`) | lines 95%, branches 90% | 97.7% / 91.9% (30 Oct) |
 | Web (vitest) | statements 95%, branches 82%, functions 88% | 99% / 83.7% / 94% |
 | AI gateway (pytest-cov) | 90% incl. branches | 94% |
 The gate fails the build below the number. When coverage rises by 2 points or more, raise the gate in the same commit.
@@ -47,7 +48,7 @@ The gate fails the build below the number. When coverage rises by 2 points or mo
 - Re-measure the coverage and raise the gates.
 
 ## Not covered yet (planned, in this order)
-1. **End-to-end browser test** (Playwright against the real core, a throwaway database and the built web app): sign in, register an FIR, add a person, record an arrest, see the deadline list. Chromium is available in the build sessions.
+1. **End-to-end browser test**: started 30 Oct 2026 (`tests/e2e`, Load data screen). Still to add: sign in, register an FIR by hand, add a person, record an arrest, see the deadline list.
 2. **Upgrade test**: restore a database dump made at the previous release, apply the new migrations, run the API tests.
 3. **Contract test between the web app and the core** (generated from the same route list as `SecurityMatrixTest`) so a renamed field fails a test, not a screen.
 4. **Load test** of the list endpoints once paging exists.
