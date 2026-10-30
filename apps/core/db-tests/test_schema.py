@@ -132,7 +132,7 @@ def test_deadlines_view(db):
                   remand_recorded_by,remand_recorded_at)
                   VALUES (%s,'2026-09-12 07:00+05:30','Demo place','{proper investigation}','Demo relative',%s,'2026-09-12','less_than_10_years',%s,now())""", (a2, io, io))
     db.execute("""INSERT INTO notice(fir_id,kind,addressee,items_requested,body,signed_by,issued_at,reply_due_on,status)
-                  VALUES (%s,'BNSS_94','Bank of Demo','{statements}','Demo body',%s,now(),'2026-10-30','sent')""", (fir, io))
+                  VALUES (%s,'BNSS_94','Bank of Demo','{statements}','Demo body',%s,'2026-09-20 10:00+05:30','2026-10-30','sent')""", (fir, io))
     rows = dict(db.execute("SELECT kind, due_on FROM case_deadline").fetchall())
     assert rows["chargesheet_custody"] == dt.date(2026, 11, 10)
     assert rows["sexual_offence_investigation"] == dt.date(2026, 10, 18)
