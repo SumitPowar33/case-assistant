@@ -14,14 +14,40 @@ Answers to the open questions from sessions 13, 18 and 25:
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
+Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 5. Module 1, front-desk complaint: typed intake, read-back, golden-hour checklist, then speech input.
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
 
-## 30 Oct 2026, session 29 (on-demand run started by Sumit at 18:29 IST) - IN PROGRESS
-Working on: front-desk complaint (module 1). Another session should not start this item; pick testing work or the next item instead.
+## 30 Oct 2026, session 29 (on-demand run started by Sumit at 18:29 IST)
+Started from `setup/seed` at 52f9d88 (nothing newer on the branch, no new answers). PostgreSQL already running. Baseline `scripts/test-all.sh`: all 8 lines PASS. I pushed a short "working on the front desk" note first (b457f8e) so a parallel session would not build the same item.
+
+Done
+- **Front desk, module 1 (typed intake, read-back, golden-hour checklist)**, f8fcfe8. New screen "Front desk" for station staff who may register FIRs (permission `fir.register`; anyone else gets 404 on a complaint).
+  - **Intake**: time received, how it was given (spoken at the station, phone, written, electronic), informant, kind, and the information in the informant's own words (Indian-script typing works as in the FIR form).
+  - **Read-back and signature (BNSS 173(1))**: the text is shown large; spoken or phoned information must be read over in a named language before it is marked signed. Before signing, the text may be corrected; **once signed it never changes** (database rule). Electronic information counts only if signed **within three days** (173(1)(ii)); after that it can only be closed as "not signed in time".
+  - **Golden-hour steps**: each kind has steps with a time limit counted from receipt, shown as due or overdue and ticked once with who, when and a note (for example the 1930 acknowledgement number). The list lives in the pack (`packs/IN/complaint-kinds.json`, marked **draft**): online financial fraud (1930/NCRP within the hour, transactions, keep phone data), sexual offence (woman officer, BNSS 173(1) proviso; identity, BNS 72/POCSO 23; medical examination within 24 hours, BNSS 184; child: CWC and Special Court within 24 hours, POCSO 19(6)), hurt, missing child (FIR at once, Bachpan Bachao Andolan 2013), vehicle theft, other. A state module may add kinds, never change national ones (checked at start-up).
+  - **Outcome**: "Register the FIR from this complaint" sends only the complaint id; the server takes the **signed text and the time received unchanged** (the database checks the FIR carries them), one FIR per complaint, same station only. Otherwise closed with a reason (NCR, preliminary enquiry, transferred, no offence).
+  - Tests: `ComplaintApiTest` (6), `ComplaintKindsTest` (2), `test_schema.py` (+4), `FrontDesk.test.tsx` (6), pack test (+1), new browser test `tests/e2e/test_front_desk.py` (front desk takes a cyber-fraud complaint received two hours ago, sees the overdue steps, ticks 1930, reads it over in Marathi, signs, registers the FIR, which shows the same words).
+- **Bug found by the browser test, regression tests first**: ticking a step answered 201 with no body, and the web client showed "Unexpected end of JSON input" although the step was saved. The step now answers 204, and the web client treats any empty success body as saved (the custody hand-over endpoint has the same 201-without-body and would have hit this once it gets a screen).
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.1% lines / 92.5% branches, web 99.3% statements / 84.5% branches / 94.8% functions, gateway 94%. No gate raised (no rise of 2 points).
+
+Deliberately skipped / not checked
+- Speech input (the last part of module 1) not started. No printed copy for the informant (BNSS 173(2) free copy) yet. No informant signature image or e-sign; "signed" is the officer's record that the informant signed the paper.
+- The preliminary enquiry outcome sets no 14-day deadline (BNSS 173(3)) yet. Complaints are not on the SP's screens (the SP has no `fir.register`). The golden-hour step texts are legal content I drafted; they need review (question 1).
+- The language list for the read-back is the typing engine's 10 languages plus English.
+
+Next
+1. Front desk, part 2: printable copy for the informant (BNSS 173(2)), the 14-day preliminary-enquiry deadline (173(3)), then speech input.
+2. Rest of the MH pack once questions 1 to 3 of session 26 are answered.
+3. Upgrade test (next kind of test in docs/TESTING.md).
+
+Questions for Sumit
+1. The golden-hour steps (packs/IN/complaint-kinds.json) are a draft I wrote from the law and national practice. Who in the pilot can check them, and which kinds of complaint come to the front desk most often there?
+2. Should a woman-victim sexual-offence complaint be refused at intake when the signed-in officer is not a woman (the app does not know officers' gender today), or is a checklist step enough?
+3. Should the SP see the complaints of the district (read only)?
 
 ## 30 Oct 2026, session 28 (scheduled weekend build, Sumit away; ran at the same time as session 27)
 Started from `setup/seed` at ec72a29. Sandbox fresh: started PostgreSQL, created role `caseapp` and the two databases, installed packages, `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS.
