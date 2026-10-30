@@ -13,9 +13,8 @@ Answers to the open questions from sessions 13, 18 and 25:
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
-Done in session 28: evidence import file (ef845fb), notices import file (a792dea).
+Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
-4. `ai.cloud_allowed` policy and the gateway refusing a cloud provider when it is off.
 5. Module 1, front-desk complaint: typed intake, read-back, golden-hour checklist, then speech input.
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
@@ -28,9 +27,10 @@ Done
 - **Evidence register import** (Next item 1, ef845fb; session 27 saw it and kept this one). Layout "Evidence register (CSV), generic": an item is attached to an FIR of the chosen station by number (and year); label, kind (physical, electronic, document) and seizure date are required. Never guessed: an **electronic item without the SHA-256 taken at seizure is an error** (the hash cannot be made up; type it by hand with its 63(4) certificate); a missing description or panchnama reference is "Not in the old record" with a warning; a seizure dated before the FIR is a warning only (a recovery can lead to an FIR). Repeats by FIR + label (case and spaces ignored). Undo is refused once a custody hand-over, a 63(4) certificate or a readiness/accused link hangs on an item. **New rule V28: an evidence item can no longer be deleted at all** (it could be, by direct SQL), except by the undo of the import that added it. Imported electronic items show "not court-ready yet" until their certificate is recorded.
 - **Notices import** (Next item 2, a792dea). Layout "Notices (CSV), generic". Legal logic, all also enforced by the database (V29): old notices **keep their law** (new kinds CrPC 91, 41A, 160, shown as "old law", never converted to BNSS 94, 35(3), 179, and not offered when typing a new notice); **no BNSS notice before 1 July 2024**; **a CrPC notice only for an FIR registered before 1 July 2024** (it may be issued after that day, BNSS 531 savings); a notice to produce (BNSS 94, CrPC 91) must list its items. The **status is never guessed** because it decides the reply deadline (unknown value = error; empty = "sent" with a warning). The signer may be empty only for an imported notice. A notice imported as complete shows nothing missing. Undo refused once a reply is recorded.
 - **Bug fixed on the way (V29)**: a concluded case still showed the reply date of an open notice on its deadline list; now a concluded case has no live deadline of any kind (database test).
+- **`ai_cloud_allowed` policy** (Next item 4, ef1e2bb). National policy, default 1; a state, district or station may set 0 (tighten-only, like every policy). `GET /api/me` now carries `ai_cloud_allowed` for the user's unit, and the AI gateway, which reads `/api/me` on every sign-in check, refuses Claude and Gemini with 403 when it is off and writes an `ai_refused` row to the audit chain; nothing is sent. It fails closed: a core answer without the field counts as "no cloud". Only the offline `fake` provider counts as on the state's servers today. Tests: `PolicyApiTest` (+1: district sets 0, its stations see false, another district and the platform admin see true, a station cannot set it back), gateway (+2).
 - Less code: one FIR lookup (`ArrestImport.firOf`) and one staging routine (`keyedRows`) now serve chargesheets, evidence and notices instead of copies.
 - Tests: `EvidenceImportTest` (6), `NoticeImportTest` (6), `ImportApiTest` (+11: load, repeats, item or notice recorded meanwhile, signer left, undo and its refusals, who may load, a CrPC notice cannot be typed for a new FIR), `test_schema.py` (+4: evidence kept, CrPC/BNSS dates, imported notice without signer, concluded case), web (+2), pack test (two new layouts), browser test `test_load_data.py` now also loads evidence and notices and checks them on the FIR screen.
-- Final `scripts/test-all.sh` (after merging session 27's work): PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 97.9% lines / 92.9% branches, web 99.3% statements / 83.9% branches / 94.4% functions, gateway 94%. No gate raised (core branches +1.4 since the last raise, web unchanged).
+- Final `scripts/test-all.sh` (after merging session 27's work): PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. After the policy change too: all 8 PASS. Coverage: core 97.9% lines / 92.9% branches, web 99.3% statements / 83.9% branches / 94.4% functions, gateway 94%. No gate raised (core branches +1.4 since the last raise, web unchanged).
 
 Deliberately skipped / not checked
 - Custody hand-overs and 63(4) certificates of old items, and replies of old notices, are not loaded (only the item or notice itself). A notice imported as "partly replied" therefore lists all its items as missing until replies are logged.
@@ -38,10 +38,12 @@ Deliberately skipped / not checked
 - The deadline list shows the basis of an old notice as `CrPC_91` (code, not the label).
 - Not seen in a browser by hand (the browser test covers the screens used).
 
+- `ai_cloud_allowed`: no per-state API keys yet and no real on-premises provider; the web screens do not hide the provider choice when cloud is off (the gateway's refusal message is shown instead). The gateway's admin check still uses the role name `state_admin` (older code, see question 4 of session 26).
+
 Next
-1. `ai.cloud_allowed` policy and the gateway refusing a cloud provider when it is off (Next item 4 above).
+1. Front-desk complaint (module 1): typed intake, read-back, golden-hour checklist.
 2. Rest of the MH pack once questions 1 to 3 of session 26 are answered.
-3. Front-desk complaint (module 1).
+3. Upgrade test (next kind of test in docs/TESTING.md after the browser tests).
 
 Blocked
 - Live Claude/Gemini calls wait for API keys (using `fake`). MH roles, punishments and playbooks wait for questions 1 to 3 of session 26.
@@ -49,7 +51,8 @@ Blocked
 Questions for Sumit
 1. Old notices of CrPC days are kept as CrPC 91, 41A and 160 (not converted). Do your pilot stations also have old notices under other sections (for example CrPC 41(1) arrest notices, 160 to women at home, or 175 summons) that the file should accept?
 2. Should a notice imported as "partly replied" carry which items were already received (a column such as `items_received`), or is it enough that the officer ticks them in the app?
-3. (Same as session 27's question) Two sessions built the evidence import at the same time this evening. Please keep only one session running at a time, or tell on-demand runs to do testing work only.
+3. With `ai_cloud_allowed` = 0 no AI drafting works today, because there is no on-premises model yet. Should the pilot state start with cloud allowed (fictional data only), and which on-premises model should come first when real data arrives?
+4. (Same as session 27's question) Two sessions built the evidence import at the same time this evening. Please keep only one session running at a time, or tell on-demand runs to do testing work only.
 
 ## 30 Oct 2026, session 27 (on-demand run started by Sumit at about 17:50 IST)
 Started from `setup/seed` at ec72a29. PostgreSQL was already running from session 26. Baseline `scripts/test-all.sh`: all 8 lines PASS.
