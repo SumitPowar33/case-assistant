@@ -100,11 +100,14 @@ class CaseTeam {
                 .params(firId, userId).query(Boolean.class).single();
     }
 
-    /** Registering an FIR: users with "fir.register" posted at that station. */
-    void requireStationStaff(UUID userId, UUID stationId) {
-        boolean ok = db.sql("select exists (select 1 from app_user where id = ? and active and station_id = ? and role in "
+    /** Registering an FIR or taking a complaint: users with "fir.register" posted at that station. */
+    boolean canRegisterAt(UUID userId, UUID stationId) {
+        return userId != null && stationId != null && db.sql("select exists (select 1 from app_user where id = ? and active and station_id = ? and role in "
                 + Roles.in(roles.with("fir.register")) + ")").params(userId, stationId).query(Boolean.class).single();
-        if (!ok) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only staff of this police station can register its FIRs.");
+    }
+
+    void requireStationStaff(UUID userId, UUID stationId) {
+        if (!canRegisterAt(userId, stationId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only staff of this police station can register its FIRs.");
     }
 
     /** Whether the user is active and holds a permission (account management: "admin.manage"). */

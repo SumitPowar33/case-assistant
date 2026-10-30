@@ -34,30 +34,35 @@ export function Form({ title, submit, onSaved, children }: {
   )
 }
 
-/** Register a new FIR at the signed-in officer's own station. */
-export function NewFirForm() {
+/**
+ * Register a new FIR at the signed-in officer's own station. With a signed complaint, the FIR takes the complaint's text
+ * and time of receipt on the server, so those fields are not asked again.
+ */
+export function NewFirForm({ complaintId }: { complaintId?: string } = {}) {
   const { lang } = useContext(TypingContext)
   const [contents, setContents] = useState('')
   const me = currentSession()?.user
   const station = me?.station_id
   if (!station) return <p>Only police station staff can register an FIR.</p>
   return (
-    <Form title="Register a new FIR" onSaved={(r) => { setContents(''); window.location.hash = `#/firs/${(r as { id: string }).id}` }}
+    <Form title={complaintId ? 'Register the FIR from this complaint' : 'Register a new FIR'} onSaved={(r) => { setContents(''); window.location.hash = `#/firs/${(r as { id: string }).id}` }}
       submit={(f) => {
-        if (!contents.trim()) throw new Error('Write the information as given.')
+        if (!complaintId && !contents.trim()) throw new Error('Write the information as given.')
         return send('/firs', 'POST', {
         stationId: station, firYear: Number(f.get('year')), firNo: Number(f.get('no')), gdEntryNo: text(f, 'gd'),
-        registeredAt: istIso(String(f.get('registered'))), informationReceivedAt: istIso(String(f.get('received'))),
-        ioId: f.get('iAmIo') === 'on' ? me!.id : null, contentsOriginal: contents.trim(), contentsLanguage: lang, actionTaken: f.get('action'), actionReason: text(f, 'reason'),
+        registeredAt: istIso(String(f.get('registered'))),
+        ...(complaintId ? { complaintId } : { informationReceivedAt: istIso(String(f.get('received'))), contentsOriginal: contents.trim(), contentsLanguage: lang }),
+        ioId: f.get('iAmIo') === 'on' ? me!.id : null, actionTaken: f.get('action'), actionReason: text(f, 'reason'),
         sexualOffence: f.get('sexual') === 'on', sections: parseSections(String(f.get('sections') ?? '')),
         })
       }}>
       <label>Year <input name="year" type="number" min={2024} max={2100} defaultValue={new Date().getFullYear()} required /></label>
       <label>FIR number <input name="no" type="number" min={1} required /></label>
       <label>General diary entry <input name="gd" required /></label>
-      <label>Information received (date and time, IST) <input name="received" type="datetime-local" required /></label>
+      {!complaintId && <label>Information received (date and time, IST) <input name="received" type="datetime-local" required /></label>}
       <label>Registered (date and time, IST) <input name="registered" type="datetime-local" required /></label>
-      <TypingField label="Information as given (in the informant's words)" value={contents} onChange={setContents} multiline />
+      {complaintId ? <p><small>The information and the time it was received are taken from the signed complaint, unchanged.</small></p>
+        : <TypingField label="Information as given (in the informant's words)" value={contents} onChange={setContents} multiline />}
       <label>Sections <input name="sections" placeholder="BNS 318(4), IT Act 66D" /></label>
       <label>Action taken <select name="action" defaultValue="investigate">
         <option value="investigate">Investigation taken up</option>

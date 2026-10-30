@@ -23,10 +23,10 @@ import org.springframework.web.server.ResponseStatusException;
 class FirController {
     record NewFir(
             @NotNull UUID stationId, @Positive int firYear, @Positive int firNo, @NotBlank String gdEntryNo,
-            @NotNull OffsetDateTime registeredAt, @NotNull OffsetDateTime informationReceivedAt,
-            boolean zeroFir, String outsideLimitsPlace, @NotBlank String contentsOriginal,
-            @NotBlank String contentsLanguage, @NotBlank String actionTaken, String actionReason,
-            UUID ioId, boolean sexualOffence, List<Section> sections) {}
+            @NotNull OffsetDateTime registeredAt, OffsetDateTime informationReceivedAt,
+            boolean zeroFir, String outsideLimitsPlace, String contentsOriginal,
+            String contentsLanguage, @NotBlank String actionTaken, String actionReason,
+            UUID ioId, boolean sexualOffence, List<Section> sections, UUID complaintId) {}
 
     record Section(@NotBlank String act, @NotBlank String section) {}
 
@@ -74,15 +74,30 @@ class FirController {
         team.requireStationStaff(me, f.stationId);
         if (f.ioId != null && !team.canBeIo(f.ioId, f.stationId))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The IO must be an active IO or SHO of this police station.");
+        Object received = f.informationReceivedAt, contents = f.contentsOriginal, language = f.contentsLanguage;
+        if (f.complaintId != null) {
+            // from a signed complaint of this station: the FIR carries its text and time of receipt unchanged
+            var c = db.sql("select station_id, received_at, text_original, text_language, signed_at, outcome from complaint where id = ? for update")
+                    .param(f.complaintId).query().listOfRows().stream().findFirst().orElse(null);
+            if (c == null || !f.stationId.equals(c.get("station_id"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such complaint at this police station.");
+            if (c.get("signed_at") == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "The informant has not signed the complaint yet (BNSS 173(1)).");
+            if (c.get("outcome") != null) throw new ResponseStatusException(HttpStatus.CONFLICT, "This complaint is already closed.");
+            received = c.get("received_at");
+            contents = c.get("text_original");
+            language = c.get("text_language");
+        } else if (f.informationReceivedAt == null || f.contentsOriginal == null || f.contentsOriginal.isBlank() || f.contentsLanguage == null || f.contentsLanguage.isBlank())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The information, its language and the time it was received are needed.");
         UUID id = db.sql("""
                 insert into fir (station_id, fir_year, fir_no, gd_entry_no, registered_at, information_received_at,
                   is_zero_fir, outside_limits_place, contents_original, contents_language, action_taken,
                   action_reason, io_id, sexual_offence)
                 values (?,?,?,?,?,?,?,?,?,?,?,?,?,?) returning id""")
-                .params(f.stationId, f.firYear, f.firNo, f.gdEntryNo, f.registeredAt, f.informationReceivedAt,
-                        f.zeroFir, f.outsideLimitsPlace, f.contentsOriginal, f.contentsLanguage, f.actionTaken,
+                .params(f.stationId, f.firYear, f.firNo, f.gdEntryNo, f.registeredAt, received,
+                        f.zeroFir, f.outsideLimitsPlace, contents, language, f.actionTaken,
                         f.actionReason, f.ioId, f.sexualOffence)
                 .query(UUID.class).single();
+        if (f.complaintId != null)
+            db.sql("update complaint set outcome = 'fir', fir_id = ?, outcome_at = clock_timestamp(), outcome_by = ? where id = ?").params(id, me, f.complaintId).update();
         if (f.ioId != null)
             db.sql("insert into fir_io_assignment (fir_id, to_io, assigned_by) values (?,?,?)").params(id, f.ioId, me).update();
         if (f.sections != null) {

@@ -1,0 +1,49 @@
+{
+  "module": "IN",
+  "status": "draft",
+  "review_note": "Golden-hour steps drafted from public law and national practice. Must be reviewed by the state police and the Directorate of Prosecution before use. Minutes count from the time the information was received.",
+  "kinds": {
+    "cyber_financial_fraud": {
+      "label": "Online financial fraud (money lost through UPI, card, bank or app)",
+      "steps": [
+        {"id": "report_1930", "text": "Report the transactions on the national cyber crime helpline 1930 or the National Cyber Crime Reporting Portal, so the banks can hold the money", "within_minutes": 60, "basis": "MHA I4C Citizen Financial Cyber Fraud Reporting and Management System"},
+        {"id": "note_transactions", "text": "Write down every transaction: date and time, amount, UTR or reference number, bank or wallet, and the account or UPI ID it went to", "within_minutes": 60},
+        {"id": "keep_phone_data", "text": "Ask the complainant to keep the phone, messages, call log and screenshots and not to delete anything", "within_minutes": 60}
+      ]
+    },
+    "sexual_offence": {
+      "label": "Sexual offence (BNS 64-71, 74-79; POCSO)",
+      "steps": [
+        {"id": "woman_officer", "text": "The information is recorded by a woman police officer or a woman officer is present", "within_minutes": 0, "basis": "BNSS 173(1), proviso"},
+        {"id": "protect_identity", "text": "Keep the victim's name and identity out of every paper that leaves the case file", "within_minutes": 0, "basis": "BNS 72; POCSO 23"},
+        {"id": "medical_exam", "text": "Medical examination of the victim by a registered medical practitioner, with consent, within 24 hours of the information", "within_minutes": 1440, "basis": "BNSS 184"},
+        {"id": "child_report", "text": "If the victim is a child: report to the Child Welfare Committee and the Special Court within 24 hours", "within_minutes": 1440, "basis": "POCSO 19(6)"}
+      ]
+    },
+    "hurt": {
+      "label": "Hurt or assault (someone injured)",
+      "steps": [
+        {"id": "medical_care", "text": "Send the injured person for treatment and medical examination; ask for the injury report (MLC)", "within_minutes": 60},
+        {"id": "keep_weapon", "text": "Note and keep any weapon or object used, and the clothes with stains, for seizure", "within_minutes": 120}
+      ]
+    },
+    "missing_child": {
+      "label": "Missing child",
+      "steps": [
+        {"id": "register_fir", "text": "Register an FIR for a missing child at once; do not wait", "within_minutes": 60, "basis": "Supreme Court, Bachpan Bachao Andolan v. Union of India (2013)"},
+        {"id": "circulate_photo", "text": "Send the photograph and description to neighbouring police stations, railway police and the missing-persons portal", "within_minutes": 120}
+      ]
+    },
+    "vehicle_theft": {
+      "label": "Vehicle theft",
+      "steps": [
+        {"id": "alert_stations", "text": "Alert neighbouring police stations and check posts with the registration number, make and colour", "within_minutes": 60},
+        {"id": "note_numbers", "text": "Note the chassis and engine numbers from the registration certificate", "within_minutes": 120}
+      ]
+    },
+    "other": {
+      "label": "Other information",
+      "steps": []
+    }
+  }
+}

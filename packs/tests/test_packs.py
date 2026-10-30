@@ -183,3 +183,20 @@ def test_import_profile_ids_are_unique_across_modules_and_made_up_layouts_say_so
         p = json.loads(path.read_text(encoding="utf-8"))
         if "fictional" in p["id"]:
             assert "MADE-UP" in p["label"] and p["note"].startswith("FICTIONAL"), path.name
+
+
+def test_complaint_kinds_are_well_formed_and_marked_as_draft_until_reviewed():
+    """packs/*/complaint-kinds.json: the front-desk kinds and their golden-hour steps (ComplaintKinds checks the same at start-up)."""
+    seen = set()
+    for path in sorted(ROOT.glob("*/complaint-kinds.json")):
+        f = json.loads(path.read_text(encoding="utf-8"))
+        assert f["module"] == path.parent.name and f["status"] == "draft" and f["review_note"]
+        for kid, k in f["kinds"].items():
+            assert re.fullmatch(r"[a-z][a-z_]{1,59}", kid) and kid not in seen and k["label"].strip(), kid
+            seen.add(kid)
+            ids = [s["id"] for s in k["steps"]]
+            assert len(ids) == len(set(ids)), kid
+            for s in k["steps"]:
+                assert re.fullmatch(r"[a-z][a-z0-9_]{1,59}", s["id"]) and s["text"].strip()
+                assert isinstance(s.get("within_minutes", 0), int) and s.get("within_minutes", 0) >= 0
+    assert "other" in seen and "cyber_financial_fraud" in seen

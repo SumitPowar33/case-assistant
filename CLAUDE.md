@@ -35,6 +35,7 @@ At the end of each session, note in PROGRESS.md anything you deliberately skippe
 - `tests/e2e` – browser tests (Playwright, Chromium) against the real core jar, a throwaway database and the built web app: `python -m pytest -q tests/e2e`.
 - `tests/repo_rules` – the hard rules of this file checked on the whole repo: `python -m pytest -q tests/repo_rules`.
 - Loading existing data: CSV import in four steps for FIRs, arrests, chargesheets, evidence and notices (`ImportController`, `FirImport`, `ArrestImport`, `ChargesheetImport`, `EvidenceImport`, `NoticeImport`, V22, V24, V25, V28, V29, `packs/*/import-profiles`); design in `docs/INTEGRATION-IMPORT.md`. Insert-only, approved by a person, undoable until work is recorded.
+- Front desk (module 1): `ComplaintController`, `ComplaintKinds`, V30, `packs/*/complaint-kinds.json` (golden-hour steps, draft), web `FrontDesk.tsx`. Information is written down, read over and signed (BNSS 173(1)); the signed text never changes, and an FIR registered from it (`POST /api/firs` with `complaintId`) takes it unchanged.
 - `docs/` – plan, progress, research, `ARCHITECTURE-TENANCY.md` (accounts, roles, policies, modules: read before touching access), `TESTING.md` (what every change must test).
 
 ## Testing rule (Sumit, 28 Oct 2026)

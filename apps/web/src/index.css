@@ -24,3 +24,6 @@ blockquote { margin: 1rem 0; padding-left: 1rem; border-left: 4px solid #12355b;
 .record-form label:has(input[type=checkbox]) { display: flex; gap: .4rem; align-items: center; }
 .ai-draft { border: 2px dashed #b36b00; padding: .5rem .75rem; background: #fff8ec; }
 .ai-draft pre { white-space: pre-wrap; font: inherit; }
+
+/* the complaint as it is read over to the informant: large, plain, easy to follow line by line */
+.read-back { font-size: 1.25rem; line-height: 1.6; white-space: pre-wrap; border-left: 4px solid currentColor; padding-left: 1rem; }

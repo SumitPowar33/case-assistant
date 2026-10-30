@@ -62,7 +62,8 @@ export async function send<T>(path: string, method: 'POST' | 'PUT', body: unknow
     const err = await res.json().catch(() => ({})) as { message?: string; error?: string }
     throw new Error(err.message || err.error || `The server answered ${res.status}`)
   }
-  return res.status === 204 ? null : res.json() as Promise<T>
+  // a success may have no body (204, or a 201 without one): that is null, not an error
+  return res.status === 204 ? null : res.json().catch(() => null) as Promise<T | null>
 }
 
 // The AI gateway (services/ai-gateway) is served under /ai.

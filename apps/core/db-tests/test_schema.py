@@ -793,3 +793,68 @@ def test_a_concluded_case_shows_no_notice_reply_deadline(db):
     assert "notice_reply:Bank of Demo" in kinds()
     db.execute("UPDATE fir SET concluded = true WHERE id=%s", (fir,))
     assert kinds() == []
+
+
+COMPLAINT = """INSERT INTO complaint(station_id,received_at,mode,informant_name,kind,text_original,text_language,recorded_by)
+               VALUES (%s,%s,%s,'Demo Informant','other','Demo information as given','mr',%s) RETURNING id"""
+
+
+def test_a_signed_complaint_keeps_the_informants_words(db):
+    st, io, fir = seed_case(db)
+    c = one(db, COMPLAINT, st, "2026-08-18 10:30+05:30", "oral", io)[0]
+    db.execute("UPDATE complaint SET text_original='Demo information, corrected while read over' WHERE id=%s", (c,))
+    with pytest.raises(psycopg.errors.CheckViolation):     # spoken information is read over before it is signed
+        db.execute("UPDATE complaint SET signed_at=now(), signed_recorded_by=%s WHERE id=%s", (io, c))
+    db.execute("UPDATE complaint SET signed_at=now(), signed_recorded_by=%s, read_back_language='mr' WHERE id=%s", (io, c))
+    for sql in ("UPDATE complaint SET text_original='Changed later' WHERE id=%s", "UPDATE complaint SET received_at=now() WHERE id=%s",
+                "UPDATE complaint SET read_back_language='en' WHERE id=%s", "DELETE FROM complaint WHERE id=%s"):
+        with pytest.raises(psycopg.errors.RaiseException):
+            db.execute(sql, (c,))
+    with pytest.raises(psycopg.errors.CheckViolation):     # a reason is needed to close it without an FIR
+        db.execute("UPDATE complaint SET outcome='ncr', outcome_reason='short', outcome_at=now(), outcome_by=%s WHERE id=%s", (io, c))
+    db.execute("UPDATE complaint SET outcome='ncr', outcome_reason='Demo: non-cognizable, entered in the NCR', outcome_at=now(), outcome_by=%s WHERE id=%s", (io, c))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE complaint SET outcome_reason='Demo: another reason entirely' WHERE id=%s", (c,))
+
+
+def test_only_a_signed_complaint_closes_and_electronic_information_lapses_after_three_days(db):
+    st, io, fir = seed_case(db)
+    oral = one(db, COMPLAINT, st, "2026-08-18 10:30+05:30", "oral", io)[0]
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("UPDATE complaint SET outcome='no_offence', outcome_reason='Demo: no offence disclosed', outcome_at=now(), outcome_by=%s WHERE id=%s", (io, oral))
+    with pytest.raises(psycopg.errors.CheckViolation):     # only electronic information can lapse
+        db.execute("UPDATE complaint SET outcome='not_signed_in_time', outcome_reason='Demo: never signed it', outcome_at=now(), outcome_by=%s WHERE id=%s", (io, oral))
+    e = one(db, COMPLAINT, st, "2026-08-10 10:30+05:30", "electronic", io)[0]
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("UPDATE complaint SET signed_at='2026-08-13 10:31+05:30', signed_recorded_by=%s WHERE id=%s", (io, e))
+    db.execute("UPDATE complaint SET signed_at='2026-08-13 10:30+05:30', signed_recorded_by=%s WHERE id=%s", (io, e))   # exactly three days
+    e2 = one(db, COMPLAINT, st, "2026-08-10 11:30+05:30", "electronic", io)[0]
+    db.execute("UPDATE complaint SET outcome='not_signed_in_time', outcome_reason='Demo: not signed within three days', outcome_at=now(), outcome_by=%s WHERE id=%s", (io, e2))
+    with pytest.raises(psycopg.errors.CheckViolation):
+        one(db, COMPLAINT, st, "2099-01-01 10:00+05:30", "oral", io)   # received after it was recorded
+
+
+def test_an_fir_from_a_complaint_carries_its_signed_text(db):
+    st, io, fir = seed_case(db)                            # this FIR has other text
+    c = one(db, COMPLAINT, st, "2026-08-18 10:30+05:30", "written", io)[0]
+    db.execute("UPDATE complaint SET signed_at=now(), signed_recorded_by=%s WHERE id=%s", (io, c))
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("UPDATE complaint SET outcome='fir', fir_id=%s, outcome_at=now(), outcome_by=%s WHERE id=%s", (fir, io, c))
+    same = one(db, """INSERT INTO fir(station_id,fir_year,fir_no,gd_entry_no,registered_at,information_received_at,contents_original,
+                      contents_language,action_taken) VALUES (%s,2026,215,'GD-18','2026-08-18 11:00+05:30','2026-08-18 10:30+05:30',
+                      'Demo information as given','mr','investigate') RETURNING id""", st)[0]
+    db.execute("UPDATE complaint SET outcome='fir', fir_id=%s, outcome_at=now(), outcome_by=%s WHERE id=%s", (same, io, c))
+    with pytest.raises(psycopg.errors.CheckViolation):     # an FIR outcome always names the FIR
+        c2 = one(db, COMPLAINT, st, "2026-08-18 10:40+05:30", "written", io)[0]
+        db.execute("UPDATE complaint SET signed_at=now(), signed_recorded_by=%s, outcome='fir', outcome_at=now(), outcome_by=%s WHERE id=%s", (io, io, c2))
+
+
+def test_golden_hour_steps_are_kept_as_recorded(db):
+    st, io, fir = seed_case(db)
+    c = one(db, COMPLAINT, st, "2026-08-18 10:30+05:30", "oral", io)[0]
+    db.execute("INSERT INTO complaint_step(complaint_id,step_id,done_at,done_by,note) VALUES (%s,'report_1930',now(),%s,'Demo ack 1')", (c, io))
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        db.execute("INSERT INTO complaint_step(complaint_id,step_id,done_at,done_by) VALUES (%s,'report_1930',now(),%s)", (c, io))
+    for sql in ("UPDATE complaint_step SET note='x' WHERE complaint_id=%s", "DELETE FROM complaint_step WHERE complaint_id=%s"):
+        with pytest.raises(psycopg.errors.RaiseException):
+            db.execute(sql, (c,))

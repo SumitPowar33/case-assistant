@@ -8,6 +8,7 @@ import AdminPage from './AdminPage'
 import ImportPage from './ImportPage'
 import PoliciesPage from './PoliciesPage'
 import LoginPage from './LoginPage'
+import { ComplaintPage, FrontDeskPage } from './FrontDesk'
 import { currentSession, onSessionChange, setSession } from './api'
 import { LANGS, TypingContext, type TypingLang } from './typing'
 
@@ -21,12 +22,13 @@ export default function App() {
   }, [])
   const session = useSyncExternalStore(onSessionChange, currentSession)
   const firId = /^#\/firs\/([\w-]+)$/.exec(hash)?.[1]
+  const complaintId = /^#\/complaints\/([\w-]+)$/.exec(hash)?.[1]
   const admin = session?.user.role === 'state_admin'
   return (
     <TypingContext.Provider value={{ lang, setLang }}>
       <header>
         <strong>Case Assistant</strong> <small>demo · fictional data only · the AI drafts, a person decides</small>
-        {session && <nav aria-label="Main"><a href="#/">FIRs</a> <a href="#/type">Type</a> <a href="#/policies">Policies</a> <a href="#/password">Password</a>{session.user.can_import && <> <a href="#/import">Load data</a></>}{admin && <> <a href="#/admin">Admin</a> <a href="#/settings">AI settings</a></>}</nav>}
+        {session && <nav aria-label="Main"><a href="#/">FIRs</a>{session.user.station_id && <> <a href="#/front-desk">Front desk</a></>} <a href="#/type">Type</a> <a href="#/policies">Policies</a> <a href="#/password">Password</a>{session.user.can_import && <> <a href="#/import">Load data</a></>}{admin && <> <a href="#/admin">Admin</a> <a href="#/settings">AI settings</a></>}</nav>}
         <label>Typing language{' '}
           <select value={lang} onChange={(e) => setLang(e.target.value as TypingLang)}>
             <option value="en">English (no conversion)</option>
@@ -36,7 +38,7 @@ export default function App() {
         {session && <span className="who">{session.user.full_name} ({session.user.rank})
           <button type="button" onClick={() => setSession(null)}>Sign out</button></span>}
       </header>
-      <main>{!session ? <LoginPage /> : firId ? <FirDetail id={firId} /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : <FirList />}</main>
+      <main>{!session ? <LoginPage /> : firId ? <FirDetail id={firId} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : <FirList />}</main>
     </TypingContext.Provider>
   )
 }
