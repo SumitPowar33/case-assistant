@@ -20,6 +20,9 @@ Done in session 28: evidence import file (ef845fb), notices import file (a792dea
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
 
+## 30 Oct 2026, session 29 (on-demand run started by Sumit at 18:29 IST) - IN PROGRESS
+Working on: front-desk complaint (module 1). Another session should not start this item; pick testing work or the next item instead.
+
 ## 30 Oct 2026, session 28 (scheduled weekend build, Sumit away; ran at the same time as session 27)
 Started from `setup/seed` at ec72a29. Sandbox fresh: started PostgreSQL, created role `caseapp` and the two databases, installed packages, `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS.
 
