@@ -38,10 +38,11 @@ A **module is a pack folder**: `packs/IN` (national), `packs/MH` (Maharashtra), 
 | `policies.json` | policies a unit may tighten (section 4) |
 | `punishments.json` | highest punishment per section (suggests 60 or 90 days; draft until a prosecutor checks it) |
 | `playbooks/*.json` | charge ingredients and readiness rules |
+| `module.json` | id (= folder name, the state code), name, version, languages, `depends` (every module but `IN` depends on `IN`). At start-up each module gets its `state_pack` row (status untouched), so a fresh installation can add stations at once (`Modules`) |
 
 Why data and not uploaded code: this runs on police servers with sensitive data. Code that arrives at run time cannot be reviewed, tested or audited. A new kind of behaviour is written as code in the repository, tested, reviewed and released; a new *setting* of existing behaviour is a pack file that anyone can read. Every pack file is validated at start-up (the application refuses to start on a bad one) and by `packs/tests`. Adding a role or policy is: write the JSON, add the pack test case, release. No Java change.
 
-Planned next for modules: a `module.json` manifest (id, version, `depends`), so a state pack declares that it builds on `IN`, and effective-from dates on legal rules (section 5, item 8).
+`module.json` manifest done 30 Oct 2026. Planned next for modules: effective-from dates on legal rules (section 5, item 8).
 
 ## 4. Policies of a state, district or station
 Each state, district and station may have its own policy, but only **in the stricter direction** than the unit above, inside the bounds the pack sets, with a written reason (10+ characters). Every change is kept (nothing is edited or deleted; the newest per unit counts). The **strictest of state, district and station applies**, and no value can pass the legal default (for example the 90 days for the victim update, BNSS 193(3)(ii), can only become shorter).

@@ -123,3 +123,25 @@ def test_law_concordance_is_a_labelled_draft_hint():
 def test_only_supervising_roles_and_the_state_admin_may_load_records():
     roles = json.loads((ROOT / "IN/roles.json").read_text(encoding="utf-8"))["roles"]
     assert {c for c, r in roles.items() if "import.run" in r["permissions"]} == {"sho", "sp", "state_admin"}
+
+
+PACK_DIRS = sorted(p for p in ROOT.iterdir() if p.is_dir() and p.name not in {"tests", "__pycache__"})
+
+
+@pytest.mark.parametrize("folder", PACK_DIRS, ids=lambda p: p.name)
+def test_every_pack_has_a_module_manifest(folder):
+    """packs/{id}/module.json: the same rules the core app checks at start-up (Modules.java)."""
+    m = json.loads((folder / "module.json").read_text(encoding="utf-8"))
+    assert m["id"] == folder.name and re.fullmatch(r"[A-Z]{2,3}", m["id"])  # must match state_pack.code in V1__core.sql
+    assert m["name"].strip() and str(m["version"]).strip()
+    assert m["languages"] and all(re.fullmatch(r"[a-z]{2,3}", lang) for lang in m["languages"])
+    known = {p.name for p in PACK_DIRS}
+    assert set(m.get("depends", [])) <= known - {m["id"]}
+    assert m["id"] == "IN" or "IN" in m["depends"], "every module builds on the national module"
+    roles = folder / "roles.json"
+    if roles.exists():
+        assert json.loads(roles.read_text(encoding="utf-8"))["module"] == m["id"]
+
+
+def test_the_national_module_is_there():
+    assert (ROOT / "IN" / "module.json").exists()

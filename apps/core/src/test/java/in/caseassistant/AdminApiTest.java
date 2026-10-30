@@ -27,6 +27,7 @@ class AdminApiTest {
     @Autowired JdbcClient db;
     @Autowired ObjectMapper json;
     @Autowired AuthController auth;
+    @Autowired Modules modules;
     static final String ADMIN_PW = "fictional-admin-pass-1";
     static final String IO_PW = "fictional-io-pass-22";
     static final String REASON = "{\"reason\":\"Fictional officer transferred out\"}";
@@ -67,6 +68,22 @@ class AdminApiTest {
                 .formatted(IO_PW, station);
         return UUID.fromString(json.readTree(post(admin, "/api/users", body).andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString()).get("id").asText());
+    }
+
+    /** Regression (found by the browser test, 30 Oct 2026): a fresh installation had no state_pack rows, so no station could be added. */
+    @Test
+    void theModulesOfThePacksAreStatePacksFromStartUp() throws Exception {
+        db.sql("truncate fir, police_station, state_pack, app_user cascade").update();
+        modules.sync();
+        modules.sync();   // again at the next start: no duplicate, status kept
+        assertThat(db.sql("select code || ' ' || status || ' ' || array_to_string(languages, ',') from state_pack").query(String.class).list())
+                .containsExactly("IN draft en,hi,mr,gu,bn,pa,or,ta,te,kn,ml");
+        auth.ensureAdmin("admin.one", ADMIN_PW);
+        admin = "Bearer " + token("admin.one", ADMIN_PW);
+        post(admin, "/api/stations", "{\"stateCode\":\"IN\",\"district\":\"Demo District\",\"name\":\"Demo Fresh PS\"}")
+                .andExpect(status().isCreated());
+        mvc.perform(get("/api/state-packs").header("Authorization", admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].code").value("IN")).andExpect(jsonPath("$[0].name").value("National (BNSS, BNS, BSA)"));
     }
 
     @Test

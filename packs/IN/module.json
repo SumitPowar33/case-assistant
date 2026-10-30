@@ -1,0 +1,7 @@
+{
+  "id": "IN",
+  "name": "National (BNSS, BNS, BSA)",
+  "version": "1",
+  "languages": ["en", "hi", "mr", "gu", "bn", "pa", "or", "ta", "te", "kn", "ml"],
+  "depends": []
+}

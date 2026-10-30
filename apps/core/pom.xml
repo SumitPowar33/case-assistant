@@ -30,7 +30,7 @@
       <resource>
         <directory>../../packs</directory>
         <targetPath>packs</targetPath>
-        <includes><include>*/playbooks/*.json</include><include>*/punishments.json</include><include>*/roles.json</include><include>*/policies.json</include><include>*/law-concordance.json</include><include>*/import-profiles/*.json</include></includes>
+        <includes><include>*/playbooks/*.json</include><include>*/punishments.json</include><include>*/roles.json</include><include>*/policies.json</include><include>*/law-concordance.json</include><include>*/import-profiles/*.json</include><include>*/module.json</include></includes>
       </resource>
     </resources>
     <plugins>
