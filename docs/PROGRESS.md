@@ -17,10 +17,38 @@ Done in session 28: evidence import file (ef845fb), notices import file (a792dea
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
 Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)).
 Done in session 31: speech input at the front desk; module 1 is finished.
+Done in session 32 (31 Oct, 02:05 IST run): upgrade test, web-to-core route contract test, a date-dependent test fixed, more tests for old code. The rest of the MH pack waits for answers (questions 1 and 2 below).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 31 Oct 2026, session 32 (scheduled nightly run, 02:05 IST, Sumit away)
+Tonight in short: this was the only session of the night (the branch had nothing newer than session 31, c59eefa). Baseline was red on one test, fixed first. No new feature: the "rest of the MH pack" needs content only a Maharashtra reviewer can give (see questions), so the time went into the next kinds of test from docs/TESTING.md and into older, lowest-covered code. Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser (all 8). Coverage: core 98.1% lines / 92.6% branches, web 99.5% statements / 88.4% branches / 95% functions, gateway 96%.
+
+Done
+- **Baseline fix (614f12f)**: `test_deadlines_view` put a notice issued "now" with a fixed reply date of 30 Oct; after midnight IST "now" is 31 Oct, so the database rule `reply_due_after_issue` refused it. The test now uses a fixed issue date. Not an app bug; the test depended on the clock.
+- **Upgrade test** (`apps/core/db-tests/test_upgrade.py`): builds the schema as it was at V25 and at V29, stores a case with a masked victim, applies every later migration and checks the case, the masking view and the unique FIR number are unchanged. Bump `BASES` when a release is tagged. Not yet: running the API tests on an upgraded dump.
+- **Contract test web to core** (`tests/repo_rules/test_web_core_contract.py`): reads every call in `apps/web/src` and every mapping in the Java controllers; each web call must have a core route with the same method. Checked that it bites (a renamed route fails). Field names are not checked yet.
+- **Tests for old code**: `RecordsRefusalsApiTest` (unknown arrest ids on release/correction/memo/time-correction, arrest of a witness, future arrest, remand before arrest, half a release, future time correction, future or replaced chargesheet corrections, closure dates and decision date, reply to an unsent notice); web `FirDetail.test.tsx` (new), `IoAssignment` (first IO, short reason, load error), `App` (menu by account, every page route, sign-out); gateway provider tests (no key, HTTP errors, empty answers, Gemini system text).
+- **Gates raised** (coverage had risen): web branches 82 to 86, gateway 90 to 92; core branch gate in the CI comment and CLAUDE.md corrected to 90 (it was already 90 in the pom).
+
+Deliberately skipped / not checked
+- Rest of the MH pack: no roles, punishment differences, playbooks or Marathi labels added. I would have had to invent Maharashtra law or police structure (for example an SDPO role would see a whole district, wider than a sub-division). Marathi labels need the "screens in 10 languages" work. Demo stations belong with the demo script (Next item 8).
+- Not looked at: the remaining uncovered core lines are unreachable catches (JSON errors) and "recorded in the meantime" races in `ImportController`; not worth fake tests.
+- Risk found, not fixed: the web app hard-codes role names (`App.tsx` uses `state_admin` for the Admin menu; `IoAssignment.tsx` uses `sho`/`sp` to show the assign form), against the rule to use permissions from `roles.json`. The server still checks, so this only decides what is shown. A permission flag in `/api/me` (like `can_import`) would fix it.
+- No accessibility, load or mutation tests yet (items 5 and 6 of "Not covered yet").
+
+Next
+1. Rest of the MH pack, once questions 1 and 2 are answered.
+2. Replace hard-coded role names in the web app with permission flags from `/api/me`.
+3. Screens in the 10 languages, then the legal glossary; Marathi labels come with it.
+4. Contract test for field names; API tests on an upgraded dump; accessibility checks.
+5. End-to-end demo case and demo script (with demo stations in MH).
+
+Questions for Sumit
+1. Maharashtra pack: who can tell me the real MH roles (is an SDPO/DySP supervising role needed, and what may they see), the Maharashtra-specific offences and punishments that differ from the national table (for example MPDA, MCOCA), and the Marathi wording to use? Until then I add nothing invented.
+2. Should I fix the hard-coded role names in the web app now (small change in the core and web), before more screens copy the pattern?
 
 ## 30 Oct 2026, session 31 (scheduled nightly run, Sumit away)
 Started from `setup/seed` at 26dc593. Fresh sandbox: started PostgreSQL, created role/databases, installed missing Python packages (`psycopg[binary]`, `pytest-cov`, `httpx` and the gateway requirements; the first `test-all.sh` run failed only on the gateway for that reason, re-run green).
