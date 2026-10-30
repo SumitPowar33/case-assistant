@@ -1,0 +1,19 @@
+{
+  "id": "evidence-generic",
+  "label": "Evidence register (CSV), generic - load the FIRs first",
+  "entity": "evidence",
+  "note": "One row per seized item, keyed by FIR number and year of the chosen station. Kind is physical, electronic or document; an electronic item needs the SHA-256 taken at seizure.",
+  "fields": {
+    "fir_no": {"required": true, "aliases": ["fir_no", "fir no", "fir number", "fir_number", "crime no", "crime_no", "crime number"]},
+    "fir_year": {"aliases": ["fir_year", "year", "fir year", "crime year"]},
+    "label": {"required": true, "aliases": ["label", "item label", "item no", "article no", "property no", "muddemal no", "exhibit no"]},
+    "kind": {"required": true, "aliases": ["kind", "item kind", "type", "item type", "evidence type"]},
+    "description": {"aliases": ["description", "item description", "details", "article description", "property description"]},
+    "seized_at": {"required": true, "aliases": ["seized_at", "seized on", "date of seizure", "seizure date", "recovered on", "date of recovery"]},
+    "seizure_memo": {"aliases": ["seizure_memo", "seizure memo", "seizure memo no", "panchnama", "panchnama no", "memo no"]},
+    "seal_no": {"aliases": ["seal_no", "seal no", "seal number", "seal"]},
+    "esakshya_id": {"aliases": ["esakshya_id", "e-sakshya id", "esakshya", "recording id"]},
+    "sha256": {"aliases": ["sha256", "sha-256", "hash", "hash value"]},
+    "source_key": {"aliases": ["source_key", "id", "old id", "old_id", "record id", "legacy id", "source id"]}
+  }
+}

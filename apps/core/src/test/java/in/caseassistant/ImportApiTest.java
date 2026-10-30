@@ -603,4 +603,114 @@ class ImportApiTest {
         body.put("mapping", all);
         send(sho1, "/api/imports", body).andExpect(status().isBadRequest());
     }
+
+    // ---- evidence register file --------------------------------------------------------------------------------------
+
+    static final String EHEAD = "FIR No,Item No,Type,Description,Date of Seizure,Panchnama,Seal No,Hash\n";
+    static final String SHA = "cd".repeat(32);
+
+    UUID stageEvidence(String who, UUID station, String csv) throws Exception {
+        var body = stageBody(station, csv);
+        body.put("profile", "evidence-generic");
+        body.put("filename", "old-evidence.csv");
+        return UUID.fromString(json.readTree(send(who, "/api/imports", body).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText());
+    }
+
+    @Test
+    void evidenceIsCheckedAgainstTheFirsAndLoadedAsTheRegisterHasIt() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        UUID b = stageEvidence(sho1, s1, EHEAD
+                + "1,1/E-01,physical,Fictional iron rod,06/03/2024 12:00,Fictional panchnama 1,S-1,\n"
+                + "1,1/E-02,Electronic,Fictional phone,06/03/2024 12:30,Fictional panchnama 1,S-2," + SHA.toUpperCase() + "\n"
+                + "1,1/E-03,electronic,Fictional laptop,06/03/2024,,,\n"
+                + "9,9/E-01,physical,Fictional knife,06/03/2024,,,\n"
+                + "1,1/E-04,document,,07/03/2024,,,\n");
+        mvc.perform(get("/api/imports/" + b).header("Authorization", sho1)).andExpect(jsonPath("$.entity").value("evidence"))
+                .andExpect(jsonPath("$.rows_ok").value(2)).andExpect(jsonPath("$.rows_warning").value(1)).andExpect(jsonPath("$.rows_error").value(2));
+        mvc.perform(get("/api/imports/" + b + "/rows?status=error").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[0].text").value(org.hamcrest.Matchers.containsString("SHA-256")))
+                .andExpect(jsonPath("$[1].messages[0].text").value(org.hamcrest.Matchers.containsString("Load the FIR file first")));
+        assertThat(db.sql("select count(*) from evidence_item").query(Long.class).single()).as("nothing before approval").isZero();
+        commit(sho1, b).andExpect(status().isOk()).andExpect(jsonPath("$.rows_imported").value(3));
+        var phone = db.sql("select * from evidence_item where label = '1/E-02'").query().singleRow();
+        assertThat(phone.get("sha256")).isEqualTo(SHA);
+        assertThat(phone.get("kind")).isEqualTo("electronic");
+        assertThat(phone.get("import_batch_id")).isEqualTo(b);
+        assertThat(phone.get("source_hash")).isNotNull();
+        var doc = db.sql("select * from evidence_item where label = '1/E-04'").query().singleRow();
+        assertThat(doc.get("description")).isEqualTo(ArrestImport.MISSING);
+        assertThat(doc.get("seizure_memo")).isEqualTo(ArrestImport.MISSING);
+        // the case page lists them; the imported phone has no 63(4) certificate yet, so it is not court-ready
+        mvc.perform(get("/api/firs/" + firId(1) + "/evidence").header("Authorization", sho1)).andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[?(@.label=='1/E-02')].court_ready").value(false));
+        // the FIR batch cannot be undone while evidence hangs on its FIRs
+        UUID firBatch = db.sql("select id from import_batch where entity = 'fir'").query(UUID.class).single();
+        send(sho1, "/api/imports/" + firBatch + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isConflict());
+        assertThat(db.sql("select raw is null and parsed is null from import_row where batch_id = ? limit 1").param(b).query(Boolean.class).single()).isTrue();
+    }
+
+    @Test
+    void theSameItemAgainIsSkippedAndNeverChangedAndTwiceInOneFileIsAnError() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        String row = "1,1/E-01,physical,Fictional iron rod,06/03/2024 12:00,Fictional panchnama 1,S-1,\n";
+        commit(sho1, stageEvidence(sho1, s1, EHEAD + row)).andExpect(status().isOk());
+        UUID again = stageEvidence(sho1, s1, EHEAD + row);
+        mvc.perform(get("/api/imports/" + again + "/rows?status=duplicate").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("same content"))));
+        UUID differs = stageEvidence(sho1, s1, EHEAD + "1,1/e-01 ,physical,Fictional steel rod,06/03/2024 12:00,,,\n");
+        mvc.perform(get("/api/imports/" + differs + "/rows?status=duplicate").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("already on this FIR's evidence register"))));
+        send(sho1, "/api/imports/" + differs + "/commit", Map.of("authority", "Order 13/2026 of the Fictional SP")).andExpect(status().isConflict());
+        UUID twice = stageEvidence(sho1, s1, EHEAD + "1,1/E-05,physical,Fictional bag,06/03/2024 12:00,P-1,,\n1,1/e-05 ,physical,Fictional bag,06/03/2024 12:00,P-1,,\n");
+        mvc.perform(get("/api/imports/" + twice).header("Authorization", sho1)).andExpect(jsonPath("$.rows_error").value(1)).andExpect(jsonPath("$.rows_ok").value(1));
+        assertThat(db.sql("select description from evidence_item").query(String.class).single()).isEqualTo("Fictional iron rod");
+    }
+
+    @Test
+    void anItemTypedByHandBetweenStagingAndApprovalIsSkipped() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        UUID b = stageEvidence(sho1, s1, EHEAD + "1,1/E-01,physical,Fictional iron rod,06/03/2024 12:00,P-1,,\n1,1/E-02,physical,Fictional bag,06/03/2024 12:00,P-1,,\n");
+        send(sho1, "/api/firs/" + firId(1) + "/evidence", Map.of("label", "1/e-01", "description", "Fictional rod typed", "kind", "physical",
+                "seizedAt", "2024-03-06T12:00:00+05:30", "seizureMemo", "P-1")).andExpect(status().isCreated());
+        commit(sho1, b).andExpect(status().isOk()).andExpect(jsonPath("$.rows_imported").value(1));
+        mvc.perform(get("/api/imports/" + b + "/rows?status=skipped").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("in the meantime"))));
+        assertThat(db.sql("select count(*) from evidence_item").query(Long.class).single()).isEqualTo(2);
+    }
+
+    @Test
+    void anEvidenceBatchCanBeUndoneUntilAHandOverIsRecordedAndTypedItemsStay() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        String rows = EHEAD + "1,1/E-01,physical,Fictional iron rod,06/03/2024 12:00,P-1,S-1,\n";
+        UUID b = stageEvidence(sho1, s1, rows);
+        commit(sho1, b).andExpect(status().isOk());
+        send(sho1, "/api/imports/" + b + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("undone"));
+        assertThat(db.sql("select count(*) from evidence_item").query(Long.class).single()).isZero();
+        UUID b2 = stageEvidence(sho1, s1, rows);
+        commit(sho1, b2).andExpect(status().isOk());
+        UUID item = db.sql("select id from evidence_item").query(UUID.class).single();
+        send(sho1, "/api/firs/" + firId(1) + "/evidence/" + item + "/custody", Map.of("at", "2024-03-06T15:00:00+05:30", "handedBy", "Fictional IO",
+                "receivedBy", "Fictional Malkhana", "location", "Fictional malkhana", "purpose", "Safe keeping", "sealIntact", true)).andExpect(status().isCreated());
+        send(sho1, "/api/imports/" + b2 + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isConflict());
+        assertThat(db.sql("select status from import_batch where id = ?").param(b2).query(String.class).single()).isEqualTo("imported");
+        assertThat(db.sql("select count(*) from evidence_item").query(Long.class).single()).isEqualTo(1);
+        // an item typed in the app can never be deleted, whatever happens to any batch
+        assertThat(org.junit.jupiter.api.Assertions.assertThrows(Exception.class,
+                () -> db.sql("delete from evidence_item where id = ?").param(item).update()).getMessage()).contains("stay on the register");
+    }
+
+    @Test
+    void evidenceCanOnlyBeLoadedByTheStationsOwnLeadersAndBadRowsAreErrors() throws Exception {
+        var body = stageBody(s1, EHEAD + "1,1/E-01,physical,Fictional rod,06/03/2024,,,\n");
+        body.put("profile", "evidence-generic");
+        send(sho2, "/api/imports", body).andExpect(status().isForbidden());
+        send(io, "/api/imports", body).andExpect(status().isForbidden());
+        send(sho1, "/api/imports/inspect", Map.of("profile", "evidence-generic", "csv", EHEAD + "1,1/E-01,physical,x,06/03/2024,,,\n")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggested.label").value("Item No")).andExpect(jsonPath("$.suggested.seized_at").value("Date of Seizure"))
+                .andExpect(jsonPath("$.suggested.seizure_memo").value("Panchnama")).andExpect(jsonPath("$.suggested.sha256").value("Hash"));
+        commit(sho1, stage(sho1, s1, GOOD));
+        UUID b = stageEvidence(sho1, s1, EHEAD + "1,1/E-01,physical,Fictional rod,06/03/2024,,,,extra\n");
+        mvc.perform(get("/api/imports/" + b + "/rows?status=error").header("Authorization", sho1)).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].messages[?(@.text=='This row has more values than the header has columns.')]").exists());
+    }
 }

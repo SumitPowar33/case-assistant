@@ -55,12 +55,15 @@ class ImportController {
     private final FirImport rules;
     private final ArrestImport arrests;
     private final ChargesheetImport chargesheets;
+    private final EvidenceImport evidence;
     private final Policies policies;
     private final ObjectMapper json;
     private List<String[]> childLinks;
 
-    ImportController(JdbcClient db, CaseTeam team, FirImport rules, ArrestImport arrests, ChargesheetImport chargesheets, Policies policies, ObjectMapper json) {
+    ImportController(JdbcClient db, CaseTeam team, FirImport rules, ArrestImport arrests, ChargesheetImport chargesheets, EvidenceImport evidence,
+                     Policies policies, ObjectMapper json) {
         this.db = db;
+        this.evidence = evidence;
         this.chargesheets = chargesheets;
         this.policies = policies;
         this.arrests = arrests;
@@ -109,7 +112,12 @@ class ImportController {
         int[] count = new int[4];
         switch (entity) {
             case "arrest" -> arrestRows(s, rows, headers, map, staged, count);
-            case "chargesheet" -> chargesheetRows(s, rows, headers, map, staged, count);
+            case "chargesheet" -> keyedRows(s, rows, headers, map, staged, count, chargesheets::check,
+                    "select report_no as k, coalesce(source_hash, '') as h from chargesheet where fir_id = ? and supersedes is null",
+                    "reportNo", "report_no", "FIR and chargesheet number", "A chargesheet with this number is already recorded for this FIR");
+            case "evidence" -> keyedRows(s, rows, headers, map, staged, count, evidence::check,
+                    "select label as k, coalesce(source_hash, '') as h from evidence_item where fir_id = ?",
+                    "label", "label", "FIR and item label", "An item with this label is already on this FIR's evidence register");
             default -> firRows(s, rows, headers, map, staged, count);
         }
         UUID id = db.sql("""
@@ -233,20 +241,30 @@ class ImportController {
         }
     }
 
-    /** Stages a chargesheets file: each row is checked against the FIR and accused already in the system. */
-    private void chargesheetRows(Stage s, List<List<String>> rows, List<String> headers, Map<String, String> map, List<Object[]> staged, int[] count) {
+    /** Checks one row of a file keyed by FIR (chargesheets, evidence) against the FIRs of the station. */
+    interface ByFir {
+        FirImport.Result check(Map<String, String> v, java.util.function.BiFunction<Integer, Integer, List<ArrestImport.Fir>> firs, Instant now);
+    }
+
+    /**
+     * Stages a file whose rows hang on an FIR of the station and are told apart by one key per FIR (chargesheet number,
+     * evidence label; case and spaces ignored). A key already recorded is skipped, a key twice in the file is an error.
+     * @param existingSql the keys (k) and fingerprints (h) already recorded for one FIR id
+     */
+    private void keyedRows(Stage s, List<List<String>> rows, List<String> headers, Map<String, String> map, List<Object[]> staged, int[] count,
+                           ByFir check, String existingSql, String keyName, String field, String what, String recorded) {
         var firs = new HashMap<String, List<ArrestImport.Fir>>();
-        var existing = new HashMap<String, String>();   // FIR id | report number -> fingerprint ("" if none) of an original chargesheet already recorded
+        var existing = new HashMap<String, String>();   // FIR id | key -> fingerprint ("" if none) of a record already there
         var seen = new HashMap<String, Integer>();
         Instant now = Instant.now();
         for (int i = 1; i < rows.size(); i++) {
             var cells = rows.get(i);
             var raw = rawOf(headers, cells);
-            var r = chargesheets.check(fieldsOf(map, raw), (year, no) -> firs.computeIfAbsent(year + "/" + no, k -> {
+            var r = check.check(fieldsOf(map, raw), (year, no) -> firs.computeIfAbsent(year + "/" + no, k -> {
                 var found = firsOf(s.stationId, year, no, new HashMap<>());
                 for (var f : found)
-                    db.sql("select report_no, coalesce(source_hash, '') as h from chargesheet where fir_id = ? and supersedes is null").param(f.id()).query().listOfRows()
-                            .forEach(c -> existing.put(ChargesheetImport.key(f.id(), c.get("report_no")), (String) c.get("h")));
+                    db.sql(existingSql).param(f.id()).query().listOfRows()
+                            .forEach(c -> existing.put(ChargesheetImport.key(f.id(), c.get("k")), (String) c.get("h")));
                 return found;
             }), now);
             var msgs = new ArrayList<>(r.messages());
@@ -256,17 +274,17 @@ class ImportController {
                 status = "error";
             }
             if (!status.equals("error")) {
-                String key = ChargesheetImport.key(r.parsed().get("firId"), r.parsed().get("reportNo"));
+                String key = ChargesheetImport.key(r.parsed().get("firId"), r.parsed().get(keyName));
                 if (seen.containsKey(key)) {
-                    msgs.add(new FirImport.Message("error", "report_no", "The same FIR and chargesheet number as row " + seen.get(key) + " of this file."));
+                    msgs.add(new FirImport.Message("error", field, "The same " + what + " as row " + seen.get(key) + " of this file."));
                     status = "error";
                 } else {
                     seen.put(key, i);
                     if (existing.containsKey(key)) {
                         status = "duplicate";
                         msgs.add(existing.get(key).equals(hash(r.parsed()))
-                                ? new FirImport.Message("info", "report_no", "Already imported with the same content; skipped.")
-                                : new FirImport.Message("warning", "report_no", "A chargesheet with this number is already recorded for this FIR; it is not changed. Skipped."));
+                                ? new FirImport.Message("info", field, "Already imported with the same content; skipped.")
+                                : new FirImport.Message("warning", field, recorded + "; it is not changed. Skipped."));
                     }
                 }
             }
@@ -349,16 +367,18 @@ class ImportController {
             if (switch (entity) {
                 case "arrest" -> addArrest(id, me, station, p);
                 case "chargesheet" -> addChargesheet(id, me, station, p);
+                case "evidence" -> addEvidence(id, station, p);
                 default -> addFir(id, station, (String) b.get("complaint_language"), p);
             }) {
                 db.sql("update import_row set status = 'imported' where batch_id = ? and row_no = ?").params(id, row.get("row_no")).update();
                 done++;
             } else {
                 db.sql("update import_row set status = 'skipped', messages = messages || ?::jsonb where batch_id = ? and row_no = ?")
-                        .params(write(List.of(new FirImport.Message("warning", switch (entity) { case "arrest" -> "arrested_at"; case "chargesheet" -> "report_no"; default -> "fir_no"; },
+                        .params(write(List.of(new FirImport.Message("warning", switch (entity) { case "arrest" -> "arrested_at"; case "chargesheet" -> "report_no"; case "evidence" -> "label"; default -> "fir_no"; },
                                 switch (entity) {
                                     case "arrest" -> "This arrest was recorded in the meantime, or the person is no longer an accused; skipped.";
                                     case "chargesheet" -> "This chargesheet was recorded in the meantime, or an accused it names is no longer an accused; skipped.";
+                                    case "evidence" -> "An item with this label was added to the FIR in the meantime; skipped.";
                                     default -> "Another FIR took this number before approval; skipped.";
                                 }))), id, row.get("row_no")).update();
             }
@@ -437,6 +457,18 @@ class ImportController {
         return true;
     }
 
+    /** Adds one checked evidence item to its FIR's register; false when an item with this label was added meanwhile. */
+    private boolean addEvidence(UUID batch, UUID station, Map<String, Object> p) {
+        return db.sql("""
+                insert into evidence_item (fir_id, label, description, kind, seized_at, seizure_memo, esakshya_id, seal_no, sha256, import_batch_id, source_hash)
+                select f.id, ?::text, ?::text, ?::text, ?::timestamptz, ?::text, ?::text, ?::text, ?::text, ?::uuid, ?::text
+                from fir f where f.id = ?::uuid and f.station_id = ?::uuid
+                  and not exists (select 1 from evidence_item x where x.fir_id = f.id
+                                  and lower(regexp_replace(x.label, '\\s', '', 'g')) = lower(regexp_replace(?::text, '\\s', '', 'g')))""")
+                .params(p.get("label"), p.get("description"), p.get("kind"), p.get("seizedAt"), p.get("seizureMemo"), p.get("esakshyaId"),
+                        p.get("sealNo"), p.get("sha256"), batch, hash(p), UUID.fromString((String) p.get("firId")), station, p.get("label")).update() == 1;
+    }
+
     @PostMapping("/{id}/discard")
     @Transactional
     Map<String, Object> discard(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
@@ -447,7 +479,7 @@ class ImportController {
         return batch(id);
     }
 
-    /** Removes the FIRs (or arrests) a batch added, but only while nothing else has been recorded on them or their people. */
+    /** Removes the FIRs (arrests, chargesheets, evidence items) a batch added, but only while nothing else has been recorded on them or their people. */
     @PostMapping("/{id}/undo")
     @Transactional
     Map<String, Object> undo(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody Undo u) {
@@ -457,13 +489,18 @@ class ImportController {
                 .params(me, u.reason.trim(), id).update() == 0)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Only an imported batch can be undone.");
         String entity = (String) b.get("entity");
+        String table = entity.equals("evidence") ? "evidence_item" : entity;
         boolean arrestBatch = entity.equals("arrest");
         for (String[] l : links()) {
             // an FIR batch is guarded by what points at its FIRs and people, any other batch by what points at its own records
-            if (!(entity.equals("fir") ? l[2].equals("fir") || l[2].equals("person") : l[2].equals(entity))) continue;
+            if (!(entity.equals("fir") ? l[2].equals("fir") || l[2].equals("person") : l[2].equals(table))) continue;
             String owned = "select id from " + l[2] + " where import_batch_id = ?";
             if (db.sql("select exists (select 1 from " + l[0] + " where " + l[1] + " in (" + owned + "))").param(id).query(Boolean.class).single())
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Work has been recorded on some of these " + things(entity) + ", so the batch cannot be undone.");
+        }
+        if (entity.equals("evidence")) {
+            db.sql("delete from evidence_item where import_batch_id = ?").param(id).update();
+            return batch(id);
         }
         if (entity.equals("chargesheet")) {
             db.sql("delete from chargesheet_accused where chargesheet_id in (select id from chargesheet where import_batch_id = ?)").param(id).update();
@@ -512,7 +549,7 @@ class ImportController {
     }
 
     private static String things(String entity) {
-        return switch (entity) { case "arrest" -> "arrests"; case "chargesheet" -> "chargesheets"; default -> "FIRs"; };
+        return switch (entity) { case "arrest" -> "arrests"; case "chargesheet" -> "chargesheets"; case "evidence" -> "evidence items"; default -> "FIRs"; };
     }
 
     private void requireImporter(UUID user) {
@@ -543,7 +580,7 @@ class ImportController {
                     .params(fir, role, label + n++, name, batch).update();
     }
 
-    /** Tables holding a link to fir.id, person.id, arrest.id or chargesheet.id, from the database catalogue, so a new table is guarded without an edit here. */
+    /** Tables holding a link to fir.id, person.id, arrest.id, chargesheet.id or evidence_item.id, from the database catalogue, so a new table is guarded without an edit here. */
     private synchronized List<String[]> links() {
         if (childLinks == null) {
             childLinks = new ArrayList<>();
@@ -552,7 +589,7 @@ class ImportController {
                     from pg_constraint c cross join lateral unnest(c.conkey, c.confkey) k(ck, fk)
                     join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.ck
                     join pg_attribute pa on pa.attrelid = c.confrelid and pa.attnum = k.fk
-                    where c.contype = 'f' and c.confrelid in ('fir'::regclass, 'person'::regclass, 'arrest'::regclass, 'chargesheet'::regclass) and pa.attname = 'id'
+                    where c.contype = 'f' and c.confrelid in ('fir'::regclass, 'person'::regclass, 'arrest'::regclass, 'chargesheet'::regclass, 'evidence_item'::regclass) and pa.attname = 'id'
                       and c.conrelid::regclass::text not in ('fir_section', 'person', 'fir')
                       and not (c.conrelid = 'chargesheet_accused'::regclass and c.confrelid = 'chargesheet'::regclass)""").query().listOfRows()
                     .forEach(r -> childLinks.add(new String[] {(String) r.get("tbl"), (String) r.get("col"), (String) r.get("parent")}));

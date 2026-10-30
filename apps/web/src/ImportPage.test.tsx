@@ -146,6 +146,13 @@ test('a chargesheets batch is described as chargesheets', async () => {
   expect(await screen.findByRole('button', { name: 'Approve and load 2 chargesheets' })).toBeTruthy()
 })
 
+test('an evidence batch is described as evidence items', async () => {
+  stub([batch({ entity: 'evidence', status: 'imported', rows_imported: 2, approved_by_name: 'SHO One', authority_note: 'Fictional order 1' })])
+  render(<ImportPage />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Open old.csv' }))
+  expect(await screen.findByText(/Loaded 2 evidence items, approved by SHO One/)).toBeTruthy()
+})
+
 test('a state layout is offered only for stations of that state', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body })

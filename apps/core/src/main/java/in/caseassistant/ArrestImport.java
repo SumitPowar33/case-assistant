@@ -34,16 +34,8 @@ class ArrestImport {
         this.punishments = punishments;
     }
 
-    /**
-     * @param firs the FIRs of the station with this number: for a given year the one of that year (or none), otherwise every year
-     * @param officer the id of an active officer of the station by username, or null
-     */
-    FirImport.Result check(Map<String, String> v, BiFunction<Integer, Integer, List<Fir>> firs, Function<String, UUID> officer, Instant now) {
-        var msgs = new ArrayList<FirImport.Message>();
-        var p = new LinkedHashMap<String, Object>();
-        Function<String, String> get = k -> v.getOrDefault(k, "").trim();
-        boolean[] dateOnly = new boolean[1];
-
+    /** The one FIR of the station that a row's fir_no (and fir_year) names, or null with the reason added to msgs. */
+    static Fir firOf(Function<String, String> get, BiFunction<Integer, Integer, List<Fir>> firs, List<FirImport.Message> msgs) {
         Integer no = get.apply("fir_no").matches("\\d{1,9}") && Integer.parseInt(get.apply("fir_no")) > 0 ? Integer.parseInt(get.apply("fir_no")) : null;
         if (no == null) msgs.add(new FirImport.Message("error", "fir_no", "The FIR number must be a whole number above zero."));
         Integer year = null;
@@ -59,6 +51,20 @@ class ArrestImport {
             else if (found.size() > 1) msgs.add(new FirImport.Message("error", "fir_year", "This FIR number exists in several years; add the FIR year."));
             else fir = found.get(0);
         }
+        return fir;
+    }
+
+    /**
+     * @param firs the FIRs of the station with this number: for a given year the one of that year (or none), otherwise every year
+     * @param officer the id of an active officer of the station by username, or null
+     */
+    FirImport.Result check(Map<String, String> v, BiFunction<Integer, Integer, List<Fir>> firs, Function<String, UUID> officer, Instant now) {
+        var msgs = new ArrayList<FirImport.Message>();
+        var p = new LinkedHashMap<String, Object>();
+        Function<String, String> get = k -> v.getOrDefault(k, "").trim();
+        boolean[] dateOnly = new boolean[1];
+
+        Fir fir = firOf(get, firs, msgs);
 
         Accused who = null;
         if (get.apply("accused_name").isEmpty()) msgs.add(new FirImport.Message("error", "accused_name", "The name of the accused is missing."));

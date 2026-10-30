@@ -1,6 +1,6 @@
 # Loading existing data (integration screen)
 
-Decided 28 Oct 2026 after research. Screen: **Load data** (`#/import`). Code: `ImportController`, `FirImport`, `Csv`, migration V22, `packs/*/import-profiles`, `packs/*/law-concordance.json`.
+Decided 28 Oct 2026 after research. Screen: **Load data** (`#/import`). Code: `ImportController`, `FirImport`, `ArrestImport`, `ChargesheetImport`, `EvidenceImport`, `Csv`, migrations V22, V24, V25, V28, `packs/*/import-profiles`, `packs/*/law-concordance.json`.
 
 ## Why a file first
 CCTNS has no public data API or published schema; each state runs its own system (for example Tamil Nadu's CIPRUS on PostgreSQL), and ICJS links CCTNS with e-Courts and e-Prisons without public details. So the only route that works for every state today is a **CSV export** that the department prepares. A direct connector for one state can be added later as another profile or a small bridge once a data agreement and a real schema exist.
@@ -51,5 +51,14 @@ Layout "Chargesheets (CSV), generic". Load the FIRs first (and the arrests, if y
 - Repeats: same FIR and report number (ignoring case and spaces) already recorded = skipped (same content "already imported", otherwise "not changed"); twice in one file = error. Corrections stay the job of the correction screen, never of an import.
 - Undo: removes the batch's chargesheets and their accused lists (again the only case in which the database lets those rows be deleted: the batch is already marked undone). Refused when a correction replaced one of them. An FIR or arrest batch cannot be undone while a chargesheet hangs on its people or FIRs.
 
+## Evidence register file (fourth file, 30 Oct 2026)
+Layout "Evidence register (CSV), generic". Load the FIRs first. Code: `EvidenceImport`, migration V28, `evidence-generic.json`. Required columns: `fir_no`, `label` (the item number, for example 214/E-03), `kind` (physical, electronic or document), `seized_at`. Optional: `fir_year`, `description`, `seizure_memo` (panchnama), `seal_no`, `esakshya_id`, `sha256`, `source_key`.
+- An item is attached to an FIR **of the chosen station**; nothing else is created.
+- **No guessing.** A missing description or seizure memo is stored as "Not in the old record" with a warning. A date without a time is 00:00 IST with a warning. An **electronic item without its SHA-256 is an error**: the hash taken at seizure cannot be made up later, so such an item is typed by hand with its 63(4) certificate. A malformed hash is an error. An imported electronic item has no 63(4) certificate, so it shows "not court-ready yet" until one is recorded.
+- **Dates.** Seizure in the future or unreadable = error. Seizure on a day before the FIR = warning only (a recovery can lead to an FIR; audits found wrong dates here, so the person checks it).
+- **Repeats.** Same FIR and label (ignoring case and spaces) already on the register = skipped ("already imported" or "not changed"); twice in one file = error; an item typed by hand between the check and the approval makes the row "skipped".
+- **Undo.** Removes the batch's items, refused once anything hangs on one of them (a custody hand-over, a 63(4) certificate, a readiness or accused link; read from the database catalogue). An FIR batch cannot be undone while evidence hangs on its FIRs.
+- **New database rule (V28).** An evidence item can no longer be deleted at all (it could be before, by direct SQL); the only exception is the undo of the import that added it.
+
 ## Not built yet
-Separate files for evidence and notices keyed by FIR (arrests and chargesheets are done); fuzzy (spelling-variant) duplicate people and duplicates across stations (only exact normalised names are flagged); a direct state-database connector; Excel files; paging beyond 500 rows in the screen; purge of old batches after a retention period.
+A separate file for notices keyed by FIR (arrests, chargesheets and evidence are done); custody hand-overs and 63(4) certificates of old items (only the item itself is loaded); fuzzy (spelling-variant) duplicate people and duplicates across stations (only exact normalised names are flagged); a direct state-database connector; Excel files; paging beyond 500 rows in the screen; purge of old batches after a retention period.

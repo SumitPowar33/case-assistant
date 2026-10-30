@@ -107,16 +107,19 @@ def test_maharashtra_asks_a_second_person_to_approve_imports():
     assert mh["state_values"]["import_self_approval"]["value"] == 0
 
 
-IMPORT_FIELDS = {  # must match what FirImport.check, ArrestImport.check and ChargesheetImport.check read
+IMPORT_FIELDS = {  # must match what FirImport.check, ArrestImport.check, ChargesheetImport.check and EvidenceImport.check read
     "fir": {"fir_no", "fir_year", "registered_at", "information_received_at", "gd_entry_no", "sections", "complaint_text",
             "io_username", "complainant_name", "victim_names", "accused_names", "witness_names", "status", "zero_fir",
             "outside_limits_place", "source_key"},
     "arrest": {"fir_no", "fir_year", "accused_name", "accused_label", "arrested_at", "place", "grounds", "informed_name",
                "informed_contact", "arresting_officer", "first_remand_on", "max_punishment", "released_on", "release_basis",
                "source_key"},
-    "chargesheet": {"fir_no", "fir_year", "report_no", "filed_on", "court", "accused_names", "source_key"}}
+    "chargesheet": {"fir_no", "fir_year", "report_no", "filed_on", "court", "accused_names", "source_key"},
+    "evidence": {"fir_no", "fir_year", "label", "kind", "description", "seized_at", "seizure_memo", "seal_no", "esakshya_id",
+                 "sha256", "source_key"}}
 IMPORT_REQUIRED = {"fir": {"fir_no", "registered_at"}, "arrest": {"fir_no", "accused_name", "arrested_at"},
-                   "chargesheet": {"fir_no", "report_no", "filed_on", "accused_names"}}
+                   "chargesheet": {"fir_no", "report_no", "filed_on", "accused_names"},
+                   "evidence": {"fir_no", "label", "kind", "seized_at"}}
 
 
 def test_import_profiles_name_known_fields_and_do_not_share_aliases():

@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 class ChargesheetImport {
     static final int MAX_NAMES = 30;
 
-    /** The key of a chargesheet for the repeat check: FIR id + "|" + report number without case or spaces. */
+    /** The key of a chargesheet (or evidence item) for the repeat check: FIR id + "|" + report number (label) without case or spaces. */
     static String key(Object firId, Object reportNo) {
         return firId + "|" + ((String) reportNo).toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
     }
@@ -32,21 +32,7 @@ class ChargesheetImport {
         var p = new LinkedHashMap<String, Object>();
         Function<String, String> get = k -> v.getOrDefault(k, "").trim();
 
-        Integer no = get.apply("fir_no").matches("\\d{1,9}") && Integer.parseInt(get.apply("fir_no")) > 0 ? Integer.parseInt(get.apply("fir_no")) : null;
-        if (no == null) msgs.add(new FirImport.Message("error", "fir_no", "The FIR number must be a whole number above zero."));
-        Integer year = null;
-        String y = get.apply("fir_year");
-        if (!y.isEmpty() && !y.matches("20\\d\\d|2100")) msgs.add(new FirImport.Message("error", "fir_year", "The FIR year must be between 2000 and 2100."));
-        else if (!y.isEmpty()) year = Integer.parseInt(y);
-
-        ArrestImport.Fir fir = null;
-        if (no != null && (y.isEmpty() || year != null)) {
-            var found = firs.apply(year, no);
-            if (found.isEmpty()) msgs.add(new FirImport.Message("error", "fir_no", "No FIR with this number" + (year == null ? "" : " and year")
-                    + " at this police station. Load the FIR file first."));
-            else if (found.size() > 1) msgs.add(new FirImport.Message("error", "fir_year", "This FIR number exists in several years; add the FIR year."));
-            else fir = found.get(0);
-        }
+        ArrestImport.Fir fir = ArrestImport.firOf(get, firs, msgs);
 
         String report = get.apply("report_no");
         if (report.isEmpty()) msgs.add(new FirImport.Message("error", "report_no", "The chargesheet (report) number is missing."));

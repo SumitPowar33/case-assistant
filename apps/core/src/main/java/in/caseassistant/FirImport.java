@@ -83,7 +83,7 @@ class FirImport {
         return profiles.containsKey(id);
     }
 
-    /** What a profile loads: "fir" or "arrest". */
+    /** What a profile loads: "fir", "arrest", "chargesheet" or "evidence". */
     String entity(String profile) {
         return profiles.get(profile).path("entity").asText();
     }

@@ -106,7 +106,7 @@ class FirImportTest {
     @Test
     void profilesAndColumnSuggestions() {
         assertThat(rules.hasProfile("fir-generic")).isTrue();
-        assertThat(rules.profileList()).extracting(p -> p.get("id")).containsExactlyInAnyOrder("fir-generic", "arrest-generic", "chargesheet-generic", "fir-mh-cctns-fictional");
+        assertThat(rules.profileList()).extracting(p -> p.get("id")).containsExactlyInAnyOrder("fir-generic", "arrest-generic", "chargesheet-generic", "evidence-generic", "fir-mh-cctns-fictional");
         assertThat(rules.entity("fir-generic")).isEqualTo("fir");
         assertThat(rules.entity("arrest-generic")).isEqualTo("arrest");
         assertThat(rules.requiredFields("arrest-generic")).containsExactlyInAnyOrder("fir_no", "accused_name", "arrested_at");

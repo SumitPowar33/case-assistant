@@ -18,7 +18,7 @@ const STATUS: Record<string, string> = {
 }
 
 /**
- * Loading existing FIRs, then their arrests and chargesheets, from CSV files, in deliberate steps: choose the file and match its columns, read the checked
+ * Loading existing FIRs, then their arrests, chargesheets and evidence registers, from CSV files, in deliberate steps: choose the file and match its columns, read the checked
  * result, approve it with the authority for the load. Nothing reaches the cases before the approval, and an
  * imported batch can be undone until work is recorded on it. The server decides who may do this.
  */
@@ -109,11 +109,11 @@ export default function ImportPage() {
   // national layouts fit every station; a state module's layout only that state's stations (the server checks it too)
   const layouts = profiles.filter((p) => !p.module || p.module === 'IN' || p.module === station?.state_code)
   const importable = batch ? batch.rows_ok + batch.rows_warning : 0
-  const things = (b: Batch) => (b.entity === 'arrest' ? 'arrests' : b.entity === 'chargesheet' ? 'chargesheets' : 'FIRs')
+  const things = (b: Batch) => ({ arrest: 'arrests', chargesheet: 'chargesheets', evidence: 'evidence items' } as Record<string, string>)[b.entity] ?? 'FIRs'
   return (
     <section aria-labelledby="import-h">
       <h2 id="import-h">Load existing records</h2>
-      <p>Load FIRs, then their arrests and chargesheets, from an old register or system as CSV files. Load the FIRs first: the other files are matched to the FIR number and the accused already in the system.
+      <p>Load FIRs, then their arrests, chargesheets and seized items (evidence register), from an old register or system as CSV files. Load the FIRs first: the other files are matched to the FIR number and the accused already in the system.
         The file is checked row by row first and nothing is added to the cases until a person approves it. Existing records are never changed.
         Use fictional data until your department has a data agreement.</p>
       {error && <p role="alert">{error}</p>}

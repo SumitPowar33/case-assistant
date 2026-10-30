@@ -724,3 +724,25 @@ def test_a_state_module_value_is_the_strictest_starting_point_of_its_state(db):
         db.execute("INSERT INTO pack_policy VALUES ('KA','session_hours',4,'Fictional state module order')")
     with pytest.raises(psycopg.errors.UniqueViolation):
         db.execute("INSERT INTO pack_policy VALUES ('MH','victim_update_days',30,'Fictional state module order')")
+
+
+def test_an_evidence_item_stays_on_the_register_unless_its_import_is_undone(db):
+    st, io, fir = seed_case(db)
+    batch = one(db, """INSERT INTO import_batch(station_id,entity,profile,filename,file_sha256,complaint_language,rows_total,created_by)
+                       VALUES (%s,'evidence','evidence-generic','e.csv','00','en',1,%s) RETURNING id""", st, io)[0]
+    ins = """INSERT INTO evidence_item(fir_id,label,description,kind,seized_at,seizure_memo,import_batch_id)
+             VALUES (%s,%s,'Demo rod','physical','2026-08-18 12:00+05:30','Demo memo',%s) RETURNING id"""
+    imported = one(db, ins, fir, "214/E-01", batch)[0]
+    typed = one(db, ins, fir, "214/E-02", None)[0]
+    for item in (imported, typed):                       # not while the batch stands, and never a typed item
+        with pytest.raises(psycopg.errors.RaiseException):
+            db.execute("DELETE FROM evidence_item WHERE id=%s", (item,))
+    db.execute("UPDATE evidence_item SET description='Demo rod (rusted)' WHERE id=%s", (typed,))   # a better description is still allowed
+    db.execute("UPDATE import_batch SET status='imported', approved_by=%s WHERE id=%s", (io, batch))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM evidence_item WHERE id=%s", (imported,))
+    db.execute("UPDATE import_batch SET status='undone', undone_by=%s, undone_at=now(), undo_reason='Fictional wrong file' WHERE id=%s", (io, batch))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM evidence_item WHERE id=%s", (typed,))
+    db.execute("DELETE FROM evidence_item WHERE id=%s", (imported,))
+    assert one(db, "SELECT count(*) FROM evidence_item")[0] == 1
