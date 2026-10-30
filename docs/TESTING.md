@@ -8,7 +8,7 @@ Rule of this project (Sumit, 28 Oct 2026): **every piece of code gets tests, and
 | Repository rules | `tests/repo_rules` | The hard rules of CLAUDE.md hold on the whole repo: no model calls outside `services/ai-gateway`, no secrets, no forbidden features (guilt/credibility scoring, prediction, facial recognition), no AI attribution in commits | `python -m pytest -q tests/repo_rules` |
 | Data / contract | `packs/tests` | Every pack file (roles, policies, punishment table, playbooks) is well formed and consistent with the database lists | `python -m pytest -q packs/tests` |
 | Unit | `packages/xlit`, `RolesTest`, `PoliciesTest`, web component tests, gateway tests | Pure logic: typing engine, role merge rules, policy bounds, forms | see CLAUDE.md |
-| Database / legal rules | `apps/core/db-tests` | Every migration V1..Vn on a clean schema; legal day-counting; append-only tables; constraints | `python -m pytest -q apps/core/db-tests` |
+| Database / legal rules | `apps/core/db-tests` | Every migration V1..Vn on a clean schema; legal day-counting; append-only tables; constraints; upgrade from an earlier release | `python -m pytest -q apps/core/db-tests` |
 | Functional / API | `apps/core/src/test` (`*ApiTest`) | Each endpoint with real tokens against PostgreSQL: happy path, every validation, every refusal | `mvn -f apps/core/pom.xml verify` |
 | Security | `SecurityMatrixTest` | Walks **every route**: nothing answers without a token (except login); a signed-in outsider reads no case record (404); admin routes refuse ordinary officers | same as above |
 | Access / tenancy | `AdminApiTest`, `PolicyApiTest`, `PeopleApiTest`, `FirApiTest` | State admin bounded to own state; policies tighten-only; case team reads | same |
@@ -49,7 +49,7 @@ The gate fails the build below the number. When coverage rises by 2 points or mo
 
 ## Not covered yet (planned, in this order)
 1. **End-to-end browser test**: done 30 Oct 2026 (`tests/e2e`: Load data screen, and a case typed by hand in `test_case_flow.py`). Add a browser test with every new screen.
-2. **Upgrade test**: restore a database dump made at the previous release, apply the new migrations, run the API tests.
+2. **Upgrade test**: done 31 Oct 2026 (`apps/core/db-tests/test_upgrade.py`: a case with a masked victim stored at V25 and V29 takes every later migration unchanged). Bump `BASES` when a release is tagged. Still to add: run the API tests on an upgraded dump.
 3. **Contract test between the web app and the core** (generated from the same route list as `SecurityMatrixTest`) so a renamed field fails a test, not a screen.
 4. **Load test** of the list endpoints once paging exists.
 5. **Accessibility check** of the main screens (axe) and Indian-language rendering checks.
