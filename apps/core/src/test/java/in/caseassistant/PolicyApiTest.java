@@ -83,6 +83,17 @@ class PolicyApiTest {
     }
 
     @Test
+    void aDistrictThatKeepsCaseTextOnStateServersTellsTheAiGatewayForItsStationsOnly() throws Exception {
+        mvc.perform(get("/api/me").header("Authorization", io)).andExpect(jsonPath("$.ai_cloud_allowed").value(true));
+        set(sp, "district", null, "North", "ai_cloud_allowed", 0).andExpect(status().isCreated());
+        mvc.perform(get("/api/me").header("Authorization", io)).andExpect(jsonPath("$.ai_cloud_allowed").value(false));
+        mvc.perform(get("/api/me").header("Authorization", sho2)).andExpect(jsonPath("$.ai_cloud_allowed").value(false));   // same district
+        mvc.perform(get("/api/me").header("Authorization", user("io", s3, "Fictional IO South"))).andExpect(jsonPath("$.ai_cloud_allowed").value(true));
+        mvc.perform(get("/api/me").header("Authorization", platformAdmin)).andExpect(jsonPath("$.ai_cloud_allowed").value(true));  // no station: the national default
+        set(sho1, "station", s1, null, "ai_cloud_allowed", 1).andExpect(status().isConflict());   // a station cannot loosen its district
+    }
+
+    @Test
     void aShoTightensTheirOwnStationOnly() throws Exception {
         set(sho1, "station", s1, null, "victim_update_days", 30).andExpect(status().isCreated());
         assertThat(effective(s1, "victim_update_days")).isEqualTo(30);

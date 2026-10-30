@@ -26,6 +26,8 @@ class Completion:
 
 class Provider:
     name = "base"
+    # True when the text leaves the state's own servers. A unit's policy "ai_cloud_allowed" = 0 refuses such providers.
+    cloud = True
 
     def complete(self, *, model: str, system: str, prompt: str, max_tokens: int) -> Completion:  # pragma: no cover
         raise NotImplementedError
@@ -89,6 +91,7 @@ class GeminiProvider(Provider):
 class FakeProvider(Provider):
     """Deterministic offline provider: echoes a marked draft so tests and keyless demos work."""
     name = "fake"
+    cloud = False
 
     def complete(self, *, model, system, prompt, max_tokens):
         return Completion(f"[demo draft] {prompt[:max_tokens]}", self.name, model, len(prompt.split()), 0)

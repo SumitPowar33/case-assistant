@@ -27,7 +27,7 @@ At the end of each session, note in PROGRESS.md anything you deliberately skippe
 
 ## Layout
 - Login: `POST /api/login` on the core app gives an 8-hour token; the core app and the AI gateway both check it with the same `AUTH_SECRET`.
-- `services/ai-gateway` – Python FastAPI. Claude + Gemini (+ offline `fake`) behind one API; per-feature provider settings; hash-chained audit log. Every token is also checked with the core app (`CORE_URL`, `GET /api/me`; a yes is kept 30 s; core down = refused). Tests: `python -m pytest -q` in that folder.
+- `services/ai-gateway` – Python FastAPI. Claude + Gemini (+ offline `fake`) behind one API; per-feature provider settings; hash-chained audit log. Every token is also checked with the core app (`CORE_URL`, `GET /api/me`; a yes is kept 30 s; core down = refused). A unit's policy `ai_cloud_allowed` = 0 (from `/api/me`) makes it refuse cloud providers. Tests: `python -m pytest -q` in that folder.
 - `packages/xlit` – English-letters to Indian-script typing engine. Tests: `node packages/xlit/xlit.test.js`.
 - `apps/core` – Java 21 / Spring Boot main app; Flyway migrations in `src/main/resources/db/migration`. Tests (need PostgreSQL): `mvn -f apps/core/pom.xml test` and `python -m pytest -q apps/core/db-tests`.
 - `apps/web` – React + TypeScript (Vite). Tests: `npm test` and `npm run build` in that folder.

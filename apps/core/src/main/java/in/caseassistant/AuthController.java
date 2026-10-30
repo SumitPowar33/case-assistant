@@ -99,6 +99,8 @@ class AuthController implements ApplicationRunner {
                 .param(CaseTeam.user(jwt)).query().singleRow());
         me.put("can_import", team.can(CaseTeam.user(jwt), "import.run"));
         me.put("can_set_policy", team.can(CaseTeam.user(jwt), "policy.set") || team.can(CaseTeam.user(jwt), "admin.manage"));
+        // the AI gateway reads this on every call and refuses a cloud provider when the user's unit said no
+        me.put("ai_cloud_allowed", policies.effective((UUID) me.get("station_id"), "ai_cloud_allowed") == 1);
         return me;
     }
 

@@ -32,7 +32,7 @@ def token(sub="user-admin", role="state_admin", secret=SECRET, exp_in=600, alg="
 def core_says_active(tok, subject):
     """Stands in for the core app's GET /api/me when the user is active and the password unchanged."""
     claims = verify(tok, SECRET)
-    return {"id": claims["sub"], "role": claims["role"]}
+    return {"id": claims["sub"], "role": claims["role"], "ai_cloud_allowed": True}
 
 
 def client(store, providers, role="state_admin", sub="user-admin"):
@@ -249,3 +249,29 @@ def test_core_answer_for_another_user_is_refused():
     check = CoreCheck("http://core", mock_client(handler))
     with pytest.raises(Exception, match="does not match"):
         check(token("user-x"), "user-x")
+
+
+def test_a_unit_that_keeps_text_on_state_servers_gets_no_cloud_provider():
+    """Policy ai_cloud_allowed = 0 at the user's unit: Claude and Gemini are refused and the refusal is logged;
+    a provider on the state's own servers (here the offline one) still answers."""
+    store = Store(":memory:")
+    calls = []
+    providers = {"claude": ClaudeProvider("k", mock_client(lambda r: calls.append(r) or claude_ok(r))), "fake": FakeProvider()}
+    no_cloud = lambda tok, sub: {**core_says_active(tok, sub), "ai_cloud_allowed": False}
+    c = TestClient(create_app(store, providers, SECRET, no_cloud), headers={"Authorization": "Bearer " + token("user-io-7", "io")})
+    r = c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "Draft a notice", "prompt_version": "test@1", "case_ref": "FIR 1/2026"})
+    assert r.status_code == 403 and "state's servers" in r.json()["detail"]
+    assert calls == []                                    # nothing left the building
+    row = store.audit_rows()[0]
+    assert row["action"] == "ai_refused" and row["detail"]["provider"] == "claude" and row["actor"] == "user-io-7"
+    assert c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "test@1", "provider": "gemini"}).status_code == 403
+    ok = c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "test@1", "provider": "fake"})
+    assert ok.status_code == 200 and ok.json()["provider"] == "fake"
+
+
+def test_a_core_answer_without_the_ai_policy_counts_as_no_cloud():
+    _, handler = core_app([{"id": "user-x", "role": "io"}])
+    providers = {"claude": ClaudeProvider("k", mock_client(claude_ok)), "fake": FakeProvider()}
+    app = create_app(Store(":memory:"), providers, SECRET, CoreCheck("http://core", mock_client(handler)))
+    c = TestClient(app, headers={"Authorization": "Bearer " + token("user-x", "io")})
+    assert c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "test@1"}).status_code == 403

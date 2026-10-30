@@ -5,7 +5,9 @@
 - Every request, error and human decision (accepted / edited / rejected) is written to the audit log.
 - Output is always returned as a *draft* for a person to review; the gateway never acts on it.
 - Every /v1 call needs the core app's login token; the audit log records the signed-in user, not a name
-  sent in the request. Only the state admin changes settings or reads the audit log.
+  sent in the request.
+- Residency: when the policy "ai_cloud_allowed" of the user's unit is 0 (the core app says so on every sign-in check),
+  no text goes to a cloud provider; the refusal is logged. Only providers on the state's own servers may answer. Only the state admin changes settings or reads the audit log.
 """
 from __future__ import annotations
 
@@ -79,8 +81,9 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             raise HTTPException(401, str(e), headers={"WWW-Authenticate": "Bearer"})
         except CoreUnavailable as e:
             raise HTTPException(503, str(e))
-        # the role as the core app has it now, not as it was when the token was issued
-        return {**claims, "role": me["role"]}
+        # the role and the unit's AI policy as the core app has them now, not as they were when the token was issued;
+        # an answer without the policy counts as "no cloud" (fails closed)
+        return {**claims, "role": me["role"], "ai_cloud_allowed": me.get("ai_cloud_allowed") is True}
 
     def admin(u: dict = Depends(user)) -> dict:
         if u.get("role") != "state_admin":
@@ -126,6 +129,11 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         elif body.model:
             model = body.model
         request_id = str(uuid.uuid4())
+        if getattr(providers.get(provider_name), "cloud", True) and not u["ai_cloud_allowed"]:
+            store.log(u["sub"], "ai_refused", body.feature, body.case_ref,
+                      {"request_id": request_id, "provider": provider_name, "model": model, "reason": "ai_cloud_allowed is off for the user's unit"})
+            raise HTTPException(403, "Your unit's policy keeps case text on the state's servers, so a cloud AI provider "
+                                     f"({provider_name}) cannot be used. Ask the admin to set an on-premises provider for this feature.")
         system = SAFETY_SYSTEM + ("\n\n" + body.system if body.system else "")
         # The text itself is not kept (it may name people); its hash proves later which exact text was sent.
         versions = {"prompt_version": body.prompt_version, "safety_version": SAFETY_VERSION,
