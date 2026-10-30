@@ -13,14 +13,32 @@ Answers to the open questions from sessions 13, 18 and 25:
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
-1. Evidence import file.
-2. Notices import file.
+1. (Done 30 Oct: evidence import file, ef845fb.) Notices import file.
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 4. `ai.cloud_allowed` policy and the gateway refusing a cloud provider when it is off.
 5. Module 1, front-desk complaint: typed intake, read-back, golden-hour checklist, then speech input.
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 30 Oct 2026, session 27 (on-demand run started by Sumit at about 17:50 IST)
+Started from `setup/seed` at ec72a29. PostgreSQL was already running from session 26. Baseline `scripts/test-all.sh`: all 8 lines PASS.
+
+Done
+- Built the evidence import (Next item 1), but another session pushed its own evidence import (ef845fb) while I was testing mine. I kept theirs, discarded mine (still on a local branch only, never pushed) and did not start the notices file, so the two sessions do not build the same thing twice. Note: after this switch the test database still had my V28, so Flyway refused to start ("checksum mismatch for migration 28"); I dropped and re-created `caseapp_test`. The next session does not need to do anything; the sandbox starts empty.
+- Instead, the next kind of test from "Not covered yet": a **browser test of a case typed by hand** (`tests/e2e/test_case_flow.py`). An IO signs in, registers an FIR (dates two days ago), adds the accused, records the arrest with the first remand, and the screen shows the 60-day chargesheet limit counted from the remand (BNSS 187(3)) and the 90-day victim update (BNSS 193(3)(ii)); the FIR is on the IO's list. That first item of "Not covered yet" in docs/TESTING.md is now done.
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage unchanged by this test-only change (core about 97.8% lines / 92.4% branches, web 99.3% / 83.9%, gateway 94%); no gate raised.
+
+Deliberately skipped / not checked
+- Notices import file: left to the session that did the evidence file, to avoid a second duplicate.
+- The browser test uses the sandbox's UTC date to pick dates two days back; it is safe at any hour, but the expected dates are computed in the test, not read from a fixed table.
+
+Next
+1. Notices import file (unless the other session already pushed it).
+2. Questions 1 to 4 of session 26 are still open.
+
+Questions for Sumit
+1. Two sessions ran at the same time this evening (this on-demand run and another one), and both built the evidence import. Should on-demand runs only do testing work (no Next items) when a scheduled session may be running, or should only one session run at a time?
 
 ## 30 Oct 2026, session 26 (scheduled weekend build, Sumit away)
 Started from `setup/seed` at 73d2322; your answers (1dff508) arrived on the branch during the session and I followed their Next list. Sandbox empty again: started PostgreSQL, created role `caseapp` and the two databases, installed packages, `npm ci`. Baseline `scripts/test-all.sh`: all 7 lines PASS.
