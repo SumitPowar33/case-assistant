@@ -4,6 +4,25 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 30 Oct 2026, Sumit's answers (read this before picking the next item)
+Answers to the open questions from sessions 13, 18 and 25:
+1. Second-approver rule (`import_self_approval` = 0): **yes, for the whole pilot state** (Maharashtra). Set it in the MH pack's `policies.json`, not by hand in the database.
+2. Sample CCTNS/state export: **not available**. Write a realistic, fully fictional CCTNS-style import profile for MH (`packs/MH/import-profiles`), clearly marked as made up, so it can be replaced when a real sample arrives.
+3. Evidence and notices import files: **build both**, same pattern as FIRs, arrests and chargesheets (insert-only, approved by a person, undoable until work is recorded).
+4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
+
+Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
+1. End-to-end browser test of the Load data screen with Playwright (skip if an earlier session already did it).
+2. Maharashtra pack `packs/MH`: roles, policies (with `import_self_approval` = 0), punishments only where the state differs, playbooks, Marathi labels; pack tests; demo stations in MH.
+3. Fictional CCTNS-style import profile for MH.
+4. Evidence import file.
+5. Notices import file.
+6. `ai.cloud_allowed` policy and the gateway refusing a cloud provider when it is off.
+7. Module 1, front-desk complaint: typed intake, read-back, golden-hour checklist, then speech input.
+8. Screens in the 10 languages, then the legal glossary.
+9. Upgrade test, contract test web-to-core, load and accessibility checks.
+10. End-to-end demo case and demo script.
+
 ## 29 Oct 2026, session 25 (scheduled nightly build, last of the night, Sumit away)
 Started from `setup/seed` at 69e0d83 (sandbox empty again: started PostgreSQL, created role `caseapp` and the two databases, installed packages, `npm ci`). Baseline `scripts/test-all.sh`: all 7 lines PASS.
 
