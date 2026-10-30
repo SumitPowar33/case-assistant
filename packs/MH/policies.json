@@ -1,0 +1,9 @@
+{
+  "module": "MH",
+  "state_values": {
+    "import_self_approval": {
+      "value": 0,
+      "reason": "Maharashtra pilot (owner decision of 30 Oct 2026): a second authorised person approves every import of old records"
+    }
+  }
+}

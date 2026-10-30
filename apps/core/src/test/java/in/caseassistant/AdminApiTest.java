@@ -77,7 +77,7 @@ class AdminApiTest {
         modules.sync();
         modules.sync();   // again at the next start: no duplicate, status kept
         assertThat(db.sql("select code || ' ' || status || ' ' || array_to_string(languages, ',') from state_pack").query(String.class).list())
-                .containsExactly("IN draft en,hi,mr,gu,bn,pa,or,ta,te,kn,ml");
+                .containsExactlyInAnyOrder("IN draft en,hi,mr,gu,bn,pa,or,ta,te,kn,ml", "MH draft mr,en,hi");
         auth.ensureAdmin("admin.one", ADMIN_PW);
         admin = "Bearer " + token("admin.one", ADMIN_PW);
         post(admin, "/api/stations", "{\"stateCode\":\"IN\",\"district\":\"Demo District\",\"name\":\"Demo Fresh PS\"}")

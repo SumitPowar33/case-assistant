@@ -79,10 +79,32 @@ def test_roles_files_use_declared_permissions_and_valid_scopes():
 def test_policies_have_a_default_inside_their_bounds():
     for path in ROOT.glob("*/policies.json"):
         data = json.loads(path.read_text(encoding="utf-8"))
-        assert data["policies"]
-        for key, p in data["policies"].items():
+        assert data["module"] == path.parent.name
+        assert data.get("policies") or data.get("state_values")
+        for key, p in data.get("policies", {}).items():
             assert re.fullmatch(r"[a-z][a-z_.]{1,59}", key), key
             assert p["label"] and p["min"] <= p["default"] <= p["max"], key
+
+
+def test_state_values_only_make_a_declared_policy_stricter():
+    """The same rules Policies.java checks at start-up: a state module, a declared key, min <= value <= default, a reason."""
+    declared = {}
+    for path in ROOT.glob("*/policies.json"):
+        declared |= json.loads(path.read_text(encoding="utf-8")).get("policies", {})
+    for path in ROOT.glob("*/policies.json"):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("state_values"):
+            assert data["module"] != "IN", "the national module sets defaults, not state values"
+        for key, v in data.get("state_values", {}).items():
+            assert key in declared, key
+            assert isinstance(v["value"], int) and declared[key]["min"] <= v["value"] <= declared[key]["default"], key
+            assert len(v["reason"].strip()) >= 10, key
+
+
+def test_maharashtra_asks_a_second_person_to_approve_imports():
+    """Owner decision of 30 Oct 2026 for the pilot state."""
+    mh = json.loads((ROOT / "MH" / "policies.json").read_text(encoding="utf-8"))
+    assert mh["state_values"]["import_self_approval"]["value"] == 0
 
 
 IMPORT_FIELDS = {  # must match what FirImport.check, ArrestImport.check and ChargesheetImport.check read

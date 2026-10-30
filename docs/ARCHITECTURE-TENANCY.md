@@ -49,6 +49,8 @@ Each state, district and station may have its own policy, but only **in the stri
 
 Who may set a policy: the state admin for their state; the SP for their district and its stations; the SHO for their own station (role permission `policy.set` plus the role's case scope). `GET /api/policies` shows each policy with its value in force; `POST /api/policy-settings` sets one; `GET /api/policy-settings` shows the history of the units you manage.
 
+A **state module** can also set a stricter value for its whole state in its own `policies.json` (`state_values`: value and reason; only between the policy's minimum and the national default). The application writes these to `pack_policy` at start-up (V27); `effective_policy_days` and the tighten-only check treat the module as the unit above the state admin, so nobody in that state can go looser. First use: Maharashtra, `import_self_approval` = 0 (a second person approves every import).
+
 Live now: `victim_update_days` (changes the due date on the deadline list and says "earlier by unit policy") and `session_hours` (length of a sign-in). `import_self_approval` (1 = the person who checked an import file may also approve it; a unit may set 0, then a second authorised person must approve). Policies are added only when the code that obeys them is added in the same change.
 
 ## 5. Other factors thought through, in order of when to deal with them

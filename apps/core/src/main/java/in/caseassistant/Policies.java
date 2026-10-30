@@ -1,6 +1,8 @@
 package in.caseassistant;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
@@ -12,6 +14,7 @@ import java.util.UUID;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,10 +25,15 @@ import org.springframework.stereotype.Component;
  * (see effective_policy_days in V21). Who may set one: see {@link PolicyController}.
  */
 @Component
+@DependsOn("modules")   // pack_policy rows point at the state_pack rows that Modules writes
 class Policies {
     record Def(String label, int defaultValue, int min, int max) {}
 
+    /** A state module's own value of a policy for its whole state ("state_values" in its policies.json), with the reason. */
+    record StateValue(int value, String reason) {}
+
     private final Map<String, Def> defs = new TreeMap<>();
+    private final Map<String, Map<String, StateValue>> stateValues = new TreeMap<>();
     private final JdbcClient db;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -33,18 +41,61 @@ class Policies {
         this.db = db;
         for (Resource res : new PathMatchingResourcePatternResolver().getResources("classpath*:packs/*/policies.json")) {
             try (InputStream in = res.getInputStream()) {
-                var tree = json.readTree(in).get("policies");
+                var file = json.readTree(in);
+                var tree = file.path("policies");
                 tree.fieldNames().forEachRemaining(key -> {
                     var d = tree.get(key);
                     add(key, new Def(d.get("label").asText(), d.get("default").asInt(), d.get("min").asInt(), d.get("max").asInt()));
                 });
+                var values = file.path("state_values");
+                var mine = new TreeMap<String, StateValue>();
+                values.fieldNames().forEachRemaining(key -> mine.put(key, stateValue(file.path("module").asText(), key, values.get(key))));
+                if (!mine.isEmpty()) stateValues.put(file.path("module").asText(), mine);
             }
         }
+        checkStateValues();
+    }
+
+    static StateValue stateValue(String module, String key, JsonNode v) {
+        if (!v.path("value").isInt()) throw new IllegalStateException(module + ": state value of " + key + " must be a whole number");
+        return new StateValue(v.get("value").asInt(), v.path("reason").asText(null));
+    }
+
+    Policies(Map<String, Def> definitions, Map<String, Map<String, StateValue>> byState, JdbcClient db) {
+        this.db = db;
+        definitions.forEach(this::add);
+        stateValues.putAll(byState);
+        checkStateValues();
     }
 
     Policies(Map<String, Def> definitions, JdbcClient db) {
-        this.db = db;
-        definitions.forEach(this::add);
+        this(definitions, Map.of(), db);
+    }
+
+    /** A state module may only make a national policy stricter for its own state, with a reason; the national module sets defaults instead. */
+    private void checkStateValues() {
+        stateValues.forEach((state, values) -> values.forEach((key, v) -> {
+            if (state.equals("IN")) throw new IllegalStateException("IN: the national module sets defaults, not state values");
+            Def d = defs.get(key);
+            if (d == null) throw new IllegalStateException(state + ": state value for unknown policy " + key);
+            if (v.value() < d.min() || v.value() > d.defaultValue())
+                throw new IllegalStateException(state + ": " + key + " may only be made stricter, between " + d.min() + " and " + d.defaultValue());
+            if (v.reason() == null || v.reason().strip().length() < 10) throw new IllegalStateException(state + ": " + key + " needs a reason of 10 or more characters");
+        }));
+    }
+
+    /** Writes the state modules' values to pack_policy, so the database (deadlines) and this class agree. */
+    @PostConstruct
+    void sync() {
+        db.sql("delete from pack_policy").update();
+        stateValues.forEach((state, values) -> values.forEach((key, v) ->
+                db.sql("insert into pack_policy (state_code, key, value, reason) values (?,?,?,?)").params(state, key, v.value(), v.reason().strip()).update()));
+    }
+
+    /** The value a state starts from: the national default, or its module's stricter value. */
+    private int base(String stateCode, String key) {
+        var v = stateValues.getOrDefault(stateCode, Map.of()).get(key);
+        return v == null ? defs.get(key).defaultValue() : v.value();
     }
 
     private void add(String key, Def d) {
@@ -77,11 +128,11 @@ class Policies {
     }
 
     /**
-     * The value a unit one level up already asks for: for a state, the default; for a district, the state's; for a
-     * station, the strictest of its district's and its state's.
+     * The value a unit one level up already asks for: for a state, the default (or its module's stricter value); for a
+     * district, also the state's; for a station, the strictest of its district's and its state's.
      */
     int above(String level, String stateCode, UUID districtId, String key) {
-        int v = defs.get(key).defaultValue();
+        int v = base(stateCode, key);
         if (level.equals("state")) return v;
         v = Math.min(v, newest("state", stateCode, null, key, v));
         if (level.equals("station")) v = Math.min(v, newest("district", stateCode, districtId, key, v));

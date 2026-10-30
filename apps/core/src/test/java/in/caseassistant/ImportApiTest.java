@@ -33,6 +33,8 @@ class ImportApiTest {
     @Autowired JdbcClient db;
     @Autowired ObjectMapper json;
     @Autowired JwtEncoder tokens;
+    @Autowired Modules modules;
+    @Autowired Policies policies;
     UUID s1, s2, s3, sx, ioUser;
     String sho1, sho2, sp, stateAdmin, platformAdmin, io, otherStateAdmin;
 
@@ -433,6 +435,30 @@ class ImportApiTest {
                 .andExpect(jsonPath("$.suggested.arresting_officer").value("Arrested By"));
         mvc.perform(get("/api/imports/profiles").header("Authorization", sho1)).andExpect(jsonPath("$[?(@.id=='arrest-generic')].entity").value("arrest"))
                 .andExpect(jsonPath("$[?(@.id=='fir-generic')].entity").value("fir"));
+    }
+
+    /** The Maharashtra module asks for a second approver for the whole state (packs/MH/policies.json); nobody in MH can loosen it. */
+    @Test
+    void theMaharashtraModuleAsksASecondPersonToApproveEveryImport() throws Exception {
+        modules.sync();
+        policies.sync();
+        assertThat(db.sql("select value from pack_policy where state_code = 'MH' and key = 'import_self_approval'").query(Integer.class).single()).isZero();
+        UUID mh = station("MH", "Fictional Pune Rural", "Fictional Pune PS");
+        String shoMh = bearer(user("sho", mh, "Fictional SHO Pune", "sho.pune"));
+        String spMh = bearer(user("sp", mh, "Fictional SP Pune", "sp.pune"));
+        String adminMh = bearer(user("state_admin", mh, "Fictional State Admin MH", "admin.mh"));
+        mvc.perform(get("/api/policies").header("Authorization", shoMh)).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.key == 'import_self_approval')].effective").value(0))
+                .andExpect(jsonPath("$[?(@.key == 'import_self_approval')].default").value(1));
+        UUID b = stage(shoMh, mh, HEAD + "1,10/03/2024 10:00,IPC 379,Fictional theft,,,,Fictional Accused One,GD-5,open\n");
+        commit(shoMh, b).andExpect(status().isForbidden());
+        commit(spMh, b).andExpect(status().isOk());
+        // the state admin cannot set the state back to self-approval: the module is the unit above
+        send(adminMh, "/api/policy-settings", Map.of("level", "state", "stateCode", "MH", "key", "import_self_approval", "value", 1,
+                "reason", "Fictional wish to loosen")).andExpect(status().isConflict());
+        // a station in another state is not affected
+        UUID other = stage(sho1, s1, HEAD + "1,10/03/2024 10:00,IPC 379,Fictional theft,,,,Fictional Accused One,GD-5,open\n");
+        commit(sho1, other).andExpect(status().isOk());
     }
 
     @Test

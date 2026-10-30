@@ -704,3 +704,23 @@ def test_an_imported_chargesheet_is_deleted_only_by_the_undo_of_its_batch(db):
     with pytest.raises(psycopg.errors.CheckViolation):
         db.execute("""INSERT INTO import_batch(station_id,entity,profile,filename,file_sha256,complaint_language,rows_total,created_by)
                       VALUES (%s,'notice','p','c.csv','00','en',1,%s)""", (st, io))
+
+
+def test_a_state_module_value_is_the_strictest_starting_point_of_its_state(db):
+    st, io, fir = seed_case(db)
+    db.execute("INSERT INTO state_pack VALUES ('MH','Maharashtra','1','{mr}','draft')")
+    mh = one(db, "INSERT INTO police_station(state_code,district_id,name) VALUES ('MH',district_id_of('MH','Demo Pune'),'Demo Pune PS') RETURNING id")[0]
+    days = lambda s, fallback=90: one(db, "SELECT effective_policy_days(%s,'victim_update_days',%s)", s, fallback)[0]
+    db.execute("INSERT INTO pack_policy VALUES ('MH','victim_update_days',45,'Fictional state module order')")
+    assert (days(mh), days(st)) == (45, 90)          # only the module's own state
+    assert days(mh, 30) == 30                         # never above the fallback
+    db.execute("INSERT INTO policy_setting(level,state_code,station_id,key,value,reason,set_by) VALUES ('station','MH',%s,'victim_update_days','60','Fictional order 2 of 2026',%s)", (mh, io))
+    assert days(mh) == 45                             # a looser unit value does not win over the module
+    db.execute("INSERT INTO policy_setting(level,state_code,station_id,key,value,reason,set_by) VALUES ('station','MH',%s,'victim_update_days','20','Fictional order 3 of 2026',%s)", (mh, io))
+    assert days(mh) == 20
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("INSERT INTO pack_policy VALUES ('MH','session_hours',4,'short')")
+    with pytest.raises(psycopg.errors.ForeignKeyViolation):
+        db.execute("INSERT INTO pack_policy VALUES ('KA','session_hours',4,'Fictional state module order')")
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        db.execute("INSERT INTO pack_policy VALUES ('MH','victim_update_days',30,'Fictional state module order')")
