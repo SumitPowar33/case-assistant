@@ -167,3 +167,13 @@ def test_every_pack_has_a_module_manifest(folder):
 
 def test_the_national_module_is_there():
     assert (ROOT / "IN" / "module.json").exists()
+
+
+def test_import_profile_ids_are_unique_across_modules_and_made_up_layouts_say_so():
+    files = sorted(ROOT.glob("*/import-profiles/*.json"))
+    ids = [json.loads(p.read_text(encoding="utf-8"))["id"] for p in files]
+    assert len(ids) == len(set(ids)), "the core app refuses to start on a profile id used twice"
+    for path in files:
+        p = json.loads(path.read_text(encoding="utf-8"))
+        if "fictional" in p["id"]:
+            assert "MADE-UP" in p["label"] and p["note"].startswith("FICTIONAL"), path.name

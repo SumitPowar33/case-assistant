@@ -437,6 +437,25 @@ class ImportApiTest {
                 .andExpect(jsonPath("$[?(@.id=='fir-generic')].entity").value("fir"));
     }
 
+    @Test
+    void aStateLayoutIsOnlyForThatStatesStations() throws Exception {
+        modules.sync();
+        UUID mh = station("MH", "Fictional Pune Rural", "Fictional Pune PS");
+        String shoMh = bearer(user("sho", mh, "Fictional SHO Pune", "sho.pune"));
+        String csv = "FIR_NUM,FIR_REG_DT,ACT_SEC,थोडक्यात हकीकत,आरोपी,CASE_STAGE\n7,12-03-2024 09:15,IPC 379,Fictional theft of a fictional bicycle,Fictional Accused One,pending\n";
+        var body = stageBody(s1, csv);
+        body.put("profile", "fir-mh-cctns-fictional");
+        send(sho1, "/api/imports", body).andExpect(status().isBadRequest())
+                .andExpect(status().reason("This file layout is only for police stations of MH."));
+        body.put("stationId", mh);
+        body.remove("mapping");
+        UUID b = UUID.fromString(json.readTree(send(shoMh, "/api/imports", body).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rows_total").value(1)).andExpect(jsonPath("$.rows_error").value(0)).andReturn().getResponse().getContentAsString()).get("id").asText());
+        mvc.perform(get("/api/imports/profiles").header("Authorization", shoMh))
+                .andExpect(jsonPath("$[?(@.id == 'fir-mh-cctns-fictional')].module").value("MH"));
+        assertThat(b).isNotNull();
+    }
+
     /** The Maharashtra module asks for a second approver for the whole state (packs/MH/policies.json); nobody in MH can loosen it. */
     @Test
     void theMaharashtraModuleAsksASecondPersonToApproveEveryImport() throws Exception {

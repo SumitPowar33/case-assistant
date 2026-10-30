@@ -54,13 +54,25 @@ class FirImport {
         var resolver = new PathMatchingResourcePatternResolver();
         for (var res : resolver.getResources("classpath*:packs/*/import-profiles/*.json"))
             try (InputStream in = res.getInputStream()) {
-                JsonNode p = json.readTree(in);
-                profiles.put(p.path("id").asText(), p);
+                String[] path = res.getURL().getPath().split("/");
+                addProfile(path[path.length - 3], json.readTree(in));
             }
         for (var res : resolver.getResources("classpath*:packs/*/law-concordance.json"))
             try (InputStream in = res.getInputStream()) {
                 json.readTree(in).path("IPC").fields().forEachRemaining(e -> ipcToBns.put(e.getKey(), e.getValue().asText()));
             }
+    }
+
+    /** A profile belongs to the module whose folder holds it; a state module's layout is only for that state's stations. */
+    void addProfile(String module, JsonNode p) {
+        String id = p.path("id").asText();
+        if (profiles.containsKey(id)) throw new IllegalStateException("import profile " + id + " is declared twice");
+        profiles.put(id, ((com.fasterxml.jackson.databind.node.ObjectNode) p.deepCopy()).put("module", module));
+    }
+
+    /** The module of a profile: "IN" (any station) or a state code. */
+    String module(String profile) {
+        return profiles.get(profile).path("module").asText();
     }
 
     private static DateTimeFormatter fmt(String p) {
@@ -82,7 +94,8 @@ class FirImport {
             var fields = new ArrayList<Map<String, Object>>();
             p.path("fields").fields().forEachRemaining(f -> fields.add(Map.of("name", f.getKey(),
                     "required", f.getValue().path("required").asBoolean(false))));
-            out.add(Map.of("id", id, "label", p.path("label").asText(id), "entity", p.path("entity").asText(), "fields", fields));
+            out.add(Map.of("id", id, "label", p.path("label").asText(id), "entity", p.path("entity").asText(), "module", p.path("module").asText(),
+                    "fields", fields));
         });
         return out;
     }

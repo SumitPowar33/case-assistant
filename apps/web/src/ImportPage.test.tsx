@@ -145,3 +145,26 @@ test('a chargesheets batch is described as chargesheets', async () => {
   fireEvent.click(await screen.findByRole('button', { name: 'Open old.csv' }))
   expect(await screen.findByRole('button', { name: 'Approve and load 2 chargesheets' })).toBeTruthy()
 })
+
+test('a state layout is offered only for stations of that state', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body })
+    if (url === '/api/stations') return ok([{ id: 's1', state_code: 'IN', district: 'Demo District', name: 'Demo PS' },
+      { id: 's2', state_code: 'MH', district: 'Demo Pune', name: 'Demo Pune PS' }])
+    if (url === '/api/imports/profiles') return ok([{ id: 'fir-generic', label: 'FIR list', entity: 'fir', module: 'IN', fields: [] },
+      { id: 'fir-mh', label: 'FIR list, MH made-up layout', entity: 'fir', module: 'MH', fields: [] }, { id: 'old', label: 'Older server', entity: 'fir', fields: [] }])
+    return ok([])
+  }))
+  setSession({ token: 't', user: { id: 'u2', username: 'sho.pune', full_name: 'SHO Pune', rank: 'Insp', role: 'sho', station_id: 's2', can_import: true } })
+  render(<ImportPage />)
+  await screen.findByRole('option', { name: 'Demo PS (Demo District)' })
+  const layout = screen.getByLabelText('File layout')
+  expect((screen.getByLabelText('Police station') as HTMLSelectElement).value).toBe('s2')   // the user's own station first
+  expect(within(layout).getByRole('option', { name: 'FIR list, MH made-up layout' })).toBeTruthy()
+  fireEvent.change(screen.getByLabelText('Police station'), { target: { value: 's1' } })
+  expect(within(layout).queryByRole('option', { name: 'FIR list, MH made-up layout' })).toBeNull()
+  expect(within(layout).getByRole('option', { name: 'Older server' })).toBeTruthy()
+  fireEvent.change(screen.getByLabelText('Police station'), { target: { value: 's2' } })
+  expect(within(layout).getByRole('option', { name: 'FIR list, MH made-up layout' })).toBeTruthy()
+  expect(within(layout).getByRole('option', { name: 'FIR list' })).toBeTruthy()
+})

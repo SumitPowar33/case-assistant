@@ -1,0 +1,24 @@
+{
+  "id": "fir-mh-cctns-fictional",
+  "label": "FIR list (CSV), Maharashtra CCTNS-style - MADE-UP layout, replace with a real sample",
+  "entity": "fir",
+  "note": "FICTIONAL. No real CCTNS or state export was available (owner decision, 30 Oct 2026). The column names below only imitate the style of such exports (capital letters, underscores, Marathi headings) so the screen can be shown. Replace this file when a real, masked sample arrives; do not rely on it for real data.",
+  "fields": {
+    "fir_no": {"required": true, "aliases": ["FIR_NUM", "FIR_SRNO", "गुन्हा क्रमांक", "गु.र.नं."]},
+    "fir_year": {"aliases": ["FIR_YR", "REG_YEAR", "वर्ष"]},
+    "registered_at": {"required": true, "aliases": ["FIR_REG_DT", "REG_DT_TM", "दाखल दिनांक"]},
+    "information_received_at": {"aliases": ["INFO_RECV_DT", "INFO_RECD_DT_TM", "माहिती मिळाल्याचा दिनांक"]},
+    "gd_entry_no": {"aliases": ["GD_NUM", "STN_DIARY_NO", "स्टेशन डायरी नोंद क्रमांक"]},
+    "sections": {"aliases": ["ACT_SEC", "ACTS_SECTIONS_LIST", "कलम"]},
+    "complaint_text": {"aliases": ["BRIEF_FACTS", "FIR_CONTENTS", "थोडक्यात हकीकत"]},
+    "io_username": {"aliases": ["IO_LOGIN_ID", "IO_USER_ID", "तपासी अंमलदार"]},
+    "complainant_name": {"aliases": ["COMPLAINANT_NM", "INFORMANT_NM", "फिर्यादी"]},
+    "victim_names": {"aliases": ["VICTIM_NM", "VICTIM_NAMES", "पीडित"]},
+    "accused_names": {"aliases": ["ACCUSED_NM", "ACCUSED_NAMES", "आरोपी"]},
+    "witness_names": {"aliases": ["WITNESS_NM", "WITNESS_NAMES", "साक्षीदार"]},
+    "status": {"aliases": ["CASE_STAGE", "CASE_STATUS_DESC", "स्थिती"]},
+    "zero_fir": {"aliases": ["ZERO_FIR_FLG", "IS_ZERO_FIR"]},
+    "outside_limits_place": {"aliases": ["ORIG_PS_NM", "PLACE_OUT_OF_JURIS"]},
+    "source_key": {"aliases": ["CCTNS_FIR_ID", "SRC_REC_ID"]}
+  }
+}

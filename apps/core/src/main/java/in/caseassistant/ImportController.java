@@ -92,6 +92,9 @@ class ImportController {
         requireProfile(s.profile);
         if (!team.canAt(me, "import.run", s.stationId))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot load records for this police station.");
+        String module = rules.module(s.profile);
+        if (!module.equals("IN") && !module.equals(db.sql("select state_code from police_station where id = ?").param(s.stationId).query(String.class).single()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This file layout is only for police stations of " + module + ".");
         var rows = read(s.csv);
         var headers = rows.get(0);
         var map = new LinkedHashMap<String, String>(s.mapping == null ? rules.suggest(s.profile, headers) : s.mapping);

@@ -106,12 +106,30 @@ class FirImportTest {
     @Test
     void profilesAndColumnSuggestions() {
         assertThat(rules.hasProfile("fir-generic")).isTrue();
-        assertThat(rules.profileList()).extracting(p -> p.get("id")).containsExactlyInAnyOrder("fir-generic", "arrest-generic", "chargesheet-generic");
+        assertThat(rules.profileList()).extracting(p -> p.get("id")).containsExactlyInAnyOrder("fir-generic", "arrest-generic", "chargesheet-generic", "fir-mh-cctns-fictional");
         assertThat(rules.entity("fir-generic")).isEqualTo("fir");
         assertThat(rules.entity("arrest-generic")).isEqualTo("arrest");
         assertThat(rules.requiredFields("arrest-generic")).containsExactlyInAnyOrder("fir_no", "accused_name", "arrested_at");
         assertThat(rules.requiredFields("fir-generic")).containsExactlyInAnyOrder("fir_no", "registered_at");
         var s = rules.suggest("fir-generic", List.of("FIR No", "Registration Date", "Brief Facts", "Unknown"));
         assertThat(s).containsEntry("fir_no", "FIR No").containsEntry("registered_at", "Registration Date").containsEntry("complaint_text", "Brief Facts");
+    }
+
+    @Test
+    void profilesBelongToTheirModuleAndAnIdIsDeclaredOnce() throws Exception {
+        assertThat(rules.module("fir-generic")).isEqualTo("IN");
+        assertThat(rules.module("fir-mh-cctns-fictional")).isEqualTo("MH");
+        assertThat(rules.profileList()).anySatisfy(p -> assertThat(p).containsEntry("id", "fir-mh-cctns-fictional").containsEntry("module", "MH"));
+        var again = new ObjectMapper().readTree("{\"id\":\"fir-generic\",\"entity\":\"fir\",\"fields\":{}}");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> rules.addProfile("MH", again)).hasMessageContaining("declared twice");
+    }
+
+    @Test
+    void theMadeUpMaharashtraLayoutMatchesCapitalAndMarathiHeadings() {
+        assertThat(rules.suggest("fir-mh-cctns-fictional", List.of("FIR_NUM", "FIR_REG_DT", "ACT_SEC", "आरोपी", "थोडक्यात हकीकत", "fir no")))
+                .containsEntry("fir_no", "FIR_NUM").containsEntry("registered_at", "FIR_REG_DT").containsEntry("sections", "ACT_SEC")
+                .containsEntry("accused_names", "आरोपी").containsEntry("complaint_text", "थोडक्यात हकीकत").hasSize(5);
+        assertThat(rules.suggest("fir-mh-cctns-fictional", List.of("गुन्हा क्रमांक", "दाखल दिनांक")))
+                .containsEntry("fir_no", "गुन्हा क्रमांक").containsEntry("registered_at", "दाखल दिनांक");
     }
 }

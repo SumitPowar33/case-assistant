@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { get, getText, send } from './api'
+import { currentSession, get, getText, send } from './api'
 import { fmt, text } from './formats'
 
-type Station = { id: string; district: string; name: string }
-type Profile = { id: string; label: string; entity: string; fields: { name: string; required: boolean }[] }
+type Station = { id: string; state_code?: string; district: string; name: string }
+type Profile = { id: string; label: string; entity: string; module?: string; fields: { name: string; required: boolean }[] }
 type Inspect = { headers: string[]; suggested: Record<string, string>; required: string[]; rows: number }
 type Batch = {
   id: string; entity: string; station_name: string; filename: string; status: string; rows_total: number; rows_ok: number; rows_warning: number
@@ -35,6 +35,7 @@ export default function ImportPage() {
   const [batch, setBatch] = useState<Batch>()
   const [rows, setRows] = useState<Row[]>([])
   const [filter, setFilter] = useState('')
+  const [stationId, setStationId] = useState('')
 
   useEffect(() => {
     let live = true
@@ -104,6 +105,9 @@ export default function ImportPage() {
   }
 
   const profile = profiles.find((p) => p.id === file?.form.profile)
+  const station = stations.find((s) => s.id === (stationId || currentSession()?.user.station_id)) ?? stations[0]   // own station first
+  // national layouts fit every station; a state module's layout only that state's stations (the server checks it too)
+  const layouts = profiles.filter((p) => !p.module || p.module === 'IN' || p.module === station?.state_code)
   const importable = batch ? batch.rows_ok + batch.rows_warning : 0
   const things = (b: Batch) => (b.entity === 'arrest' ? 'arrests' : b.entity === 'chargesheet' ? 'chargesheets' : 'FIRs')
   return (
@@ -117,8 +121,9 @@ export default function ImportPage() {
 
       <form onSubmit={readFile} aria-label="Choose the file">
         <h3>1. Choose the file</h3>
-        <label>Police station <select name="station" required>{stations.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.district})</option>)}</select></label>{' '}
-        <label>File layout <select name="profile">{profiles.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select></label>{' '}
+        <label>Police station <select name="station" required value={station?.id ?? ''} onChange={(e) => setStationId(e.target.value)}>
+          {stations.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.district})</option>)}</select></label>{' '}
+        <label>File layout <select name="profile">{layouts.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select></label>{' '}
         <label>Language of the complaint text (FIR files) <input name="language" defaultValue="en" size={5} pattern="[a-z]{2,3}(-[A-Za-z]{2,4})?" required /></label>{' '}
         <label>CSV file <input name="file" type="file" accept=".csv,text/csv" /></label>{' '}
         <button type="submit">Read the file</button>

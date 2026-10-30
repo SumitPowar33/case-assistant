@@ -18,16 +18,16 @@ CHARGESHEETS = ("FIR No,Report No,Filed On,Court,Accused\n"
                 "1,CS-1/2024,20/04/2024,Fictional JMFC Court,Fictional Accused One; Fictional Accused Two\n")
 
 
-def setup_station(core, tag):
+def setup_station(core, tag, state="IN", roles=("sho", "io")):
     """A fresh station with an SHO (may load data) and an IO (may not); made by the platform admin over the API.
-    Returns the passwords by username: sho.{tag} and io.{tag}."""
+    Returns the passwords by username: {role}.{tag}."""
     api, admin, password = core
     token = api.token(admin, password)
-    status, body = api.call("POST", "/api/stations", {"stateCode": "IN", "district": "Fictional E2E District",
+    status, body = api.call("POST", "/api/stations", {"stateCode": state, "district": "Fictional E2E District",
                                                       "name": f"Fictional {tag} PS"}, token)
     assert status == 201, body
     accounts = {}
-    for role in ("sho", "io"):
+    for role in roles:
         username, pw = f"{role}.{tag}", secrets.token_urlsafe(18)
         status, body2 = api.call("POST", "/api/users", {"username": username, "password": pw, "fullName": f"Fictional {role.upper()}",
                                                         "rank": "Inspector", "role": role, "stationId": body["id"]}, token)
@@ -112,3 +112,34 @@ def test_an_officer_without_the_right_to_load_data_is_refused(core, page):
     expect(page.get_by_role("link", name="Load data")).to_have_count(0)
     page.goto(page.url.split("#")[0] + "#/import")   # typed by hand: the server still refuses
     expect(page.get_by_role("alert")).to_contain_text("The server answered 403")
+
+
+MH_FIRS = ("FIR_NUM,FIR_REG_DT,ACT_SEC,थोडक्यात हकीकत,आरोपी,CASE_STAGE\n"
+           "7,12-03-2024 09:15,IPC 379,Fictional theft of a fictional bicycle,Fictional Accused Seven,pending\n")
+
+
+def test_maharashtra_uses_its_own_layout_and_a_second_person_approves(core, page):
+    accounts = setup_station(core, "pune", state="MH", roles=("sho", "sp"))
+    sign_in(page, "sho.pune", accounts["sho.pune"])
+    page.get_by_role("link", name="Load data").click()
+    layout = page.get_by_label("File layout")
+    page.get_by_label("CSV file").set_input_files({"name": "mh-firs.csv", "mimeType": "text/csv", "buffer": MH_FIRS.encode()})
+    layout.select_option(label="FIR list (CSV), Maharashtra CCTNS-style - MADE-UP layout, replace with a real sample")
+    page.get_by_role("button", name="Read the file").click()
+    match = page.get_by_role("form", name="Match the columns")
+    expect(match.get_by_label("fir_no *")).to_have_value("FIR_NUM")       # matched by the made-up layout's names
+    expect(match.get_by_label("accused_names")).to_have_value("आरोपी")      # and by a Marathi heading
+    page.get_by_role("button", name="Check the file").click()
+    expect(page.get_by_label("Result")).to_contain_text("1 rows")
+    page.get_by_label(re.compile("^Authority for this load")).fill("Fictional order no. MH/1 of the SP")
+    page.get_by_role("button", name=re.compile("^Approve and load")).click()
+    expect(page.get_by_role("alert")).to_contain_text("a second authorised person must approve")   # the Maharashtra module
+    page.get_by_role("button", name="Sign out").click()
+
+    sign_in(page, "sp.pune", accounts["sp.pune"])
+    page.get_by_role("link", name="Load data").click()
+    page.get_by_role("button", name="Open mh-firs.csv").click()
+    page.get_by_label(re.compile("^Authority for this load")).fill("Fictional order no. MH/1 of the SP")
+    page.get_by_role("button", name=re.compile("^Approve and load")).click()
+    expect(page.get_by_role("status")).to_have_text("The records were loaded.")
+    expect(page.get_by_text("Loaded 1 FIRs, approved by Fictional SP")).to_be_visible()
