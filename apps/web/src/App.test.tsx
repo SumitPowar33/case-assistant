@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import App from './App'
 import { setSession, type Session } from './api'
 
@@ -111,4 +111,33 @@ test('the Policies link opens the policies page for any signed-in user', async (
   render(<App />)
   expect(screen.getByRole('link', { name: 'Policies' }).getAttribute('href')).toBe('#/policies')
   expect(await screen.findByRole('heading', { name: 'Policies' })).toBeTruthy()
+})
+
+const admin: Session = { token: 'tok-admin', user: { id: 'u9', username: 'admin.fictional', full_name: 'Fictional Admin', rank: 'IG', role: 'state_admin', station_id: null, can_import: true } }
+
+test('the menu follows the account: station staff get the front desk, only the admin gets Admin and AI settings, import needs its permission', async () => {
+  mockApi()
+  const { unmount } = render(<App />)
+  const nav = () => within(screen.getByRole('navigation', { name: 'Main' }))
+  expect(nav().getByRole('link', { name: 'Front desk' })).toBeTruthy()
+  expect(nav().queryByRole('link', { name: 'Admin' })).toBeNull()
+  expect(nav().queryByRole('link', { name: 'Load data' })).toBeNull()
+  unmount()
+  setSession(admin)
+  render(<App />)
+  expect(nav().queryByRole('link', { name: 'Front desk' })).toBeNull()   // no station
+  expect(nav().getByRole('link', { name: 'Admin' })).toBeTruthy()
+  expect(nav().getByRole('link', { name: 'AI settings' })).toBeTruthy()
+  expect(nav().getByRole('link', { name: 'Load data' })).toBeTruthy()
+})
+
+test.each(['#/front-desk', '#/policies', '#/password', '#/import', '#/admin', '#/settings', '#/complaints/c1'])('the page at %s opens and a sign-out leaves the login screen', async (hash) => {
+  mockApi()
+  setSession(admin)
+  window.location.hash = hash
+  render(<App />)
+  await waitFor(() => expect(screen.getByRole('main').textContent).not.toBe(''))
+  expect(screen.queryByLabelText('Username')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+  expect(await screen.findByLabelText('Username')).toBeTruthy()
 })
