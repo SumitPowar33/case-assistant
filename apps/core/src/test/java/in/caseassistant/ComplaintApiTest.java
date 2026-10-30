@@ -131,6 +131,21 @@ class ComplaintApiTest {
     }
 
     @Test
+    void aPreliminaryEnquiryMustEndWithinFourteenDaysOfTheDecision() throws Exception {
+        UUID c = take("written", "other", Instant.now().minus(1, ChronoUnit.HOURS));
+        mvc.perform(get("/api/complaints/" + c).header("Authorization", clerk)).andExpect(jsonPath("$.enquiry_due").doesNotExist());
+        send(clerk, "POST", "/api/complaints/" + c + "/sign", Map.of()).andExpect(status().isNoContent());
+        send(clerk, "POST", "/api/complaints/" + c + "/outcome", Map.of("outcome", "preliminary_enquiry", "reason", "Fictional: offence punishable 3 to 7 years")).andExpect(status().isNoContent());
+        var due = db.sql("select outcome_at + interval '14 days' from complaint where id = ?").param(c).query(java.sql.Timestamp.class).single().toInstant();
+        var seen = json.readTree(mvc.perform(get("/api/complaints/" + c).header("Authorization", clerk)).andReturn().getResponse().getContentAsString()).get("enquiry_due").asText();
+        assertThat(Instant.parse(seen)).isEqualTo(due);
+        UUID n = take("written", "other", Instant.now().minus(1, ChronoUnit.HOURS));
+        send(clerk, "POST", "/api/complaints/" + n + "/sign", Map.of()).andExpect(status().isNoContent());
+        send(clerk, "POST", "/api/complaints/" + n + "/outcome", Map.of("outcome", "ncr", "reason", "Fictional: non-cognizable, NCR entry")).andExpect(status().isNoContent());
+        mvc.perform(get("/api/complaints/" + n).header("Authorization", clerk)).andExpect(jsonPath("$.enquiry_due").doesNotExist());
+    }
+
+    @Test
     void electronicInformationLapsesUnlessSignedWithinThreeDays() throws Exception {
         UUID late = take("electronic", "other", Instant.now().minus(4, ChronoUnit.DAYS));
         mvc.perform(get("/api/complaints/" + late).header("Authorization", clerk)).andExpect(jsonPath("$.sign_by").isNotEmpty());

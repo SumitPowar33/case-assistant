@@ -42,6 +42,7 @@ def test_a_complaint_is_written_down_read_over_signed_and_becomes_an_fir(core, p
     sign.get_by_label("Read over in").select_option("mr")
     sign.get_by_role("button", name="Save").click()
     expect(main).to_contain_text("Read over to the informant in Marathi, admitted correct and signed")
+    expect(page.get_by_label("Copy for the informant")).to_contain_text(WORDS)   # the free copy (BNSS 173(2)) carries the signed words
 
     fir = form(page, "Register the FIR from this complaint")
     fir.get_by_label("Year").fill(str(registered.year))

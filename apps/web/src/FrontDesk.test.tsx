@@ -24,7 +24,7 @@ const kinds = [{ id: 'cyber_financial_fraud', label: 'Online financial fraud', s
 const base = {
   id: 'c1', received_at: '2026-10-30T04:30:00Z', mode: 'oral', informant_name: 'Fictional Informant', informant_contact: null, kind: 'cyber_financial_fraud',
   kind_label: 'Online financial fraud', text_original: 'Fictional caller took money.', text_language: 'mr', recorded_by_name: 'HC Fictional',
-  read_back_language: null, signed_at: null, signed_by_name: null, outcome: null, outcome_reason: null, fir_id: null, fir_no: null, fir_year: null, sign_by: null,
+  read_back_language: null, signed_at: null, signed_by_name: null, outcome: null, outcome_reason: null, fir_id: null, fir_no: null, fir_year: null, sign_by: null, enquiry_due: null,
   steps: [
     { id: 'report_1930', text: 'Report on 1930', basis: 'MHA I4C', due_at: '2026-10-30T05:30:00Z', done_at: null, done_by_name: null, note: null, overdue: true },
     { id: 'note_transactions', text: 'Write down every transaction', basis: null, due_at: '2026-10-30T05:30:00Z', done_at: '2026-10-30T04:40:00Z', done_by_name: 'HC Fictional', note: 'UTR noted', overdue: false },
@@ -130,4 +130,24 @@ test('a write answered with an empty body still counts as saved', async () => {
   fireEvent.click(within(step).getByRole('button', { name: 'Save' }))
   await vi.waitFor(() => expect((fetch as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBeGreaterThan(2))
   expect(within(step).queryByRole('alert')).toBeNull()
+})
+
+test('a signed complaint has a copy for the informant to print; a preliminary enquiry shows its 14-day limit', async () => {
+  const print = vi.fn()
+  vi.stubGlobal('print', print)
+  stub({ '/complaints/c1': { ...base, signed_at: '2026-10-30T04:50:00Z', signed_by_name: 'HC Fictional', read_back_language: 'mr', steps: [] } })
+  render(<ComplaintPage id="c1" />)
+  const copy = (await screen.findByLabelText('Copy for the informant')) as HTMLElement
+  expect(within(copy).getByText('Fictional caller took money.').getAttribute('lang')).toBe('mr')
+  fireEvent.click(within(copy).getByRole('button', { name: 'Print the copy' }))
+  expect(print).toHaveBeenCalledOnce()
+  cleanup()
+  stub({ '/complaints/c1': { ...base, signed_at: '2026-10-30T04:50:00Z', outcome: 'preliminary_enquiry', outcome_reason: 'Fictional: 3 to 7 years', enquiry_due: '2026-11-13T05:00:00Z', steps: [] } })
+  render(<ComplaintPage id="c1" />)
+  expect(await screen.findByText(/to be finished by 13 Nov 2026/)).toBeTruthy()
+  cleanup()
+  stub({ '/complaints/c1': { ...base, steps: [] } })
+  render(<ComplaintPage id="c1" />)
+  await screen.findByText('Fictional caller took money.')
+  expect(screen.queryByLabelText('Copy for the informant')).toBeNull()
 })

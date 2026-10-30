@@ -14,7 +14,7 @@ type Complaint = {
   id: string; received_at: string; mode: string; informant_name: string; informant_contact: string | null; kind: string; kind_label: string
   text_original: string; text_language: string; recorded_by_name: string; read_back_language: string | null; signed_at: string | null
   signed_by_name: string | null; outcome: string | null; outcome_reason: string | null; fir_id: string | null; fir_no: number | null; fir_year: number | null
-  sign_by: string | null; steps: CheckStep[]
+  sign_by: string | null; enquiry_due: string | null; steps: CheckStep[]
 }
 
 const MODES: Record<string, string> = {
@@ -89,6 +89,13 @@ export function ComplaintPage({ id }: { id: string }) {
       {c.signed_at
         ? <p>{spoken ? `Read over to the informant in ${languageName(c.read_back_language ?? '')}, admitted correct and signed` : 'Signed by the informant'}; recorded by {c.signed_by_name} on {fmt(c.signed_at)}. The text can no longer change.</p>
         : open && <SignForm c={c} spoken={spoken} onSaved={saved} />}
+      {c.signed_at && <section className="print-copy" aria-label="Copy for the informant">
+        <h3>Copy for the informant (BNSS 173(2), free of cost)</h3>
+        <p>{c.informant_name} · {c.kind_label} · received {fmt(c.received_at)}</p>
+        <blockquote lang={c.text_language}>{c.text_original}</blockquote>
+        <p>Informant's signature recorded by {c.signed_by_name} on {fmt(c.signed_at)}.</p>
+        <button type="button" className="no-print" onClick={() => window.print()}>Print the copy</button>
+      </section>}
       {c.steps.length > 0 && <>
         <h3>First steps</h3>
         <ul>{c.steps.map((s) => (
@@ -101,7 +108,7 @@ export function ComplaintPage({ id }: { id: string }) {
       </>}
       <h3>Outcome</h3>
       {c.outcome
-        ? <p>{OUTCOMES[c.outcome]}{c.fir_id ? <>: <a href={`#/firs/${c.fir_id}`}>FIR {c.fir_no}/{c.fir_year}</a></> : `: ${c.outcome_reason}`}</p>
+        ? <p>{OUTCOMES[c.outcome]}{c.enquiry_due && <> (to be finished by {fmt(c.enquiry_due)}, 14 days, BNSS 173(3))</>}{c.fir_id ? <>: <a href={`#/firs/${c.fir_id}`}>FIR {c.fir_no}/{c.fir_year}</a></> : `: ${c.outcome_reason}`}</p>
         : c.signed_at ? <><NewFirForm complaintId={c.id} /><OutcomeForm c={c} onSaved={saved} /></>
           : <>{c.mode === 'electronic' && c.sign_by && <p>The informant must sign by {fmt(c.sign_by)} (BNSS 173(1)(ii)).</p>}
             {c.mode === 'electronic' && <OutcomeForm c={c} onSaved={saved} lapsedOnly />}

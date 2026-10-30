@@ -33,6 +33,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api")
 class ComplaintController {
     static final Duration E_SIGN_LIMIT = Duration.ofDays(3);   // BNSS 173(1)(ii)
+    static final Duration ENQUIRY_LIMIT = Duration.ofDays(14); // BNSS 173(3): preliminary enquiry to finish within 14 days
 
     record NewComplaint(@NotNull UUID stationId, @NotNull OffsetDateTime receivedAt, @NotBlank @Pattern(regexp = "oral|phone|written|electronic") String mode,
                         @NotBlank @Size(max = 200) String informantName, @Size(max = 200) String informantContact, @NotBlank String kind,
@@ -101,6 +102,7 @@ class ComplaintController {
         out.put("kind_label", kinds.get((String) c.get("kind")).label());
         out.put("steps", steps(id, c));
         out.put("sign_by", c.get("mode").equals("electronic") ? ((java.sql.Timestamp) c.get("received_at")).toInstant().plus(E_SIGN_LIMIT) : null);
+        out.put("enquiry_due", "preliminary_enquiry".equals(c.get("outcome")) ? ((java.sql.Timestamp) c.get("outcome_at")).toInstant().plus(ENQUIRY_LIMIT) : null);
         return out;
     }
 

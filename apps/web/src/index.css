@@ -27,3 +27,11 @@ blockquote { margin: 1rem 0; padding-left: 1rem; border-left: 4px solid #12355b;
 
 /* the complaint as it is read over to the informant: large, plain, easy to follow line by line */
 .read-back { font-size: 1.25rem; line-height: 1.6; white-space: pre-wrap; border-left: 4px solid currentColor; padding-left: 1rem; }
+
+/* The informant's copy (BNSS 173(2)) is the only thing printed from a complaint. */
+@media print {
+  body * { visibility: hidden; }
+  .print-copy, .print-copy * { visibility: visible; }
+  .print-copy { position: absolute; left: 0; top: 0; width: 100%; }
+  .no-print { display: none; }
+}

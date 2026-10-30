@@ -15,11 +15,33 @@ Next (replaces the "Next" list of session 25; a session finishing an item remove
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
+Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)); only speech input is left of module 1.
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 5. Module 1, front-desk complaint: typed intake, read-back, golden-hour checklist, then speech input.
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 30 Oct 2026, session 30 (scheduled nightly run, Sumit away)
+Started from `setup/seed` at 0e6b30c. Sandbox fresh: started PostgreSQL, created role `caseapp` and the two databases, installed packages (`psycopg[binary]` was missing for the database and browser suites). Baseline `scripts/test-all.sh`: all 8 lines PASS.
+
+Done (front desk, part 2)
+- **Copy for the informant (BNSS 173(2))**: once a complaint is signed, its screen shows a "Copy for the informant" block (name, kind, time received, the signed words in their language, who recorded the signature) and a "Print the copy" button. Printing shows only that block (print stylesheet in `index.css`). No new route: it reads the existing complaint.
+- **Preliminary enquiry limit (BNSS 173(3))**: `GET /api/complaints/{id}` carries `enquiry_due` = decision time + 14 days when the outcome is a preliminary enquiry, null otherwise; the screen shows "to be finished by ...". Computed, no migration.
+- Tests: `ComplaintApiTest` (+1: due date is decision + 14 days, absent for other outcomes), `FrontDesk.test.tsx` (+1: copy and print, enquiry limit, no copy before signing), browser test checks the copy carries the signed words.
+- Final `scripts/test-all.sh`: all 8 lines PASS (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e browser). Coverage: core 98.1% lines / 92.5% branches, web 99.3% statements, gateway 94%. No gate raised (no rise of 2 points).
+
+Deliberately skipped / not checked
+- Speech input not started. The printed copy was not checked on paper (only that the button calls print and the block is in the page). The 14-day limit is shown, but it is not on the deadline list or any alert, and "DSP permission" for the enquiry (173(3)) is not recorded. The copy shows no station name or letterhead.
+
+Next
+1. Front desk, part 3: speech input.
+2. Rest of the MH pack (roles, Marathi labels, playbooks, demo stations).
+3. Upgrade test.
+
+Questions for Sumit
+1. Should the 14-day preliminary-enquiry limit appear on the station's deadline list with an alert, and should the DSP's permission be recorded?
+2. What should the informant's copy carry: station name and address, FIR/complaint number? (Needs the station letterhead details.)
 
 ## 30 Oct 2026, session 29 (on-demand run started by Sumit at 18:29 IST)
 Started from `setup/seed` at 52f9d88 (nothing newer on the branch, no new answers). PostgreSQL already running. Baseline `scripts/test-all.sh`: all 8 lines PASS. I pushed a short "working on the front desk" note first (b457f8e) so a parallel session would not build the same item.
