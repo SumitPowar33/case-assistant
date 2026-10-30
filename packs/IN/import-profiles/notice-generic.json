@@ -1,0 +1,19 @@
+{
+  "id": "notice-generic",
+  "label": "Notices (CSV), generic - load the FIRs first",
+  "entity": "notice",
+  "note": "One row per notice issued, keyed by FIR number and year of the chosen station. Kind: BNSS 94, BNSS 35(3), BNSS 179, CrPC 91, CrPC 41A, CrPC 160 or follow-up; old CrPC notices stay CrPC notices. Items asked for are separated by ';'.",
+  "fields": {
+    "fir_no": {"required": true, "aliases": ["fir_no", "fir no", "fir number", "fir_number", "crime no", "crime_no", "crime number"]},
+    "fir_year": {"aliases": ["fir_year", "year", "fir year", "crime year"]},
+    "kind": {"required": true, "aliases": ["kind", "notice kind", "notice type", "type", "section", "under section"]},
+    "addressee": {"required": true, "aliases": ["addressee", "to", "issued to", "notice to", "name of addressee", "recipient"]},
+    "issued_on": {"required": true, "aliases": ["issued_on", "issued on", "date of issue", "issue date", "notice date", "date of notice"]},
+    "items_requested": {"aliases": ["items_requested", "items", "items requested", "documents requested", "documents called for", "called for"]},
+    "reply_due_on": {"aliases": ["reply_due_on", "reply due", "reply due on", "due date", "reply by", "appear on"]},
+    "status": {"aliases": ["status", "notice status", "reply status"]},
+    "signed_by": {"aliases": ["signed_by", "signed by", "issued by", "officer", "io"]},
+    "body": {"aliases": ["body", "text", "notice text", "contents"]},
+    "source_key": {"aliases": ["source_key", "id", "old id", "old_id", "record id", "legacy id", "source id"]}
+  }
+}

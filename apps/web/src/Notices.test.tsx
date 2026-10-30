@@ -176,3 +176,12 @@ test('a replaced certificate is marked and cannot be replaced again', async () =
   const options = within(screen.getByLabelText('Corrects an earlier certificate?')).getAllByRole('option')
   expect(options).toHaveLength(2) // "No" and the current certificate only
 })
+
+test('an old notice loaded from a file keeps its CrPC section and may have no signer on record', async () => {
+  stub({ '/firs/f1/notices': [{ ...sent, id: 'n9', kind: 'CrPC_41A', items_requested: [], items_missing: [], status: 'complete', signed_by_name: null, issued_at: '2024-03-11T04:30:00Z' }] })
+  render(<Notices firId="f1" />)
+  const item = (await screen.findByText('CrPC 41A (old law): appear')).closest('li')!
+  expect(item.textContent).toContain('issued 11 Mar 2024, 10:00 am IST')
+  expect(item.textContent).not.toContain('IST by')
+  expect(screen.queryByRole('option', { name: /CrPC/ })).toBeNull()   // the form for a new notice offers BNSS kinds only
+})

@@ -1,4 +1,4 @@
-"""The Load data screen in a real browser: FIRs, then their arrests, chargesheets and evidence, each checked and approved by a
+"""The Load data screen in a real browser: FIRs, then their arrests, chargesheets, evidence and notices, each checked and approved by a
 person; the loaded records then show on the FIR screens. Fictional data only."""
 import re
 import secrets
@@ -20,6 +20,9 @@ EVIDENCE = ("FIR No,Item No,Type,Description,Date of Seizure,Panchnama,Seal No,H
             "1,1/E-01,physical,Fictional iron rod,06/03/2024 12:00,Fictional panchnama 1,S-1,\n"
             "1,1/E-02,electronic,Fictional phone,06/03/2024 12:30,Fictional panchnama 1,S-2," + "ab" * 32 + "\n"
             "1,1/E-03,electronic,Fictional laptop without a hash,06/03/2024,,,\n")
+NOTICES = ("FIR No,Under Section,Issued To,Date of Issue,Documents Called For,Reply By,Status,Issued By,Notice Text\n"
+           "1,CrPC 91,Fictional Bank Ltd,10/03/2024 11:00,Account statement; KYC form,20/03/2024,pending,io.e2e,Fictional notice text\n"
+           "1,BNSS 94,Fictional Telecom Ltd,12/03/2024 11:00,Call records,,pending,io.e2e,Fictional notice text\n")
 
 
 def setup_station(core, tag, state="IN", roles=("sho", "io")):
@@ -75,9 +78,10 @@ def test_load_firs_then_arrests_then_chargesheets(core, page):
     load(page, "Chargesheets (CSV), generic - load the FIRs first", "old-chargesheets.csv", CHARGESHEETS, "1 rows: 1 ready")
     load(page, "Evidence register (CSV), generic - load the FIRs first", "old-evidence.csv", EVIDENCE, "1 with errors")
     expect(page.get_by_text("Loaded 2 evidence items, approved by")).to_be_visible()
+    load(page, "Notices (CSV), generic - load the FIRs first", "old-notices.csv", NOTICES, "1 with errors")   # no BNSS notice in March 2024
 
-    # the history lists all four loads, each with an undo form
-    for name in ("old-firs.csv", "old-arrests.csv", "old-chargesheets.csv", "old-evidence.csv"):
+    # the history lists all five loads, each with an undo form
+    for name in ("old-firs.csv", "old-arrests.csv", "old-chargesheets.csv", "old-evidence.csv", "old-notices.csv"):
         expect(page.get_by_role("button", name=f"Undo {name}")).to_be_visible()
 
     # the loaded records on the FIR screens
@@ -96,9 +100,12 @@ def test_load_firs_then_arrests_then_chargesheets(core, page):
     expect(evidence).to_contain_text("1/E-01 (physical)")
     expect(evidence).to_contain_text("1/E-02 (electronic) · not court-ready yet (BSA 63(4))")   # imported without its certificate
     expect(evidence).not_to_contain_text("1/E-03")                                              # no hash, not loaded
+    expect(main).to_contain_text("CrPC 91 (old law): produce documents to Fictional Bank Ltd: sent, waiting for reply")
+    expect(main).not_to_contain_text("Fictional Telecom Ltd")
     deadlines = page.locator("section", has=page.get_by_role("heading", name="Deadlines", exact=True))
     expect(deadlines).not_to_contain_text("Loading")
     expect(deadlines).to_contain_text("victim_progress_update: by 2024-06-03 (BNSS 193(3)(ii), 90 days)")
+    expect(deadlines).to_contain_text("notice_reply:Fictional Bank Ltd: by 2024-03-20 (CrPC_91)")
     expect(deadlines).not_to_contain_text("chargesheet_custody")  # the chargesheet ended the custody clock
 
     # undo the chargesheets: the custody clock of the accused runs again

@@ -713,4 +713,117 @@ class ImportApiTest {
         mvc.perform(get("/api/imports/" + b + "/rows?status=error").header("Authorization", sho1)).andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].messages[?(@.text=='This row has more values than the header has columns.')]").exists());
     }
+
+    // ---- notices file ------------------------------------------------------------------------------------------------
+
+    static final String NHEAD = "FIR No,Under Section,Issued To,Date of Issue,Documents Called For,Reply By,Status,Issued By\n";
+    static final String NOTICES = NHEAD
+            + "1,CrPC 91,Fictional Bank Ltd,10/03/2024 11:00,Account statement; KYC form,20/03/2024,pending,io.one\n"
+            + "1,CrPC 41A,Fictional Accused One,11/03/2024 10:00,,,replied,\n"
+            + "1,BNSS 94,Fictional Telecom Ltd,12/03/2024 10:00,Call records,,pending,io.one\n"
+            + "2,CrPC 160,Fictional Witness,12/03/2024 10:00,,15/03/2024,pending,io.one\n"
+            + "9,CrPC 160,Fictional Witness,12/03/2024 10:00,,,pending,io.one\n";
+
+    UUID stageNotices(String who, UUID station, String csv) throws Exception {
+        var body = stageBody(station, csv);
+        body.put("profile", "notice-generic");
+        body.put("filename", "old-notices.csv");
+        return UUID.fromString(json.readTree(send(who, "/api/imports", body).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText());
+    }
+
+    @Test
+    void noticesAreLoadedUnderTheCodeTheyWereIssuedUnder() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        UUID b = stageNotices(sho1, s1, NOTICES);
+        mvc.perform(get("/api/imports/" + b).header("Authorization", sho1)).andExpect(jsonPath("$.entity").value("notice"))
+                .andExpect(jsonPath("$.rows_ok").value(0)).andExpect(jsonPath("$.rows_warning").value(3)).andExpect(jsonPath("$.rows_error").value(2));   // no notice text in this file
+        mvc.perform(get("/api/imports/" + b + "/rows?status=error").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[0].text").value(org.hamcrest.Matchers.containsString("before 1 July 2024")))
+                .andExpect(jsonPath("$[1].messages[0].text").value(org.hamcrest.Matchers.containsString("Load the FIR file first")));
+        assertThat(db.sql("select count(*) from notice").query(Long.class).single()).as("nothing before approval").isZero();
+        commit(sho1, b).andExpect(status().isOk()).andExpect(jsonPath("$.rows_imported").value(3));
+        var bank = db.sql("select * from notice where addressee = 'Fictional Bank Ltd'").query().singleRow();
+        assertThat(bank.get("kind")).isEqualTo("CrPC_91");
+        assertThat(bank.get("signed_by")).isEqualTo(ioUser);
+        assertThat(bank.get("status")).isEqualTo("sent");
+        assertThat(bank.get("body")).isEqualTo(ArrestImport.MISSING);
+        assertThat(bank.get("import_batch_id")).isEqualTo(b);
+        var accused = db.sql("select * from notice where kind = 'CrPC_41A'").query().singleRow();
+        assertThat(accused.get("signed_by")).as("not in the old record").isNull();
+        assertThat(accused.get("status")).isEqualTo("complete");
+        mvc.perform(get("/api/firs/" + firId(1) + "/notices").header("Authorization", sho1)).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[?(@.kind=='CrPC_91')].items_missing[*]").value(org.hamcrest.Matchers.containsInAnyOrder("Account statement", "KYC form")));
+        // the open case shows the reply date; the concluded FIR 2 shows none
+        assertThat(db.sql("select count(*) from case_deadline where fir_id = ? and kind = 'notice_reply:Fictional Bank Ltd'").param(firId(1)).query(Long.class).single()).isEqualTo(1);
+        assertThat(db.sql("select count(*) from case_deadline where fir_id = ?").param(firId(2)).query(Long.class).single()).isZero();
+        UUID firBatch = db.sql("select id from import_batch where entity = 'fir'").query(UUID.class).single();
+        send(sho1, "/api/imports/" + firBatch + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isConflict());
+    }
+
+    @Test
+    void aCompleteOldNoticeHasNothingMissing() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        commit(sho1, stageNotices(sho1, s1, NHEAD + "1,CrPC 91,Fictional Bank Ltd,10/03/2024 11:00,Account statement,,replied,io.one\n")).andExpect(status().isOk());
+        mvc.perform(get("/api/firs/" + firId(1) + "/notices").header("Authorization", sho1)).andExpect(jsonPath("$[0].status").value("complete"))
+                .andExpect(jsonPath("$[0].items_missing").isEmpty());
+    }
+
+    @Test
+    void theSameNoticeAgainIsSkippedAndTwiceInOneFileIsAnError() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        String row = "1,CrPC 91,Fictional Bank Ltd,10/03/2024 11:00,Account statement,20/03/2024,pending,io.one\n";
+        commit(sho1, stageNotices(sho1, s1, NHEAD + row)).andExpect(status().isOk());
+        UUID again = stageNotices(sho1, s1, NHEAD + row);
+        mvc.perform(get("/api/imports/" + again + "/rows?status=duplicate").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("same content"))));
+        UUID differs = stageNotices(sho1, s1, NHEAD + "1,CrPC 91,fictional bank  ltd,10/03/2024 16:00,Other papers,,replied,io.one\n");
+        mvc.perform(get("/api/imports/" + differs + "/rows?status=duplicate").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("already recorded"))));
+        send(sho1, "/api/imports/" + differs + "/commit", Map.of("authority", "Order 13/2026 of the Fictional SP")).andExpect(status().isConflict());
+        UUID twice = stageNotices(sho1, s1, NHEAD + "1,CrPC 160,Fictional Witness,12/03/2024 10:00,,,pending,io.one\n1,CrPC 160,Fictional  Witness,12/03/2024 15:00,,,pending,io.one\n");
+        mvc.perform(get("/api/imports/" + twice).header("Authorization", sho1)).andExpect(jsonPath("$.rows_error").value(1)).andExpect(jsonPath("$.rows_warning").value(1));
+        assertThat(db.sql("select count(*) from notice").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void aNoticeWhoseSignerLeftBeforeApprovalIsSkipped() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        UUID b = stageNotices(sho1, s1, NHEAD + "1,CrPC 91,Fictional Bank Ltd,10/03/2024 11:00,Account statement,,pending,io.one\n"
+                + "1,CrPC 160,Fictional Witness,12/03/2024 10:00,,,pending,\n");
+        db.sql("update app_user set active = false where id = ?").param(ioUser).update();
+        commit(sho1, b).andExpect(status().isOk()).andExpect(jsonPath("$.rows_imported").value(1));
+        mvc.perform(get("/api/imports/" + b + "/rows?status=skipped").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("no longer an active officer"))));
+    }
+
+    @Test
+    void aNoticeBatchCanBeUndoneUntilAReplyIsRecorded() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        String rows = NHEAD + "1,CrPC 91,Fictional Bank Ltd,10/03/2024 11:00,Account statement,20/03/2024,pending,io.one\n";
+        UUID b = stageNotices(sho1, s1, rows);
+        commit(sho1, b).andExpect(status().isOk());
+        send(sho1, "/api/imports/" + b + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("undone"));
+        assertThat(db.sql("select count(*) from notice").query(Long.class).single()).isZero();
+        UUID b2 = stageNotices(sho1, s1, rows);
+        commit(sho1, b2).andExpect(status().isOk());
+        UUID notice = db.sql("select id from notice").query(UUID.class).single();
+        send(sho1, "/api/firs/" + firId(1) + "/notices/" + notice + "/replies", Map.of("receivedAt", "2024-03-18T10:00:00+05:30", "channel", "post",
+                "checksJson", "[{\"item\":\"Account statement\",\"present\":true}]")).andExpect(status().isCreated());
+        send(sho1, "/api/imports/" + b2 + "/undo", Map.of("reason", "Wrong file uploaded")).andExpect(status().isConflict());
+        assertThat(db.sql("select count(*) from notice").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void noticesCanOnlyBeLoadedByTheStationsOwnLeadersAndCrpcNoticesCannotBeTypedForNewFirs() throws Exception {
+        var body = stageBody(s1, NHEAD + "1,CrPC 91,Fictional Bank Ltd,10/03/2024 11:00,Account statement,,pending,io.one\n");
+        body.put("profile", "notice-generic");
+        send(sho2, "/api/imports", body).andExpect(status().isForbidden());
+        send(io, "/api/imports", body).andExpect(status().isForbidden());
+        send(sho1, "/api/imports/inspect", Map.of("profile", "notice-generic", "csv", NOTICES)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggested.kind").value("Under Section")).andExpect(jsonPath("$.suggested.addressee").value("Issued To"))
+                .andExpect(jsonPath("$.suggested.signed_by").value("Issued By")).andExpect(jsonPath("$.suggested.items_requested").value("Documents Called For"));
+        commit(sho1, stage(sho1, s1, GOOD + "3,02/07/2024 10:00,BNS 303,Fictional theft,io.one,,,,GD-3,open\n"));
+        send(sho1, "/api/firs/" + firId(3) + "/notices", Map.of("kind", "CrPC_160", "addressee", "Fictional Witness", "body", "Fictional text"))
+                .andExpect(status().isBadRequest());
+    }
 }

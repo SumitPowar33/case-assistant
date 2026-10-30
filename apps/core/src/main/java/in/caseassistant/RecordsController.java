@@ -548,13 +548,14 @@ class RecordsController {
 
     /**
      * Notices with the items asked for and, for each, whether some reply has brought it (ticked present).
-     * `items_missing` lists what is still outstanding, so the officer knows what to chase.
+     * `items_missing` lists what is still outstanding, so the officer knows what to chase (nothing once the notice is
+     * complete: an imported old notice marked replied has no reply rows to tick items off).
      */
     @GetMapping("/notices")
     List<Map<String, Object>> notices(@PathVariable UUID firId) {
         return db.sql("""
                 select n.id, n.kind, n.addressee, to_json(n.items_requested)::text as items_requested,
-                  to_json(array(select i from unnest(n.items_requested) i where not exists (
+                  to_json(array(select i from unnest(n.items_requested) i where n.status <> 'complete' and not exists (
                     select 1 from notice_reply r, jsonb_array_elements(r.checks) x
                     where r.notice_id = n.id and x->>'item' = i and (x->>'present')::boolean)))::text as items_missing,
                   n.status, n.issued_at, n.reply_due_on, u.full_name as signed_by_name, n.ai_request_id is not null as ai_drafted,

@@ -56,13 +56,15 @@ class ImportController {
     private final ArrestImport arrests;
     private final ChargesheetImport chargesheets;
     private final EvidenceImport evidence;
+    private final NoticeImport notices;
     private final Policies policies;
     private final ObjectMapper json;
     private List<String[]> childLinks;
 
     ImportController(JdbcClient db, CaseTeam team, FirImport rules, ArrestImport arrests, ChargesheetImport chargesheets, EvidenceImport evidence,
-                     Policies policies, ObjectMapper json) {
+                     NoticeImport notices, Policies policies, ObjectMapper json) {
         this.db = db;
+        this.notices = notices;
         this.evidence = evidence;
         this.chargesheets = chargesheets;
         this.policies = policies;
@@ -118,6 +120,13 @@ class ImportController {
             case "evidence" -> keyedRows(s, rows, headers, map, staged, count, evidence::check,
                     "select label as k, coalesce(source_hash, '') as h from evidence_item where fir_id = ?",
                     "label", "label", "FIR and item label", "An item with this label is already on this FIR's evidence register");
+            case "notice" -> {
+                var signers = new HashMap<String, java.util.Optional<UUID>>();
+                keyedRows(s, rows, headers, map, staged, count, (v, firs, now) -> notices.check(v, firs, u -> signers.computeIfAbsent(u, k -> db.sql(
+                                "select id from app_user where username = ? and active and station_id = ?").params(k, s.stationId).query(UUID.class).optional()).orElse(null), now),
+                        "select kind || '|' || addressee || '|' || ist_date(issued_at) as k, coalesce(source_hash, '') as h from notice where fir_id = ? and issued_at is not null",
+                        "key", "addressee", "FIR, kind, addressee and day of issue", "A notice of this kind to this addressee on this day is already recorded for this FIR");
+            }
             default -> firRows(s, rows, headers, map, staged, count);
         }
         UUID id = db.sql("""
@@ -368,17 +377,19 @@ class ImportController {
                 case "arrest" -> addArrest(id, me, station, p);
                 case "chargesheet" -> addChargesheet(id, me, station, p);
                 case "evidence" -> addEvidence(id, station, p);
+                case "notice" -> addNotice(id, station, p);
                 default -> addFir(id, station, (String) b.get("complaint_language"), p);
             }) {
                 db.sql("update import_row set status = 'imported' where batch_id = ? and row_no = ?").params(id, row.get("row_no")).update();
                 done++;
             } else {
                 db.sql("update import_row set status = 'skipped', messages = messages || ?::jsonb where batch_id = ? and row_no = ?")
-                        .params(write(List.of(new FirImport.Message("warning", switch (entity) { case "arrest" -> "arrested_at"; case "chargesheet" -> "report_no"; case "evidence" -> "label"; default -> "fir_no"; },
+                        .params(write(List.of(new FirImport.Message("warning", switch (entity) { case "arrest" -> "arrested_at"; case "chargesheet" -> "report_no"; case "evidence" -> "label"; case "notice" -> "addressee"; default -> "fir_no"; },
                                 switch (entity) {
                                     case "arrest" -> "This arrest was recorded in the meantime, or the person is no longer an accused; skipped.";
                                     case "chargesheet" -> "This chargesheet was recorded in the meantime, or an accused it names is no longer an accused; skipped.";
                                     case "evidence" -> "An item with this label was added to the FIR in the meantime; skipped.";
+                                    case "notice" -> "This notice was recorded in the meantime, or its signer is no longer an active officer of the station; skipped.";
                                     default -> "Another FIR took this number before approval; skipped.";
                                 }))), id, row.get("row_no")).update();
             }
@@ -469,6 +480,22 @@ class ImportController {
                         p.get("sealNo"), p.get("sha256"), batch, hash(p), UUID.fromString((String) p.get("firId")), station, p.get("label")).update() == 1;
     }
 
+    /** Adds one checked notice as the old register has it; false when the same notice was recorded meanwhile or the signer left the station. */
+    private boolean addNotice(UUID batch, UUID station, Map<String, Object> p) {
+        UUID signer = p.get("signedBy") == null ? null : UUID.fromString((String) p.get("signedBy"));
+        if (signer != null && !db.sql("select exists (select 1 from app_user where id = ? and active and station_id = ?)").params(signer, station).query(Boolean.class).single())
+            return false;
+        return db.sql("""
+                insert into notice (fir_id, kind, addressee, items_requested, body, signed_by, issued_at, reply_due_on, status, import_batch_id, source_hash)
+                select f.id, ?::text, ?::text, ?::text[], ?::text, ?::uuid, ?::timestamptz, ?::date, ?::text, ?::uuid, ?::text
+                from fir f where f.id = ?::uuid and f.station_id = ?::uuid
+                  and not exists (select 1 from notice x where x.fir_id = f.id and x.kind = ?::text and ist_date(x.issued_at) = ist_date(?::timestamptz)
+                                  and lower(regexp_replace(x.addressee, '\\s', '', 'g')) = lower(regexp_replace(?::text, '\\s', '', 'g')))""")
+                .params(p.get("kind"), p.get("addressee"), ((List<String>) p.get("itemsRequested")).toArray(String[]::new), p.get("body"), signer,
+                        p.get("issuedAt"), p.get("replyDueOn"), p.get("status"), batch, hash(p), UUID.fromString((String) p.get("firId")), station,
+                        p.get("kind"), p.get("issuedAt"), p.get("addressee")).update() == 1;
+    }
+
     @PostMapping("/{id}/discard")
     @Transactional
     Map<String, Object> discard(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
@@ -479,7 +506,7 @@ class ImportController {
         return batch(id);
     }
 
-    /** Removes the FIRs (arrests, chargesheets, evidence items) a batch added, but only while nothing else has been recorded on them or their people. */
+    /** Removes the FIRs (arrests, chargesheets, evidence items, notices) a batch added, but only while nothing else has been recorded on them or their people. */
     @PostMapping("/{id}/undo")
     @Transactional
     Map<String, Object> undo(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody Undo u) {
@@ -498,8 +525,8 @@ class ImportController {
             if (db.sql("select exists (select 1 from " + l[0] + " where " + l[1] + " in (" + owned + "))").param(id).query(Boolean.class).single())
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Work has been recorded on some of these " + things(entity) + ", so the batch cannot be undone.");
         }
-        if (entity.equals("evidence")) {
-            db.sql("delete from evidence_item where import_batch_id = ?").param(id).update();
+        if (entity.equals("evidence") || entity.equals("notice")) {
+            db.sql("delete from " + table + " where import_batch_id = ?").param(id).update();
             return batch(id);
         }
         if (entity.equals("chargesheet")) {
@@ -549,7 +576,7 @@ class ImportController {
     }
 
     private static String things(String entity) {
-        return switch (entity) { case "arrest" -> "arrests"; case "chargesheet" -> "chargesheets"; case "evidence" -> "evidence items"; default -> "FIRs"; };
+        return switch (entity) { case "arrest" -> "arrests"; case "chargesheet" -> "chargesheets"; case "evidence" -> "evidence items"; case "notice" -> "notices"; default -> "FIRs"; };
     }
 
     private void requireImporter(UUID user) {
@@ -580,7 +607,7 @@ class ImportController {
                     .params(fir, role, label + n++, name, batch).update();
     }
 
-    /** Tables holding a link to fir.id, person.id, arrest.id, chargesheet.id or evidence_item.id, from the database catalogue, so a new table is guarded without an edit here. */
+    /** Tables holding a link to fir.id, person.id, arrest.id, chargesheet.id, evidence_item.id or notice.id, from the database catalogue, so a new table is guarded without an edit here. */
     private synchronized List<String[]> links() {
         if (childLinks == null) {
             childLinks = new ArrayList<>();
@@ -589,7 +616,7 @@ class ImportController {
                     from pg_constraint c cross join lateral unnest(c.conkey, c.confkey) k(ck, fk)
                     join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.ck
                     join pg_attribute pa on pa.attrelid = c.confrelid and pa.attnum = k.fk
-                    where c.contype = 'f' and c.confrelid in ('fir'::regclass, 'person'::regclass, 'arrest'::regclass, 'chargesheet'::regclass, 'evidence_item'::regclass) and pa.attname = 'id'
+                    where c.contype = 'f' and c.confrelid in ('fir'::regclass, 'person'::regclass, 'arrest'::regclass, 'chargesheet'::regclass, 'evidence_item'::regclass, 'notice'::regclass) and pa.attname = 'id'
                       and c.conrelid::regclass::text not in ('fir_section', 'person', 'fir')
                       and not (c.conrelid = 'chargesheet_accused'::regclass and c.confrelid = 'chargesheet'::regclass)""").query().listOfRows()
                     .forEach(r -> childLinks.add(new String[] {(String) r.get("tbl"), (String) r.get("col"), (String) r.get("parent")}));

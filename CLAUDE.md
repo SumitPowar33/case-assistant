@@ -34,7 +34,7 @@ At the end of each session, note in PROGRESS.md anything you deliberately skippe
 - `packs` – modules, one folder per state or the nation (`IN`): `module.json` (id, name, version, languages, depends; gives the `state_pack` row), `roles.json`, `policies.json` (a state module may add `state_values`: stricter values for its own state), `punishments.json`, `playbooks/`. Data, not code. A module may add roles, permissions and policies, never remove or loosen the national ones. Tests: `python -m pytest -q packs/tests`.
 - `tests/e2e` – browser tests (Playwright, Chromium) against the real core jar, a throwaway database and the built web app: `python -m pytest -q tests/e2e`.
 - `tests/repo_rules` – the hard rules of this file checked on the whole repo: `python -m pytest -q tests/repo_rules`.
-- Loading existing data: CSV import in four steps for FIRs, arrests, chargesheets and evidence (`ImportController`, `FirImport`, `ArrestImport`, `ChargesheetImport`, `EvidenceImport`, V22, V24, V25, V28, `packs/*/import-profiles`); design in `docs/INTEGRATION-IMPORT.md`. Insert-only, approved by a person, undoable until work is recorded.
+- Loading existing data: CSV import in four steps for FIRs, arrests, chargesheets, evidence and notices (`ImportController`, `FirImport`, `ArrestImport`, `ChargesheetImport`, `EvidenceImport`, `NoticeImport`, V22, V24, V25, V28, V29, `packs/*/import-profiles`); design in `docs/INTEGRATION-IMPORT.md`. Insert-only, approved by a person, undoable until work is recorded.
 - `docs/` – plan, progress, research, `ARCHITECTURE-TENANCY.md` (accounts, roles, policies, modules: read before touching access), `TESTING.md` (what every change must test).
 
 ## Testing rule (Sumit, 28 Oct 2026)

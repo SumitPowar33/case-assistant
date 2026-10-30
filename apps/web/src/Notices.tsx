@@ -16,6 +16,10 @@ const KINDS: Record<string, string> = {
   BNSS_94: 'BNSS 94: produce documents or data', BNSS_35_3: 'BNSS 35(3): appear before the officer',
   BNSS_179: 'BNSS 179: attend as a witness', follow_up: 'Follow-up',
 }
+/** Notices of old cases loaded from a file keep the CrPC section they were issued under; they cannot be typed new. */
+const OLD_KINDS: Record<string, string> = {
+  CrPC_91: 'CrPC 91 (old law): produce documents', CrPC_41A: 'CrPC 41A (old law): appear', CrPC_160: 'CrPC 160 (old law): attend as a witness',
+}
 const STATUS: Record<string, string> = {
   draft: 'draft (not signed)', sent: 'sent, waiting for reply', reply_incomplete: 'reply incomplete', complete: 'complete', cancelled: 'cancelled',
 }
@@ -155,7 +159,7 @@ export default function Notices({ firId, fir }: { firId: string; fir?: NoticeFac
       {error ? <p role="alert">{error}</p> : !data ? <p>Loading…</p> : !data.length ? <p>None yet.</p> : (
         <ul>{data.map((n) => (
           <li key={n.id}>
-            <strong>{KINDS[n.kind] ?? n.kind}</strong> to {n.addressee}: {STATUS[n.status] ?? n.status}
+            <strong>{KINDS[n.kind] ?? OLD_KINDS[n.kind] ?? n.kind}</strong> to {n.addressee}: {STATUS[n.status] ?? n.status}
             {n.issued_at && <> · issued {fmt(n.issued_at)}{n.signed_by_name && ` by ${n.signed_by_name}`}</>}
             {n.reply_due_on && <> · reply due by {n.reply_due_on}</>}
             {n.ai_drafted && <> · text drafted with AI, checked by the officer</>}

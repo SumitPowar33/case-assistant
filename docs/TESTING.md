@@ -13,7 +13,7 @@ Rule of this project (Sumit, 28 Oct 2026): **every piece of code gets tests, and
 | Security | `SecurityMatrixTest` | Walks **every route**: nothing answers without a token (except login); a signed-in outsider reads no case record (404); admin routes refuse ordinary officers | same as above |
 | Access / tenancy | `AdminApiTest`, `PolicyApiTest`, `PeopleApiTest`, `FirApiTest` | State admin bounded to own state; policies tighten-only; case team reads | same |
 | Web | `apps/web/src/*.test.tsx` | Screens with stubbed requests; lint; production build | `npm run coverage && npm run lint && npm run build` |
-| End-to-end browser | `tests/e2e` | The real core jar on a throwaway database (`caseapp_e2e`), the built web app and Chromium (Playwright): Load data with FIRs, arrests, chargesheets and evidence, the records on the FIR screen, undo, refusal of an officer without the right; a case typed by hand (FIR, accused, arrest with remand, deadlines) | `python -m pytest -q tests/e2e` (after `mvn verify` and `npm run build`) |
+| End-to-end browser | `tests/e2e` | The real core jar on a throwaway database (`caseapp_e2e`), the built web app and Chromium (Playwright): Load data with FIRs, arrests, chargesheets, evidence and notices, the records on the FIR screen, undo, refusal of an officer without the right; a case typed by hand (FIR, accused, arrest with remand, deadlines) | `python -m pytest -q tests/e2e` (after `mvn verify` and `npm run build`) |
 | Integration (gateway to core) | `services/ai-gateway/tests` | Token checks, audit hash chain, provider switching | `python -m pytest -q` |
 
 ## Coverage gates (they only go up)

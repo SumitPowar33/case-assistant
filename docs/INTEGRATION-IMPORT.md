@@ -1,6 +1,6 @@
 # Loading existing data (integration screen)
 
-Decided 28 Oct 2026 after research. Screen: **Load data** (`#/import`). Code: `ImportController`, `FirImport`, `ArrestImport`, `ChargesheetImport`, `EvidenceImport`, `Csv`, migrations V22, V24, V25, V28, `packs/*/import-profiles`, `packs/*/law-concordance.json`.
+Decided 28 Oct 2026 after research. Screen: **Load data** (`#/import`). Code: `ImportController`, `FirImport`, `ArrestImport`, `ChargesheetImport`, `EvidenceImport`, `NoticeImport`, `Csv`, migrations V22, V24, V25, V28, V29, `packs/*/import-profiles`, `packs/*/law-concordance.json`.
 
 ## Why a file first
 CCTNS has no public data API or published schema; each state runs its own system (for example Tamil Nadu's CIPRUS on PostgreSQL), and ICJS links CCTNS with e-Courts and e-Prisons without public details. So the only route that works for every state today is a **CSV export** that the department prepares. A direct connector for one state can be added later as another profile or a small bridge once a data agreement and a real schema exist.
@@ -60,5 +60,16 @@ Layout "Evidence register (CSV), generic". Load the FIRs first. Code: `EvidenceI
 - **Undo.** Removes the batch's items, refused once anything hangs on one of them (a custody hand-over, a 63(4) certificate, a readiness or accused link; read from the database catalogue). An FIR batch cannot be undone while evidence hangs on its FIRs.
 - **New database rule (V28).** An evidence item can no longer be deleted at all (it could be before, by direct SQL); the only exception is the undo of the import that added it.
 
+## Notices file (fifth file, 30 Oct 2026)
+Layout "Notices (CSV), generic". Load the FIRs first. Code: `NoticeImport`, migration V29, `notice-generic.json`. Required columns: `fir_no`, `kind`, `addressee`, `issued_on`. Optional: `fir_year`, `items_requested` (separated by `;`), `reply_due_on`, `status`, `signed_by` (username of an active officer of the station), `body`, `source_key`.
+- **Old notices keep their law.** Kinds: BNSS 94, BNSS 35(3), BNSS 179, follow-up, and for old cases **CrPC 91, CrPC 41A, CrPC 160** (new kinds in V29, shown as "old law"; they cannot be typed for a new notice). Nothing is converted, exactly as old offences stay under the IPC. Common spellings are read (`Cr.P.C. 41-A`, `BNSS 35(3)`, `94`).
+- **Legal date rules (errors, also enforced by the database).** No BNSS notice before 1 July 2024 (the BNSS came into force that day). A CrPC notice only for an FIR registered before 1 July 2024; such an old investigation may still get CrPC notices after that day (BNSS 531 savings). A notice to produce (BNSS 94, CrPC 91) must list what it asked for. A reply due before the day of issue is an error; issue in the future is an error; issue before the FIR day is a warning.
+- **Status is never guessed**, because it decides whether a reply deadline shows: sent / pending / issued = waiting for a reply; partly replied = reply incomplete; replied / complete / closed = complete; cancelled / withdrawn = cancelled. Any other value is an error. An empty status is stored as sent with a warning that says the reply date will show on the deadline list.
+- **Signer.** An unknown or missing signer is left empty with a warning (the database allows that only for imported notices, V29); a signer who left the station before the approval makes the row "skipped".
+- **Text.** A missing notice text is stored as "Not in the old record" with a warning. Replies of old notices are not loaded; a notice imported as complete shows nothing missing.
+- **Repeats.** Same FIR, kind, addressee (ignoring case and spaces) and day of issue already recorded = skipped; twice in one file = error.
+- **Undo.** Removes the batch's notices, refused once a reply is recorded on one of them. An FIR batch cannot be undone while notices hang on its FIRs.
+- **Fixed on the way (V29).** A concluded case showed the reply date of an open notice on its deadline list; now a concluded case has no live deadline of any kind.
+
 ## Not built yet
-A separate file for notices keyed by FIR (arrests, chargesheets and evidence are done); custody hand-overs and 63(4) certificates of old items (only the item itself is loaded); fuzzy (spelling-variant) duplicate people and duplicates across stations (only exact normalised names are flagged); a direct state-database connector; Excel files; paging beyond 500 rows in the screen; purge of old batches after a retention period.
+Custody hand-overs and 63(4) certificates of old items (only the item itself is loaded); fuzzy (spelling-variant) duplicate people and duplicates across stations (only exact normalised names are flagged); a direct state-database connector; Excel files; paging beyond 500 rows in the screen; purge of old batches after a retention period.

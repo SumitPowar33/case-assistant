@@ -647,7 +647,7 @@ def test_an_imported_arrest_may_have_no_arresting_officer_but_a_typed_one_may_no
                       VALUES (%s,now(),'x','{x}','x','life',%s)""", (a2, io))
     with pytest.raises(psycopg.errors.CheckViolation):
         db.execute("""INSERT INTO import_batch(station_id,entity,profile,filename,file_sha256,complaint_language,rows_total,created_by)
-                      VALUES (%s,'notice','p','a.csv','00','en',1,%s)""", (st, io))
+                      VALUES (%s,'closure','p','a.csv','00','en',1,%s)""", (st, io))
 
 
 def test_an_imported_arrest_is_deleted_only_by_the_undo_of_its_batch(db):
@@ -703,7 +703,7 @@ def test_an_imported_chargesheet_is_deleted_only_by_the_undo_of_its_batch(db):
     assert one(db, "SELECT count(*) FROM chargesheet")[0] == 1
     with pytest.raises(psycopg.errors.CheckViolation):
         db.execute("""INSERT INTO import_batch(station_id,entity,profile,filename,file_sha256,complaint_language,rows_total,created_by)
-                      VALUES (%s,'notice','p','c.csv','00','en',1,%s)""", (st, io))
+                      VALUES (%s,'closure','p','c.csv','00','en',1,%s)""", (st, io))
 
 
 def test_a_state_module_value_is_the_strictest_starting_point_of_its_state(db):
@@ -746,3 +746,50 @@ def test_an_evidence_item_stays_on_the_register_unless_its_import_is_undone(db):
         db.execute("DELETE FROM evidence_item WHERE id=%s", (typed,))
     db.execute("DELETE FROM evidence_item WHERE id=%s", (imported,))
     assert one(db, "SELECT count(*) FROM evidence_item")[0] == 1
+
+
+NOTICE = """INSERT INTO notice(fir_id,kind,addressee,items_requested,body,signed_by,issued_at,reply_due_on,status,import_batch_id)
+            VALUES (%s,%s,'Bank of Demo',%s,'Demo body',%s,%s,%s,'sent',%s) RETURNING id"""
+
+
+def _old_fir(db, st, no=101):
+    return one(db, """INSERT INTO fir(station_id,fir_year,fir_no,gd_entry_no,registered_at,information_received_at,
+                      contents_original,contents_language,action_taken) VALUES (%s,2024,%s,'GD-1','2024-03-05 10:00+05:30',
+                      '2024-03-05 09:00+05:30','Demo old complaint','en','investigate') RETURNING id""", st, no)[0]
+
+
+def test_old_notices_keep_the_code_they_were_issued_under(db):
+    st, io, fir = seed_case(db)                       # FIR of 18 Aug 2026: BNSS
+    old = _old_fir(db, st)                            # FIR of 5 Mar 2024: CrPC
+    one(db, NOTICE, old, "CrPC_91", ["statements"], io, "2024-03-10 10:00+05:30", None, None)
+    one(db, NOTICE, old, "CrPC_41A", [], io, "2024-08-10 10:00+05:30", None, None)   # an old investigation goes on under the CrPC
+    one(db, NOTICE, old, "BNSS_179", [], io, "2024-07-01 00:00+05:30", None, None)   # from the first day of the BNSS
+    with pytest.raises(psycopg.errors.CheckViolation):                                  # a new FIR's notices are BNSS notices
+        db.execute(NOTICE, (fir, "CrPC_160", [], io, "2026-08-20 10:00+05:30", None, None))
+    with pytest.raises(psycopg.errors.CheckViolation):                                  # no BNSS notice before 1 July 2024
+        db.execute(NOTICE, (old, "BNSS_94", ["statements"], io, "2024-06-30 23:59+05:30", None, None))
+    with pytest.raises(psycopg.errors.CheckViolation):                                  # a notice to produce lists what it asks for
+        db.execute(NOTICE, (old, "CrPC_91", [], io, "2024-03-10 10:00+05:30", None, None))
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute(NOTICE, (old, "CrPC_99", [], io, "2024-03-10 10:00+05:30", None, None))
+    cr = one(db, NOTICE, old, "CrPC_160", [], io, "2024-03-11 10:00+05:30", None, None)[0]
+    with pytest.raises(psycopg.errors.CheckViolation):                                  # nor can a CrPC notice be moved to a new FIR
+        db.execute("UPDATE notice SET fir_id=%s WHERE id=%s", (fir, cr))
+
+
+def test_only_an_imported_notice_may_lack_its_signer(db):
+    st, io, fir = seed_case(db)
+    batch = one(db, """INSERT INTO import_batch(station_id,entity,profile,filename,file_sha256,complaint_language,rows_total,created_by)
+                       VALUES (%s,'notice','notice-generic','n.csv','00','en',1,%s) RETURNING id""", st, io)[0]
+    one(db, NOTICE, fir, "BNSS_179", [], None, "2026-08-20 10:00+05:30", None, batch)
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute(NOTICE, (fir, "BNSS_179", [], None, "2026-08-21 10:00+05:30", None, None))
+
+
+def test_a_concluded_case_shows_no_notice_reply_deadline(db):
+    st, io, fir = seed_case(db)
+    one(db, NOTICE, fir, "BNSS_94", ["statements"], io, "2026-08-20 10:00+05:30", "2026-09-01", None)
+    kinds = lambda: [k for (k,) in db.execute("SELECT kind FROM case_deadline WHERE fir_id=%s", (fir,)).fetchall()]
+    assert "notice_reply:Bank of Demo" in kinds()
+    db.execute("UPDATE fir SET concluded = true WHERE id=%s", (fir,))
+    assert kinds() == []
