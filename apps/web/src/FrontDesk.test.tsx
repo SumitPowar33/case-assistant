@@ -49,6 +49,19 @@ test('the front desk lists open complaints with overdue steps and writes a new o
   await vi.waitFor(() => expect(window.location.hash).toBe('#/complaints/c9'))
 })
 
+test('the Speak button shows only where the unit allows cloud processing of case text', async () => {
+  class R { start() {} stop() {} }
+  vi.stubGlobal('webkitSpeechRecognition', R)
+  stub({ '/complaint-kinds': kinds, '/me': { ai_cloud_allowed: false } })
+  render(<FrontDeskPage />)
+  await screen.findByText('No open complaints.')
+  expect(screen.queryByRole('button', { name: 'Speak' })).toBeNull()
+  cleanup()
+  stub({ '/complaint-kinds': kinds, '/me': { ai_cloud_allowed: true } })
+  render(<FrontDeskPage />)
+  expect(await screen.findByRole('button', { name: 'Speak' })).toBeTruthy()
+})
+
 test('an empty front desk says so; an error is shown', async () => {
   stub({ '/complaint-kinds': kinds })
   render(<FrontDeskPage />)

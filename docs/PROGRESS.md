@@ -15,12 +15,32 @@ Next (replaces the "Next" list of session 25; a session finishing an item remove
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
-Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)); only speech input is left of module 1.
+Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)).
+Done in session 31: speech input at the front desk; module 1 is finished.
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
-5. Module 1, front-desk complaint: typed intake, read-back, golden-hour checklist, then speech input.
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 30 Oct 2026, session 31 (scheduled nightly run, Sumit away)
+Started from `setup/seed` at 26dc593. Fresh sandbox: started PostgreSQL, created role/databases, installed missing Python packages (`psycopg[binary]`, `pytest-cov`, `httpx` and the gateway requirements; the first `test-all.sh` run failed only on the gateway for that reason, re-run green).
+
+Done (front desk, part 3: speech input)
+- A **Speak / Stop speaking** button under the "Information as given" box. It uses the browser's own speech recognition (no new dependency, no new route), in the language chosen for typing (Marathi gives `mr-IN`, English `en-IN`). Only finished phrases are added, at the end of the text, so the officer reads and corrects them before the read-back; the signed text still never changes. If the browser has no speech recognition the button is not shown; an error (for example microphone refused) is shown and typing still works; leaving the page stops listening.
+- **Policy**: Chrome and Edge send the audio to the browser maker's servers, so the button shows only when the unit's `ai_cloud_allowed` policy is on (read from `/api/me`). It is a browser feature, not an AI call of ours, so it does not go through the AI gateway and is not in the AI audit log (see question 1).
+- Tests: `TypingField.test.tsx` (+3 with a fake recogniser: absent without the prop or support, adds finished phrases only and stops, error and unmount), `FrontDesk.test.tsx` (+1: button hidden when the policy is off). Final `scripts/test-all.sh`: all 8 lines PASS.
+
+Deliberately skipped / not checked
+- Not tried with a real microphone or on a real browser (headless Chromium has no speech service), only against a fake recogniser. Accuracy for Marathi and other languages is unknown. No browser test for it. Speech is on the complaint text only, not other text fields.
+
+Next
+1. Rest of the MH pack (roles, Marathi labels, playbooks, demo stations).
+2. Upgrade test.
+3. Screens in the 10 languages, then the legal glossary.
+
+Questions for Sumit
+1. Speech goes to the browser maker's cloud, outside our audit log. Is that acceptable for the demo only, or should real use wait for an on-prem speech model (IndicConformer) behind the AI gateway, as the plan says for later?
+2. Which phones/browsers will the front desk use in the pilot (decides whether browser speech works at all)?
 
 ## 30 Oct 2026, session 30 (scheduled nightly run, Sumit away)
 Started from `setup/seed` at 0e6b30c. Sandbox fresh: started PostgreSQL, created role `caseapp` and the two databases, installed packages (`psycopg[binary]` was missing for the database and browser suites). Baseline `scripts/test-all.sh`: all 8 lines PASS.

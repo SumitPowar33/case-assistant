@@ -31,6 +31,7 @@ export function FrontDeskPage() {
   const [version, setVersion] = useState(0)
   const { data, error } = useLoad<Row[]>('/complaints?open=true', version)
   const { data: kinds } = useLoad<Kind[]>('/complaint-kinds')
+  const { data: me } = useLoad<{ ai_cloud_allowed?: boolean }>('/me')
   const { lang } = useContext(TypingContext)
   const [words, setWords] = useState('')
   const station = currentSession()?.user.station_id
@@ -53,7 +54,7 @@ export function FrontDeskPage() {
         <label>Informant's name <input name="name" required maxLength={200} /></label>
         <label>Informant's phone or address <input name="contact" maxLength={200} /></label>
         <label>Kind <select name="kind" defaultValue="other">{kinds.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}</select></label>
-        <TypingField label="Information as given (in the informant's words)" value={words} onChange={setWords} multiline />
+        <TypingField label="Information as given (in the informant's words)" value={words} onChange={setWords} multiline speech={me?.ai_cloud_allowed === true} />
       </Form>
       {!data.length ? <p>No open complaints.</p> : <table>
         <caption>Open complaints</caption>

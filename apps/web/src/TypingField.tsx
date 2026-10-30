@@ -1,7 +1,16 @@
-import { useContext, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { LANGS, TypingContext, suggestions, wordBefore } from './typing'
 
-type Props = { label: string; value: string; onChange: (value: string) => void; multiline?: boolean }
+type Props = { label: string; value: string; onChange: (value: string) => void; multiline?: boolean; speech?: boolean }
+type Recognition = {
+  lang: string; continuous: boolean; interimResults: boolean; start: () => void; stop: () => void
+  onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null
+  onend: (() => void) | null; onerror: ((e: { error: string }) => void) | null
+}
+const recognitionClass = (): (new () => Recognition) | undefined => {
+  const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition }
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition
+}
 type Field = HTMLInputElement | HTMLTextAreaElement
 
 /**
@@ -9,7 +18,7 @@ type Field = HTMLInputElement | HTMLTextAreaElement
  * Space, Enter (multi-line) or punctuation puts in the top suggestion; a click picks another;
  * Esc keeps the word in English. With the language set to English it is a plain field.
  */
-export default function TypingField({ label, value, onChange, multiline }: Props) {
+export default function TypingField({ label, value, onChange, multiline, speech }: Props) {
   const { lang } = useContext(TypingContext)
   const id = useId()
   const ref = useRef<Field>(null)
@@ -18,6 +27,38 @@ export default function TypingField({ label, value, onChange, multiline }: Props
   const [caret, setCaret] = useState<number | null>(null)
   const options = keepEnglish ? [] : suggestions(word, lang)
   const tag = lang === 'en' ? 'en' : LANGS[lang].tag
+  const [listening, setListening] = useState(false)
+  const [speechError, setSpeechError] = useState('')
+  const valueRef = useRef(value)
+  valueRef.current = value
+  const rec = useRef<Recognition | null>(null)
+  const Rec = speech ? recognitionClass() : undefined
+
+  // The browser turns speech into text in the chosen language; only finished phrases are added, at the end, for the officer to check and correct.
+  function toggleSpeech() {
+    if (rec.current) { rec.current.stop(); return }
+    if (!Rec) return
+    const r = new Rec()
+    r.lang = lang === 'en' ? 'en-IN' : `${tag}-IN`
+    r.continuous = true
+    r.interimResults = false
+    r.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          const v = valueRef.current
+          valueRef.current = (v && !/\s$/.test(v) ? v + ' ' : v) + e.results[i][0].transcript.trim()
+          onChange(valueRef.current)
+        }
+      }
+    }
+    r.onerror = (e) => setSpeechError(`Speech input stopped: ${e.error}. You can still type.`)
+    r.onend = () => { rec.current = null; setListening(false) }
+    setSpeechError('')
+    rec.current = r
+    setListening(true)
+    r.start()
+  }
+  useEffect(() => () => rec.current?.stop(), [])
 
   useLayoutEffect(() => {
     if (caret !== null && ref.current) {
@@ -64,6 +105,8 @@ export default function TypingField({ label, value, onChange, multiline }: Props
       {multiline
         ? <textarea ref={ref as React.Ref<HTMLTextAreaElement>} rows={6} {...common} />
         : <input ref={ref as React.Ref<HTMLInputElement>} {...common} />}
+      {Rec && <button type="button" className="no-print" aria-pressed={listening} onClick={toggleSpeech}>{listening ? 'Stop speaking' : 'Speak'}</button>}
+      {speechError && <p role="alert">{speechError}</p>}
       <div aria-live="polite">
         {options.length > 0 && (
           <ul className="suggestions" aria-label={`Suggestions for ${word}`}>
