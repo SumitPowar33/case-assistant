@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { REVIEWED, SCREEN_LANGS, translate, translateCode } from './i18n'
+import { REVIEWED, SCREEN_LANGS, translate, translateCode, translateServer } from './i18n'
 import nationalModule from '../../../packs/IN/module.json'
 
 const files = import.meta.glob<Record<string, string>>('./i18n/*.json', { eager: true, import: 'default' })
@@ -41,4 +41,17 @@ test('a code from the server is shown by its label, or as it is when no catalog 
   expect(translateCode('en', 'person', 'accused')).toBe('accused')
   expect(translateCode('ta', 'person', 'witness')).toBe('சாட்சி')
   expect(translateCode('mr', 'person', 'a_new_role')).toBe('a_new_role')
+})
+
+test('a server message is shown in the screen language when a server text matches it whole, with its values kept', () => {
+  expect(translateServer('mr', 'Only the case team can do this.')).toBe('फक्त प्रकरणाची टीम हे करू शकते.')
+  expect(translateServer('hi', 'The unit above already asks for 30 or less; a unit can only be stricter, never looser.'))
+    .toBe('ऊपर की इकाई पहले से 30 या उससे कम माँगती है; इकाई केवल अधिक सख़्त हो सकती है, कभी ढीली नहीं।')
+  expect(translateServer('ta', 'Too many wrong passwords. Try again after 21:15 IST.')).toBe('பல முறை தவறான கடவுச்சொல். 21:15 IST க்குப் பிறகு மீண்டும் முயலவும்.')
+  // the most specific text wins: "answered {status} for {path}", not "answered {status}" with the path swallowed
+  expect(translateServer('mr', 'The server answered 500 for /firs')).toBe('सर्व्हरने /firs साठी 500 उत्तर दिले')
+  expect(translateServer('mr', 'The server answered 500')).toBe('सर्व्हरने 500 उत्तर दिले')
+  expect(translateServer('mr', 'Only the case team can do this. And more.')).toBe('Only the case team can do this. And more.')   // whole message only
+  expect(translateServer('mr', 'A message no catalog knows (x+y)?')).toBe('A message no catalog knows (x+y)?')
+  expect(translateServer('en', 'Only the case team can do this.')).toBe('Only the case team can do this.')
 })

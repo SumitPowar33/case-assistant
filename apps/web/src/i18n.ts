@@ -32,3 +32,25 @@ export function useT() {
   t.code = (prefix: string, code: string) => translateCode(lang, prefix, code)
   return t
 }
+
+// Messages the servers write in English (a refusal, a rule) are shown in the screen language when a `server.*` text
+// matches the whole message; a {name} in it stands for a value the server put in (a number, a time). A message no
+// catalog knows is shown as the server wrote it. tests/repo_rules/test_server_messages.py keeps these texts in step.
+const SERVER = (Object.keys(en) as Key[]).filter((k) => k.startsWith('server.')).map((key) => {
+  const names: string[] = []
+  const source = en[key].split(/\{(\w+)\}/).map((part, i) => {
+    if (i % 2) { names.push(part); return '(.+?)' }
+    return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  }).join('')
+  return { key, names, pattern: new RegExp(`^${source}$`), literal: en[key].replace(/\{\w+\}/g, '').length }
+}).sort((a, b) => b.literal - a.literal)   // the most specific text first ("answered {status} for {path}" before "answered {status}")
+
+/** A message from a server in a screen language. */
+export function translateServer(lang: string, message: string): string {
+  if (lang === 'en') return message
+  for (const { key, names, pattern } of SERVER) {
+    const m = pattern.exec(message)
+    if (m) return translate(lang, key, Object.fromEntries(names.map((n, i) => [n, m[i + 1]])))
+  }
+  return message
+}

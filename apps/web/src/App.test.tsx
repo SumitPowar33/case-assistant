@@ -170,7 +170,7 @@ test('the screen language is chosen in the header, kept on the server, and the m
   delete routes['/api/me/language']
   render(<App />)
   fireEvent.change(screen.getByLabelText('स्क्रीनची भाषा'), { target: { value: 'ta' } })
-  expect(await screen.findByRole('alert')).toBeTruthy()
+  expect((await screen.findByRole('alert')).textContent).toBe('सर्व्हरने 404 उत्तर दिले')   // the server's answer in the screen language
   expect(nav().getByRole('link', { name: 'एफआयआर' })).toBeTruthy()
 })
 
@@ -181,4 +181,8 @@ test('before sign-in the chosen screen language is used on the sign-in page', ()
   fireEvent.change(screen.getByLabelText('Screen language'), { target: { value: 'hi' } })
   expect(screen.getByRole('heading', { name: 'साइन इन' })).toBeTruthy()
   expect(screen.getByLabelText('यूज़रनेम')).toBeTruthy()
+  fireEvent.change(screen.getByLabelText('यूज़रनेम'), { target: { value: 'si.fictional' } })
+  fireEvent.change(screen.getByLabelText('पासवर्ड'), { target: { value: 'wrong-pass' } })
+  fireEvent.click(screen.getByRole('button', { name: 'साइन इन करें' }))
+  return screen.findByText('गलत यूज़रनेम या पासवर्ड।')
 })

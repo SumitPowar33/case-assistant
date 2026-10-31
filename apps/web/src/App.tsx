@@ -9,7 +9,7 @@ import ImportPage from './ImportPage'
 import PoliciesPage from './PoliciesPage'
 import LoginPage from './LoginPage'
 import { ComplaintPage, FrontDeskPage } from './FrontDesk'
-import { currentSession, onSessionChange, setScreenLanguage, setSession } from './api'
+import { currentSession, onSessionChange, setMessageLanguage, setScreenLanguage, setSession } from './api'
 import { REVIEWED, SCREEN_LANGS, ScreenLangContext, translate, type Key } from './i18n'
 import { LANGS, TypingContext, type TypingLang } from './typing'
 
@@ -29,6 +29,7 @@ export default function App() {
   const [chosen, setChosen] = useState('en')
   const [langError, setLangError] = useState('')
   const screen = session?.user.ui_language && SCREEN_LANGS.includes(session.user.ui_language) ? session.user.ui_language : chosen
+  setMessageLanguage(screen)   // during render, so the first loads of the screens below already use it
   useEffect(() => { document.documentElement.lang = screen }, [screen])
   const t = (key: Key) => translate(screen, key)
   async function chooseScreen(code: string) {

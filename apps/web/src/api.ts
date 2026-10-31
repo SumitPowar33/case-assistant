@@ -1,3 +1,5 @@
+import { translateServer } from './i18n'
+
 // Every call carries the login token from the core app (POST /api/login). The AI gateway checks the same token.
 // The session lives in sessionStorage, so it ends when the browser tab closes; a 401 from either server ends it too.
 export type User = { id: string; username: string; full_name: string; rank: string; role: string; station_id: string | null; can_import?: boolean; can_set_policy?: boolean
@@ -8,6 +10,10 @@ export type User = { id: string; username: string; full_name: string; rank: stri
 export type Session = { token: string; user: User }
 
 const KEY = 'case-assistant-session'
+// The screen language the messages of these calls are shown in (App sets it); the servers write English.
+let screenLang = 'en'
+export const setMessageLanguage = (lang: string) => { screenLang = lang }
+const failure = (message: string) => new Error(translateServer(screenLang, message))
 let session: Session | null = (() => {
   try { return JSON.parse(sessionStorage.getItem(KEY) ?? 'null') as Session | null } catch { return null }
 })()
@@ -30,9 +36,9 @@ export async function login(username: string, password: string) {
   const res = await fetch('/api/login', {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password }),
   })
-  if (res.status === 401 || res.status === 400) throw new Error('Wrong username or password.')
-  if (res.status === 429) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'Too many wrong passwords. Try again later.')
-  if (!res.ok) throw new Error(`The server answered ${res.status}. Please try again.`)
+  if (res.status === 401 || res.status === 400) throw failure('Wrong username or password.')
+  if (res.status === 429) throw failure(((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'Too many wrong passwords. Try again later.')
+  if (!res.ok) throw failure(`The server answered ${res.status}. Please try again.`)
   const body = await res.json() as Session
   setSession({ token: body.token, user: body.user })
 }
@@ -43,21 +49,21 @@ async function call(url: string, init: { method?: string; body?: unknown } = {})
   const res = await fetch(url, { method: init.method ?? 'GET', headers, body: init.body === undefined ? undefined : JSON.stringify(init.body) })
   if (res.status === 401) {
     setSession(null)
-    throw new Error('Your sign-in has ended. Please sign in again.')
+    throw failure('Your sign-in has ended. Please sign in again.')
   }
   return res
 }
 
 export async function get<T>(path: string): Promise<T> {
   const res = await call(`/api${path}`)
-  if (!res.ok) throw new Error(`The server answered ${res.status} for ${path}`)
+  if (!res.ok) throw failure(`The server answered ${res.status} for ${path}`)
   return res.json() as Promise<T>
 }
 
 /** A plain-text download (e.g. a CSV) fetched with the login token. */
 export async function getText(path: string): Promise<string> {
   const res = await call(`/api${path}`)
-  if (!res.ok) throw new Error(`The server answered ${res.status} for ${path}`)
+  if (!res.ok) throw failure(`The server answered ${res.status} for ${path}`)
   return res.text()
 }
 
@@ -65,8 +71,8 @@ export async function getText(path: string): Promise<string> {
 export async function send<T>(path: string, method: 'POST' | 'PUT', body: unknown): Promise<T | null> {
   const res = await call(`/api${path}`, { method, body })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as { message?: string; error?: string }
-    throw new Error(err.message || err.error || `The server answered ${res.status}`)
+    const err = ((await res.json().catch(() => null)) ?? {}) as { message?: string; error?: string }   // a body of null or none says nothing
+    throw failure(err.message || err.error || `The server answered ${res.status}`)
   }
   // a success may have no body (204, or a 201 without one): that is null, not an error
   return res.status === 204 ? null : res.json().catch(() => null) as Promise<T | null>
@@ -87,7 +93,7 @@ export async function ai<T>(path: string, init?: { method: string; body: unknown
 export async function changePassword(currentPassword: string, newPassword: string) {
   const res = await call('/api/me/password', { method: 'POST', body: { currentPassword, newPassword } })
   const body = await res.json().catch(() => ({})) as { token?: string; error?: string; message?: string }
-  if (!res.ok || !body.token) throw new Error(body.error || body.message || `The server answered ${res.status}`)
+  if (!res.ok || !body.token) throw failure(body.error || body.message || `The server answered ${res.status}`)
   setSession({ ...session!, token: body.token })
 }
 
