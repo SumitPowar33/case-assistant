@@ -27,7 +27,8 @@ Rules the loader enforces at start-up (and `RolesTest`, `packs/tests` check):
 - A pack can **add** a role or **add** permissions to a role. It can never remove a permission, widen a role's case scope, or change whether a station is required.
 - Every permission a role names must be declared by some pack. Role codes are `[a-z_]` only, so they are safe in SQL.
 - Case access is always: the named IO, plus the roles whose scope covers the station or district of the FIR. Everything under `/api/firs/{id}/...` is readable only by that case team (404 otherwise); evidence also by the station's malkhana; the FIR itself also by the station's front desk.
-- Admins: a state admin works only inside the state of their own station. An admin with **no station** is the platform admin of the installation (the first account, from `BOOTSTRAP_ADMIN_*`) and works in every state.
+- The screens and the AI gateway decide what to show or allow by the `permissions` and `case_scope` that `/api/login` and `/api/me` give from these files, never by role name (repo rule `test_no_role_names.py`).
+- Admins: a state admin works only inside the state of their own station, and every admin account made through the API must have a station. An admin with **no station** is the platform admin of the installation (the first account, from `BOOTSTRAP_ADMIN_*`) and works in every state.
 
 ## 3. Modules: how to customise without touching the core (the "Odoo" part)
 A **module is a pack folder**: `packs/IN` (national), `packs/MH` (Maharashtra), `packs/MH-Pune` if ever needed. A module is **data, not code**:

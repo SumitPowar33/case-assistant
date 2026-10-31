@@ -5,7 +5,7 @@ Rule of this project (Sumit, 28 Oct 2026): **every piece of code gets tests, and
 ## The suites
 | Kind | Suite | What it proves | Command |
 |---|---|---|---|
-| Repository rules | `tests/repo_rules` | Every route the web app calls exists in the core (contract); the hard rules of CLAUDE.md hold on the whole repo: no model calls outside `services/ai-gateway`, no secrets, no forbidden features (guilt/credibility scoring, prediction, facial recognition), no AI attribution in commits | `python -m pytest -q tests/repo_rules` |
+| Repository rules | `tests/repo_rules` | Every route the web app calls exists in the core (contract); the hard rules of CLAUDE.md hold on the whole repo: no model calls outside `services/ai-gateway`, no secrets, no forbidden features (guilt/credibility scoring, prediction, facial recognition), no AI attribution in commits; no app code decides by role name | `python -m pytest -q tests/repo_rules` |
 | Data / contract | `packs/tests` | Every pack file (roles, policies, punishment table, playbooks) is well formed and consistent with the database lists | `python -m pytest -q packs/tests` |
 | Unit | `packages/xlit`, `RolesTest`, `PoliciesTest`, web component tests, gateway tests | Pure logic: typing engine, role merge rules, policy bounds, forms | see CLAUDE.md |
 | Database / legal rules | `apps/core/db-tests` | Every migration V1..Vn on a clean schema; legal day-counting; append-only tables; constraints; upgrade from an earlier release | `python -m pytest -q apps/core/db-tests` |

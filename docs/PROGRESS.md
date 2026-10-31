@@ -18,10 +18,35 @@ Done in session 29: front desk, typed intake, read-back and golden-hour checklis
 Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)).
 Done in session 31: speech input at the front desk; module 1 is finished.
 Done in session 32 (31 Oct, 02:05 IST run): upgrade test, web-to-core route contract test, a date-dependent test fixed, more tests for old code. The rest of the MH pack waits for answers (questions 1 and 2 below).
+Done in session 33 (31 Oct, Saturday 21:05 IST run): hard-coded role names replaced by permissions from the packs (web and gateway); bug fixed: the admin screen made every new state admin an all-state admin.
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 31 Oct 2026, session 33 (scheduled weekend run, Saturday 21:05 IST, Sumit away)
+Started from `setup/seed` at 9523355 (nothing newer). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Built Next item 2 (item 1, the MH pack, still waits for your answer to question 1 of session 32).
+
+Done
+- **Bug found and fixed, regression tests first (98ec099)**: the admin screen dropped the police station chosen for a **state admin** (it sent `stationId: null` for that role), so a state admin created or promoted from the screen had no station, and the core treats an admin without a station as the **platform admin of every state**. The screen now always sends the chosen station. The core also refuses any account of a role holding `admin.manage` without a station (create and change), so no second all-state admin can be made; only the first account from `BOOTSTRAP_ADMIN_*` has none. The screen now takes role names and "needs a station" from `GET /api/roles` (packs), so a role a state adds can be given. Tests: `AdminPage.test.tsx` (+2), `AdminApiTest` (+1).
+- **No role names in code (c49c4e1)**: `POST /api/login` and `GET /api/me` now carry the role's `permissions` and `case_scope` from `roles.json` (a role no pack declares any more gives none). Web: Admin and AI settings menu by `admin.manage`; the IO assignment form by case scope station/district; "I am the investigating officer" by `case.lead` (ticked for an officer of their own cases, offered unticked to an SHO, who could not tick it before). AI gateway: only `admin.manage` changes AI settings; an answer without a permission list counts as none. New repo rule `tests/repo_rules/test_no_role_names.py`: a line of app code naming a role together with a role code from the packs fails. Tests: `ImportApiTest` (+1), `AuthApiTest`, web `App`/`Forms`/`IoAssignment` (+3), gateway (+1).
+- Saturday audit: core suite also run in reverse class order, 185 tests, no failure (no order dependence). Tried the new admin refusals and `/api/me` for a role left in the database without a pack by API tests.
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.1% lines / 92.6% branches, web 99.5% statements / 89.3% branches / 95.1% functions, gateway 96%. No gate raised (no rise of 2 points).
+
+Deliberately skipped / not checked
+- An officer still signed in from before this change has no `permissions` in their stored session, so the Admin link is hidden until they sign in again (the server was never affected). Not worth code for a demo.
+- No new browser test (no new screen); the admin screen's station fix is covered by web and API tests only.
+- Still open from the audit list: `GET /api/stations` lists every state's station names to any signed-in user; the AI settings are one set for the whole installation (fine with one installation per state).
+
+Next
+1. Rest of the MH pack, once question 1 of session 32 is answered.
+2. Screens in the 10 languages, then the legal glossary; Marathi labels come with it.
+3. Contract test for field names; API tests on an upgraded dump; accessibility checks (axe).
+4. End-to-end demo case and demo script (with demo stations in MH).
+
+Questions for Sumit
+1. A new state admin must now always be placed at a police station of their state; only the first account (set at installation) works across all states. Is that right, or do you want a way to make a second all-state admin?
+2. Question 1 of session 32 (who can give the Maharashtra roles, MH-specific offences and Marathi wording) is still open and blocks the MH pack.
 
 ## 31 Oct 2026, session 32 (scheduled nightly run, 02:05 IST, Sumit away)
 Tonight in short: this was the only session of the night (the branch had nothing newer than session 31, c59eefa). Baseline was red on one test, fixed first. No new feature: the "rest of the MH pack" needs content only a Maharashtra reviewer can give (see questions), so the time went into the next kinds of test from docs/TESTING.md and into older, lowest-covered code. Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser (all 8). Coverage: core 98.1% lines / 92.6% branches, web 99.5% statements / 88.4% branches / 95% functions, gateway 96%.
