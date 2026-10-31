@@ -22,10 +22,36 @@ Done in session 33 (31 Oct, Saturday run at about 14:20 IST): hard-coded role na
 Done in session 34 (31 Oct, on-demand run from 14:34 IST): screen language, part 1 (header, menu, sign-in, password in English + 10 draft translations, kept per officer).
 Done in session 35 (31 Oct, scheduled weekend run from about 16:30 IST): screen language, part 2 (FIR list, FIR screen, front desk and complaint screens, Save button of every form).
 Done in session 36 (31 Oct, on-demand run from 16:50 IST): screen language, part 3 (readiness check, IO assignment, BSA 63(4) certificates).
+Done in session 37 (31 Oct, scheduled weekend run from about 18:00 IST): screen language, part 4 (arrests, chargesheets, closure report); contract test for request field names.
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 31 Oct 2026, session 37 (scheduled weekend run, Saturday, started about 18:00 IST, Sumit away)
+Started from `setup/seed` at a06d3b1 (session 36, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 1 (MH pack) still waits for your answer, so I built item 2 (screen language part 4, the legal parts first), then used the remaining time on item 3 (the next test from "Not covered yet").
+
+Done
+- **Screen language part 4 (3161989)**: arrests, chargesheets and the closure report in English and the 10 languages (100 texts each): arrest lines, punishment classes and their 60/90 days, release kinds, the remand, release and three correction forms with their refusals, the punishment hint and its warning, the custody-limit lines (released, chargesheet filed, after the last day, earlier custody days counted), the chargesheet list and forms, the closure report, its five grounds and the Magistrate's decision. Codes the screen does not know (a new punishment class or ground from the server) still show as the code. Names, places, courts, numbers and reasons stay as written.
+- Tests: `Arrests.test.tsx` (+2: Marathi list with every kind of line and history, options, refusal, hint; Hindi empty list and "accused first"), `Chargesheets.test.tsx` (+2: Hindi replaced/corrected entries, form and refusal; Tamil empty list), `ClosureReport.test.tsx` (+2: Marathi recorded report, decision and correction form; Hindi empty form and decision choices).
+- **Contract test for request field names (17e9df3)**: `tests/repo_rules/test_web_core_fields.py` reads the body of every `send(...)` in the web app (42 bodies) and the `@RequestBody` record of the core route; every key sent must be a record component and every `@NotNull`/`@NotBlank` component must be sent. Needed because Jackson silently drops a misspelled field (it arrives as null). No mismatch found today; checked that a renamed field (`decidedOn` to `decidedAt`) fails it.
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.1% lines / 92.6% branches, web 99.55% statements / 90.6% branches / 95.4% functions, gateway 96%. No gate raised (web branches rose 0.8 points).
+
+Deliberately skipped / not checked
+- The 100 new texts × 10 languages are mine and unchecked (as in sessions 34 to 36). Least sure: Odia, Punjabi and Malayalam legal terms ("default bail", "closure report", "remand" kept as loanwords). "Closure report" is "समाप्ती अहवाल" in Marathi and "क्लोज़र रिपोर्ट" in Hindi; the glossary should settle these.
+- The legal references (BNSS 187(3), 193(2), 35, 47, 48) stay in Latin letters in every language.
+- The field-name test covers only `send(...)` bodies to the core. Not covered: sign-in (`login` in `api.ts`), the bodies sent to the AI gateway (pydantic also ignores unknown fields) and the field names of answers.
+- Not looked at by eye in a browser; no new browser test (no new screen; the English texts the browser tests read are unchanged).
+
+Next
+1. Rest of the MH pack, once question 2 of session 33 is answered.
+2. Screen language part 5: notices and evidence on the case page, the person, evidence and FIR forms (`Forms.tsx`); then policies, load data, admin, AI settings, typing; complaint-kind and step labels per language in the packs; server messages; then the legal glossary.
+3. Contract test for answer field names and gateway bodies; API tests on an upgraded dump; accessibility checks (axe).
+4. End-to-end demo case and demo script (with demo stations in MH).
+
+Questions for Sumit
+1. Still open from session 35: who checks the translations (now about 230 texts per language), may `services/ai-gateway/.coverage` leave git, and should complaint-kind texts per language live in the pack files?
+2. For legal terms with no settled local word (remand, default bail, closure report), should the screen keep the English loanword in the local script, as it does now?
 
 ## 31 Oct 2026, session 36 (on-demand run started by Sumit from the build monitor, about 16:50 IST)
 Started from `setup/seed` at b8e7f82 (session 35, nothing newer, no new answers). PostgreSQL was already running. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 1 (MH pack) still waits for your answer, so I went on with item 2, taking the legal parts of the case page first.
