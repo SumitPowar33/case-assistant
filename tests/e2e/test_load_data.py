@@ -104,9 +104,9 @@ def test_load_firs_then_arrests_then_chargesheets(core, page):
     expect(main).not_to_contain_text("Fictional Telecom Ltd")
     deadlines = page.locator("section", has=page.get_by_role("heading", name="Deadlines", exact=True))
     expect(deadlines).not_to_contain_text("Loading")
-    expect(deadlines).to_contain_text("victim_progress_update: by 2024-06-03 (BNSS 193(3)(ii), 90 days)")
-    expect(deadlines).to_contain_text("notice_reply:Fictional Bank Ltd: by 2024-03-20 (CrPC_91)")
-    expect(deadlines).not_to_contain_text("chargesheet_custody")  # the chargesheet ended the custody clock
+    expect(deadlines).to_contain_text("Progress update to the victim: by 2024-06-03 (BNSS 193(3)(ii), 90 days)")
+    expect(deadlines).to_contain_text("Reply to the notice from Fictional Bank Ltd: by 2024-03-20 (CrPC_91)")
+    expect(deadlines).not_to_contain_text("Chargesheet for an accused in custody")  # the chargesheet ended the custody clock
 
     # undo the chargesheets: the custody clock of the accused runs again
     page.get_by_role("link", name="Load data").click()
@@ -119,7 +119,7 @@ def test_load_firs_then_arrests_then_chargesheets(core, page):
     page.get_by_role("link", name="1/2024", exact=True).click()
     expect(main).not_to_contain_text("Chargesheet naming A1")
     # A1 is still in custody (A2 was released on bail), so the 60-day clock from the first remand is back
-    expect(deadlines).to_contain_text("chargesheet_custody: by 2024-05-05 (BNSS 187(3), from first remand of an accused in custody)")
+    expect(deadlines).to_contain_text("Chargesheet for an accused in custody: by 2024-05-05 (BNSS 187(3), from first remand of an accused in custody)")
 
 
 def test_an_officer_without_the_right_to_load_data_is_refused(core, page):

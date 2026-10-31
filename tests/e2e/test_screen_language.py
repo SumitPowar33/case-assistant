@@ -21,6 +21,7 @@ def test_an_officer_chooses_marathi_and_the_next_sign_in_starts_in_marathi(core,
     page.get_by_label("Password").fill(accounts["io.lang"])
     page.get_by_role("button", name="Sign in").click()
     expect(nav.get_by_role("link", name="धोरणे")).to_be_visible()
+    expect(page.get_by_text("अजून एकही एफआयआर नाही.")).to_be_visible()   # the FIR list of a new station, in Marathi
     api = core[0]
     status, me = api.call("GET", "/api/me", token=api.token("io.lang", accounts["io.lang"]))
     assert status == 200 and me["ui_language"] == "mr"

@@ -2,6 +2,7 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import FirList from './FirList'
+import { ScreenLangContext } from './i18n'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -45,4 +46,15 @@ test('a long list is shown 50 at a time with Older and Newer', async () => {
   expect((screen.getByRole('button', { name: 'Older' }) as HTMLButtonElement).disabled).toBe(true)
   fireEvent.click(screen.getByRole('button', { name: 'Newer' }))
   expect(await screen.findByText('1/2026')).toBeTruthy()
+})
+
+test('in Hindi the list, its columns and the page buttons are in Hindi', async () => {
+  stub(60)
+  render(<ScreenLangContext.Provider value="hi"><FirList /></ScreenLangContext.Provider>)
+  expect(await screen.findByText('50/2026')).toBeTruthy()
+  expect(screen.getByRole('columnheader', { name: 'दर्ज' })).toBeTruthy()
+  expect(screen.getByText('ज़ीरो एफआईआर')).toBeTruthy()
+  expect(screen.getByRole('navigation', { name: 'पन्ने' })).toBeTruthy()
+  expect(screen.getByText('पन्ना 1')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'पुराने' })).toBeTruthy()
 })

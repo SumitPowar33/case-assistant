@@ -12,13 +12,23 @@ const CATALOGS: Record<string, Catalog> = Object.fromEntries(
 export const SCREEN_LANGS = Object.keys(CATALOGS).sort((a, b) => (a === 'en' ? -1 : b === 'en' ? 1 : 0))
 export const REVIEWED = new Set(['en'])
 
-export function translate(lang: string, key: Key): string {
-  return CATALOGS[lang]?.[key] || en[key]
+/** The text of a key in a language, with each {name} in it replaced by vars[name]. */
+export function translate(lang: string, key: Key, vars: Record<string, string | number> = {}): string {
+  return (CATALOGS[lang]?.[key] || en[key]).replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m))
+}
+
+/** The label of a code the server sends (a person's role, a deadline kind): the key prefix.code, or the code itself when no
+ *  catalog knows it, so a code added on the server still shows. */
+export function translateCode(lang: string, prefix: string, code: string): string {
+  const key = `${prefix}.${code}`
+  return key in en ? translate(lang, key as Key) : code
 }
 
 export const ScreenLangContext = createContext('en')
 /** The text of a key in the signed-in user's screen language. */
 export function useT() {
   const lang = useContext(ScreenLangContext)
-  return (key: Key) => translate(lang, key)
+  const t = (key: Key, vars?: Record<string, string | number>) => translate(lang, key, vars)
+  t.code = (prefix: string, code: string) => translateCode(lang, prefix, code)
+  return t
 }

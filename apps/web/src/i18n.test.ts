@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { REVIEWED, SCREEN_LANGS, translate } from './i18n'
+import { REVIEWED, SCREEN_LANGS, translate, translateCode } from './i18n'
 import nationalModule from '../../../packs/IN/module.json'
 
 const files = import.meta.glob<Record<string, string>>('./i18n/*.json', { eager: true, import: 'default' })
@@ -20,6 +20,8 @@ test.each(Object.keys(SCRIPT))('the %s catalog has every English key, nothing em
   expect(Object.keys(c).sort()).toEqual(Object.keys(en).sort())
   for (const [key, text] of Object.entries(c)) {
     expect(text.trim(), key).not.toBe('')
+    // a translation must keep every {name} of the English text, or the screen would lose that value (a date, a number)
+    expect((text.match(/\{\w+\}/g) ?? []).sort(), `${code} ${key} placeholders`).toEqual((en[key].match(/\{\w+\}/g) ?? []).sort())
     expect([...text].some((ch) => ch.codePointAt(0)! >= SCRIPT[code] && ch.codePointAt(0)! < SCRIPT[code] + 0x80), `${code} ${key}`).toBe(true)
   }
 })
@@ -27,4 +29,16 @@ test.each(Object.keys(SCRIPT))('the %s catalog has every English key, nothing em
 test('a missing key or an unknown language falls back to English', () => {
   expect(translate('xx', 'nav.firs')).toBe('FIRs')
   expect(translate('mr', 'nav.firs')).toBe('एफआयआर')
+})
+
+test('values fill the {name} places; a place without a value stays visible', () => {
+  expect(translate('en', 'fir.title', { no: 9, year: 2026 })).toBe('FIR 9/2026')
+  expect(translate('mr', 'fir.dueBy', { kind: 'K', date: '2026-11-30' })).toBe('K: 2026-11-30 पर्यंत')
+  expect(translate('en', 'fir.title', { no: 9 })).toBe('FIR 9/{year}')
+})
+
+test('a code from the server is shown by its label, or as it is when no catalog knows it', () => {
+  expect(translateCode('en', 'person', 'accused')).toBe('accused')
+  expect(translateCode('ta', 'person', 'witness')).toBe('சாட்சி')
+  expect(translateCode('mr', 'person', 'a_new_role')).toBe('a_new_role')
 })

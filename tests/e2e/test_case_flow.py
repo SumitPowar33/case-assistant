@@ -56,8 +56,8 @@ def test_an_io_registers_an_fir_adds_the_accused_records_the_arrest_and_sees_the
     expect(main).to_contain_text("A1: arrested")
     expect(main).to_contain_text(f"chargesheet within 60 days, last day {last_day}")
     deadlines = page.locator("section", has=page.get_by_role("heading", name="Deadlines", exact=True))
-    expect(deadlines).to_contain_text(f"chargesheet_custody: by {last_day} (BNSS 187(3)")
-    expect(deadlines).to_contain_text(f"victim_progress_update: by {registered + dt.timedelta(days=90)} (BNSS 193(3)(ii), 90 days)")
+    expect(deadlines).to_contain_text(f"Chargesheet for an accused in custody: by {last_day} (BNSS 187(3)")
+    expect(deadlines).to_contain_text(f"Progress update to the victim: by {registered + dt.timedelta(days=90)} (BNSS 193(3)(ii), 90 days)")
 
     # the FIR is on the list of the IO
     page.get_by_role("link", name="← All FIRs").click()
