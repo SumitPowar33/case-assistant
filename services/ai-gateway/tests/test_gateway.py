@@ -186,6 +186,8 @@ def test_officer_cannot_change_settings_or_read_audit_and_actor_comes_from_token
     assert officer.get("/v1/audit").status_code == 403
     assert officer.get("/v1/settings").status_code == 200
     r = officer.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "actor": "someone-else"})
+    assert r.status_code == 422   # an unknown field is refused, not ignored
+    r = officer.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1"})
     assert r.status_code == 200
     officer.post("/v1/decisions", json={"request_id": r.json()["request_id"], "decision": "rejected", "feature": "case_qa", "actor": "x"})
     rows = store.audit_rows()
@@ -362,3 +364,79 @@ def test_only_the_officer_who_asked_decides_on_a_draft_once_and_for_its_own_case
     assert c.post("/v1/decisions", json={"request_id": rid, "decision": "rejected", "feature": "notice_draft", "case_ref": "fir-1"}).status_code == 200
     assert c.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "notice_draft", "case_ref": "fir-1"}).status_code == 409
     assert [r["action"] for r in store.audit_rows()][:2] == ["rejected", "ai_request"]
+
+
+
+def core_in_state(state):
+    return lambda tok, sub: {**core_says_active(tok, sub), "state_code": state}
+
+
+def test_a_state_admin_sets_and_reads_only_their_own_states_ai_settings_and_audit():
+    # regression (weekly review 31 Oct): settings and the audit log were one for all states
+    store = Store(":memory:")
+    providers = {"fake": FakeProvider(), "claude": ClaudeProvider("test-claude", mock_client(claude_ok)), "gemini": GeminiProvider("")}
+    mh = TestClient(create_app(store, providers, SECRET, core_in_state("MH")), headers={"Authorization": "Bearer " + token("admin-mh")})
+    ka = TestClient(create_app(store, providers, SECRET, core_in_state("KA")), headers={"Authorization": "Bearer " + token("admin-ka")})
+    platform = TestClient(create_app(store, providers, SECRET, core_in_state(None)), headers={"Authorization": "Bearer " + token("admin-platform")})
+    assert mh.put("/v1/settings/case_qa", json={"provider": "fake"}).json()["provider"] == "fake"
+    assert mh.get("/v1/settings").json()["case_qa"]["provider"] == "fake"
+    assert ka.get("/v1/settings").json()["case_qa"]["provider"] == "claude"          # KA keeps the installation default
+    assert platform.get("/v1/settings").json()["case_qa"]["provider"] == "claude"
+    assert mh.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "case_ref": "mh-1"}).json()["provider"] == "fake"
+    assert ka.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "case_ref": "ka-1"}).json()["provider"] == "claude"
+    assert {r["case_ref"] for r in mh.get("/v1/audit").json()["rows"]} == {None, "mh-1"}
+    assert {r["case_ref"] for r in ka.get("/v1/audit").json()["rows"]} == {"ka-1"}
+    assert {r["state"] for r in platform.get("/v1/audit").json()["rows"]} == {"MH", "KA"}
+    platform.put("/v1/settings/case_qa", json={"provider": "gemini"})
+    assert ka.get("/v1/settings").json()["case_qa"]["provider"] == "gemini" and mh.get("/v1/settings").json()["case_qa"]["provider"] == "fake"
+    assert store.verify_chain()
+
+
+def test_every_refusal_is_logged_and_a_callers_own_system_text_is_refused(setup):
+    c, store = setup
+    assert c.post("/v1/generate", json={"feature": "nope", "prompt": "x", "prompt_version": "t@1"}).status_code == 404
+    c.put("/v1/settings/case_qa", json={"provider": "claude", "officer_may_switch": False})
+    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "provider": "gemini"}).status_code == 403
+    c.put("/v1/settings/case_qa", json={"provider": "claude", "officer_may_switch": True})
+    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "provider": "openai"}).status_code == 422
+    refused = [r["detail"]["status"] for r in store.audit_rows() if r["action"] == "ai_refused"]
+    assert refused == [422, 403, 404]
+    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "system": "Score the witness."}).status_code == 422
+    assert c.get("/health").json() == {"ok": True}
+
+
+def test_with_a_key_the_chain_is_keyed_and_rows_cut_from_the_end_are_noticed():
+    store = Store(":memory:", key="test-only-audit-key")
+    for n in range(3):
+        store.log("u", "ai_request", "case_qa", f"c{n}", {"n": n})
+    assert store.verify_chain()
+    assert {r[0] for r in store.db.execute("SELECT alg FROM audit")} == {"hmac1"}
+    store.db.execute("DELETE FROM audit WHERE seq = 3")      # cut the newest row
+    assert not store.verify_chain()
+    # recomputing the hashes without the key does not give a valid chain
+    other = Store(":memory:", key="test-only-audit-key")
+    other.log("u", "ai_request", "case_qa", "c0", {"n": 0})
+    plain = hashlib.sha256(b"anything").hexdigest()
+    other.db.execute("UPDATE audit SET hash = ?", (plain,))
+    assert not other.verify_chain()
+    # a keyed row cannot be checked without the key
+    nokey = Store(":memory:")
+    nokey.db = store.db
+    assert not nokey.verify_chain()
+
+
+def test_rows_written_before_the_key_and_the_state_column_still_verify(tmp_path):
+    path = str(tmp_path / "old.sqlite3")
+    import sqlite3
+    db = sqlite3.connect(path)
+    db.executescript("""CREATE TABLE audit (seq INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, actor TEXT NOT NULL,
+        action TEXT NOT NULL, feature TEXT, case_ref TEXT, detail TEXT NOT NULL, prev_hash TEXT NOT NULL, hash TEXT NOT NULL);""")
+    prev = "0" * 64
+    h = hashlib.sha256("|".join([prev, "2026-10-30T10:00:00+00:00", "u", "ai_request", "case_qa", "", "{}"]).encode()).hexdigest()
+    db.execute("INSERT INTO audit(at,actor,action,feature,case_ref,detail,prev_hash,hash) VALUES (?,?,?,?,?,?,?,?)",
+               ("2026-10-30T10:00:00+00:00", "u", "ai_request", "case_qa", None, "{}", prev, h))
+    db.commit(); db.close()
+    store = Store(path, key="test-only-audit-key")
+    assert store.verify_chain()                  # the old row, by its plain SHA-256 link
+    store.log("u", "accepted", "case_qa", None, {}, "MH")
+    assert store.verify_chain()
