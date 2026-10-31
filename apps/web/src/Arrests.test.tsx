@@ -224,7 +224,7 @@ test('in Marathi the arrests, their limits, corrections and the arrest form are 
   expect(memo.textContent).toContain('वेळेसाठी “अटकेची वेळ दुरुस्त करा” वापरा.')
   const form = screen.getByText('अटक नोंदवा (BNSS 35 मेमो)').closest('details')!
   expect((await within(form).findByRole('note')).textContent).toMatch(/कलमांवरून \(BNS 103\(1\)\) तक्ता मृत्युदंड \(90 दिवस\) सुचवतो/)
-  expect(within(form).getByRole('alert').textContent).toContain('तुम्ही 10 वर्षांपेक्षा कमी कारावास (60 दिवस) निवडले')
+  expect(within(form).getByRole('alert').textContent).toContain('तुम्ही 10 वर्षांपेक्षा कमी कारावास ("10 वर्षांपर्यंत" सुद्धा) (60 दिवस) निवडले')
   type('अटक (तारीख आणि वेळ, IST)', '2026-10-30T10:00', within(form))
   type('अटकेचे ठिकाण', 'Testpur', within(form))
   type(/कळवलेला नातेवाईक/, 'Fictional Relative', within(form))
