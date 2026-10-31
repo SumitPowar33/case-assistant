@@ -27,17 +27,44 @@ Done in session 38 (31 Oct, on-demand run from 18:20 IST): screen language, part
 Done in session 39 (31 Oct, scheduled weekend run from about 20:00 IST): screen language, part 6 (policies, load data, admin, AI settings, typing); contract test for AI gateway bodies; API test on an upgraded database.
 Done in session 40 (31 Oct, on-demand run from 20:50 IST): server messages in the screen language (case work, front desk, policies, readiness, records, sign-in).
 Done in session 41 (31 Oct, Saturday 21:05 weekly review): weekly review and test audit (7 fixes, see the entry), BNSS 193(3)(ii) progress update recorded (V31).
-1. From the weekly review of 31 Oct (legal logic and access first; each needs your answer where marked):
-   a. Production before the Magistrate within 24 hours (BNSS 58) as a deadline from the arrest time until a remand or release is recorded, and a warning when the first remand is more than a day after the arrest (the import already warns).
-   b. Preliminary enquiry (BNSS 173(3)) as an open state that ends in an FIR or a closure, and its 14-day limit on the deadline list (question 2).
-   c. The AI gateway: settings and the audit log per state (a state admin now changes the provider for every state and reads every state's AI audit), refusals of the 403/404/422 kinds logged, the caller's own `system` text removed, `/health` without the chain check, the chain anchored outside the SQLite file (HMAC + head hash in the core database), one writer across processes.
-   d. History of a playbook choice and of complaint corrections before signing (both overwrite today); append-only guards on `notice_reply`, `fir_section`, `case_playbook`.
-   e. `SecurityMatrixTest`: walk every write route as an outsider with real child records and valid bodies (today only GETs, and child ids are random).
-   f. Sign-in lock-out race (parallel wrong passwords): an advisory lock per username.
+Done in session 42 (31 Oct, Sumit asked "research and fix it all yourself"): decisions on the questions of session 41 and the review items, below.
+1. Still open from the weekly review: the AI chain head is kept in the same file (a copy of an older file could be put back whole; anchor it in the core database later); after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42); a state pack could still give a national section a lighter punishment class.
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 31 Oct 2026, session 42 (Sumit: "I don't know about that, can you deep research and fix it all yourself?")
+Sumit handed the open questions to me. I read the law and the court orders on each and decided, in the strict direction where the law is silent, then built the fixes. Every decision below can be overruled.
+
+Decisions (with the source)
+1. **Preliminary enquiry, BNSS 173(3)**: the text allows it only for offences punishable with 3 years or more but less than 7, with the prior permission of an officer not below DSP, "within a period of fourteen days". It is a step, not an outcome: it now ends in an FIR from the same signed text, or in a closing outcome with a reason. The DSP's permission (rank and name) is recorded. The statute does not say from when the 14 days run (no court has settled it as far as I could find); I count from the **receipt of the information**, the earliest and so the strictest reading. Overdue enquiries are marked on the complaint and in the front-desk list. Old enquiries move to the new columns (V32, permission "not recorded").
+2. **Clearing a recorded first remand by a correction: refused.** A remand can be corrected to another date, never removed (it would silently drop the BNSS 187(3) limit). A remand that never happened can be answered by recording the release.
+3. **Masking**: the age of a protected victim stays visible, because only the case team sees the people list and the age decides the section (BNS 65, POCSO); BNS 72 forbids making the identity known to others, which the masking already does. **An open sexual-offence complaint** is now read only by the officer who wrote it down, the station's supervisors (roles with station or district case scope) and, once it is an FIR, the case team (Nipun Saxena v Union of India, SC 2018: the victim's name stays out of anything others can see). The FIR made from it is always identity-protected.
+4. **BNSS 193(3)(ii)**: the text asks for one progress update within 90 days; the Punjab and Haryana High Court (Nov 2024) held it mandatory and the Bombay High Court took the Maharashtra circular of 23 Aug 2024 on record, neither set a frequency. So one recorded update ends the deadline; no schedule is added. A state that wants monthly updates can get a policy later.
+5. **BNSS 58**: no police officer may hold a person arrested without warrant for more than 24 hours, journey time to the Magistrate excluded, without an order under BNSS 187. Now a deadline from the (corrected) time of arrest until a remand or release, and the arrest shows "produce by"; a first remand after the day the 24 hours end is flagged for checking (journey time cannot be known, so it is a flag, not a refusal). Imported arrests are left out.
+6. **Further investigation after a closure report**: the BNSS proviso to 193(9) sets 90 days only for further investigation *during the trial*, with the court's permission; there is no limit for further investigation ordered on a closure report, so none is added.
+7. Earlier questions: `services/ai-gateway/.coverage` leaves git (in `.gitignore`); `axe-core` added as a test-only dependency (pinned 4.10.2, an accessibility check of 5 main screens: no faults found); complaint-kind texts per language and the MH content still wait (they need a reviewer of legal wording, which research cannot replace); the translations still need a human reviewer.
+
+Built (3475fed, 77726a8, 178d1d6, 590052c)
+- V32: preliminary enquiry columns, closing outcomes after it, earlier wordings of a complaint kept (`complaint_version`, shown on the complaint page). V33: BNSS 58 deadline. V34: notice replies and FIR sections kept as written (they go only with their notice or FIR, as an import undo does), playbook choices kept in `case_playbook_choice`.
+- Front desk: enquiry form with "Permitted by", enquiry state and overdue mark, earlier wordings; arrests: produce-by line and the late-remand flag; 9 new texts × 11 languages.
+- Sign-in: attempts on one username wait for each other (advisory lock); 12 guesses sent at once used to all get a try, now 5 do. The first admin's role comes from the packs (no role name in code).
+- AI gateway: settings and audit per state (`/api/me` now gives `state_code`), every refusal logged (403, 404, 422, cloud), unknown fields such as a caller's `system` text refused (422), `/health` says only `ok`, the chain is keyed with `AI_AUDIT_KEY` when set (old rows still verify), a chain head shows rows cut from the end, writes take SQLite's write lock.
+- `SecurityMatrixTest`: every write route under `/api/firs/{id}` and `/api/complaints/{id}` sent by an outsider: never a success, nothing written.
+- Tests: database (V32 data move and rules, V33 deadline, V34 guards), API (enquiry, versions, desk masking, production, remand clearing, parallel sign-in, state in `/api/me`), gateway (+4), web (enquiry, versions, production, axe).
+
+Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.1% lines / 92.6% branches, web 99.8% statements / 93.5% branches / 97.1% functions, gateway 95%.
+
+Deliberately skipped / not checked
+- The 24-hour count does not know the journey time; the officer judges it.
+- The repo rule on role names looks only at lines that also say "role"; the bootstrap admin slipped past it. Not widened (it would flag ordinary words such as 'io').
+- The new texts × 10 languages are mine and unchecked, as before.
+- Set `AI_AUDIT_KEY` (32+ random characters) on any real installation; without it the chain is plain SHA-256 as before.
+
+Questions for Sumit
+1. Do you want the 14 days of a preliminary enquiry counted from the DSP's permission instead of from receipt? (Receipt is stricter; I chose it.)
+2. Still open: a human reviewer for the translations and the legal wording of the MH pack and complaint kinds.
 
 ## 31 Oct 2026, Weekly review (Saturday 21:05 session, session 41, Sumit away)
 Started from `setup/seed` at adfe973 (session 40, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` (superuser) and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS.
