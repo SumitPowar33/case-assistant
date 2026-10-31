@@ -18,7 +18,7 @@ const lists: Record<string, unknown> = {
   '/stations': [{ id: 's1', state_code: 'IN', district: 'Demo District', name: 'Demo Cyber PS', cctns_code: null }],
   '/state-packs': [{ code: 'IN', name: 'National', status: 'draft' }],
   '/admin-actions': [{ action: 'user_disabled', reason: 'Fictional transfer out', at: '2026-10-25T10:00:00Z', actor_name: 'State Admin', username: 'hc.away', user_name: 'HC Away', station_name: null }],
-  '/roles': [{ code: 'io', label: 'Investigating officer', station_required: true, permissions: ['case.write'] }, { code: 'state_admin', label: 'State admin', station_required: false, permissions: [] }],
+  '/roles': [{ code: 'io', label: 'Investigating officer', station_required: true, permissions: ['case.write'] }, { code: 'sho', label: 'Station House Officer', station_required: true, permissions: [] }, { code: 'state_admin', label: 'State admin', station_required: false, permissions: [] }],
   '/sign-ins': [{ username_tried: 'si.fictional', outcome: 'wrong_password', client_ip: '127.0.0.1', at: '2026-10-25T15:45:00Z' }],
 }
 
@@ -102,4 +102,47 @@ test('the role list from the packs is shown read-only', async () => {
   const row = (await screen.findByText('Investigating officer', { selector: 'th' })).closest('tr')!
   expect(within(row).getByText('case.write')).toBeTruthy()
   expect(within(screen.getByText('State admin', { selector: 'th' }).closest('tr')!).getByText('—')).toBeTruthy()
+})
+
+// Regression (31 Oct 2026): the form dropped the chosen station for a state admin, so a new or promoted state admin
+// had no station and the server took them for the platform admin of every state.
+test('a state admin keeps the chosen station (their state), when created and when promoted', async () => {
+  const writes = stub({ status: 201, body: { id: 'u9', changed: 'role io to state_admin', firsAsIo: 0 } })
+  render(<AdminPage />)
+  const form = (await screen.findByText('Add an account')).closest('details')!
+  type('Full name', 'Admin Demo', within(form))
+  type('Rank', 'SP', within(form))
+  fireEvent.change(within(form).getByLabelText('Role'), { target: { value: 'state_admin' } })
+  type(/^Police station/, 's1', within(form))
+  type(/^Username/, 'admin.demo', within(form))
+  type(/^First password \(/, 'fictional-pass-123', within(form))
+  type('First password again', 'fictional-pass-123', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Create account' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0].body).toMatchObject({ role: 'state_admin', stationId: 's1' })
+  const row = screen.getByText('SI Fictional (SI)').closest('tr')!
+  fireEvent.change(within(row).getByLabelText('New role for SI Fictional'), { target: { value: 'state_admin' } })
+  type(/^Reason \(for example/, 'Fictional posting order 7', within(row))
+  fireEvent.click(within(row).getByRole('button', { name: 'Change SI Fictional' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(2))
+  expect(writes[1].body).toMatchObject({ role: 'state_admin', stationId: 's1' })
+})
+
+test('role names and the station rule come from the packs, so a role a state adds can be given', async () => {
+  lists['/roles'] = [...(lists['/roles'] as object[]), { code: 'duty_officer', label: 'Station duty officer', station_required: true, permissions: [] }]
+  const writes = stub({ status: 201, body: { id: 'u9' } })
+  render(<AdminPage />)
+  const form = (await screen.findByText('Add an account')).closest('details')!
+  await within(form).findByRole('option', { name: 'Station duty officer' })
+  expect(within(screen.getByText('SI Fictional (SI)').closest('tr')!).getByText('Investigating officer', { selector: 'td' })).toBeTruthy()
+  type('Full name', 'HC Duty', within(form))
+  type('Rank', 'HC', within(form))
+  fireEvent.change(within(form).getByLabelText('Role'), { target: { value: 'duty_officer' } })
+  type(/^Username/, 'hc.duty', within(form))
+  type(/^First password \(/, 'fictional-pass-123', within(form))
+  type('First password again', 'fictional-pass-123', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Create account' }))
+  expect((await screen.findByRole('alert')).textContent).toBe('Choose the police station for this role.')
+  expect(writes).toHaveLength(0)
+  ;(lists['/roles'] as object[]).pop()
 })

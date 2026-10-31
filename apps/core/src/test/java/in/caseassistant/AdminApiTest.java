@@ -114,6 +114,32 @@ class AdminApiTest {
         assertThat(users).doesNotContain("password_hash").doesNotContain("bcrypt");
     }
 
+    /**
+     * An admin's station decides their state. A new or promoted admin without one would manage every state, so it is
+     * refused; only the first account (from BOOTSTRAP_ADMIN_*) has no station.
+     */
+    @Test
+    void anAdminAlwaysNeedsAStationSoNoSecondAllStateAdminCanBeMade() throws Exception {
+        String admin2 = "{\"username\":\"admin.two\",\"password\":\"fictional-admin-pass-2\",\"fullName\":\"Admin Two\",\"rank\":\"Admin\",\"role\":\"state_admin\"%s}";
+        for (String noStation : new String[] {"", ",\"stationId\":null"})
+            post(admin, "/api/users", admin2.formatted(noStation)).andExpect(status().isBadRequest())
+                    .andExpect(status().reason(Matchers.containsString("would manage every state")));
+        // a prosecutor needs no station and holds no admin permission: still allowed without one
+        post(admin, "/api/users", """
+                {"username":"pp.one","password":"%s","fullName":"PP One","rank":"APP","role":"prosecutor"}""".formatted(IO_PW))
+                .andExpect(status().isCreated());
+        UUID io = createIo();
+        var promote = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/users/" + io).header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON);
+        mvc.perform(promote.content("{\"role\":\"state_admin\",\"rank\":\"Admin\",\"stationId\":null,\"reason\":\"Fictional posting order 7\"}"))
+                .andExpect(status().isBadRequest());
+        assertThat(db.sql("select role || ' ' || (station_id is not null) from app_user where id = ?").param(io).query(String.class).single())
+                .isEqualTo("io true");
+        mvc.perform(promote.content("{\"role\":\"state_admin\",\"rank\":\"Admin\",\"stationId\":\"%s\",\"reason\":\"Fictional posting order 7\"}"
+                .formatted(station))).andExpect(status().isOk());
+        assertThat(db.sql("select count(*) from app_user where station_id is null and role = 'state_admin'").query(Long.class).single()).isEqualTo(1);
+    }
+
     @Test
     void disablingEndsTokensForGoodAndEnablingNeedsAFreshSignIn() throws Exception {
         UUID io = createIo();

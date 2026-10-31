@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { currentSession, get, send } from './api'
 import { fmt, text } from './formats'
-import { useLoad } from './useLoad'
 
 type Account = {
   id: string; username: string | null; full_name: string; rank: string; role: string; station_id: string | null
@@ -12,12 +11,8 @@ type StatePack = { code: string; name: string; status: string }
 type SignIn = { username_tried: string; outcome: string; client_ip: string | null; at: string }
 type AdminAction = { action: string; reason: string | null; detail: string | null; at: string; actor_name: string; username: string | null; user_name: string | null; station_name: string | null }
 
-const ROLES: Record<string, string> = {
-  io: 'Investigating officer', front_desk: 'Front desk', sho: 'SHO', sp: 'SP', malkhana: 'Malkhana (evidence store)',
-  prosecutor: 'Prosecutor', state_admin: 'State admin',
-}
-/** Roles whose case access follows their police station (same list as the core app). */
-const STATION_ROLES = ['io', 'front_desk', 'sho', 'sp', 'malkhana']
+/** A role from the packs (the roles.json of each pack, via GET /api/roles): no role name is written into this screen. */
+type Role = { code: string; label: string; station_required: boolean; permissions: string[] }
 const OUTCOMES: Record<string, string> = {
   ok: 'signed in', wrong_password: 'wrong password', locked: 'refused: locked', password_changed: 'changed password',
   wrong_current_password: 'wrong current password', unlocked_by_admin: 'unlocked by the state admin',
@@ -32,6 +27,7 @@ export default function AdminPage() {
   const [accounts, setAccounts] = useState<Account[]>()
   const [stations, setStations] = useState<Station[]>([])
   const [packs, setPacks] = useState<StatePack[]>([])
+  const [roles, setRoles] = useState<Role[]>([])
   const [actions, setActions] = useState<AdminAction[]>([])
   const [error, setError] = useState('')
   const [done, setDone] = useState('')
@@ -39,8 +35,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     let live = true
-    Promise.all([get<Account[]>('/users'), get<Station[]>('/stations'), get<StatePack[]>('/state-packs'), get<AdminAction[]>('/admin-actions')])
-      .then(([a, s, p, l]) => { if (live) { setAccounts(a); setStations(s); setPacks(p); setActions(l) } }, (e: Error) => live && setError(e.message))
+    Promise.all([get<Account[]>('/users'), get<Station[]>('/stations'), get<StatePack[]>('/state-packs'), get<AdminAction[]>('/admin-actions'), get<Role[]>('/roles')])
+      .then(([a, s, p, l, r]) => { if (live) { setAccounts(a); setStations(s); setPacks(p); setActions(l); setRoles(r) } }, (e: Error) => live && setError(e.message))
     return () => { live = false }
   }, [version])
 
@@ -54,24 +50,29 @@ export default function AdminPage() {
     } catch (err) { setError((err as Error).message) }
   }
 
+  const label = (code: string) => roles.find((r) => r.code === code)?.label ?? code
+  /** The chosen station is always sent (a state admin's station decides their state); the server checks it too. */
+  function station(f: FormData, role: string) {
+    const stationId = text(f, 'station')
+    if (roles.find((r) => r.code === role)?.station_required && !stationId) throw new Error('Choose the police station for this role.')
+    return stationId
+  }
+  const roleOptions = roles.map((r) => <option key={r.code} value={r.code}>{r.label}</option>)
+
   function createUser(f: FormData) {
     if (f.get('password') !== f.get('repeat')) throw new Error('The two passwords are not the same.')
     const role = String(f.get('role'))
-    const stationId = text(f, 'station')
-    if (STATION_ROLES.includes(role) && !stationId) throw new Error('Choose the police station for this role.')
     return send('/users', 'POST', {
       username: String(f.get('username')).trim().toLowerCase(), password: f.get('password'), fullName: text(f, 'fullName'),
-      rank: text(f, 'rank'), role, stationId: STATION_ROLES.includes(role) || role === 'prosecutor' ? stationId : null,
+      rank: text(f, 'rank'), role, stationId: station(f, role),
     })
   }
 
   /** A transfer or promotion: new role, rank or station, with a reason. The officer must sign in again. */
   async function changeAccount(a: Account, f: FormData) {
     const role = String(f.get('role'))
-    const stationId = text(f, 'station')
-    if (STATION_ROLES.includes(role) && !stationId) throw new Error('Choose the police station for this role.')
     const r = await send<{ changed: string; firsAsIo: number }>(`/users/${a.id}`, 'PUT', {
-      role, rank: text(f, 'rank'), stationId: STATION_ROLES.includes(role) || role === 'prosecutor' ? stationId : null, reason: f.get('reason'),
+      role, rank: text(f, 'rank'), stationId: station(f, role), reason: f.get('reason'),
     })
     return `${a.full_name}: ${r!.changed}. They must sign in again.`
       + (r!.firsAsIo ? ` They are still the IO of ${r!.firsAsIo} FIR${r!.firsAsIo === 1 ? '' : 's'}; give those cases to another officer.` : '')
@@ -89,7 +90,7 @@ export default function AdminPage() {
         <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Station</th><th>Status</th><th>Change</th></tr></thead>
         <tbody>{accounts.map((a) => (
           <tr key={a.id}>
-            <td>{a.full_name} ({a.rank})</td><td>{a.username ?? <em>cannot sign in</em>}</td><td>{ROLES[a.role] ?? a.role}</td>
+            <td>{a.full_name} ({a.rank})</td><td>{a.username ?? <em>cannot sign in</em>}</td><td>{label(a.role)}</td>
             <td>{a.station_name ? `${a.station_name}, ${a.district}` : '—'}</td>
             <td>{!a.active ? 'Disabled' : a.locked_until ? `Locked until ${fmt(a.locked_until)}` : 'Active'}</td>
             <td>
@@ -100,7 +101,7 @@ export default function AdminPage() {
                 <details className="inline">
                   <summary>Change<span className="visually-hidden"> {a.full_name}</span></summary>
                   <form className="record-form" onSubmit={(e) => act(e, (f) => changeAccount(a, f))}>
-                    <label>New role for {a.full_name} <select name="role" defaultValue={a.role}>{Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+                    <label>New role for {a.full_name} <select name="role" defaultValue={a.role}>{roleOptions}</select></label>
                     <label>Rank <input name="rank" required maxLength={60} defaultValue={a.rank} /></label>
                     <label>Police station <select name="station" defaultValue={a.station_id ?? ''}><option value="">— none —</option>
                       {stations.map((s) => <option key={s.id} value={s.id}>{s.name}, {s.district} ({s.state_code})</option>)}</select></label>
@@ -119,8 +120,8 @@ export default function AdminPage() {
         <form className="record-form" onSubmit={(e) => act(e, createUser, 'Account created. Give the officer the password in person; they should change it at first sign-in.')}>
           <label>Full name <input name="fullName" required maxLength={200} /></label>
           <label>Rank <input name="rank" required maxLength={60} placeholder="SI, PSI, Inspector…" /></label>
-          <label>Role <select name="role" required defaultValue="io">{Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-          <label>Police station (needed for station roles; an SP sees the station's district)
+          <label>Role <select name="role" required>{roleOptions}</select></label>
+          <label>Police station (needed for station roles; an SP sees the station's district; a state admin works in the station's state)
             <select name="station" defaultValue=""><option value="">— none —</option>
               {stations.map((s) => <option key={s.id} value={s.id}>{s.name}, {s.district} ({s.state_code})</option>)}</select>
           </label>
@@ -150,7 +151,7 @@ export default function AdminPage() {
           </form>)}
       </details>
 
-      <RoleList />
+      <RoleList roles={roles} />
 
       <SignInLog version={version} />
 
@@ -205,16 +206,14 @@ function SignInLog({ version }: { version: number }) {
 }
 
 /** The roles from the packs and what each may do (read only; packs change roles, not this screen). */
-function RoleList() {
-  const { data: roles, error } = useLoad<{ code: string; label: string; station_required: boolean; permissions: string[] }[]>('/roles')
+function RoleList({ roles }: { roles: Role[] }) {
   return (
     <>
       <h2>Roles and permissions</h2>
-      {error ? <p role="alert">{error}</p> : !roles ? <p>Loading…</p> : (
-        <table>
+      <table>
           <thead><tr><th scope="col">Role</th><th scope="col">Needs a station</th><th scope="col">Permissions</th></tr></thead>
           <tbody>{roles.map((r) => <tr key={r.code}><th scope="row">{r.label}</th><td>{r.station_required ? 'Yes' : 'No'}</td><td>{r.permissions.join(', ') || '—'}</td></tr>)}</tbody>
-        </table>)}
+      </table>
     </>
   )
 }

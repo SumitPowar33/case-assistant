@@ -72,6 +72,19 @@ class AdminController {
                 .param(me).query(String.class).optional().orElse(null);
     }
 
+    /**
+     * A station role needs its station. So does every admin role: an admin's station decides the state they work in,
+     * and an admin without one would work in every state. Only the first account (BOOTSTRAP_ADMIN_*) is that admin.
+     */
+    private void requireStation(String role, UUID stationId) {
+        if (stationId != null) return;
+        if (roles.stationRequired(role))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose the police station for this role.");
+        if (roles.has(role, "admin.manage"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Choose a police station of the admin's state; an admin without a station would manage every state.");
+    }
+
     private void requireKnownRole(String role) {
         if (!roles.exists(role)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such role.");
     }
@@ -130,8 +143,7 @@ class AdminController {
     ResponseEntity<Map<String, UUID>> createUser(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody NewUser u) {
         UUID me = requireAdmin(jwt);
         requireKnownRole(u.role);
-        if (roles.stationRequired(u.role) && u.stationId == null)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose the police station for this role.");
+        requireStation(u.role, u.stationId);
         requireStationInScope(scope(me), u.stationId);
         UUID id = db.sql("""
                 insert into app_user (username, password_hash, full_name, rank, role, station_id)
@@ -187,8 +199,7 @@ class AdminController {
         requireAccountInScope(scope, id);
         requireKnownRole(c.role);
         UUID station = c.stationId;
-        if (roles.stationRequired(c.role) && station == null)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose the police station for this role.");
+        requireStation(c.role, station);
         requireStationInScope(scope, station);
         var old = db.sql("""
                 select u.role, u.rank, u.station_id, s.name as station_name from app_user u
