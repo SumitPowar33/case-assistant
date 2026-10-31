@@ -20,10 +20,37 @@ Done in session 31: speech input at the front desk; module 1 is finished.
 Done in session 32 (31 Oct, 02:05 IST run): upgrade test, web-to-core route contract test, a date-dependent test fixed, more tests for old code. The rest of the MH pack waits for answers (questions 1 and 2 below).
 Done in session 33 (31 Oct, Saturday run at about 14:20 IST): hard-coded role names replaced by permissions from the packs (web and gateway); bug fixed: the admin screen made every new state admin an all-state admin.
 Done in session 34 (31 Oct, on-demand run from 14:34 IST): screen language, part 1 (header, menu, sign-in, password in English + 10 draft translations, kept per officer).
+Done in session 35 (31 Oct, scheduled weekend run from about 16:30 IST): screen language, part 2 (FIR list, FIR screen, front desk and complaint screens, Save button of every form).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 31 Oct 2026, session 35 (scheduled weekend run, Saturday, started about 16:30 IST, Sumit away)
+Started from `setup/seed` at f953d64 (nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Next item 1 (MH pack) still waits for your answer, so I built item 2, screen language part 2. The Saturday test audit was already done in session 33 today.
+
+Done
+- **FIR list and FIR screen (557845c)**: list, columns, page buttons, the case page headings (People, Deadlines, Evidence), "identity protected", the BNS 72 notice when the complaint text is withheld, court-ready state, in English and the 10 languages. `translate` now fills `{name}` places (dates, numbers); `t.code(prefix, code)` shows a code from the server by its label (person role, evidence kind, deadline kind) and shows the bare code when no catalog knows it, so a code added on the server still appears.
+- **Deadline kinds by label**: the case page used to show raw codes (`chargesheet_custody`, `victim_progress_update`, `notice_reply:<addressee>`); it now shows "Chargesheet for an accused in custody", "Progress update to the victim", "Reply to the notice from <addressee>" (and in each language). The legal basis in brackets (BNSS 187(3) ...) still comes from the database in English.
+- **Front desk and complaint screens (5140d48)**: intake form, open complaints, how-given and outcome lists, read-back and signature lines, the informant's copy (BNSS 173(2)), first steps, outcome, the sign/step/close forms; the Save/Saving button of every form. The read-back language is named in its own script on a non-English screen (मराठी). The signed words of the informant are never translated.
+- Tests: `i18n.test.ts` (+3: every translation keeps the `{name}` places of the English text, filling, codes and fallback), `FirList.test.tsx` (+1 Hindi), `FirDetail.test.tsx` (+1 Marathi; notice-reply and unknown deadline kinds), `FrontDesk.test.tsx` (+2: Marathi desk and complaint with one overdue step, copy and enquiry limit; Hindi Save button, written information not read over). Browser tests updated for the deadline labels; `test_screen_language.py` now also checks the empty FIR list in Marathi.
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.1% lines / 92.6% branches, web 99.5% statements / 89.5% branches / 95.3% functions, gateway 96%. No gate raised (no rise of 2 points since the last raise).
+
+Deliberately skipped / not checked
+- Still English: complaint kinds and golden-hour step texts (they come from `packs/*/complaint-kinds.json`, so a translation belongs in the pack, one label per language), the legal basis of each deadline, `action_taken`, the FIR registration and other forms in `Forms.tsx` apart from Save, the arrest, chargesheet, closure, notice, evidence and readiness parts of the case page, and every server error message.
+- The new translations (about 100 texts × 10 languages) are mine and unchecked, as in session 34. Legal terms I was least sure of: "non-cognizable" (Tamil and Malayalam use the English loanword), "preliminary enquiry", "chargesheet". Not looked at by eye in a browser.
+- `services/ai-gateway/.coverage` is tracked in git and changes on every test run; I restored it each time rather than commit it. It should probably be removed from git and ignored (question 2).
+
+Next
+1. Rest of the MH pack, once question 2 of session 33 is answered.
+2. Screen language, part 3: the other parts of the case page (arrests, chargesheets, closure, notices, evidence, readiness), the FIR and other forms, then the remaining screens (policies, load data, admin, AI settings, typing); complaint-kind and step labels per language in the packs; server messages; then the legal glossary.
+3. Contract test for field names; API tests on an upgraded dump; accessibility checks (axe).
+4. End-to-end demo case and demo script (with demo stations in MH).
+
+Questions for Sumit
+1. Question 1 of session 34 is still open: who can check the translations? There are now about 130 texts per language.
+2. May I remove `services/ai-gateway/.coverage` (a test-run file) from git and add it to `.gitignore`?
+3. Complaint kinds and golden-hour steps are pack data. Should their translations live in the pack files (`label` per language), so a state can word them its own way? I would do it that way unless you say otherwise.
 
 ## 31 Oct 2026, session 34 (on-demand run started by Sumit at 14:34 IST)
 Started from `setup/seed` at d9c201a (nothing newer, no new answers). PostgreSQL was already running. Baseline `scripts/test-all.sh`: all 8 lines PASS. Next item 1 (MH pack) still waits for question 2 of session 33, so I started item 2, "screens in the 10 languages".
