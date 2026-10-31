@@ -1,5 +1,5 @@
 import { useContext, useState, type FormEvent, type ReactNode } from 'react'
-import { currentSession, send } from './api'
+import { can, currentSession, send } from './api'
 import TypingField from './TypingField'
 import { TypingContext } from './typing'
 import { istIso, parseSections, text } from './formats'
@@ -72,7 +72,7 @@ export function NewFirForm({ complaintId }: { complaintId?: string } = {}) {
       </select></label>
       <label>Reason (if not investigated) <input name="reason" /></label>
       <label><input name="sexual" type="checkbox" /> Sexual offence (protects the victim's identity, BNS 72)</label>
-      {me!.role === 'io' && <label><input name="iAmIo" type="checkbox" defaultChecked /> I am the investigating officer</label>}
+      {can('case.lead') && <label><input name="iAmIo" type="checkbox" defaultChecked={me!.case_scope === 'none'} /> I am the investigating officer</label>}
     </Form>
   )
 }

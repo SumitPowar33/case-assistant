@@ -1,6 +1,8 @@
 // Every call carries the login token from the core app (POST /api/login). The AI gateway checks the same token.
 // The session lives in sessionStorage, so it ends when the browser tab closes; a 401 from either server ends it too.
-export type User = { id: string; username: string; full_name: string; rank: string; role: string; station_id: string | null; can_import?: boolean; can_set_policy?: boolean }
+export type User = { id: string; username: string; full_name: string; rank: string; role: string; station_id: string | null; can_import?: boolean; can_set_policy?: boolean
+  /** From the role's data in the packs (GET /api/me, POST /api/login): what the screens may offer. The server checks every call again. */
+  permissions?: string[]; case_scope?: 'none' | 'station' | 'district' }
 export type Session = { token: string; user: User }
 
 const KEY = 'case-assistant-session'
@@ -10,6 +12,8 @@ let session: Session | null = (() => {
 const listeners = new Set<() => void>()
 
 export const currentSession = () => session
+/** Whether the signed-in user's role holds a permission (never decide by role name). */
+export const can = (permission: string) => session?.user.permissions?.includes(permission) ?? false
 export function onSessionChange(fn: () => void) {
   listeners.add(fn)
   return () => { listeners.delete(fn) }

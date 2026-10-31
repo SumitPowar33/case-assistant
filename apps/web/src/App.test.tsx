@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import App from './App'
 import { setSession, type Session } from './api'
 
-const io: Session = { token: 'tok-io', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional Rao', rank: 'SI', role: 'io', station_id: 's1' } }
+const io: Session = { token: 'tok-io', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional Rao', rank: 'SI', role: 'io', station_id: 's1', permissions: ['fir.register', 'case.lead'], case_scope: 'none' } }
 
 const fir = { id: 'f1', fir_year: 2026, fir_no: 7, registered_at: '2026-09-10T10:00:00Z', is_zero_fir: false, action_taken: 'registered', sexual_offence: false, contents_original: 'Fictional complaint text', sections: [{ act: 'BNS', section: '318' }] }
 const routes: Record<string, unknown> = {
@@ -113,7 +113,7 @@ test('the Policies link opens the policies page for any signed-in user', async (
   expect(await screen.findByRole('heading', { name: 'Policies' })).toBeTruthy()
 })
 
-const admin: Session = { token: 'tok-admin', user: { id: 'u9', username: 'admin.fictional', full_name: 'Fictional Admin', rank: 'IG', role: 'state_admin', station_id: null, can_import: true } }
+const admin: Session = { token: 'tok-admin', user: { id: 'u9', username: 'admin.fictional', full_name: 'Fictional Admin', rank: 'IG', role: 'state_admin', station_id: null, can_import: true, permissions: ['admin.manage', 'import.run'], case_scope: 'none' } }
 
 test('the menu follows the account: station staff get the front desk, only the admin gets Admin and AI settings, import needs its permission', async () => {
   mockApi()
@@ -129,6 +129,18 @@ test('the menu follows the account: station staff get the front desk, only the a
   expect(nav().getByRole('link', { name: 'Admin' })).toBeTruthy()
   expect(nav().getByRole('link', { name: 'AI settings' })).toBeTruthy()
   expect(nav().getByRole('link', { name: 'Load data' })).toBeTruthy()
+})
+
+test('the Admin menu follows the permission admin.manage, not the role name', () => {
+  mockApi()
+  setSession({ ...admin, user: { ...admin.user, permissions: ['import.run'] } })
+  const { unmount } = render(<App />)
+  const nav = () => within(screen.getByRole('navigation', { name: 'Main' }))
+  expect(nav().queryByRole('link', { name: 'Admin' })).toBeNull()
+  unmount()
+  setSession({ ...io, user: { ...io.user, role: 'state_security_cell', station_id: null, permissions: ['admin.manage'] } })
+  render(<App />)
+  expect(nav().getByRole('link', { name: 'Admin' })).toBeTruthy()
 })
 
 test.each(['#/front-desk', '#/policies', '#/password', '#/import', '#/admin', '#/settings', '#/complaints/c1'])('the page at %s opens and a sign-out leaves the login screen', async (hash) => {

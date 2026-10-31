@@ -48,6 +48,9 @@ class AuthApiTest {
         var body = json.readTree(login("admin.one", ADMIN_PW, 200));
         assertThat(body.at("/user/role").asText()).isEqualTo("state_admin");
         assertThat(body.at("/user/password_hash").isMissingNode()).isTrue();
+        // what the screens may offer comes from the role's data in the packs, not from the role name
+        assertThat(body.at("/user/permissions").toString()).contains("\"admin.manage\"").doesNotContain("case.lead");
+        assertThat(body.at("/user/case_scope").asText()).isEqualTo("none");
         String token = "Bearer " + body.get("token").asText();
         mvc.perform(get("/api/me").header("Authorization", token)).andExpect(jsonPath("$.username").value("admin.one"));
         mvc.perform(get("/api/me")).andExpect(status().isUnauthorized());

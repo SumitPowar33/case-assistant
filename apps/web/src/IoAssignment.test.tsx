@@ -6,7 +6,9 @@ import { setSession } from './api'
 
 // Fictional data only.
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); setSession(null) })
-const as = (role: string) => setSession({ token: 't', user: { id: 'u1', username: 'x.fictional', full_name: 'Fictional', rank: 'PI', role, station_id: 's1' } })
+// the form follows the role's case scope from the packs; the role name is never looked at
+const as = (role: string, case_scope: 'none' | 'station' | 'district') =>
+  setSession({ token: 't', user: { id: 'u1', username: 'x.fictional', full_name: 'Fictional', rank: 'PI', role, station_id: 's1', case_scope, permissions: [] } })
 
 function stub(lists: Record<string, unknown>) {
   const writes: { url: string; body: unknown }[] = []
@@ -25,7 +27,7 @@ const lists = {
 }
 
 test('the SHO changes the IO only with a reason; the history is shown', async () => {
-  as('sho')
+  as('sho', 'station')
   const writes = stub(lists)
   const saved = vi.fn()
   render(<IoAssignment firId="f1" ioName="SI Fictional One" version={0} onSaved={saved} />)
@@ -39,7 +41,7 @@ test('the SHO changes the IO only with a reason; the history is shown', async ()
 })
 
 test('an FIR without an IO says so; an IO does not get the assign form', async () => {
-  as('io')
+  as('io', 'none')
   stub(lists)
   render(<IoAssignment firId="f1" ioName={null} version={0} onSaved={() => {}} />)
   expect(screen.getByText('not assigned yet')).toBeTruthy()
@@ -48,7 +50,7 @@ test('an FIR without an IO says so; an IO does not get the assign form', async (
 })
 
 test('the first IO needs no reason; a change with a short reason is refused before anything is sent', async () => {
-  as('sp')
+  as('sp', 'district')
   const writes = stub({ ...lists, '/firs/f1/io-history': [{ at: '2026-10-02T05:00:00Z', from_name: 'SI Fictional One', to_name: 'SI Fictional Two', assigned_by_name: 'PI Fictional SHO', reason: 'Fictional transfer' }] })
   const saved = vi.fn()
   const { unmount } = render(<IoAssignment firId="f1" ioName={null} version={0} onSaved={saved} />)
@@ -69,9 +71,21 @@ test('the first IO needs no reason; a change with a short reason is refused befo
 })
 
 test('a failure to load the officers is shown instead of the form', async () => {
-  as('sho')
+  as('sho', 'station')
   vi.stubGlobal('fetch', vi.fn(async (url: string) => (url.includes('io-candidates')
     ? { ok: false, status: 500, json: async () => null } : { ok: true, status: 200, json: async () => [] })))
   render(<IoAssignment firId="f1" ioName="SI Fictional One" version={0} onSaved={() => {}} />)
   expect((await screen.findByRole('alert')).textContent).toContain('500')
+})
+
+test('a role a state adds with a station scope may assign; the role name alone gives nothing', async () => {
+  stub(lists)
+  as('duty_officer', 'station')
+  const { unmount } = render(<IoAssignment firId="f1" ioName={null} version={0} onSaved={() => {}} />)
+  expect(await screen.findByRole('button', { name: 'Save' })).toBeTruthy()
+  unmount()
+  as('sho', 'none')
+  render(<IoAssignment firId="f1" ioName={null} version={0} onSaved={() => {}} />)
+  await screen.findByText('IO history')
+  expect(screen.queryByRole('button', { name: 'Save' })).toBeNull()
 })

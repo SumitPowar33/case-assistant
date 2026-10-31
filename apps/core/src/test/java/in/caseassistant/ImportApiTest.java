@@ -502,6 +502,25 @@ class ImportApiTest {
         mvc.perform(get("/api/me").header("Authorization", io)).andExpect(jsonPath("$.can_set_policy").value(false));
     }
 
+    /** The screens show or hide things by permission and case scope from the packs, never by role name. */
+    @Test
+    void theSessionCarriesThePermissionsAndCaseScopeOfTheRole() throws Exception {
+        mvc.perform(get("/api/me").header("Authorization", io)).andExpect(jsonPath("$.case_scope").value("none"))
+                .andExpect(jsonPath("$.permissions").value(org.hamcrest.Matchers.containsInAnyOrder("fir.register", "case.lead")));
+        mvc.perform(get("/api/me").header("Authorization", sho1)).andExpect(jsonPath("$.case_scope").value("station"))
+                .andExpect(jsonPath("$.permissions").value(org.hamcrest.Matchers.hasItems("case.lead", "policy.set")));
+        mvc.perform(get("/api/me").header("Authorization", sp)).andExpect(jsonPath("$.case_scope").value("district"))
+                .andExpect(jsonPath("$.permissions").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("case.lead"))));
+        mvc.perform(get("/api/me").header("Authorization", stateAdmin)).andExpect(jsonPath("$.permissions").value(org.hamcrest.Matchers.hasItem("admin.manage")));
+        // a role that no pack declares any more (left in the database) gives no permission at all
+        db.sql("insert into role (code, label) values ('retired_role', 'Retired role') on conflict do nothing").update();
+        String retired = bearer(user("retired_role", s1, "Fictional Retired", "retired.one"));
+        mvc.perform(get("/api/me").header("Authorization", retired)).andExpect(jsonPath("$.case_scope").value("none"))
+                .andExpect(jsonPath("$.permissions").isEmpty()).andExpect(jsonPath("$.can_import").value(false));
+        db.sql("delete from app_user where username = 'retired.one'").update();
+        db.sql("delete from role where code = 'retired_role'").update();
+    }
+
     // ---- chargesheets file -----------------------------------------------------------------------------------------
 
     static final String CHEAD = "FIR No,Report No,Filed On,Court,Accused\n";

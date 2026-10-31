@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import os
+import pathlib
 import time
 
 os.environ["AI_GATEWAY_AUTOSTART"] = "0"
@@ -29,10 +30,15 @@ def token(sub="user-admin", role="state_admin", secret=SECRET, exp_in=600, alg="
     return f"{head}.{body}.{sig}"
 
 
+ROLES = json.loads((pathlib.Path(__file__).parents[3] / "packs/IN/roles.json").read_text(encoding="utf-8"))["roles"]
+
+
 def core_says_active(tok, subject):
-    """Stands in for the core app's GET /api/me when the user is active and the password unchanged."""
+    """Stands in for the core app's GET /api/me when the user is active and the password unchanged; the permissions
+    are the role's in the national pack, as the core app gives them."""
     claims = verify(tok, SECRET)
-    return {"id": claims["sub"], "role": claims["role"], "ai_cloud_allowed": True}
+    permissions = ROLES.get(claims["role"], {}).get("permissions", [])
+    return {"id": claims["sub"], "role": claims["role"], "permissions": permissions, "ai_cloud_allowed": True}
 
 
 def client(store, providers, role="state_admin", sub="user-admin"):
@@ -316,3 +322,16 @@ def test_gemini_error_status_empty_candidates_and_system_text():
     done = call(GeminiProvider("k", mock_client(ok)))
     assert (done.text, done.input_tokens, done.output_tokens) == ("Fictional answer", 3, 2)
     assert seen[0]["systemInstruction"]["parts"][0]["text"] == "be brief"
+
+
+def test_admin_settings_follow_the_permission_from_the_core_never_the_role_name():
+    store = Store(":memory:")
+    put = lambda me: TestClient(create_app(store, {"fake": FakeProvider()}, SECRET, lambda tok, sub: {**me, "id": sub}),
+                                headers={"Authorization": "Bearer " + token("user-x", me["role"])}).put(
+        "/v1/settings/case_qa", json={"provider": "fake"})
+    # the role name alone opens nothing, nor does an answer without a permission list (fails closed)
+    assert put({"role": "state_admin", "permissions": [], "ai_cloud_allowed": True}).status_code == 403
+    assert put({"role": "state_admin", "ai_cloud_allowed": True}).status_code == 403
+    assert put({"role": "state_admin", "permissions": "admin.manage", "ai_cloud_allowed": True}).status_code == 403
+    # a role a state adds that holds admin.manage may set them
+    assert put({"role": "state_security_cell", "permissions": ["admin.manage"], "ai_cloud_allowed": True}).status_code == 200

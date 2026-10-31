@@ -26,7 +26,9 @@ function AssignForm({ firId, hasIo, onSaved }: { firId: string; hasIo: boolean; 
 
 export default function IoAssignment({ firId, ioName, version, onSaved }: { firId: string; ioName: string | null; version: number; onSaved: () => void }) {
   const { data: history } = useLoad<Assignment[]>(`/firs/${firId}/io-history`, version)
-  const supervisor = ['sho', 'sp'].includes(currentSession()?.user.role ?? '')
+  // a role that sees every case of its station or district assigns the IO (packs: case_scope), not a role name
+  const scope = currentSession()?.user.case_scope
+  const supervisor = scope === 'station' || scope === 'district'
   return (
     <>
       <p>Investigating officer: {ioName ?? <strong>not assigned yet</strong>}</p>

@@ -99,6 +99,11 @@ public class Roles {
         return r != null && r.permissions().contains(permission);
     }
 
+    /** The permissions a role holds (merged from every pack). */
+    List<String> permissions(String code) {
+        return roles.get(code).permissions();
+    }
+
     /** "none", "station" or "district". */
     String caseScope(String code) {
         return roles.get(code).caseScope();

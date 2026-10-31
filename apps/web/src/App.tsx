@@ -23,7 +23,7 @@ export default function App() {
   const session = useSyncExternalStore(onSessionChange, currentSession)
   const firId = /^#\/firs\/([\w-]+)$/.exec(hash)?.[1]
   const complaintId = /^#\/complaints\/([\w-]+)$/.exec(hash)?.[1]
-  const admin = session?.user.role === 'state_admin'
+  const admin = session?.user.permissions?.includes('admin.manage') ?? false
   return (
     <TypingContext.Provider value={{ lang, setLang }}>
       <header>

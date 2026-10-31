@@ -5,7 +5,8 @@ import { AddEvidenceForm, AddPersonForm, NewFirForm } from './Forms'
 import { istIso, parseSections } from './formats'
 import { setSession } from './api'
 
-beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional', rank: 'SI', role: 'io', station_id: 's1' } }))
+const io = { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional', rank: 'SI', role: 'io', station_id: 's1', permissions: ['fir.register', 'case.lead'], case_scope: 'none' as const }
+beforeEach(() => setSession({ token: 't', user: io }))
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); setSession(null); window.location.hash = '' })
 
 function stub(status = 201, body: unknown = { id: 'new1' }) {
@@ -43,6 +44,20 @@ test('registering an FIR sends the station, India times and sections, then opens
   expect(calls[0]).toMatchObject({ url: '/api/firs', body: { stationId: 's1', ioId: 'u1', firNo: 41, gdEntryNo: 'GD-3', contentsLanguage: 'en',
     informationReceivedAt: '2026-10-01T09:00:00+05:30', registeredAt: '2026-10-01T10:00:00+05:30', actionTaken: 'investigate',
     sections: [{ act: 'BNS', section: '318(4)' }, { act: 'BNS', section: '319(2)' }] } })
+})
+
+test('"I am the IO" follows the permission case.lead: ticked for an officer of their own cases, offered unticked to a supervisor, absent without it', () => {
+  const box = () => screen.queryByLabelText<HTMLInputElement>('I am the investigating officer')
+  const { unmount } = render(<NewFirForm />)
+  expect(box()!.checked).toBe(true)
+  unmount()
+  setSession({ token: 't', user: { ...io, role: 'sho', permissions: ['fir.register', 'case.lead'], case_scope: 'station' } })
+  const second = render(<NewFirForm />)
+  expect(box()!.checked).toBe(false)
+  second.unmount()
+  setSession({ token: 't', user: { ...io, role: 'io', permissions: ['fir.register'], case_scope: 'none' } })
+  render(<NewFirForm />)
+  expect(box()).toBeNull()
 })
 
 test('a bad section is shown and nothing is sent', async () => {

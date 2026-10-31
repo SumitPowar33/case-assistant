@@ -81,12 +81,15 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             raise HTTPException(401, str(e), headers={"WWW-Authenticate": "Bearer"})
         except CoreUnavailable as e:
             raise HTTPException(503, str(e))
-        # the role and the unit's AI policy as the core app has them now, not as they were when the token was issued;
-        # an answer without the policy counts as "no cloud" (fails closed)
-        return {**claims, "role": me["role"], "ai_cloud_allowed": me.get("ai_cloud_allowed") is True}
+        # the role, its permissions and the unit's AI policy as the core app has them now, not as they were when the
+        # token was issued; an answer without the policy counts as "no cloud", without permissions as none (fails closed)
+        permissions = me.get("permissions")
+        return {**claims, "role": me["role"], "permissions": permissions if isinstance(permissions, list) else [],
+                "ai_cloud_allowed": me.get("ai_cloud_allowed") is True}
 
     def admin(u: dict = Depends(user)) -> dict:
-        if u.get("role") != "state_admin":
+        # by permission from the packs (roles.json), never by role name
+        if "admin.manage" not in u["permissions"]:
             raise HTTPException(403, "only the state admin can do this")
         return u
 

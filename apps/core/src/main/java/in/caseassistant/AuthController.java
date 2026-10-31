@@ -48,12 +48,13 @@ class AuthController implements ApplicationRunner {
     private final JwtEncoder tokens;
     private final CaseTeam team;
     private final Policies policies;
+    private final Roles roles;
     private final String bootstrapUser;
     private final String bootstrapPassword;
     /** Checked when the username is unknown, so a wrong username takes as long as a wrong password. */
     private final String dummyHash;
 
-    AuthController(JdbcClient db, PasswordEncoder passwords, JwtEncoder tokens, CaseTeam team, Policies policies,
+    AuthController(JdbcClient db, PasswordEncoder passwords, JwtEncoder tokens, CaseTeam team, Policies policies, Roles roles,
                    @Value("${BOOTSTRAP_ADMIN_USERNAME:}") String bootstrapUser,
                    @Value("${BOOTSTRAP_ADMIN_PASSWORD:}") String bootstrapPassword) {
         this.db = db;
@@ -61,6 +62,7 @@ class AuthController implements ApplicationRunner {
         this.tokens = tokens;
         this.team = team;
         this.policies = policies;
+        this.roles = roles;
         this.bootstrapUser = bootstrapUser;
         this.bootstrapPassword = bootstrapPassword;
         this.dummyHash = passwords.encode(UUID.randomUUID().toString());
@@ -85,8 +87,7 @@ class AuthController implements ApplicationRunner {
         if (!ok) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Wrong username or password."));
         var user = new LinkedHashMap<>(row.get());
         user.remove("password_hash");
-        user.put("can_import", team.can((UUID) user.get("id"), "import.run"));
-        user.put("can_set_policy", team.can((UUID) user.get("id"), "policy.set") || team.can((UUID) user.get("id"), "admin.manage"));
+        rights(user);
         var changedAt = (java.sql.Timestamp) user.remove("password_changed_at");
         var life = policies.sessionLife((UUID) user.get("station_id"));
         String token = SecurityConfig.issue(tokens, (UUID) user.get("id"), (String) user.get("role"), (String) user.get("full_name"), changedAt, life);
@@ -97,11 +98,24 @@ class AuthController implements ApplicationRunner {
     Map<String, Object> me(@AuthenticationPrincipal Jwt jwt) {
         var me = new LinkedHashMap<>(db.sql("select id, username, full_name, rank, role, station_id, ui_language from app_user where id = ?")
                 .param(CaseTeam.user(jwt)).query().singleRow());
-        me.put("can_import", team.can(CaseTeam.user(jwt), "import.run"));
-        me.put("can_set_policy", team.can(CaseTeam.user(jwt), "policy.set") || team.can(CaseTeam.user(jwt), "admin.manage"));
+        rights(me);
         // the AI gateway reads this on every call and refuses a cloud provider when the user's unit said no
         me.put("ai_cloud_allowed", policies.effective((UUID) me.get("station_id"), "ai_cloud_allowed") == 1);
         return me;
+    }
+
+    /**
+     * What the screens may offer this user, from the role's data in the packs (never from a role name): the role's
+     * permissions and case scope, and two shortcuts. Only for showing or hiding things; every route checks again.
+     */
+    private void rights(Map<String, Object> user) {
+        UUID id = (UUID) user.get("id");
+        String role = (String) user.get("role");
+        boolean known = roles.exists(role);   // a role no pack declares any more gives nothing
+        user.put("permissions", known ? roles.permissions(role) : List.of());
+        user.put("case_scope", known ? roles.caseScope(role) : "none");
+        user.put("can_import", team.can(id, "import.run"));
+        user.put("can_set_policy", team.can(id, "policy.set") || team.can(id, "admin.manage"));
     }
 
     /** Changes the signed-in user's own password. Every older token stops working; a fresh one is returned. */
