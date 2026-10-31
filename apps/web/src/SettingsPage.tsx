@@ -15,8 +15,8 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState('')
 
   useEffect(() => {
-    Promise.all([ai<Record<string, Setting>>('/v1/settings'), ai<Features>('/v1/features'), ai<{ audit_chain_ok: boolean }>('/health')])
-      .then(([s, f, h]) => { setSettings(s); setFeatures(f); setChainOk(h.audit_chain_ok) }, (e: Error) => setError(e.message))
+    Promise.all([ai<Record<string, Setting>>('/v1/settings'), ai<Features>('/v1/features'), ai<{ chain_ok: boolean }>('/v1/audit?limit=1')])
+      .then(([s, f, a]) => { setSettings(s); setFeatures(f); setChainOk(a.chain_ok) }, (e: Error) => setError(e.message))
   }, [])
 
   if (error && !settings) return <p role="alert">{error}</p>

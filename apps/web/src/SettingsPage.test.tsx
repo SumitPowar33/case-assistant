@@ -14,7 +14,9 @@ function mockGateway(chainOk = true) {
     let body: unknown
     if (url === '/ai/v1/settings') body = { notice_draft: notice }
     else if (url === '/ai/v1/features') body = { providers: ['claude', 'fake', 'gemini'], default_models: { claude: 'claude-sonnet-5-5', gemini: 'gemini-3.7-flash', fake: 'fake-1' } }
-    else if (url === '/ai/health') body = { audit_chain_ok: chainOk }
+    // as the gateway answers since 31 Oct: /health says only that it runs; the chain check is on /v1/audit (admins)
+    else if (url === '/ai/health') body = { ok: true }
+    else if (url === '/ai/v1/audit?limit=1') body = { chain_ok: chainOk, rows: [] }
     else if (url === '/ai/v1/settings/notice_draft') {
       const b = JSON.parse(init!.body as string)
       notice = { ...notice, provider: b.provider, model: b.model ?? 'gemini-3.7-flash', officer_may_switch: b.officer_may_switch }
