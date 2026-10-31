@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import ClosureReport from './ClosureReport'
 import { setSession } from './api'
+import { ScreenLangContext } from './i18n'
 
 // Fictional data only.
 beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional', rank: 'SI', role: 'io', station_id: 's1' } }))
@@ -71,4 +72,31 @@ test('a recorded decision is shown and its form is gone', async () => {
   render(<ClosureReport firId="f1" version={0} onSaved={vi.fn()} />)
   expect(await screen.findByText(/Magistrate accepted the report on 2026-10-22\. order 5/)).toBeTruthy()
   expect(screen.queryByText(/Record the Magistrate's decision/)).toBeNull()
+})
+
+test('in Marathi a recorded report, the decision and the correction form are in Marathi; numbers, courts and reasons stay', async () => {
+  stub([{ ...recorded, informant_informed_on: '2026-10-21', corrected: true, decision: 'further_investigation', decided_on: '2026-10-22', decision_note: 'order 5' }], [])
+  render(<ScreenLangContext.Provider value="mr"><ClosureReport firId="f1" version={0} onSaved={vi.fn()} /></ScreenLangContext.Provider>)
+  expect(await screen.findByRole('heading', { name: 'समाप्ती अहवाल' })).toBeTruthy()
+  expect(screen.getByText(/FR-1: 2026-10-20 रोजी Fictional JMFC Court येथे दाखल\. आरोपीचा शोध लागला नाही\. कारण: accused could not be traced/)).toBeTruthy()
+  expect(screen.getByText('(SI Fictional यांनी नोंदवले; माहिती देणाऱ्याला 2026-10-21 रोजी कळवले; दुरुस्त केले, खाली पाहा)')).toBeTruthy()
+  expect(screen.getByText('2026-10-22 रोजी दंडाधिकाऱ्यांनी पुढील तपासाचा आदेश दिला. order 5')).toBeTruthy()
+  const fix = screen.getByText('हा समाप्ती अहवाल दुरुस्त करा').closest('details')!
+  expect((within(fix).getByLabelText('आधार') as HTMLSelectElement).value).toBe('untraced')
+  expect(within(fix).getByRole('option', { name: 'प्रकरण दिवाणी स्वरूपाचे आहे' })).toBeTruthy()
+  expect(within(fix).getByLabelText('दुरुस्ती का केली जात आहे')).toBeTruthy()
+})
+
+test('in Hindi the empty page offers the closure form; the decision form names its choices', async () => {
+  stub([], [])
+  render(<ScreenLangContext.Provider value="hi"><ClosureReport firId="f1" version={0} onSaved={vi.fn()} /></ScreenLangContext.Provider>)
+  const form = (await screen.findByText('क्लोज़र रिपोर्ट दर्ज करें (कोई आरोप-पत्र दाखिल नहीं होगा)')).closest('details')!
+  expect(within(form).getByRole('option', { name: 'शिकायत झूठी पाई गई' })).toBeTruthy()
+  expect(form.textContent).toContain('BNSS 193(2) की दो महीने की सीमा')
+  cleanup()
+  stub([recorded], [])
+  render(<ScreenLangContext.Provider value="hi"><ClosureReport firId="f1" version={0} onSaved={vi.fn()} /></ScreenLangContext.Provider>)
+  const dec = (await screen.findByText('मजिस्ट्रेट का निर्णय दर्ज करें')).closest('details')!
+  expect(within(dec).getByRole('option', { name: 'मजिस्ट्रेट ने रिपोर्ट स्वीकार की' })).toBeTruthy()
+  expect(screen.getByText(/सूचनाकर्ता को बताया जाना अभी दर्ज नहीं/)).toBeTruthy()
 })

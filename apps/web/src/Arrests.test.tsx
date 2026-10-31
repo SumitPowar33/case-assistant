@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import Arrests from './Arrests'
 import { setSession } from './api'
+import { ScreenLangContext } from './i18n'
 
 // Fictional data only.
 beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional', rank: 'SI', role: 'io', station_id: 's1' } }))
@@ -181,4 +182,59 @@ test('an imported arrest without an arresting officer says so', async () => {
   ] }, { status: 204, body: null })
   render(<Arrests firId="f1" version={0} onSaved={vi.fn()} />)
   expect(await screen.findByText(/at Oldpur, officer not in the old record/)).toBeTruthy()
+})
+
+test('in Marathi the arrests, their limits, corrections and the arrest form are in Marathi; names, places and reasons stay as written', async () => {
+  stub({ '/firs/f1/people': people, '/firs/f1/punishment-hint': { suggested: 'death', sections: [{ section: 'BNS 103(1)', class: 'death' }], unknown: [] },
+    '/firs/f1/arrests': [
+      { ...base, id: 'a1', informed_contact: 'Testpur 1', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-10', earlier_custody_days: 5,
+        remand_recorded_by_name: 'SI Fictional', released_on: '2026-09-20', release_basis: 'default_bail', chargesheet_filed_on: null, corrected: false },
+      { ...base, id: 'a2', person_label: 'A2', arresting_officer_name: null, max_punishment: 'a_new_class', first_remand_on: '2026-09-12',
+        chargesheet_last_day: '2026-11-10', released_on: null, release_basis: null, chargesheet_filed_on: '2026-11-01', corrected: true },
+    ],
+    '/firs/f1/arrests/corrections': [{ id: 'c1', arrest_id: 'a1', first_remand_on: null, max_punishment: 'life', released_on: '2026-09-20', release_basis: 'bail',
+      reason: 'remand order was misread', recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' }],
+    '/firs/f1/arrests/memo-corrections': [{ id: 'm1', arrest_id: 'a1', place: 'Testpur Market', grounds: ['proper investigation'], informed_name: 'Fictional Friend',
+      informed_contact: null, reason: 'place was the market', recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' }],
+    '/firs/f1/arrests/time-corrections': [{ id: 't1', arrest_id: 'a2', arrested_at: '2026-09-11T16:30:00Z', reason: 'memo typed a day late',
+      recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' }],
+  }, { status: 201, body: { id: 'a9' } })
+  render(<ScreenLangContext.Provider value="mr"><Arrests firId="f1" version={0} onSaved={() => {}} /></ScreenLangContext.Provider>)
+  expect(await screen.findByRole('heading', { name: 'अटक' })).toBeTruthy()
+  const [one, two] = screen.getAllByRole('listitem')
+  expect(one.textContent).toMatch(/^A1: .+ रोजी Testpur येथे SI Fictional यांनी अटक केली/)
+  expect(one.textContent).toContain('कळवले: Fictional Relative (Testpur 1)')
+  expect(one.textContent).toContain('कमाल शिक्षा: 10 वर्षांपेक्षा कमी कारावास')
+  expect(one.textContent).toContain('पहिली रिमांड 2026-09-12 (SI Fictional यांनी नोंदवली): दोषारोपपत्र 60 दिवसांत, शेवटचा दिवस 2026-11-10')
+  expect(one.textContent).toContain('(BNSS 187(3); आधीच्या सुटकेपूर्वी कोठडीत घालवलेले 5 दिवस मोजले आहेत)')
+  expect(one.textContent).toContain('2026-09-20 रोजी डिफॉल्ट जामिनावर (BNSS 187(3)) सुटका: कोठडीची मुदत आता चालत नाही.')
+  expect(one.textContent).toMatch(/यांनी दुरुस्त केले: रिमांड नाही, जन्मठेप, 2026-09-20 रोजी सुटका\. कारण: remand order was misread/)
+  expect(one.textContent).toMatch(/यांनी मेमो दुरुस्त केला: ठिकाण Testpur Market; कारणे proper investigation; कळवले Fictional Friend\. कारण: place was the market/)
+  expect(two.textContent).toMatch(/A2: .* रोजी Testpur येथे अटक, जुन्या अभिलेखात अधिकारी नाही/)
+  expect(two.textContent).toContain('कमाल शिक्षा: a_new_class')   // a class the screen does not know shows its code
+  expect(two.textContent).toContain('A2 यांचे नाव असलेले दोषारोपपत्र 2026-11-01 रोजी दाखल.')
+  expect(two.textContent).toMatch(/यांनी अटकेची वेळ दुरुस्त केली: .*\. कारण: memo typed a day late/)
+  expect(within(one).queryByText('पहिली रिमांड नोंदवा')).toBeNull()   // remand and release already recorded
+  expect(within(one).queryByText('कोठडीतून सुटका नोंदवा')).toBeNull()
+  const fix = within(one).getByText('रिमांड, शिक्षा किंवा सुटका दुरुस्त करा').closest('details')!
+  expect(within(fix).getByRole('option', { name: 'जन्मठेप (दोषारोपपत्रासाठी 90 दिवस)' })).toBeTruthy()
+  expect(within(fix).getByRole('option', { name: 'जामिनावर' })).toBeTruthy()
+  expect(within(fix).getByLabelText('दुरुस्ती का केली जात आहे')).toBeTruthy()
+  const memo = within(one).getByText('ठिकाण, कारणे किंवा कळवलेली व्यक्ती दुरुस्त करा').closest('details')!
+  expect(memo.textContent).toContain('वेळेसाठी “अटकेची वेळ दुरुस्त करा” वापरा.')
+  const form = screen.getByText('अटक नोंदवा (BNSS 35 मेमो)').closest('details')!
+  expect((await within(form).findByRole('note')).textContent).toMatch(/कलमांवरून \(BNS 103\(1\)\) तक्ता मृत्युदंड \(90 दिवस\) सुचवतो/)
+  expect(within(form).getByRole('alert').textContent).toContain('तुम्ही 10 वर्षांपेक्षा कमी कारावास (60 दिवस) निवडले')
+  type('अटक (तारीख आणि वेळ, IST)', '2026-10-30T10:00', within(form))
+  type('अटकेचे ठिकाण', 'Testpur', within(form))
+  type(/कळवलेला नातेवाईक/, 'Fictional Relative', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'जतन करा' }))
+  expect((await within(form).findByText('व्यक्तीला सांगितलेली अटकेची कारणे लिहा (BNSS 47).')).getAttribute('role')).toBe('alert')
+})
+
+test('in Hindi an unknown section gives the no-suggestion note and an empty list says so', async () => {
+  stub({ '/firs/f1/people': [people[1]], '/firs/f1/punishment-hint': { suggested: null, sections: [], unknown: ['BNS 999(9)'] } })
+  render(<ScreenLangContext.Provider value="hi"><Arrests firId="f1" version={0} onSaved={() => {}} /></ScreenLangContext.Provider>)
+  expect(await screen.findByText('अभी कुछ नहीं।')).toBeTruthy()
+  expect(screen.getByText('पहले व्यक्ति को आरोपी के रूप में जोड़ें; केवल आरोपी को गिरफ़्तार किया जा सकता है।')).toBeTruthy()
 })
