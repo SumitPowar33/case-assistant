@@ -154,7 +154,9 @@ class AdminApiTest {
         post(admin, "/api/users/" + io + "/enable", REASON).andExpect(status().isConflict());
         // the token from before the account was disabled stays dead; a new sign-in works
         mvc.perform(get("/api/me").header("Authorization", old)).andExpect(status().isUnauthorized());
-        mvc.perform(get("/api/me").header("Authorization", "Bearer " + token("si.fictional", IO_PW))).andExpect(status().isOk());
+        mvc.perform(get("/api/me").header("Authorization", "Bearer " + token("si.fictional", IO_PW))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.state_code").value("IN"));   // the AI gateway keeps settings and audit per state
+        mvc.perform(get("/api/me").header("Authorization", admin)).andExpect(jsonPath("$.state_code").value((Object) null));   // platform admin
         post(admin, "/api/users/" + UUID.randomUUID() + "/enable", REASON).andExpect(status().isNotFound());
     }
 

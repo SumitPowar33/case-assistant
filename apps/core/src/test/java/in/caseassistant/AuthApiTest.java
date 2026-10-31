@@ -131,6 +131,25 @@ class AuthApiTest {
     }
 
     @Test
+    void wrongPasswordsSentAllAtOnceStillStopAtFive() throws Exception {
+        // regression (weekly review 31 Oct): the lock was checked and the attempt recorded without a lock in between,
+        // so many guesses sent at the same moment all got a try
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(12);
+        var tries = new java.util.ArrayList<java.util.concurrent.Future<Integer>>();
+        for (int i = 0; i < 12; i++) {
+            String guess = "parallel-guess-" + i;
+            tries.add(pool.submit(() -> mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON)
+                    .content(json.writeValueAsString(java.util.Map.of("username", "admin.one", "password", guess)))).andReturn().getResponse().getStatus()));
+        }
+        var statuses = new java.util.ArrayList<Integer>();
+        for (var t : tries) statuses.add(t.get());
+        pool.shutdown();
+        assertThat(statuses.stream().filter(st -> st == 401).count()).isEqualTo(5);
+        assertThat(statuses.stream().filter(st -> st == 429).count()).isEqualTo(7);
+        assertThat(db.sql("select count(*) from sign_in_attempt where outcome = 'wrong_password'").query(Long.class).single()).isEqualTo(5);
+    }
+
+    @Test
     void aSuccessfulSignInClearsEarlierWrongPasswords() throws Exception {
         for (int i = 0; i < 4; i++) login("admin.one", "not-the-password", 401);
         login("admin.one", ADMIN_PW, 200);

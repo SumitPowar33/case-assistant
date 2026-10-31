@@ -119,6 +119,32 @@ class SecurityMatrixTest {
     }
 
     @Test
+    void noWriteToACaseOrAComplaintSucceedsForASignedInOutsider() throws Exception {
+        // every write route under /api/firs/{id} and /api/complaints/{id}, with an empty body: never a success, nothing written
+        UUID complaint = db.sql("""
+                insert into complaint (station_id, received_at, mode, informant_name, kind, text_original, text_language, recorded_by)
+                select f.station_id, now(), 'written', 'Fictional Informant', 'other', 'Fictional words', 'en', u.id
+                from fir f, app_user u where f.id = ? limit 1 returning id""").param(fir).query(UUID.class).single();
+        String counts = "select (select count(*) from person) + (select count(*) from arrest) + (select count(*) from notice) + (select count(*) from evidence_item)"
+                + " + (select count(*) from complaint_step) + (select count(*) from victim_update) + (select count(*) from fir_io_assignment)"
+                + " + (select count(*) from case_playbook) + (select count(*) from chargesheet) + (select count(*) from closure_report)";
+        long before = db.sql(counts).query(Long.class).single();
+        int checked = 0;
+        for (Route r : all()) {
+            if (r.method().equals("GET") || !(r.path().startsWith("/api/firs/{") || r.path().startsWith("/api/complaints/{"))) continue;
+            String path = fill(r.path());
+            if (r.path().startsWith("/api/complaints/{")) path = r.path().replaceFirst("\\{id}", complaint.toString()).replaceAll("\\{[^}]+}", UUID.randomUUID().toString());
+            int status = mvc.perform(request(HttpMethod.valueOf(r.method()), path).header("Authorization", outsider)
+                    .contentType("application/json").content("{}")).andReturn().getResponse().getStatus();
+            assertThat(status).as(r.key()).isBetween(400, 499);
+            checked++;
+        }
+        assertThat(checked).isGreaterThan(15);
+        assertThat(db.sql(counts).query(Long.class).single()).isEqualTo(before);
+        assertThat(db.sql("select signed_at is null and outcome is null and text_original = 'Fictional words' from complaint where id = ?").param(complaint).query(Boolean.class).single()).isTrue();
+    }
+
+    @Test
     void loadingExistingRecordsIsRefusedToAnOrdinaryOfficerAndBatchesAreInvisibleToThem() throws Exception {
         assertThat(all().stream().map(Route::key)).contains("GET /api/imports/profiles", "POST /api/imports/inspect", "POST /api/imports",
                 "POST /api/imports/{id}/commit", "POST /api/imports/{id}/undo", "POST /api/imports/{id}/discard");

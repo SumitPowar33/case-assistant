@@ -73,8 +73,10 @@ class AuthController implements ApplicationRunner {
     }
 
     @PostMapping("/login")
+    @org.springframework.transaction.annotation.Transactional
     ResponseEntity<Map<String, Object>> login(@Valid @RequestBody Login l, HttpServletRequest req) {
         String username = l.username.trim().toLowerCase();
+        oneAtATime(username);
         var row = db.sql("""
                 select id, username, full_name, rank, role, station_id, ui_language, password_hash, password_changed_at
                 from app_user where username = ? and active""").param(username)
@@ -100,7 +102,10 @@ class AuthController implements ApplicationRunner {
 
     @GetMapping("/me")
     Map<String, Object> me(@AuthenticationPrincipal Jwt jwt) {
-        var me = new LinkedHashMap<>(db.sql("select id, username, full_name, rank, role, station_id, ui_language from app_user where id = ?")
+        // state_code: the state of the user's station (none for the platform admin); the AI gateway keeps settings and audit per state
+        var me = new LinkedHashMap<>(db.sql("""
+                select u.id, u.username, u.full_name, u.rank, u.role, u.station_id, u.ui_language, s.state_code
+                from app_user u left join police_station s on s.id = u.station_id where u.id = ?""")
                 .param(CaseTeam.user(jwt)).query().singleRow());
         rights(me);
         // the AI gateway reads this on every call and refuses a cloud provider when the user's unit said no
@@ -132,12 +137,22 @@ class AuthController implements ApplicationRunner {
     }
 
     /** Changes the signed-in user's own password. Every older token stops working; a fresh one is returned. */
+    /**
+     * Attempts on one username wait for each other until the transaction ends, so the lock check and the recorded
+     * attempt cannot be raced by sending many guesses at once (known and unknown usernames alike).
+     */
+    private void oneAtATime(String username) {
+        db.sql("select pg_advisory_xact_lock(hashtext('sign-in:' || ?))").param(username).query().listOfRows();
+    }
+
     @PostMapping("/me/password")
+    @org.springframework.transaction.annotation.Transactional
     ResponseEntity<Map<String, Object>> changePassword(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PasswordChange c,
                                                       HttpServletRequest req) {
         UUID id = CaseTeam.user(jwt);
         var u = db.sql("select username, password_hash, role, full_name from app_user where id = ?").param(id).query().singleRow();
         String username = (String) u.get("username");
+        oneAtATime(username);
         var locked = lockedUntil(username);
         if (locked.isPresent()) {
             record(username, id, "locked", req);
@@ -212,9 +227,12 @@ class AuthController implements ApplicationRunner {
     void ensureAdmin(String username, String password) {
         if (username.isBlank() || password.isBlank()) return;
         if (password.length() < 12) throw new IllegalStateException("BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters");
+        // the first role of the packs that manages accounts (never a role name in code)
+        String role = roles.with("admin.manage").stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("No role in the packs holds admin.manage"));
         db.sql("""
                 insert into app_user (username, password_hash, full_name, rank, role)
-                values (?, ?, 'State Admin', 'Admin', 'state_admin') on conflict (username) do nothing""")
-                .params(username.trim().toLowerCase(), passwords.encode(password)).update();
+                values (?, ?, 'State Admin', 'Admin', ?) on conflict (username) do nothing""")
+                .params(username.trim().toLowerCase(), passwords.encode(password), role).update();
     }
 }
