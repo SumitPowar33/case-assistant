@@ -24,10 +24,41 @@ Done in session 35 (31 Oct, scheduled weekend run from about 16:30 IST): screen 
 Done in session 36 (31 Oct, on-demand run from 16:50 IST): screen language, part 3 (readiness check, IO assignment, BSA 63(4) certificates).
 Done in session 37 (31 Oct, scheduled weekend run from about 18:00 IST): screen language, part 4 (arrests, chargesheets, closure report); contract test for request field names.
 Done in session 38 (31 Oct, on-demand run from 18:20 IST): screen language, part 5 (notices, FIR, person and evidence forms, action taken); web branch gate raised to 89.
+Done in session 39 (31 Oct, scheduled weekend run from about 20:00 IST): screen language, part 6 (policies, load data, admin, AI settings, typing); contract test for AI gateway bodies; API test on an upgraded database.
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 31 Oct 2026, session 39 (scheduled weekend run, Saturday, started about 20:00 IST, Sumit away)
+Started from `setup/seed` at 802c442 (session 38, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 1 (MH pack) still waits for your answer, so I built item 2 (screen language part 6), then used the remaining time on the next tests from "Not covered yet" in `docs/TESTING.md`.
+
+Done
+- **Screen language part 6, policies and load data (1eafdd7)**: the policy table, the tighten form, each recorded change (level by label), every step of loading CSV files (batch and row results, the four row filters, problems, approval, undo, discard, history). 79 texts × 10 languages. Policy keys, layout field names, file names, the checks the server writes on each row and its refusals stay as sent. "Reason (at least 10 letters)" on the policy form became the shared "Reason (at least 10 characters)".
+- **AI settings, typing page, typing field (7d09e68)**: headings, audit-chain line, every control and the saved line; the typing page names the typing language in English on an English screen and in its own script otherwise; the Speak/Stop buttons, speech error and suggestion list. 24 texts × 10 languages. Feature labels, providers and models stay as the gateway sends them.
+- **State admin screen (87be87d)**: accounts and their state, disable/enable/unlock with reason, transfer form and its "still IO of n FIRs" warning, new account form and its two refusals, stations, the role list, the sign-in log and the admin log. 74 texts × 10 languages. Role labels (from the packs), names and the server's "what changed" text stay as sent; an action or sign-in outcome the screen does not know shows its code.
+- Untested code found and covered on the way: a refused import check, a failed problems download and a refused approval (the test name claimed the last one but never did it), a refused AI settings save, adding a police station.
+- **Contract test for AI gateway bodies (4d18855)**: `tests/repo_rules/test_web_gateway_contract.py` reads every `ai(...)` call of the web app and the FastAPI routes and pydantic models (Python parser): the route must exist with that method, every key sent must be a model field, every field without a default must be sent. No mismatch today; checked that `caseRef` for `case_ref` and a wrong path both fail it.
+- **API test on an upgraded database (078254e)**: `tests/e2e/test_upgraded_database.py`. The core app takes a fresh database to V29 (Flyway target), a sexual-offence case with a masked victim is written as that release would, then the current app upgrades it at start-up. The SHO reads the FIR, its people and deadlines and adds a witness; the front desk gets the complaint text withheld (BNS 72) and 404 for the people; an SHO of another state gets 404. The e2e harness (`running_core` in `tests/e2e/conftest.py`) can now start the core on any database.
+- Browser test: `test_screen_language.py` now also opens the policies screen in Marathi with the values the real core gives (7 ते 90).
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.1% lines / 92.6% branches, web 99.8% statements / 93.4% branches / 97.0% functions, gateway 96%. No gate raised (web branches rose 1.6 points since the last raise, 2 needed).
+
+Deliberately skipped / not checked
+- The 177 new texts × 10 languages are mine and unchecked, as before. Least sure: "batch" (बॅच, தொகுப்பு), "staged by", "authority for this load", Odia and Malayalam wording of the admin forms. Rank placeholders ("SI, PSI, Inspector…") stay English.
+- Complaint kinds and golden-hour steps per language in the packs: not done, it waits for question 3 of session 35 (it changes pack files and the core loader, and the step texts are legal instructions).
+- Server error messages and the legal glossary are still English; the field names of the answers (web reads, core writes) are not contract-tested yet.
+- Not looked at by eye in a browser apart from what the browser tests check.
+- The e2e core log file is now `apps/core/target/e2e-core-<database>.log` (was `e2e-core.log`).
+
+Next
+1. Rest of the MH pack, once question 2 of session 33 is answered.
+2. Screen language, last parts: complaint-kind and step labels per language in the packs (question 3 of session 35), server messages, then the legal glossary.
+3. Tests: field names of the answers; accessibility checks (axe, needs `axe-core` as a test-only dependency); load test once paging exists.
+4. End-to-end demo case and demo script (with demo stations in MH).
+
+Questions for Sumit
+1. Still open: who checks the translations (now about 500 texts per language), may `services/ai-gateway/.coverage` leave git, complaint-kind texts per language in the packs (session 35, question 3), and loanwords for legal terms.
+2. May I add `axe-core` as a test-only dependency for the accessibility check of the main screens?
 
 ## 31 Oct 2026, session 38 (on-demand run started by Sumit from the build monitor, about 18:20 IST)
 Started from `setup/seed` at 5c5c800 (session 37, nothing newer, no new answers). PostgreSQL was already running. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 1 (MH pack) still waits for your answer, so I went on with item 2.
