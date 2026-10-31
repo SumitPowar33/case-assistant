@@ -26,10 +26,56 @@ Done in session 37 (31 Oct, scheduled weekend run from about 18:00 IST): screen 
 Done in session 38 (31 Oct, on-demand run from 18:20 IST): screen language, part 5 (notices, FIR, person and evidence forms, action taken); web branch gate raised to 89.
 Done in session 39 (31 Oct, scheduled weekend run from about 20:00 IST): screen language, part 6 (policies, load data, admin, AI settings, typing); contract test for AI gateway bodies; API test on an upgraded database.
 Done in session 40 (31 Oct, on-demand run from 20:50 IST): server messages in the screen language (case work, front desk, policies, readiness, records, sign-in).
+Done in session 41 (31 Oct, Saturday 21:05 weekly review): weekly review and test audit (7 fixes, see the entry), BNSS 193(3)(ii) progress update recorded (V31).
+1. From the weekly review of 31 Oct (legal logic and access first; each needs your answer where marked):
+   a. Production before the Magistrate within 24 hours (BNSS 58) as a deadline from the arrest time until a remand or release is recorded, and a warning when the first remand is more than a day after the arrest (the import already warns).
+   b. Preliminary enquiry (BNSS 173(3)) as an open state that ends in an FIR or a closure, and its 14-day limit on the deadline list (question 2).
+   c. The AI gateway: settings and the audit log per state (a state admin now changes the provider for every state and reads every state's AI audit), refusals of the 403/404/422 kinds logged, the caller's own `system` text removed, `/health` without the chain check, the chain anchored outside the SQLite file (HMAC + head hash in the core database), one writer across processes.
+   d. History of a playbook choice and of complaint corrections before signing (both overwrite today); append-only guards on `notice_reply`, `fir_section`, `case_playbook`.
+   e. `SecurityMatrixTest`: walk every write route as an outsider with real child records and valid bodies (today only GETs, and child ids are random).
+   f. Sign-in lock-out race (parallel wrong passwords): an advisory lock per username.
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 31 Oct 2026, Weekly review (Saturday 21:05 session, session 41, Sumit away)
+Started from `setup/seed` at adfe973 (session 40, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` (superuser) and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS.
+
+What I checked: all 118 commits since the last weekly review (ebc1224, 24 Oct), in three read-only passes (legal rules and deadlines; access, tenancy, masking and audit in the core; AI gateway, web app and test quality), then confirmed each finding below with a failing test before fixing it. Tried by hand: an outsider through an encoded path and HEAD, a state admin reading other states' logs, an IO outside the case team reading a protected complaint, a slipped-year remand, a second officer deciding on someone else's AI draft. Policies looser than their parent: none found (`effective_policy_days` takes the least of module, state, district and station, and the API caps at the pack bound; covered by `PolicyApiTest`). Flaky check: the core suite run in random order (`-Dsurefire.runOrder=random`) passes; no date or order dependence found. Slowest: `AdminApiTest` 17 s (password hashing), `ImportApiTest` 11 s.
+
+Fixed (each with a regression test written first and seen failing)
+- **High, case records readable by any signed-in officer (6a6d1e5)**: the case-team check in `ReadAccess` read the raw URI, so `GET /api/fir%73/{id}/deadlines` (and every other case sub-route) reached the handler without the check; HEAD was not checked at all. Now decided by the route that matched; HEAD counts as a read. `SecurityMatrixTest` walks every case route with two encoded spellings and HEAD.
+- **High, BNS 72 (45e35f4)**: the FIR withheld a protected case's text, but the complaint it came from still showed the same text, the informant's name and contact to every station officer who may register FIRs. Now withheld outside the case team once the complaint has become a protected FIR (while it is being written down the desk still sees it). The front-desk screen says "Name withheld (BNS 72)" and offers no printable copy.
+- **Medium, tenancy (fbb4a47)**: `GET /api/admin-actions` and `GET /api/sign-ins` showed every state to a state admin. Now bounded to the admin's state; attempts on unknown usernames only for the platform admin.
+- **Medium, custody limit (f13fdab)**: a first remand after today (2027 for 2026) was taken and moved the BNSS 187(3) limit a year out. Refused now, typed or corrected.
+- **Medium, legal wording (7d0309a)**: the 90-day class was labelled "imprisonment of 10 years or more", which invites choosing it for "may extend to ten years" offences (e.g. BNS 309(4)); BNSS 187(3) needs a term "not less than ten years" (Rajeev Chaudhary, SC 2001). Labels now say "at least 10 years (minimum term)" and the 60-day class names "up to 10 years", in all 11 languages. The pack's own section table was already right.
+- **Medium, AI audit (d1c20a0)**: a provider timeout or broken answer escaped as a 500 with no audit row, though the case text may have left; now logged as `ai_error` and answered 502. Any officer could log a decision on someone else's AI draft, for any case, many times; now only the officer who asked, for the same case, once (409 after).
+- **Legal, BNSS 193(3)(ii) (73e853b)**: the 90-day progress update could never be marked as done, so it showed as overdue for the life of the case. New table `victim_update` (V31: day, to whom, how; no names; kept as written; not before the FIR, not in the future), `GET/POST /api/firs/{id}/victim-updates` (case team), the deadline ends once one is recorded; web `VictimUpdates.tsx` under the deadlines, in 11 languages. Tests: database (V31 rules and the view), API (team only, both date refusals with their messages, bad values, list), web (list, form, refusal, load error, Marathi), server messages (3 new texts × 10 languages).
+- **Gates raised (84341e3)**: core lines 95 to 96, web statements and lines 95 to 97, functions 88 to 95, gateway 92 to 94 (branch gates unchanged: core and web branches rose less than 2 points since their last raise).
+
+Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.1% lines / 92.7% branches, web 99.8% statements / 93.6% branches / 97.1% functions, gateway 96%.
+
+Still worried about (not fixed tonight; now in "Next" item 1)
+- No 24-hour production deadline (BNSS 58) exists anywhere; a first remand days after the arrest gets no warning when typed.
+- A preliminary enquiry is a final outcome, so no FIR can follow it from the signed text, and its 14-day limit is not on the deadline list and runs from the decision, not from receipt.
+- AI gateway settings and its audit log are one for all states; a state admin can change the provider for every state and read every state's AI audit rows (`ai_cloud_allowed` still blocks the cloud per unit). The chain cannot notice rows cut from its end, and anyone who can write the SQLite file can recompute it. Callers may send their own `system` text. 403/404/422 refusals are not logged.
+- A correction may leave the remand date empty, which removes the custody deadline (question 3).
+- After a Magistrate orders further investigation on a closure report the BNSS 193(2) limit does not come back (legal question for a prosecutor).
+- `SecurityMatrixTest` tries only GETs as an outsider, with random child ids; writes rely on each controller's own tests.
+- Refusal tests in `RecordsRefusalsApiTest` check the status only, not the message; `test_server_messages.py` would not notice a reworded message whose pieces stay common words.
+- A state pack could reclassify a national section to a lighter punishment class (`Punishments.java`, `putAll`); no state pack does today.
+- `FirDetail` shows a masked victim's age next to "Victim V1"; BNS 72 may want it dropped (question 4).
+- Open complaints of kind `sexual_offence` still show the informant's name in the station's front-desk list before an FIR exists (needed to do the work; question 4).
+
+Next: see item 1 of the "Next" list above.
+
+Questions for Sumit
+1. Still open: the questions of sessions 33, 35 and 39 (translations reviewer, `.coverage` in git, complaint kinds per language, MH content, `axe-core`).
+2. Should a preliminary enquiry stay open and later become an FIR (from the same signed text) or a closure, with the 14 days counted from the receipt of information? That is how I read BNSS 173(3); please confirm before I change it.
+3. May an arrest correction clear a recorded first remand (for example a remand entered on the wrong arrest), or must every correction restate it? Today clearing is allowed and removes the custody deadline.
+4. Masking: should a protected victim's age be hidden too, and should the front-desk list hide the informant's name of an open sexual-offence complaint from everyone but the officer who wrote it down?
+5. BNSS 193(3)(ii) asks for one update within 90 days. Do you want later updates on a schedule too (some states ask for monthly ones)? If so it becomes a policy.
 
 ## 31 Oct 2026, session 40 (on-demand run started by Sumit from the build monitor, about 20:50 IST)
 Started from `setup/seed` at a4e3999 (session 39, nothing newer, no new answers). PostgreSQL was already running. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 1 (MH pack) still waits for your answer; of item 2, the complaint-kind labels wait for question 3 of session 35, so I built the next part, server messages.
