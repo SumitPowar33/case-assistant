@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import PoliciesPage from './PoliciesPage'
 import { setSession } from './api'
+import { ScreenLangContext } from './i18n'
 
 // Fictional data only.
 beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'sho.one', full_name: 'SHO One', rank: 'Insp', role: 'sho', station_id: 's1', can_set_policy: true } }))
@@ -100,4 +101,34 @@ test('the form is not offered to someone who cannot set policies, but the values
   render(<PoliciesPage />)
   expect(await screen.findByText('In force at your own station')).toBeTruthy()
   expect(screen.queryByRole('form', { name: 'Make a policy stricter' })).toBeNull()
+})
+
+test('in Marathi: the table, the form, the saved message and every recent change; policy keys and reasons stay as written', async () => {
+  lists['/policy-settings'] = [
+    { id: 'p1', level: 'station', state_code: 'IN', district: null, station_name: 'Demo Cyber PS', key: 'victim_update_days', value: 60, reason: 'Fictional audit finding', set_by_name: 'SHO One', set_at: '2026-10-25T10:00:00Z' },
+    { id: 'p2', level: 'state', state_code: 'IN', district: null, station_name: null, key: 'session_hours', value: 6, reason: 'Fictional state rule', set_by_name: 'State Admin', set_at: '2026-10-25T11:00:00Z' },
+    { id: 'p3', level: 'zone', state_code: 'IN', district: 'Demo District', station_name: null, key: 'session_hours', value: 5, reason: 'Fictional zone rule', set_by_name: 'SP One', set_at: '2026-10-25T12:00:00Z' },
+  ]
+  const writes = stub()
+  render(<ScreenLangContext.Provider value="mr"><PoliciesPage /></ScreenLangContext.Provider>)
+  expect(await screen.findByRole('heading', { name: 'धोरणे' })).toBeTruthy()
+  expect(screen.getByText('तुमच्या स्वतःच्या ठाण्यात लागू')).toBeTruthy()
+  for (const name of ['धोरण', 'सध्याचे मूल्य', 'परवानगी असलेली मर्यादा']) expect(screen.getByRole('columnheader', { name })).toBeTruthy()
+  expect(screen.getByText('7 ते 90')).toBeTruthy()
+  expect(screen.getByText(/^Demo Cyber PS \(ठाणे\) साठी victim_update_days 60 केले, SHO One यांनी .* रोजी\. कारण: “Fictional audit finding”$/)).toBeTruthy()
+  expect(screen.getByText(/^IN \(राज्य\) साठी session_hours 6 केले/)).toBeTruthy()
+  expect(screen.getByText(/^Demo District \(zone\) साठी/)).toBeTruthy()   // a level the screen does not know shows its code
+  const form = screen.getByRole('form', { name: 'धोरण अधिक कडक करा' })
+  for (const name of ['राज्य', 'जिल्हा', 'पोलीस ठाणे']) expect(within(form).getByRole('option', { name })).toBeTruthy()
+  fireEvent.change(within(form).getByLabelText('नवीन मूल्य'), { target: { value: '45' } })
+  fireEvent.change(within(form).getByLabelText('कारण (किमान 10 अक्षरे)'), { target: { value: 'Fictional supervisor request' } })
+  fireEvent.change(within(form).getByLabelText('स्तर'), { target: { value: 'district' } })
+  fireEvent.click(within(form).getByRole('button', { name: 'जतन करा' }))
+  expect((await screen.findByRole('status')).textContent).toBe('जतन केले. आता अधिक कडक मूल्य लागू आहे.')
+  expect(writes[0].body).toEqual({ level: 'district', stateCode: 'IN', district: 'Demo District', key: 'victim_update_days', value: 45, reason: 'Fictional supervisor request' })
+  cleanup()
+  lists['/policy-settings'] = []
+  stub()
+  render(<ScreenLangContext.Provider value="ta"><PoliciesPage /></ScreenLangContext.Provider>)
+  expect(await screen.findByText('நீங்கள் காணக்கூடிய மாற்றம் எதுவும் இல்லை.')).toBeTruthy()
 })

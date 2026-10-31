@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import ImportPage from './ImportPage'
 import { setSession } from './api'
+import { ScreenLangContext } from './i18n'
 
 // Fictional data only.
 beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'sho.one', full_name: 'SHO One', rank: 'Insp', role: 'sho', station_id: 's1', can_import: true } }))
@@ -174,4 +175,84 @@ test('a state layout is offered only for stations of that state', async () => {
   fireEvent.change(screen.getByLabelText('Police station'), { target: { value: 's2' } })
   expect(within(layout).getByRole('option', { name: 'FIR list, MH made-up layout' })).toBeTruthy()
   expect(within(layout).getByRole('option', { name: 'FIR list' })).toBeTruthy()
+})
+
+const inLang = (lang: string) => render(<ScreenLangContext.Provider value={lang}><ImportPage /></ScreenLangContext.Provider>)
+
+test('in Marathi: every step, status, row result and the approval are in Marathi; server texts and file names stay as sent', async () => {
+  const calls = stub()
+  inLang('mr')
+  expect(await screen.findByRole('heading', { name: 'विद्यमान नोंदी लोड करा' })).toBeTruthy()
+  expect(screen.getByText('अद्याप कोणतीही फाइल लोड झालेली नाही.')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'फाइल वाचा' }))
+  expect((await screen.findByRole('alert')).textContent).toBe('CSV फाइल निवडा.')
+  const file = new File(['x'], 'old.csv', { type: 'text/csv' })
+  Object.defineProperty(file, 'text', { value: async () => 'FIR No,Date,State\n1,05/03/2024,open' })
+  fireEvent.change(screen.getByLabelText('CSV फाइल'), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('button', { name: 'फाइल वाचा' }))
+  const match = await screen.findByRole('form', { name: 'स्तंभ जुळवा' })
+  expect(within(match).getByText(/^3 ओळी\./)).toBeTruthy()
+  expect(within(match).getAllByRole('option', { name: '(फाइलमध्ये नाही)' }).length).toBe(3)
+  fireEvent.change(within(match).getByLabelText('registered_at *'), { target: { value: 'Date' } })   // field names of the layout stay as they are
+  fireEvent.click(within(match).getByRole('button', { name: 'फाइल तपासा' }))
+  const result = await screen.findByLabelText('निकाल')
+  expect(within(result).getByRole('heading', { name: '3. old.csv चा निकाल' })).toBeTruthy()
+  expect(within(result).getByText('मंजुरीच्या प्रतीक्षेत. 3 ओळी: 1 तयार, 1 तयार पण काही तपासायचे, 1 चुका असलेल्या (वगळल्या), 0 प्रणालीत आधीच (वगळल्या).')).toBeTruthy()
+  expect(await within(result).findByText('तपासा: The General Diary entry is missing')).toBeTruthy()   // the check itself comes from the server in English
+  expect(within(result).getByText('टीप: IPC 379 is BNS 303')).toBeTruthy()
+  expect(within(result).getByText('चूक: Bad number')).toBeTruthy()
+  expect(within(result).getByText('लोड केल्यानंतर काढले')).toBeTruthy()
+  for (const name of ['सर्व ओळी', 'तयार', 'तयार, तपासा', 'वगळली जाईल: चूक', 'वगळली: आधीच आहे']) expect(within(result).getByRole('button', { name })).toBeTruthy()
+  expect(within(result).getAllByText('लोड केले').length).toBe(1)   // the row already imported
+  fireEvent.change(screen.getByLabelText(/या लोडचा अधिकार/), { target: { value: 'Order 4/2026 of the Fictional SP' } })
+  fireEvent.click(screen.getByRole('button', { name: 'मंजुरी द्या आणि 2 एफआयआर लोड करा' }))
+  expect(await screen.findByText('2 एफआयआर लोड केले, SHO One यांच्या मंजुरीने, “Order 4/2026” या अधिकारावर.')).toBeTruthy()
+  expect(screen.getByRole('status').textContent).toBe('नोंदी लोड झाल्या.')
+  expect(calls.find((c) => c.url.endsWith('/commit'))?.body).toEqual({ authority: 'Order 4/2026 of the Fictional SP' })
+})
+
+test('in Hindi: the history, undo and discard; an unknown status or kind from the server shows its code', async () => {
+  stub([batch({ entity: 'notice', status: 'imported', rows_imported: 2, approved_by_name: 'SHO One' }), batch({ id: 'b2', filename: 'odd.csv', status: 'archived' }), batch({ id: 'b3', filename: 'new.csv', entity: 'witness_list' })])
+  inLang('hi')
+  const form = await screen.findByRole('form', { name: 'old.csv पूर्ववत करें' })
+  for (const name of ['फ़ाइल', 'थाना', 'स्थिति', 'पंक्तियाँ', 'किसने तैयार किया']) expect(screen.getByRole('columnheader', { name })).toBeTruthy()
+  expect(screen.getByRole('cell', { name: 'लोड किया गया' })).toBeTruthy()
+  expect(screen.getByRole('cell', { name: 'archived' })).toBeTruthy()
+  fireEvent.change(within(form).getByLabelText('old.csv पूर्ववत करने का कारण'), { target: { value: 'Wrong file was chosen' } })
+  fireEvent.click(within(form).getByRole('button', { name: 'old.csv पूर्ववत करें' }))
+  expect((await screen.findByRole('status')).textContent).toBe('बैच पूर्ववत किया गया और उसके नोटिस हटा दिए गए।')
+  fireEvent.click(screen.getByRole('button', { name: 'new.csv खोलें' }))
+  expect(await screen.findByRole('button', { name: 'स्वीकृति दें और 2 witness_list लोड करें' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'यह बैच रद्द करें' }))
+  await waitFor(() => expect(screen.getByRole('status').textContent).toBe('बैच रद्द कर दिया गया।'))
+})
+
+test('a refused check, a failed download and a refused approval are shown, and nothing is claimed loaded', async () => {
+  const refuse = (message: string, status = 409) => ({ ok: false, status, json: async () => ({ message }), text: async () => '' })
+  let refused = 'check'
+  const base = stub()
+  const inner = vi.mocked(fetch).getMockImplementation()!
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (url === '/api/imports' && init?.method === 'POST' && refused === 'check') return refuse('The layout fir-generic needs registered_at.', 400)
+    if (url.endsWith('/errors.csv')) return refuse('', 500)
+    if (url.endsWith('/commit')) return refuse('A second authorised person must approve this import.')
+    return inner(url, init)
+  }))
+  render(<ImportPage />)
+  await chooseFile()
+  const match = await screen.findByRole('form', { name: 'Match the columns' })
+  fireEvent.click(within(match).getByRole('button', { name: 'Check the file' }))
+  expect((await screen.findByRole('alert')).textContent).toBe('The layout fir-generic needs registered_at.')
+  expect(screen.getByRole('form', { name: 'Match the columns' })).toBeTruthy()   // the matching stays to be corrected
+  refused = ''
+  fireEvent.click(within(match).getByRole('button', { name: 'Check the file' }))
+  const result = await screen.findByLabelText('Result')
+  fireEvent.click(within(result).getByRole('button', { name: 'Download the problems as CSV' }))
+  expect((await screen.findByRole('alert')).textContent).toMatch(/500/)
+  fireEvent.change(screen.getByLabelText(/Authority for this load/), { target: { value: 'Order 4/2026 of the Fictional SP' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Approve and load 2 FIRs' }))
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('A second authorised person must approve this import.'))
+  expect(screen.queryByRole('status')).toBeNull()
+  expect(screen.getByRole('form', { name: 'Approve' })).toBeTruthy()   // still waiting for approval
+  expect(base.length).toBeGreaterThan(0)
 })
