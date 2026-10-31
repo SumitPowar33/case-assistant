@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import AdminPage from './AdminPage'
 import { setSession } from './api'
+import { ScreenLangContext } from './i18n'
 
 // Fictional data only.
 beforeEach(() => setSession({ token: 't', user: { id: 'a1', username: 'admin.one', full_name: 'State Admin', rank: 'Admin', role: 'state_admin', station_id: null } }))
@@ -145,4 +146,77 @@ test('role names and the station rule come from the packs, so a role a state add
   expect((await screen.findByRole('alert')).textContent).toBe('Choose the police station for this role.')
   expect(writes).toHaveLength(0)
   ;(lists['/roles'] as object[]).pop()
+})
+
+test('in Marathi: accounts, the reason forms, the logs and the role list; names, role labels from the packs and server texts stay as sent', async () => {
+  lists['/admin-actions'] = [
+    { action: 'user_disabled', reason: 'Fictional transfer out', at: '2026-10-25T10:00:00Z', actor_name: 'State Admin', username: 'hc.away', user_name: 'HC Away', station_name: null, detail: null },
+    { action: 'station_moved', reason: null, at: '2026-10-25T11:00:00Z', actor_name: 'State Admin', username: null, user_name: null, station_name: 'Demo Cyber PS', detail: 'fictional' },
+  ]
+  lists['/sign-ins'] = [{ username_tried: 'si.fictional', outcome: 'wrong_password', client_ip: null, at: '2026-10-25T15:45:00Z' },
+    { username_tried: 'x.y', outcome: 'captcha_failed', client_ip: '127.0.0.1', at: '2026-10-25T15:46:00Z' }]
+  const writes = stub()
+  render(<ScreenLangContext.Provider value="mr"><AdminPage /></ScreenLangContext.Provider>)
+  expect(await screen.findByRole('heading', { name: 'राज्य ॲडमिन' })).toBeTruthy()
+  for (const name of ['खाती', 'पोलीस ठाणी', 'साइन-इन लॉग', 'ॲडमिन लॉग', 'भूमिका आणि परवानग्या']) expect(screen.getByRole('heading', { name })).toBeTruthy()
+  const row = screen.getByText('SI Fictional (SI)').closest('tr')!
+  expect(within(row).getByText(/^25 Oct 2026, 9:30 pm IST पर्यंत लॉक$/)).toBeTruthy()
+  expect(within(row).getByText('Investigating officer', { selector: 'td' })).toBeTruthy()
+  expect(within(screen.getByText('HC Away (HC)').closest('tr')!).getByText('बंद')).toBeTruthy()
+  expect(within(screen.getByText('State Admin (Admin)').closest('tr')!).getByText('तुम्ही')).toBeTruthy()
+  type('SI Fictional अनलॉक करण्याचे कारण', 'Officer called from the station')
+  fireEvent.click(screen.getByRole('button', { name: 'SI Fictional अनलॉक करा' }))
+  expect((await screen.findByRole('status')).textContent).toBe('SI Fictional अनलॉक केले.')
+  expect(writes).toEqual([{ url: '/api/users/u1/unlock', body: { reason: 'Officer called from the station' } }])
+  expect(screen.getByText(/^.*: खाते बंद केले: HC Away \(hc.away\), State Admin यांनी\. कारण: “Fictional transfer out”$/)).toBeTruthy()
+  expect(screen.getByText(/: station_moved: Demo Cyber PS \(fictional\), State Admin यांनी$/)).toBeTruthy()   // an action the screen does not know shows its code
+  expect(screen.getByRole('cell', { name: 'चुकीचा पासवर्ड' })).toBeTruthy()
+  expect(screen.getByRole('cell', { name: 'captcha_failed' })).toBeTruthy()
+  const roleRow = screen.getByText('Investigating officer', { selector: 'th' }).closest('tr')!
+  expect(within(roleRow).getByText('होय')).toBeTruthy()
+  expect(within(screen.getByText('State admin', { selector: 'th' }).closest('tr')!).getByText('नाही')).toBeTruthy()
+  const add = screen.getByText('खाते जोडा').closest('details')!
+  expect(within(add).getByRole('button', { name: 'खाते तयार करा' })).toBeTruthy()
+  type('पूर्ण नाव', 'PSI Demo', within(add))
+  type('हुद्दा', 'PSI', within(add))
+  type(/^यूजरनेम/, 'psi.demo', within(add))
+  type(/^पहिला पासवर्ड \(/, 'fictional-pass-123', within(add))
+  type('पहिला पासवर्ड पुन्हा', 'fictional-pass-124', within(add))
+  fireEvent.click(within(add).getByRole('button', { name: 'खाते तयार करा' }))
+  expect((await screen.findByRole('alert')).textContent).toBe('दोन्ही पासवर्ड सारखे नाहीत.')
+  type('पहिला पासवर्ड पुन्हा', 'fictional-pass-123', within(add))
+  fireEvent.click(within(add).getByRole('button', { name: 'खाते तयार करा' }))
+  expect((await screen.findByRole('alert')).textContent).toBe('या भूमिकेसाठी पोलीस ठाणे निवडा.')
+  expect(writes.length).toBe(1)
+  const station = screen.getByText('पोलीस ठाणे जोडा').closest('details')!
+  expect(within(station).getByRole('button', { name: 'ठाणे जोडा' })).toBeTruthy()
+})
+
+test('in Hindi: a transfer of the IO of one FIR, enabling an account and an installation without state packs', async () => {
+  lists['/state-packs'] = []
+  const writes = stub({ status: 200, body: { changed: 'rank SI to PI', firsAsIo: 1 } })
+  render(<ScreenLangContext.Provider value="hi"><AdminPage /></ScreenLangContext.Provider>)
+  const row = (await screen.findByText('SI Fictional (SI)')).closest('tr')!
+  type('पद', 'PI', within(row))
+  type(/^कारण \(जैसे तबादला आदेश\)/, 'Fictional transfer order 12', within(row))
+  fireEvent.click(within(row).getByRole('button', { name: 'SI Fictional को बदलें' }))
+  expect((await screen.findByRole('status')).textContent).toBe(
+    'SI Fictional: rank SI to PI। उन्हें फिर से साइन इन करना होगा। वे अभी भी 1 एफआईआर के IO हैं; ये मामले किसी दूसरे अधिकारी को दें।')
+  type('HC Away को सक्रिय करने का कारण', 'Back from fictional leave')
+  fireEvent.click(screen.getByRole('button', { name: 'HC Away को सक्रिय करें' }))
+  expect(await screen.findByText('HC Away सक्रिय किए गए और उन्हें फिर से साइन इन करना होगा।')).toBeTruthy()
+  expect(writes.map((w) => w.url)).toEqual(['/api/users/u1', '/api/users/u2/enable'])
+  expect(screen.getByText('अभी कोई राज्य पैक लोड नहीं है, इसलिए कोई थाना नहीं जोड़ा जा सकता।')).toBeTruthy()
+  lists['/state-packs'] = [{ code: 'IN', name: 'National', status: 'draft' }]
+})
+
+test('a police station is added to a loaded state pack; an empty CCTNS code is sent as none', async () => {
+  const writes = stub({ status: 201, body: { id: 's9' } })
+  render(<AdminPage />)
+  const form = (await screen.findByText('Add a police station')).closest('details')!
+  type('District', 'Demo District', within(form))
+  type('Station name', 'Demo Harbour PS', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Add station' }))
+  expect((await screen.findByRole('status')).textContent).toBe('Station added.')
+  expect(writes).toEqual([{ url: '/api/stations', body: { stateCode: 'IN', district: 'Demo District', name: 'Demo Harbour PS', cctnsCode: null } }])
 })
