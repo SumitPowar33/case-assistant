@@ -28,7 +28,7 @@ export default function FirList() {
             <td><a href={`#/firs/${f.id}`}>{f.fir_no}/{f.fir_year}</a></td>
             <td>{fmt(f.registered_at)}</td>
             <td>{t(f.is_zero_fir ? 'firs.zero' : 'firs.plain')}{f.sexual_offence ? ` · ${t('firs.sexualOffence')}` : ''}</td>
-            <td>{f.action_taken}</td>
+            <td>{t.code('action', f.action_taken)}</td>
           </tr>
         ))}
       </tbody>

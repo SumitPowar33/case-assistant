@@ -46,7 +46,7 @@ export default function FirDetail({ id }: { id: string }) {
     <>
       <p><a href="#/">{t('fir.back')}</a></p>
       <h1>{t('fir.title', { no: fir.fir_no, year: fir.fir_year })}{fir.is_zero_fir ? ` ${t('fir.zeroSuffix')}` : ''}</h1>
-      <p>{t('fir.registered', { date: fmt(fir.registered_at) })} · {fir.action_taken}</p>
+      <p>{t('fir.registered', { date: fmt(fir.registered_at) })} · {t.code('action', fir.action_taken)}</p>
       <IoAssignment firId={id} ioName={fir.io_name} version={version} onSaved={saved} />
       <p>{t('fir.sections', { list: fir.sections.map((s) => `${s.act} ${s.section}`).join(', ') || t('fir.sectionsNone') })}</p>
       {fir.contents_withheld

@@ -57,4 +57,5 @@ test('in Hindi the list, its columns and the page buttons are in Hindi', async (
   expect(screen.getByRole('navigation', { name: 'पन्ने' })).toBeTruthy()
   expect(screen.getByText('पन्ना 1')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'पुराने' })).toBeTruthy()
+  expect(screen.getAllByRole('cell', { name: 'जाँच शुरू की गई' }).length).toBeGreaterThan(0)   // the action taken, by its label
 })

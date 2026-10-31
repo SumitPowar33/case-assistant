@@ -42,14 +42,15 @@ export function Form({ title, submit, onSaved, children }: {
  */
 export function NewFirForm({ complaintId }: { complaintId?: string } = {}) {
   const { lang } = useContext(TypingContext)
+  const t = useT()
   const [contents, setContents] = useState('')
   const me = currentSession()?.user
   const station = me?.station_id
-  if (!station) return <p>Only police station staff can register an FIR.</p>
+  if (!station) return <p>{t('firForm.onlyStation')}</p>
   return (
-    <Form title={complaintId ? 'Register the FIR from this complaint' : 'Register a new FIR'} onSaved={(r) => { setContents(''); window.location.hash = `#/firs/${(r as { id: string }).id}` }}
+    <Form title={t(complaintId ? 'firForm.fromComplaint' : 'firForm.new')} onSaved={(r) => { setContents(''); window.location.hash = `#/firs/${(r as { id: string }).id}` }}
       submit={(f) => {
-        if (!complaintId && !contents.trim()) throw new Error('Write the information as given.')
+        if (!complaintId && !contents.trim()) throw new Error(t('firForm.needWords'))
         return send('/firs', 'POST', {
         stationId: station, firYear: Number(f.get('year')), firNo: Number(f.get('no')), gdEntryNo: text(f, 'gd'),
         registeredAt: istIso(String(f.get('registered'))),
@@ -58,74 +59,76 @@ export function NewFirForm({ complaintId }: { complaintId?: string } = {}) {
         sexualOffence: f.get('sexual') === 'on', sections: parseSections(String(f.get('sections') ?? '')),
         })
       }}>
-      <label>Year <input name="year" type="number" min={2024} max={2100} defaultValue={new Date().getFullYear()} required /></label>
-      <label>FIR number <input name="no" type="number" min={1} required /></label>
-      <label>General diary entry <input name="gd" required /></label>
-      {!complaintId && <label>Information received (date and time, IST) <input name="received" type="datetime-local" required /></label>}
-      <label>Registered (date and time, IST) <input name="registered" type="datetime-local" required /></label>
-      {complaintId ? <p><small>The information and the time it was received are taken from the signed complaint, unchanged.</small></p>
-        : <TypingField label="Information as given (in the informant's words)" value={contents} onChange={setContents} multiline />}
-      <label>Sections <input name="sections" placeholder="BNS 318(4), IT Act 66D" /></label>
-      <label>Action taken <select name="action" defaultValue="investigate">
-        <option value="investigate">Investigation taken up</option>
-        <option value="self_investigation">Not investigated by self (give reason)</option>
-        <option value="refused">Refused to investigate (give reason)</option>
-        <option value="transferred">Transferred to the police station with jurisdiction</option>
+      <label>{t('firForm.year')} <input name="year" type="number" min={2024} max={2100} defaultValue={new Date().getFullYear()} required /></label>
+      <label>{t('firForm.no')} <input name="no" type="number" min={1} required /></label>
+      <label>{t('firForm.gd')} <input name="gd" required /></label>
+      {!complaintId && <label>{t('firForm.received')} <input name="received" type="datetime-local" required /></label>}
+      <label>{t('firForm.registered')} <input name="registered" type="datetime-local" required /></label>
+      {complaintId ? <p><small>{t('firForm.fromSigned')}</small></p>
+        : <TypingField label={t('desk.words')} value={contents} onChange={setContents} multiline />}
+      <label>{t('firForm.sections')} <input name="sections" placeholder="BNS 318(4), IT Act 66D" /></label>
+      <label>{t('firForm.action')} <select name="action" defaultValue="investigate">
+        {ACTIONS.map((a) => <option key={a} value={a}>{t.code('action', a)}</option>)}
       </select></label>
-      <label>Reason (if not investigated) <input name="reason" /></label>
-      <label><input name="sexual" type="checkbox" /> Sexual offence (protects the victim's identity, BNS 72)</label>
-      {can('case.lead') && <label><input name="iAmIo" type="checkbox" defaultChecked={me!.case_scope === 'none'} /> I am the investigating officer</label>}
+      <label>{t('firForm.reason')} <input name="reason" /></label>
+      <label><input name="sexual" type="checkbox" /> {t('firForm.sexual')}</label>
+      {can('case.lead') && <label><input name="iAmIo" type="checkbox" defaultChecked={me!.case_scope === 'none'} /> {t('firForm.iAmIo')}</label>}
     </Form>
   )
 }
 
+/** What the officer did on the information (BNSS 173, 176); labels are action.<code>. */
+const ACTIONS = ['investigate', 'self_investigation', 'refused', 'transferred']
+
 /** Add a person to the case (case team only; the server checks). */
 export function AddPersonForm({ firId, onSaved }: { firId: string; onSaved: () => void }) {
+  const t = useT()
   const [name, setName] = useState('')
   return (
-    <Form title="Add a person" onSaved={() => { setName(''); onSaved() }}
+    <Form title={t('personForm.title')} onSaved={() => { setName(''); onSaved() }}
       submit={(f) => send(`/firs/${firId}/people`, 'POST', {
         role: f.get('role'), label: text(f, 'label'), identityKnown: name.trim() !== '', fullName: name.trim() || null,
         ageYears: f.get('age') ? Number(f.get('age')) : null, gender: text(f, 'gender'), phone: text(f, 'phone'),
         addressPresent: text(f, 'address'), identityMasked: f.get('masked') === 'on',
       })}>
-      <label>Role <select name="role">
-        {['complainant', 'victim', 'accused', 'witness', 'suspect'].map((r) => <option key={r} value={r}>{r}</option>)}
+      <label>{t('personForm.role')} <select name="role">
+        {['complainant', 'victim', 'accused', 'witness', 'suspect'].map((r) => <option key={r} value={r}>{t.code('person', r)}</option>)}
       </select></label>
-      <label>Label <input name="label" placeholder="A1, W2, V1" /></label>
-      <TypingField label="Full name (leave empty if not known)" value={name} onChange={setName} />
-      <label>Age <input name="age" type="number" min={0} max={120} /></label>
-      <label>Gender <input name="gender" /></label>
-      <label>Phone <input name="phone" inputMode="tel" /></label>
-      <label>Present address <input name="address" /></label>
-      <label><input name="masked" type="checkbox" /> Protect this person's identity (BNS 72)</label>
+      <label>{t('common.label')} <input name="label" placeholder="A1, W2, V1" /></label>
+      <TypingField label={t('personForm.name')} value={name} onChange={setName} />
+      <label>{t('personForm.age')} <input name="age" type="number" min={0} max={120} /></label>
+      <label>{t('personForm.gender')} <input name="gender" /></label>
+      <label>{t('personForm.phone')} <input name="phone" inputMode="tel" /></label>
+      <label>{t('personForm.address')} <input name="address" /></label>
+      <label><input name="masked" type="checkbox" /> {t('personForm.masked')}</label>
     </Form>
   )
 }
 
 /** Record a seized item. Electronic items need the SHA-256 taken at seizure. */
 export function AddEvidenceForm({ firId, onSaved }: { firId: string; onSaved: () => void }) {
+  const t = useT()
   const [description, setDescription] = useState('')
   return (
-    <Form title="Add evidence" onSaved={() => { setDescription(''); onSaved() }}
+    <Form title={t('evForm.title')} onSaved={() => { setDescription(''); onSaved() }}
       submit={(f) => {
         const sha = text(f, 'sha256')
-        if (f.get('kind') === 'electronic' && !/^[0-9a-fA-F]{64}$/.test(sha ?? '')) throw new Error('Electronic evidence needs the 64-character SHA-256 taken at seizure.')
+        if (f.get('kind') === 'electronic' && !/^[0-9a-fA-F]{64}$/.test(sha ?? '')) throw new Error(t('evForm.needSha'))
         return send(`/firs/${firId}/evidence`, 'POST', {
           label: text(f, 'label'), description: description.trim(), kind: f.get('kind'), seizedAt: istIso(String(f.get('seized'))),
           seizureMemo: text(f, 'memo'), esakshyaId: text(f, 'esakshya'), sealNo: text(f, 'seal'), sha256: sha,
         })
       }}>
-      <label>Label <input name="label" placeholder="E-01" required /></label>
-      <TypingField label="Description" value={description} onChange={setDescription} />
-      <label>Kind <select name="kind">
-        <option value="document">document</option><option value="electronic">electronic</option><option value="physical">physical</option>
+      <label>{t('common.label')} <input name="label" placeholder="E-01" required /></label>
+      <TypingField label={t('evForm.description')} value={description} onChange={setDescription} />
+      <label>{t('common.kind')} <select name="kind">
+        {['document', 'electronic', 'physical'].map((k) => <option key={k} value={k}>{t.code('evidenceKind', k)}</option>)}
       </select></label>
-      <label>Seized (date and time, IST) <input name="seized" type="datetime-local" required /></label>
-      <label>Seizure memo number <input name="memo" required /></label>
-      <label>eSakshya recording ID <input name="esakshya" /></label>
-      <label>Seal number <input name="seal" /></label>
-      <label>SHA-256 (electronic items) <input name="sha256" spellCheck={false} /></label>
+      <label>{t('evForm.seized')} <input name="seized" type="datetime-local" required /></label>
+      <label>{t('evForm.memo')} <input name="memo" required /></label>
+      <label>{t('evForm.esakshya')} <input name="esakshya" /></label>
+      <label>{t('evForm.seal')} <input name="seal" /></label>
+      <label>{t('evForm.sha')} <input name="sha256" spellCheck={false} /></label>
     </Form>
   )
 }

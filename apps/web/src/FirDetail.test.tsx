@@ -74,6 +74,7 @@ test('in Marathi the case page shows its headings, roles, deadlines and evidence
   expect(await screen.findByText('एफआयआर 9/2026 (झिरो एफआयआर)')).toBeTruthy()
   expect(screen.getByText('← सर्व एफआयआर')).toBeTruthy()
   expect(screen.getByText('कलमे: BNS 318(4)')).toBeTruthy()
+  expect(screen.getByText(/· तपास हाती घेतला$/)).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'व्यक्ती' })).toBeTruthy()
   expect(await screen.findByText('V1 (पीडित): Victim V1 (ओळख संरक्षित)')).toBeTruthy()
   expect(await screen.findByText(/पीडितेला प्रगतीची माहिती: 2026-12-30 पर्यंत/)).toBeTruthy()

@@ -5,6 +5,7 @@ import { Form } from './Forms'
 import TypingField from './TypingField'
 import { fmt, istIso, text } from './formats'
 import { useLoad } from './useLoad'
+import { translateCode, useT } from './i18n'
 
 type Notice = {
   id: string; kind: string; addressee: string; items_requested: string[]; items_missing: string[]; status: string
@@ -12,49 +13,42 @@ type Notice = {
 }
 type Draft = { request_id: string; draft: string; provider: string; model: string; label: string }
 
-const KINDS: Record<string, string> = {
-  BNSS_94: 'BNSS 94: produce documents or data', BNSS_35_3: 'BNSS 35(3): appear before the officer',
-  BNSS_179: 'BNSS 179: attend as a witness', follow_up: 'Follow-up',
-}
-/** Notices of old cases loaded from a file keep the CrPC section they were issued under; they cannot be typed new. */
-const OLD_KINDS: Record<string, string> = {
-  CrPC_91: 'CrPC 91 (old law): produce documents', CrPC_41A: 'CrPC 41A (old law): appear', CrPC_160: 'CrPC 160 (old law): attend as a witness',
-}
-const STATUS: Record<string, string> = {
-  draft: 'draft (not signed)', sent: 'sent, waiting for reply', reply_incomplete: 'reply incomplete', complete: 'complete', cancelled: 'cancelled',
-}
-/** The check used for a notice that asked for no list of items. */
+/** Kinds a new notice can have; labels are notice.kind.<code>. Notices of old cases loaded from a file keep the CrPC
+ *  section they were issued under (notice.kind.CrPC_91 and others); they cannot be typed new. */
+const KINDS = ['BNSS_94', 'BNSS_35_3', 'BNSS_179', 'follow_up']
+const CHANNELS = ['email', 'portal', 'post', 'by_hand']
+/** The check stored for a notice that asked for no list of items. It is stored in English, whatever the screen language. */
 const FULL_REPLY = 'Reply answers the notice fully'
 const lines = (s: string) => [...new Set(s.split('\n').map((l) => l.trim()).filter(Boolean))]
 
 /** Sends a draft: the signed-in officer signs it (the server records who). */
 function SendForm({ firId, notice, onSaved }: { firId: string; notice: Notice; onSaved: () => void }) {
+  const t = useT()
   return (
-    <Form title="Sign and send this notice" onSaved={onSaved}
+    <Form title={t('notice.sendTitle')} onSaved={onSaved}
       submit={(f) => send(`/firs/${firId}/notices/${notice.id}/send`, 'POST', {
         issuedAt: istIso(String(f.get('issued'))), replyDueOn: text(f, 'due'),
       })}>
-      <label>Issued (date and time, IST) <input name="issued" type="datetime-local" required /></label>
-      <label>Reply due by <input name="due" type="date" /></label>
+      <label>{t('notice.issued')} <input name="issued" type="datetime-local" required /></label>
+      <label>{t('notice.dueBy')} <input name="due" type="date" /></label>
     </Form>
   )
 }
 
 /** Logs a reply. The officer ticks each outstanding item the reply brought; unticked means it did not come. */
 function ReplyForm({ firId, notice, onSaved }: { firId: string; notice: Notice; onSaved: () => void }) {
+  const t = useT()
   const items = notice.items_requested.length ? notice.items_missing : [FULL_REPLY]
   return (
-    <Form title="Log a reply" onSaved={onSaved}
+    <Form title={t('notice.replyTitle')} onSaved={onSaved}
       submit={(f) => send(`/firs/${firId}/notices/${notice.id}/replies`, 'POST', {
         receivedAt: istIso(String(f.get('received'))), channel: f.get('channel'),
         checksJson: JSON.stringify(items.map((item, i) => ({ item, present: f.get(`item${i}`) === 'on' }))),
       })}>
-      <label>Received (date and time, IST) <input name="received" type="datetime-local" required /></label>
-      <label>Came by <select name="channel">
-        <option value="email">email</option><option value="portal">portal</option><option value="post">post</option><option value="by_hand">by hand</option>
-      </select></label>
-      {notice.items_requested.length > 0 && <p>Tick what this reply brought:</p>}
-      {items.map((item, i) => <label key={item}><input name={`item${i}`} type="checkbox" /> {item}</label>)}
+      <label>{t('notice.received')} <input name="received" type="datetime-local" required /></label>
+      <label>{t('notice.channel')} <select name="channel">{CHANNELS.map((c) => <option key={c} value={c}>{t.code('notice.channel', c)}</option>)}</select></label>
+      {notice.items_requested.length > 0 && <p>{t('notice.tick')}</p>}
+      {items.map((item, i) => <label key={item}><input name={`item${i}`} type="checkbox" /> {item === FULL_REPLY ? t('notice.fullReply') : item}</label>)}
     </Form>
   )
 }
@@ -67,6 +61,7 @@ function ReplyForm({ firId, notice, onSaved }: { firId: string; notice: Notice; 
  * gateway's audit log gets the officer's decision: accepted (used unchanged), edited, or rejected (not used).
  */
 function NewNoticeForm({ firId, fir, onSaved }: { firId: string; fir?: NoticeFacts['fir']; onSaved: () => void }) {
+  const t = useT()
   const [body, setBody] = useState('')
   const [draft, setDraft] = useState<Draft>()
   const [used, setUsed] = useState<Draft>()
@@ -82,10 +77,11 @@ function NewNoticeForm({ firId, fir, onSaved }: { firId: string; fir?: NoticeFac
     const kind = String(f.get('kind'))
     const addressee = text(f, 'addressee')
     setAiNote('')
-    if (!addressee) { setAiNote('Fill in "To" first.'); return }
+    if (!addressee) { setAiNote(t('notice.fillTo', { to: t('notice.to') })); return }
     setAiBusy(true)
     try {
-      const prompt = noticePrompt({ kind, kindLabel: KINDS[kind] ?? kind, addressee, items: lines(String(f.get('items') ?? '')), fir })
+      // the prompt is in English whatever the screen language (it is versioned and audit-logged as written)
+      const prompt = noticePrompt({ kind, kindLabel: translateCode('en', 'notice.kind', kind), addressee, items: lines(String(f.get('items') ?? '')), fir })
       const out = await ai<Draft>('/v1/generate', { method: 'POST', body: {
         feature: 'notice_draft', prompt_version: NOTICE_PROMPT_VERSION, prompt, case_ref: firId, max_tokens: 1200 } })
       if (draft && draft.request_id !== used?.request_id) await decide(draft, 'rejected', 'replaced by a new draft').catch(() => undefined)
@@ -103,11 +99,11 @@ function NewNoticeForm({ firId, fir, onSaved }: { firId: string; fir?: NoticeFac
   }
 
   return (
-    <Form title="Write a notice" onSaved={() => { setBody(''); setDraft(undefined); setUsed(undefined); onSaved() }}
+    <Form title={t('notice.writeTitle')} onSaved={() => { setBody(''); setDraft(undefined); setUsed(undefined); onSaved() }}
       submit={async (f) => {
-        if (!body.trim()) throw new Error('Write the text of the notice.')
+        if (!body.trim()) throw new Error(t('notice.needText'))
         const items = lines(String(f.get('items') ?? ''))
-        if (f.get('kind') === 'BNSS_94' && !items.length) throw new Error('A BNSS 94 notice must list what is to be produced, one item per line.')
+        if (f.get('kind') === 'BNSS_94' && !items.length) throw new Error(t('notice.need94'))
         const sendNow = f.get('sendNow') === 'on'
         const result = await send(`/firs/${firId}/notices`, 'POST', {
           kind: f.get('kind'), addressee: text(f, 'addressee'), itemsRequested: items, body: body.trim(),
@@ -121,29 +117,29 @@ function NewNoticeForm({ firId, fir, onSaved }: { firId: string; fir?: NoticeFac
           if (used) await decide(used, body.trim() === used.draft.trim() ? 'accepted' : 'edited')
           if (draft && draft.request_id !== used?.request_id) await decide(draft, 'rejected', 'not used')
         } catch (err) {
-          setAiNote(`The notice is saved, but the decision on the AI draft could not be logged: ${(err as Error).message}`)
+          setAiNote(t('notice.savedNotLogged', { error: (err as Error).message }))
         }
         return result
       }}>
-      <label>Kind <select name="kind">{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-      <label>To <input name="addressee" placeholder="Nodal Officer, Fictional Bank" required /></label>
-      <label>Items to produce (one per line) <textarea name="items" rows={4} placeholder={'Account statement 01-09-2026 to 30-09-2026\nKYC documents\nBSA 63(4) certificate Part A'} /></label>
-      <p><button type="button" onClick={askAi} disabled={aiBusy}>{aiBusy ? 'Asking the AI…' : 'Draft the text with AI'}</button>{' '}
-        <small>Sends only the kind, the FIR number and sections, the items{' '}and, for BNSS 94, who it is to. Never the complaint or names of people.</small></p>
+      <label>{t('common.kind')} <select name="kind">{KINDS.map((k) => <option key={k} value={k}>{t.code('notice.kind', k)}</option>)}</select></label>
+      <label>{t('notice.to')} <input name="addressee" placeholder={t('notice.toPh')} required /></label>
+      <label>{t('notice.items')} <textarea name="items" rows={4} placeholder={t('notice.itemsPh')} /></label>
+      <p><button type="button" onClick={askAi} disabled={aiBusy}>{t(aiBusy ? 'notice.asking' : 'notice.askAi')}</button>{' '}
+        <small>{t('notice.aiSends')}</small></p>
       {aiNote && <p role="alert">{aiNote}</p>}
       {draft && (
-        <section aria-label="AI draft" className="ai-draft">
+        <section aria-label={t('notice.aiDraft')} className="ai-draft">
           <p><strong>{draft.label}</strong> <small>({draft.provider} / {draft.model})</small></p>
           <pre>{draft.draft}</pre>
-          <button type="button" onClick={() => { setBody(draft.draft); setUsed(draft) }}>Use this draft</button>{' '}
-          {draft.request_id !== used?.request_id && <button type="button" onClick={discard}>Discard</button>}
-          {draft.request_id === used?.request_id && <small>Copied into the text below. Check and correct it before you save.</small>}
+          <button type="button" onClick={() => { setBody(draft.draft); setUsed(draft) }}>{t('notice.useDraft')}</button>{' '}
+          {draft.request_id !== used?.request_id && <button type="button" onClick={discard}>{t('notice.discard')}</button>}
+          {draft.request_id === used?.request_id && <small>{t('notice.copied')}</small>}
         </section>
       )}
-      <TypingField label="Text of the notice" value={body} onChange={setBody} multiline />
-      <label><input name="sendNow" type="checkbox" /> I sign and send it now</label>
-      <label>Issued (date and time, IST, if sent now) <input name="issued" type="datetime-local" /></label>
-      <label>Reply due by (if sent now) <input name="due" type="date" /></label>
+      <TypingField label={t('notice.text')} value={body} onChange={setBody} multiline />
+      <label><input name="sendNow" type="checkbox" /> {t('notice.sendNow')}</label>
+      <label>{t('notice.issuedIfNow')} <input name="issued" type="datetime-local" /></label>
+      <label>{t('notice.dueIfNow')} <input name="due" type="date" /></label>
     </Form>
   )
 }
@@ -153,20 +149,21 @@ export default function Notices({ firId, fir }: { firId: string; fir?: NoticeFac
   const [version, setVersion] = useState(0)
   const saved = () => setVersion((v) => v + 1)
   const { data, error } = useLoad<Notice[]>(`/firs/${firId}/notices`, version)
+  const t = useT()
   return (
     <section aria-labelledby="notices">
-      <h2 id="notices">Notices</h2>
-      {error ? <p role="alert">{error}</p> : !data ? <p>Loading…</p> : !data.length ? <p>None yet.</p> : (
+      <h2 id="notices">{t('notice.heading')}</h2>
+      {error ? <p role="alert">{error}</p> : !data ? <p>{t('common.loading')}</p> : !data.length ? <p>{t('common.noneYet')}</p> : (
         <ul>{data.map((n) => (
           <li key={n.id}>
-            <strong>{KINDS[n.kind] ?? OLD_KINDS[n.kind] ?? n.kind}</strong> to {n.addressee}: {STATUS[n.status] ?? n.status}
-            {n.issued_at && <> · issued {fmt(n.issued_at)}{n.signed_by_name && ` by ${n.signed_by_name}`}</>}
-            {n.reply_due_on && <> · reply due by {n.reply_due_on}</>}
-            {n.ai_drafted && <> · text drafted with AI, checked by the officer</>}
-            {n.replies > 0 && <> · {n.replies} {n.replies === 1 ? 'reply' : 'replies'}</>}
+            <strong>{t.code('notice.kind', n.kind)}</strong> {t('notice.toLine', { addressee: n.addressee, status: t.code('notice.status', n.status) })}
+            {n.issued_at && <> · {n.signed_by_name ? t('notice.issuedBy', { date: fmt(n.issued_at), name: n.signed_by_name }) : t('notice.issuedLine', { date: fmt(n.issued_at) })}</>}
+            {n.reply_due_on && <> · {t('notice.dueLine', { date: n.reply_due_on })}</>}
+            {n.ai_drafted && <> · {t('notice.aiDrafted')}</>}
+            {n.replies > 0 && <> · {n.replies === 1 ? t('notice.oneReply') : t('notice.replies', { n: n.replies })}</>}
             {n.items_requested.length > 0 && (
               <ul>{n.items_requested.map((item) => (
-                <li key={item}>{item}: {n.items_missing.includes(item) ? 'not received yet' : 'received'}</li>
+                <li key={item}>{t(n.items_missing.includes(item) ? 'notice.itemMissing' : 'notice.itemReceived', { item })}</li>
               ))}</ul>
             )}
             {n.status === 'draft' && <SendForm firId={firId} notice={n} onSaved={saved} />}

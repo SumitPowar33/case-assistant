@@ -106,7 +106,7 @@ test('an AI draft is shown apart, used only when the officer chooses, and an edi
   render(<Notices firId="f1" fir={fir} />)
   await screen.findByText('None yet.')
   fireEvent.click(screen.getByRole('button', { name: 'Draft the text with AI' }))
-  expect((await screen.findByRole('alert')).textContent).toBe('Fill in "To" first.')
+  expect((await screen.findByRole('alert')).textContent).toBe('Fill in “To” first.')
   type('To', 'Nodal Officer, Fictional Telecom')
   type(/Items to produce/, 'CDR')
   fireEvent.click(screen.getByRole('button', { name: 'Draft the text with AI' }))
@@ -204,4 +204,72 @@ test('an old notice loaded from a file keeps its CrPC section and may have no si
   expect(item.textContent).toContain('issued 11 Mar 2024, 10:00 am IST')
   expect(item.textContent).not.toContain('IST by')
   expect(screen.queryByRole('option', { name: /CrPC/ })).toBeNull()   // the form for a new notice offers BNSS kinds only
+})
+
+test('in Marathi the notice list, the reply and send forms and the new-notice form are in Marathi; the stored check and the AI prompt stay English', async () => {
+  const writes = stubWithAi()
+  vi.mocked(fetch).mockImplementation((async (url: string, init?: RequestInit) => {
+    if (!init?.method || init.method === 'GET') {
+      const lists: Record<string, unknown> = { '/api/firs/f1/notices': [
+        { ...sent, ai_drafted: true, replies: 2 },
+        { ...sent, id: 'n2', kind: 'BNSS_179', items_requested: [], items_missing: [], status: 'sent', signed_by_name: null, replies: 1, reply_due_on: null },
+        { ...sent, id: 'n3', kind: 'a_new_kind', items_requested: [], items_missing: [], status: 'draft', issued_at: null, reply_due_on: null, replies: 0 },
+      ] }
+      return { ok: true, status: 200, json: async () => lists[url] ?? [] }
+    }
+    const body = JSON.parse(init.body as string)
+    writes.push({ url, body })
+    if (url === '/ai/v1/generate') return { ok: true, status: 200, json: async () => ({ request_id: 'r1', draft: AI_TEXT, provider: 'fake', model: 'fake-1', label: 'AI draft - check before use' }) }
+    return { ok: true, status: 201, json: async () => ({ id: 'x' }) }
+  }) as typeof fetch)
+  render(<ScreenLangContext.Provider value="mr"><Notices firId="f1" fir={fir} /></ScreenLangContext.Provider>)
+  expect(await screen.findByRole('heading', { name: 'नोटिसा' })).toBeTruthy()
+  const [one, two, three] = screen.getAllByRole('listitem').filter((li) => li.parentElement?.parentElement?.tagName === 'SECTION')
+  expect(one.textContent).toContain('BNSS 94: कागदपत्रे किंवा डेटा सादर करा Nodal Officer, Fictional Bank यांना: उत्तर अपूर्ण')
+  expect(one.textContent).toMatch(/रोजी SI Fictional यांनी जारी · उत्तर 2026-10-12 पर्यंत · मजकूर AI ने मसुदा केला, अधिकाऱ्याने तपासला · 2 उत्तरे/)
+  expect(within(one).getByText('Account statement: मिळाले')).toBeTruthy()
+  expect(within(one).getByText('KYC documents: अजून मिळाले नाही')).toBeTruthy()
+  expect(two.textContent).toMatch(/BNSS 179: साक्षीदार म्हणून हजर राहा .* यांना: पाठवली, उत्तराची वाट · .* रोजी जारी · 1 उत्तर/)
+  expect(three.textContent).toContain('a_new_kind Nodal Officer, Fictional Bank यांना: मसुदा (स्वाक्षरी नाही)')   // an unknown kind shows its code
+  expect(within(three).getByText('या नोटिसीवर स्वाक्षरी करून पाठवा')).toBeTruthy()
+  const reply = within(two).getByText('उत्तर नोंदवा').closest('details')!
+  expect(within(reply).getByRole('option', { name: 'हस्ते' })).toBeTruthy()
+  type('मिळाले (तारीख आणि वेळ, IST)', '2026-10-11T15:00', within(reply))
+  fireEvent.click(within(reply).getByLabelText('उत्तर नोटिसीला पूर्ण उत्तर देते'))
+  fireEvent.click(within(reply).getByRole('button', { name: 'जतन करा' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0].body.checksJson).toBe('[{"item":"Reply answers the notice fully","present":true}]')   // stored in English
+  fireEvent.click(screen.getByRole('button', { name: 'AI कडून मजकुराचा मसुदा करा' }))
+  expect((await screen.findByRole('alert')).textContent).toBe('आधी “कोणाला” भरा.')
+  type('कोणाला', 'Nodal Officer, Fictional Telecom')
+  type(/सादर करायच्या गोष्टी/, 'CDR')
+  fireEvent.click(screen.getByRole('button', { name: 'AI कडून मजकुराचा मसुदा करा' }))
+  const box = await screen.findByRole('region', { name: 'AI मसुदा' })
+  expect(writes[1].body.prompt).toContain('Write the text of a police notice: BNSS 94: produce documents or data.')
+  fireEvent.click(within(box).getByRole('button', { name: 'हा मसुदा वापरा' }))
+  expect(within(box).getByText('खालील मजकुरात कॉपी केले. जतन करण्यापूर्वी तपासा आणि दुरुस्त करा.')).toBeTruthy()
+  type(/सादर करायच्या गोष्टी/, '')
+  const write = screen.getByText('नोटीस लिहा').closest('details')!
+  fireEvent.click(within(write).getByRole('button', { name: 'जतन करा' }))
+  expect((await within(write).findByText('BNSS 94 नोटिसीत सादर करायच्या गोष्टी, प्रत्येक ओळीत एक, लिहिलेल्या असल्या पाहिजेत.')).getAttribute('role')).toBe('alert')
+})
+
+test('in Hindi an empty text is refused, and a decision that could not be logged is reported in Hindi', async () => {
+  const writes = stubWithAi()
+  render(<ScreenLangContext.Provider value="hi"><Notices firId="f1" fir={fir} /></ScreenLangContext.Provider>)
+  await screen.findByText('अभी कुछ नहीं।')
+  const write = screen.getByText('नोटिस लिखें').closest('details')!
+  type('किसे', 'Nodal Officer, Fictional Telecom')
+  fireEvent.change(within(write).getByLabelText(/^प्रकार/), { target: { value: 'BNSS_35_3' } })
+  fireEvent.click(within(write).getByRole('button', { name: 'सहेजें' }))
+  expect((await within(write).findByRole('alert')).textContent).toBe('नोटिस का पाठ लिखें।')
+  fireEvent.click(screen.getByRole('button', { name: 'AI से पाठ का मसौदा बनाएँ' }))
+  await screen.findByRole('region', { name: 'AI मसौदा' })
+  vi.mocked(fetch).mockImplementation((async (url: string, init?: RequestInit) => {
+    writes.push({ url, body: JSON.parse(init!.body as string) })
+    return url === '/ai/v1/decisions' ? { ok: false, status: 503, json: async () => ({ detail: 'gateway down' }) } : { ok: true, status: 201, json: async () => ({ id: 'n5' }) }
+  }) as typeof fetch)
+  type('नोटिस का पाठ', 'Fictional notice text')
+  fireEvent.click(within(write).getByRole('button', { name: 'सहेजें' }))
+  expect(await screen.findByText('नोटिस सहेजा गया, पर AI मसौदे पर निर्णय दर्ज नहीं हो सका: The AI gateway answered 503: gateway down')).toBeTruthy()   // the gateway's own words stay as sent
 })

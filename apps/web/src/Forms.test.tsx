@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { AddEvidenceForm, AddPersonForm, NewFirForm } from './Forms'
 import { istIso, parseSections } from './formats'
 import { setSession } from './api'
+import { ScreenLangContext } from './i18n'
 
 const io = { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional', rank: 'SI', role: 'io', station_id: 's1', permissions: ['fir.register', 'case.lead'], case_scope: 'none' as const }
 beforeEach(() => setSession({ token: 't', user: io }))
@@ -106,4 +107,44 @@ test('electronic evidence needs its SHA-256; the server refusal is shown', async
 test('dates are shown in India time', async () => {
   const { fmt } = await import('./formats')
   expect(fmt('2026-10-01T04:30:00Z')).toMatch(/10:00\s?am IST$/i)
+})
+
+test('in Marathi the FIR, person and evidence forms and their refusals are in Marathi; the codes sent stay the same', async () => {
+  const calls = stub()
+  render(<ScreenLangContext.Provider value="mr"><NewFirForm /><AddPersonForm firId="f1" onSaved={() => {}} /><AddEvidenceForm firId="f1" onSaved={() => {}} /></ScreenLangContext.Provider>)
+  const fir = screen.getByText('नवीन एफआयआर नोंदवा').closest('details')!
+  expect(within(fir).getByRole('option', { name: 'हद्द असलेल्या पोलीस ठाण्याकडे वर्ग केले' })).toBeTruthy()
+  expect(within(fir).getByLabelText(/मी तपास अधिकारी आहे/)).toBeTruthy()
+  fireEvent.change(within(fir).getByLabelText('एफआयआर क्रमांक'), { target: { value: '9' } })
+  fireEvent.change(within(fir).getByLabelText('स्टेशन डायरी नोंद'), { target: { value: 'GD-9' } })
+  fireEvent.change(within(fir).getByLabelText('माहिती मिळाली (तारीख आणि वेळ, IST)'), { target: { value: '2026-10-01T09:00' } })
+  fireEvent.change(within(fir).getByLabelText('नोंदवली (तारीख आणि वेळ, IST)'), { target: { value: '2026-10-01T10:00' } })
+  fireEvent.click(within(fir).getByRole('button', { name: 'जतन करा' }))
+  expect((await within(fir).findByRole('alert')).textContent).toBe('दिलेली माहिती लिहा.')
+  const person = screen.getByText('व्यक्ती जोडा').closest('details')!
+  expect(within(person).getByRole('option', { name: 'साक्षीदार' })).toBeTruthy()
+  fireEvent.change(within(person).getByLabelText('भूमिका'), { target: { value: 'witness' } })
+  fireEvent.change(within(person).getByLabelText('लेबल'), { target: { value: 'W1' } })
+  expect(within(person).getByLabelText(/या व्यक्तीची ओळख सुरक्षित ठेवा/)).toBeTruthy()
+  fireEvent.click(within(person).getByRole('button', { name: 'जतन करा' }))
+  await vi.waitFor(() => expect(calls).toHaveLength(1))
+  expect(calls[0].body).toMatchObject({ role: 'witness', label: 'W1' })
+  const ev = screen.getByText('पुरावा जोडा').closest('details')!
+  fireEvent.change(within(ev).getByLabelText('लेबल'), { target: { value: 'E-03' } })
+  fireEvent.change(within(ev).getByLabelText('जप्त (तारीख आणि वेळ, IST)'), { target: { value: '2026-10-02T10:00' } })
+  fireEvent.change(within(ev).getByLabelText('जप्ती पंचनामा क्रमांक'), { target: { value: 'SM-3' } })
+  fireEvent.change(within(ev).getByLabelText('प्रकार'), { target: { value: 'electronic' } })
+  expect(within(ev).getByRole('option', { name: 'इलेक्ट्रॉनिक' })).toBeTruthy()
+  fireEvent.click(within(ev).getByRole('button', { name: 'जतन करा' }))
+  expect((await within(ev).findByRole('alert')).textContent).toBe('इलेक्ट्रॉनिक पुराव्यासाठी जप्तीच्या वेळी घेतलेला 64 अक्षरी SHA-256 हवा.')
+})
+
+test('in Hindi the FIR form from a signed complaint names where the text comes from; a non-station account is told in Hindi', () => {
+  render(<ScreenLangContext.Provider value="hi"><NewFirForm complaintId="c1" /></ScreenLangContext.Provider>)
+  expect(screen.getByText('इस शिकायत से एफआईआर दर्ज करें')).toBeTruthy()
+  expect(screen.getByText('सूचना और उसके प्राप्त होने का समय हस्ताक्षरित शिकायत से, बिना बदले, लिए जाते हैं।')).toBeTruthy()
+  cleanup()
+  setSession({ token: 't', user: { id: 'u2', username: 'state.admin', full_name: 'Admin', rank: 'Admin', role: 'state_admin', station_id: null } })
+  render(<ScreenLangContext.Provider value="hi"><NewFirForm /></ScreenLangContext.Provider>)
+  expect(screen.getByText('केवल पुलिस थाने के कर्मचारी एफआईआर दर्ज कर सकते हैं।')).toBeTruthy()
 })
