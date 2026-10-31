@@ -5,6 +5,7 @@ What runs: a fresh PostgreSQL database `caseapp_e2e` (dropped and created for ea
 (apps/web/dist; `npm run build`) served by a small server here that passes /api to the core, as Vite does in development.
 All data is fictional. The signing key and passwords are made up for each run and never stored.
 """
+import contextlib
 import glob
 import http.server
 import json
@@ -66,18 +67,20 @@ class Api:
         return body["token"]
 
 
-@pytest.fixture(scope="session")
-def core():
-    """The core app on a fresh database; yields (Api, bootstrap admin username, password)."""
-    with psycopg.connect(dbname="postgres", autocommit=True, **PG) as c:
-        c.execute(f"drop database if exists {DB} with (force)")
-        c.execute(f"create database {DB}")
+@contextlib.contextmanager
+def running_core(db, *args, fresh=True):
+    """The core jar on database db (dropped and made again when fresh), started with the extra args;
+    yields (Api, bootstrap admin username, password) once the admin can sign in."""
+    if fresh:
+        with psycopg.connect(dbname="postgres", autocommit=True, **PG) as c:
+            c.execute(f"drop database if exists {db} with (force)")
+            c.execute(f"create database {db}")
     port = free_port()
     admin, password = "e2e.admin", secrets.token_urlsafe(18)
-    env = {**os.environ, "DATABASE_URL": f"jdbc:postgresql://{PG['host']}/{DB}", "AUTH_SECRET": secrets.token_urlsafe(48),
+    env = {**os.environ, "DATABASE_URL": f"jdbc:postgresql://{PG['host']}/{db}", "AUTH_SECRET": secrets.token_urlsafe(48),
            "BOOTSTRAP_ADMIN_USERNAME": admin, "BOOTSTRAP_ADMIN_PASSWORD": password}
-    log = open(ROOT / "apps/core/target/e2e-core.log", "w")
-    proc = subprocess.Popen(["java", "-jar", core_jar(), f"--server.port={port}"], env=env, stdout=log, stderr=subprocess.STDOUT)
+    log = open(ROOT / f"apps/core/target/e2e-core-{db}.log", "w")
+    proc = subprocess.Popen(["java", "-jar", core_jar(), f"--server.port={port}", *args], env=env, stdout=log, stderr=subprocess.STDOUT)
     api = Api(f"http://127.0.0.1:{port}")
     try:
         deadline = time.time() + 90
@@ -97,6 +100,13 @@ def core():
         proc.terminate()
         proc.wait(timeout=30)
         log.close()
+
+
+@pytest.fixture(scope="session")
+def core():
+    """The core app on a fresh database; yields (Api, bootstrap admin username, password)."""
+    with running_core(DB) as c:
+        yield c
 
 
 @pytest.fixture(scope="session")
