@@ -3,7 +3,7 @@
 A screen reads an answer through a TypeScript type (useLoad<T>, get<T>). If the server stops writing a field, or never
 wrote it under that name, the screen shows nothing or the wrong thing without any error (31 Oct 2026: the AI settings
 screen read audit_chain_ok, which the gateway no longer wrote, and told every admin the audit chain was broken). Here
-every field of the type a screen reads must be a name the server side writes: a word in the controller of the route, in
+every field of the type a screen reads (and of the objects inside it) must be a name the server side writes: a word in the controller of the route, in
 a class that controller names, or in a migration (a view read with select *); for the AI gateway, in its source.
 This cannot see whether that word is written into this very answer, so it catches a name the server never writes at
 all, which is how such a field breaks. Read from the source of both sides, so it needs no running server.
@@ -21,23 +21,44 @@ GATEWAY = " ".join(p.read_text(encoding="utf-8") for p in sorted((ROOT / "servic
 CLASSES = {p.stem: p for p in JAVA}
 
 
-def fields(literal):
-    """Top-level field names of a TypeScript object type literal '{ a: string; b?: number }'."""
+def members(literal):
+    """(name, type text) of the top-level fields of a TypeScript object type literal '{ a: string; b?: number }'."""
     body = re.sub(r"/\*.*?\*/|//[^\n]*", "", literal[1:-1], flags=re.S)
-    names, depth, cur = [], 0, ""
+    out, depth, cur = [], 0, ""
     for ch in body + ";":
         if ch in "{[(<":
             depth += 1
         elif ch in "}])>":
             depth -= 1
         if depth == 0 and ch in ";,\n":
-            m = re.match(r"\s*(?:readonly\s+)?(\w+)\??\s*:", cur)
+            m = re.match(r"\s*(?:readonly\s+)?(\w+)\??\s*:(.*)", cur, flags=re.S)
             if m:
-                names.append(m[1])
+                out.append((m[1], m[2]))
             cur = ""
         else:
             cur += ch
-    return names
+    return out
+
+
+def fields(literal):
+    return [name for name, _ in members(literal)]
+
+
+def all_fields(literal, text, depth=0):
+    """Every field name, also of the objects inside: an inline {...} or a type of this file, in a list or not."""
+    for name, kind in members(literal):
+        yield name
+        if depth == 3:
+            continue
+        i = kind.find("{")
+        while i != -1:
+            end = closing(kind, i)
+            yield from all_fields(kind[i:end], text, depth + 1)
+            i = kind.find("{", end)
+        for ref in re.findall(r"\b([A-Z]\w*)\b", re.sub(r"\{.*\}", "", kind, flags=re.S)):
+            inner = type_literal(ref, text)
+            if inner:
+                yield from all_fields(inner, text, depth + 1)
 
 
 def type_literal(name, text):
@@ -68,7 +89,7 @@ def type_literal(name, text):
 
 
 def read_types():
-    """(file, url, type text) of every call that reads an answer through a type."""
+    """(file, url, type text, file text) of every call that reads an answer through a type."""
     out = []
     for path in WEB:
         text = path.read_text(encoding="utf-8")
@@ -81,7 +102,7 @@ def read_types():
                 if imported:
                     literal = type_literal(t, (path.parent / (imported[1] + ".tsx")).read_text(encoding="utf-8")) if (path.parent / (imported[1] + ".tsx")).exists() else None
             assert literal, f"{path.name}: the type {t} read from {m['url']} was not found"
-            out.append((path.name, m["url"], literal))
+            out.append((path.name, m["url"], literal, text))
     return out
 
 
@@ -101,21 +122,23 @@ def handlers():
 def test_there_are_typed_answers_to_check():
     assert len(read_types()) > 30
     assert fields("{ a: string; b?: { c: number }, /** d */ d: Array<{ e: 1 }>\n f: x }") == ["a", "b", "d", "f"]
+    text = "type Item = { g: string }\ntype X = { h: Item[] }"
+    assert list(all_fields("{ a: string; b?: { c: number }, d: Array<{ e: 1 }>; f: X }", text)) == ["a", "b", "c", "d", "e", "f", "h", "g"]
 
 
 def test_every_field_a_screen_reads_is_written_by_its_server():
     routes = handlers()
     missing, checked = [], 0
-    for name, url, literal in read_types():
+    for name, url, literal, text in read_types():
         if url.startswith("/v1/") or url == "/health":   # the AI gateway
             source = GATEWAY
         else:
             source = next((s for rx, s in routes if rx.match("/api" + shape(url))), None)
             assert source, f"{name}: no GET route for {url}"
             source += MIGRATIONS
-        for field in fields(literal):
+        for field in all_fields(literal, text):
             checked += 1
             if not re.search(r"\b" + field + r"\b", source):
                 missing.append(f"{name}: {url} reads '{field}', which the server never writes")
     assert not missing, "\n".join(missing)
-    assert checked > 150
+    assert checked > 300

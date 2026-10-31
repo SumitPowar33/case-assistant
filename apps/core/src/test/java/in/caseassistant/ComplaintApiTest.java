@@ -220,7 +220,8 @@ class ComplaintApiTest {
         mvc.perform(get("/api/complaints/" + c).header("Authorization", clerk)).andExpect(jsonPath("$.steps[0].overdue").value(false))
                 .andExpect(jsonPath("$.steps[0].done_by_name").value("HC Fictional Clerk")).andExpect(jsonPath("$.steps[0].note").value("Fictional acknowledgement 2026-1"));
         mvc.perform(get("/api/complaint-kinds").header("Authorization", malkhana)).andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.id=='other')]").isNotEmpty());
+                .andExpect(jsonPath("$[?(@.id=='other')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.id=='sexual_offence')].steps[?(@.id=='medical_exam')].withinMinutes").value(1440));   // the name the web type reads
     }
 
     @Test

@@ -7,7 +7,7 @@ import { LANGS, TypingContext } from './typing'
 import { fmt, istIso, text } from './formats'
 import { ScreenLangContext, useT } from './i18n'
 
-type Step = { id: string; text: string; within_minutes: number | null; basis: string | null }
+type Step = { id: string; text: string; withinMinutes: number | null; basis: string | null }
 type Kind = { id: string; label: string; steps: Step[] }
 type Row = { id: string; received_at: string; mode: string; informant_name: string | null; withheld: boolean; kind: string; signed_at: string | null; outcome: string | null; steps_overdue: number; enquiry_overdue?: boolean }
 type CheckStep = { id: string; text: string; basis: string | null; due_at: string | null; done_at: string | null; done_by_name: string | null; note: string | null; overdue: boolean }
