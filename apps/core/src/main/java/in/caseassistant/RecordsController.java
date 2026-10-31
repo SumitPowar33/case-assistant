@@ -133,6 +133,9 @@ class RecordsController {
     private static void checkRemand(LocalDate remand, OffsetDateTime arrestedAt) {
         if (remand != null && remand.isBefore(arrestedAt.atZoneSameInstant(IST).toLocalDate()))
             badRequest("The first remand cannot be before the day of arrest.");
+        // a slipped year (2027 for 2026) would push the 60/90-day limit far out without anyone noticing
+        if (remand != null && remand.isAfter(LocalDate.now(IST)))
+            badRequest("The first remand cannot be after today.");
     }
 
     /**

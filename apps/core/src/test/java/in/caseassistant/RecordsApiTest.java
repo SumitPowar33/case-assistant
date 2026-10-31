@@ -84,6 +84,17 @@ class RecordsApiTest {
                  "informedName":"Fictional Friend","informedContact":"Fictional contact","maxPunishment":"life"}""".formatted(pid), 201));
         mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", auth)).andExpect(jsonPath("$[?(@.kind=='chargesheet_custody')]").isEmpty());
         send("/arrests/" + arrest + "/first-remand", "{\"firstRemandOn\":\"2026-09-11\"}", 400);
+        // regression (weekly review 31 Oct): a slipped year was taken and moved the custody limit a year out
+        String tomorrow = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).plusDays(1).toString();
+        mvc.perform(post("/api/firs/" + fir + "/arrests/" + arrest + "/first-remand").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"firstRemandOn\":\"" + tomorrow + "\"}")).andExpect(status().isBadRequest())
+                .andExpect(status().reason("The first remand cannot be after today."));
+        mvc.perform(post("/api/firs/" + fir + "/arrests").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"personId":"%s","arrestedAt":"2026-09-12T08:00:00Z","place":"Testpur","grounds":["proper investigation"],
+                         "informedName":"Fictional Friend","firstRemandOn":"%s","maxPunishment":"life"}""".formatted(pid, tomorrow))).andExpect(status().isBadRequest())
+                .andExpect(status().reason("The first remand cannot be after today."));
+        org.assertj.core.api.Assertions.assertThat(db.sql("select count(*) from arrest where first_remand_on is not null").query(Long.class).single()).isZero();
         send("/arrests/" + UUID.randomUUID() + "/first-remand", "{\"firstRemandOn\":\"2026-09-13\"}", 404);
         send("/arrests/" + arrest + "/first-remand", "{\"firstRemandOn\":\"2026-09-13\"}", 204);
         send("/arrests/" + arrest + "/first-remand", "{\"firstRemandOn\":\"2026-09-14\"}", 409);
