@@ -13,7 +13,7 @@ run() {  # run "name" command...
 run "repo rules (CLAUDE.md hard rules)"        python -m pytest -q tests/repo_rules
 run "packs (roles, policies, playbooks, tables)" python -m pytest -q packs/tests
 run "xlit (typing engine)"                      node packages/xlit/xlit.test.js
-run "ai-gateway (unit + API, coverage >= 92%)"  bash -c 'cd services/ai-gateway && python -m pytest -q --cov=app --cov-branch --cov-fail-under=92'
+run "ai-gateway (unit + API, coverage >= 94%)"  bash -c 'cd services/ai-gateway && python -m pytest -q --cov=app --cov-branch --cov-fail-under=94'
 run "web (tests, coverage gate, lint, build)"   bash -c 'cd apps/web && npm run coverage && npx eslint . && npm run build'
 if [ $NO_DB = 0 ]; then
   run "database rules (migrations V1..Vn)"      python -m pytest -q apps/core/db-tests

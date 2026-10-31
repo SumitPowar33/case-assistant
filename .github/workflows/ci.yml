@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt -r requirements-dev.txt
-      - run: python -m pytest -q --cov=app --cov-branch --cov-fail-under=92
+      - run: python -m pytest -q --cov=app --cov-branch --cov-fail-under=94
   xlit:
     runs-on: ubuntu-latest
     steps:
