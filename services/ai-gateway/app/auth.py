@@ -92,3 +92,43 @@ class CoreCheck:
                 self._ok = {k: v for k, v in self._ok.items() if v[0] > now}
             self._ok[key] = (now + self.ttl, me)
         return me
+
+
+class ChainAnchor:
+    """Keeps the audit chain head in the core app's database too (core V35, /api/ai-chain-head), so an older or
+    rewritten copy of the gateway's own file no longer verifies. Each report is signed with the shared AUTH_SECRET,
+    so only the gateway can move the head; it is sent on the token of the officer whose request wrote the row."""
+
+    def __init__(self, base_url: str, secret: str, client: httpx.Client | None = None):
+        self.url = base_url.rstrip("/") + "/api/ai-chain-head"
+        self.secret = secret.encode()
+        self.client = client or httpx.Client(timeout=5.0)
+
+    def mac(self, seq: int, h: str) -> str:
+        return hmac.new(self.secret, f"ai-chain-head|{seq}|{h}".encode(), hashlib.sha256).hexdigest()
+
+    def report(self, token: str, seq: int, h: str) -> bool:
+        """True when the core app took it. A failure never loses the officer's answer: the row is already written,
+        and the next report covers it; until then the core keeps an older head, which still verifies."""
+        try:
+            r = self.client.post(self.url, json={"seq": seq, "hash": h},
+                                 headers={"Authorization": "Bearer " + token, "X-Chain-Mac": self.mac(seq, h)})
+            return r.status_code == 200
+        except httpx.HTTPError:
+            return False
+
+    def newest(self, token: str) -> dict:
+        """{seq, hash} of the newest head the core keeps, {} before the first; raises CoreUnavailable (fails closed)."""
+        try:
+            r = self.client.get(self.url, headers={"Authorization": "Bearer " + token})
+        except httpx.HTTPError as e:
+            raise CoreUnavailable("cannot reach the core app to check the audit chain head") from e
+        if r.status_code != 200:
+            raise CoreUnavailable(f"core app answered {r.status_code} to the audit chain head check")
+        try:
+            head = r.json()
+        except ValueError as e:
+            raise CoreUnavailable("core app gave an unreadable audit chain head") from e
+        if not isinstance(head, dict):
+            raise CoreUnavailable("core app gave an unreadable audit chain head")
+        return head

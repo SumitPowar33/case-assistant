@@ -21,7 +21,7 @@ import uuid
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from .auth import CoreCheck, CoreUnavailable, TokenError, verify
+from .auth import ChainAnchor, CoreCheck, CoreUnavailable, TokenError, verify
 from .providers import ClaudeProvider, FakeProvider, GeminiProvider, Provider, ProviderError
 from .store import DEFAULT_MODELS, FEATURES, PROVIDERS, Store
 
@@ -62,12 +62,14 @@ class SettingIn(BaseModel):
 
 
 def create_app(store: Store | None = None, providers: dict[str, Provider] | None = None,
-               auth_secret: str | None = None, core_check=None) -> FastAPI:
+               auth_secret: str | None = None, core_check=None, anchor=None) -> FastAPI:
     secret = auth_secret if auth_secret is not None else os.environ.get("AUTH_SECRET", "")
     if len(secret) < 32:
         raise RuntimeError("AUTH_SECRET must be set (at least 32 characters, the same value as the core app)")
     # Asks the core app if the user is still active and the password unchanged (see auth.CoreCheck).
     core_check = core_check or CoreCheck(os.environ.get("CORE_URL", "http://localhost:8080"))
+    # the chain head is also kept in the core app's database (auth.ChainAnchor)
+    anchor = anchor or ChainAnchor(os.environ.get("CORE_URL", "http://localhost:8080"), secret)
     store = store or Store(os.environ.get("AI_GATEWAY_DB", "ai-gateway.sqlite3"), os.environ.get("AI_AUDIT_KEY") or None)
     providers = providers or {"claude": ClaudeProvider(), "gemini": GeminiProvider(), "fake": FakeProvider()}
     app = FastAPI(title="Case Assistant AI gateway", version="0.1.0")
@@ -87,9 +89,19 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         # the role, its permissions and the unit's AI policy as the core app has them now, not as they were when the
         # token was issued; an answer without the policy counts as "no cloud", without permissions as none (fails closed)
         permissions = me.get("permissions")
-        return {**claims, "role": me["role"], "permissions": permissions if isinstance(permissions, list) else [],
+        return {**claims, "token": token, "role": me["role"], "permissions": permissions if isinstance(permissions, list) else [],
                 "ai_cloud_allowed": me.get("ai_cloud_allowed") is True,
                 "state": me.get("state_code") if isinstance(me.get("state_code"), str) else None}
+
+    def log(u: dict, action: str, feature: str | None, case_ref: str | None, detail: dict) -> int:
+        seq = store.log(u["sub"], action, feature, case_ref, detail, u["state"])
+        anchor_head(u)
+        return seq
+
+    def anchor_head(u: dict) -> None:
+        head = store.head()   # the newest row, which may be another request's: the head only moves forward
+        if head:
+            anchor.report(u["token"], *head)
 
     def admin(u: dict = Depends(user)) -> dict:
         # by permission from the packs (roles.json), never by role name
@@ -113,7 +125,9 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
     @app.put("/v1/settings/{feature}")
     def put_setting(feature: str, body: SettingIn, u: dict = Depends(admin)):
         try:
-            return store.set_setting(feature, body.provider, body.model, body.officer_may_switch, u["sub"], u["state"])
+            out = store.set_setting(feature, body.provider, body.model, body.officer_may_switch, u["sub"], u["state"])
+            anchor_head(u)
+            return out
         except KeyError:
             raise HTTPException(404, f"unknown feature {feature}")
         except ValueError as e:
@@ -125,7 +139,7 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
 
         def refuse(status: int, message: str, **detail):
             # every refusal is logged, with who asked and why it was refused (the text itself is not kept)
-            store.log(u["sub"], "ai_refused", body.feature, body.case_ref, {"request_id": request_id, "status": status, "reason": message, **detail}, u["state"])
+            log(u, "ai_refused", body.feature, body.case_ref, {"request_id": request_id, "status": status, "reason": message, **detail})
             raise HTTPException(status, message)
 
         settings = store.get_settings(u["state"])
@@ -155,13 +169,13 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             out = providers[provider_name].complete(model=model, system=system, prompt=body.prompt, max_tokens=body.max_tokens)
         except Exception as e:  # a timeout or a broken answer too: the text may already have left, so it is logged
             error = str(e) if isinstance(e, ProviderError) else f"{provider_name} could not be reached ({type(e).__name__})"
-            store.log(u["sub"], "ai_error", body.feature, body.case_ref,
-                      {"request_id": request_id, "provider": provider_name, "model": model, **versions, "error": error}, u["state"])
+            log(u, "ai_error", body.feature, body.case_ref,
+                {"request_id": request_id, "provider": provider_name, "model": model, **versions, "error": error})
             raise HTTPException(502, error)
-        store.log(u["sub"], "ai_request", body.feature, body.case_ref, {
+        log(u, "ai_request", body.feature, body.case_ref, {
             "request_id": request_id, "provider": out.provider, "model": out.model, **versions,
             "prompt_chars": len(body.prompt), "output_chars": len(out.text),
-            "input_tokens": out.input_tokens, "output_tokens": out.output_tokens}, u["state"])
+            "input_tokens": out.input_tokens, "output_tokens": out.output_tokens})
         return {"request_id": request_id, "draft": out.text, "provider": out.provider, "model": out.model,
                 "label": "AI draft - check before use"}
 
@@ -179,12 +193,18 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             raise HTTPException(422, "case does not match the AI request")
         if store.decided(body.request_id):
             raise HTTPException(409, "a decision on this AI draft is already logged")
-        seq = store.log(u["sub"], body.decision, body.feature, body.case_ref, {"request_id": body.request_id, "note": body.note}, u["state"])
+        seq = log(u, body.decision, body.feature, body.case_ref, {"request_id": body.request_id, "note": body.note})
         return {"logged": seq}
 
     @app.get("/v1/audit")
     def audit(limit: int = 100, u: dict = Depends(admin)):
-        return {"chain_ok": store.verify_chain(), "rows": store.audit_rows(min(max(limit, 1), 500), u["state"])}
+        try:
+            kept = anchor.newest(u["token"])
+        except CoreUnavailable as e:
+            raise HTTPException(503, str(e))
+        # intact = every link and the file's own head check, and the file holds the head the core app keeps
+        return {"chain_ok": store.verify_chain() and store.agrees_with(kept), "anchored_seq": kept.get("seq"),
+                "rows": store.audit_rows(min(max(limit, 1), 500), u["state"])}
 
     return app
 

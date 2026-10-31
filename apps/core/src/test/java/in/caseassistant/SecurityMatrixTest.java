@@ -27,7 +27,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 @AutoConfigureMockMvc
 class SecurityMatrixTest {
     static final Set<String> PUBLIC = Set.of("POST /api/login");
-    static final Set<String> ADMIN_ONLY = Set.of("GET /api/users", "GET /api/admin-actions", "GET /api/sign-ins", "GET /api/roles");
+    static final Set<String> ADMIN_ONLY = Set.of("GET /api/users", "GET /api/admin-actions", "GET /api/sign-ins", "GET /api/roles",
+            "GET /api/ai-chain-head");
 
     @Autowired MockMvc mvc;
     @Autowired JdbcClient db;

@@ -963,3 +963,22 @@ def test_replies_sections_and_playbook_choices_are_kept_and_go_only_with_their_p
     db.execute("DELETE FROM fir WHERE id=%s", (fir,))
     assert one(db, "SELECT count(*) FROM fir_section")[0] == 0 and one(db, "SELECT count(*) FROM case_playbook_choice")[0] == 0
     assert one(db, "SELECT count(*) FROM notice_reply")[0] == 0
+
+
+def test_the_ai_chain_head_is_kept_as_written_and_only_moves_forward(db):
+    # V35: the AI gateway's chain head outside its own file (weekly review 31 Oct: an older copy of the file verified)
+    st, io, fir = seed_case(db)
+    add = "INSERT INTO ai_chain_anchor(seq,hash,reported_by) VALUES (%s,%s,%s)"
+    db.execute(add, (4, "a" * 64, io))
+    for seq, h in ((4, "b" * 64), (3, "b" * 64)):   # the same or an older head
+        with pytest.raises(psycopg.errors.CheckViolation):
+            db.execute(add, (seq, h, io))
+    for seq, h in ((0, "c" * 64), (9, "C" * 64), (9, "c" * 63)):   # not a sequence number, not a lower-case SHA-256
+        with pytest.raises(psycopg.errors.CheckViolation):
+            db.execute(add, (seq, h, io))
+    db.execute(add, (9, "c" * 64, io))
+    assert one(db, "SELECT seq, hash FROM ai_chain_anchor ORDER BY seq DESC LIMIT 1") == (9, "c" * 64)
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE ai_chain_anchor SET hash=%s", ("d" * 64,))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM ai_chain_anchor")

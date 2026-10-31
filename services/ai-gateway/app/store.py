@@ -3,7 +3,8 @@
 Demo storage is SQLite; the same tables move to PostgreSQL in the Java app later.
 The audit log is append-only and hash-chained: each row stores the hash of the previous row, so editing or deleting
 a row breaks `verify_chain()`. With a key (AI_AUDIT_KEY) each hash is an HMAC, so someone who can write the file
-cannot recompute the chain; a separate chain head (last row and its hash, also keyed) shows rows cut from the end.
+cannot recompute the chain; a separate chain head (last row and its hash, also keyed) shows rows cut from the end, and the core app keeps
+the head too (auth.ChainAnchor), so an older copy of the whole file put back no longer verifies.
 Rows written before the key existed stay verifiable with plain SHA-256 (column `alg`).
 Writes take SQLite's write lock (BEGIN IMMEDIATE), so several gateway processes on one file cannot fork the chain.
 """
@@ -149,6 +150,18 @@ class Store:
                                "ORDER BY seq DESC LIMIT ?", (state, state, limit)).fetchall()
         return [{"seq": s, "at": a, "actor": ac, "action": act, "feature": f, "case_ref": c, "detail": json.loads(d), "hash": h, "state": st}
                 for s, a, ac, act, f, c, d, h, st in rows]
+
+    def head(self) -> tuple[int, str] | None:
+        """The last row's sequence number and hash (None before the first row)."""
+        row = self.db.execute("SELECT seq, hash FROM audit ORDER BY seq DESC LIMIT 1").fetchone()
+        return (row[0], row[1]) if row else None
+
+    def agrees_with(self, anchor: dict) -> bool:
+        """Whether this file holds the head the core app keeps (an older copy of the file, or one rewritten after it, does not)."""
+        if not anchor:
+            return True   # nothing anchored yet
+        row = self.db.execute("SELECT hash FROM audit WHERE seq = ?", (anchor.get("seq"),)).fetchone()
+        return row is not None and isinstance(anchor.get("hash"), str) and hmac.compare_digest(row[0], anchor["hash"])
 
     def verify_chain(self) -> bool:
         prev, seq, keyed = GENESIS, 0, False

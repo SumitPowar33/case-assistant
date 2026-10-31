@@ -12,7 +12,8 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app.auth import CoreCheck, verify
+from app import main as gateway_main
+from app.auth import ChainAnchor, CoreCheck, CoreUnavailable, verify
 from app.main import create_app
 from app.providers import ClaudeProvider, FakeProvider, GeminiProvider
 from app.store import Store
@@ -39,6 +40,28 @@ def core_says_active(tok, subject):
     claims = verify(tok, SECRET)
     permissions = ROLES.get(claims["role"], {}).get("permissions", [])
     return {"id": claims["sub"], "role": claims["role"], "permissions": permissions, "ai_cloud_allowed": True}
+
+
+class MemoryAnchor:
+    """Stands in for the core app's /api/ai-chain-head: keeps the newest head, which only moves forward."""
+    def __init__(self, *args, **kwargs):
+        self.kept: dict = {}
+        self.reports: list = []
+
+    def report(self, token, seq, h):
+        self.reports.append((token, seq, h))
+        if seq > self.kept.get("seq", 0):
+            self.kept = {"seq": seq, "hash": h}
+        return True
+
+    def newest(self, token):
+        return self.kept
+
+
+@pytest.fixture(autouse=True)
+def no_core_for_the_chain_head(monkeypatch):
+    # tests that do not pass their own anchor get one in memory, never a real core app
+    monkeypatch.setattr(gateway_main, "ChainAnchor", MemoryAnchor)
 
 
 def client(store, providers, role="state_admin", sub="user-admin"):
@@ -440,3 +463,80 @@ def test_rows_written_before_the_key_and_the_state_column_still_verify(tmp_path)
     assert store.verify_chain()                  # the old row, by its plain SHA-256 link
     store.log("u", "accepted", "case_qa", None, {}, "MH")
     assert store.verify_chain()
+
+
+def test_every_audit_row_moves_the_head_kept_by_the_core_app():
+    store, anchor = Store(":memory:"), MemoryAnchor()
+    c = TestClient(create_app(store, {"fake": FakeProvider()}, SECRET, core_says_active, anchor),
+                   headers={"Authorization": "Bearer " + token()})
+    c.put("/v1/settings/case_qa", json={"provider": "fake"})
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1"}).json()
+    c.post("/v1/generate", json={"feature": "nope", "prompt": "x", "prompt_version": "test@1"})   # a refusal is a row too
+    c.post("/v1/decisions", json={"request_id": r["request_id"], "decision": "rejected", "feature": "case_qa"})
+    assert [seq for _, seq, _ in anchor.reports] == [1, 2, 3, 4]
+    assert anchor.reports[-1] == (token(), *store.head()) and all(t == token() for t, _, _ in anchor.reports)
+    audit = c.get("/v1/audit").json()
+    assert audit["chain_ok"] is True and audit["anchored_seq"] == 4
+
+
+def test_an_older_copy_of_the_audit_file_put_back_no_longer_verifies(tmp_path):
+    path = str(tmp_path / "audit.sqlite3")
+    anchor = MemoryAnchor()
+    make = lambda: TestClient(create_app(Store(path, "k" * 32), {"fake": FakeProvider()}, SECRET, core_says_active, anchor),
+                              headers={"Authorization": "Bearer " + token()})
+    ask = lambda c: c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "fake"})
+    c = make()
+    ask(c)
+    old = pathlib.Path(path).read_bytes()   # someone keeps a copy of the file here
+    ask(c); ask(c)
+    assert c.get("/v1/audit").json()["chain_ok"] is True
+    pathlib.Path(path).write_bytes(old)     # ... and puts it back: its own links and head are fine
+    assert Store(path, "k" * 32).verify_chain() is True
+    assert make().get("/v1/audit").json()["chain_ok"] is False
+    # a file rewritten from that row on (another hash at the kept seq) does not verify either
+    assert Store(":memory:").agrees_with({"seq": 1, "hash": "a" * 64}) is False
+    assert Store(":memory:").agrees_with({}) is True
+
+
+def test_the_chain_anchor_signs_each_head_and_fails_closed_on_reading():
+    sent = []
+
+    def handler(request: httpx.Request):
+        sent.append(request)
+        if request.method == "POST":
+            return httpx.Response(200, json={"kept": True})
+        return answers.pop(0)
+
+    anchor = ChainAnchor("http://core/", SECRET, mock_client(handler))
+    assert anchor.report("tok-1", 7, "a" * 64) is True
+    post = sent[0]
+    assert str(post.url) == "http://core/api/ai-chain-head" and post.headers["Authorization"] == "Bearer tok-1"
+    assert json.loads(post.content) == {"seq": 7, "hash": "a" * 64}
+    # the same value AiChainApiTest.theCoreChecksTheSameMacAsTheGateway expects from the Java side
+    assert post.headers["X-Chain-Mac"] == "6eaa19a834b909aadf19904690dff595b17cf8ee28e7030e9af1549523ff9598"
+    answers = [httpx.Response(200, json={"seq": 7, "hash": "a" * 64}), httpx.Response(200, json={}),
+               httpx.Response(403, json={}), httpx.Response(200, content=b"not json"), httpx.Response(200, json=[1])]
+    assert anchor.newest("tok") == {"seq": 7, "hash": "a" * 64}
+    assert anchor.newest("tok") == {}
+    for _ in range(3):
+        with pytest.raises(CoreUnavailable):
+            anchor.newest("tok")
+
+    def down(request):
+        raise httpx.ConnectError("down")
+    broken = ChainAnchor("http://core", SECRET, mock_client(down))
+    assert broken.report("tok", 1, "a" * 64) is False   # the officer's answer is not lost
+    with pytest.raises(CoreUnavailable):
+        broken.newest("tok")
+    refused = ChainAnchor("http://core", SECRET, mock_client(lambda r: httpx.Response(403)))
+    assert refused.report("tok", 1, "a" * 64) is False
+
+
+def test_the_audit_check_says_so_when_the_core_app_cannot_give_the_head():
+    class Down(MemoryAnchor):
+        def newest(self, token):
+            raise CoreUnavailable("cannot reach the core app to check the audit chain head")
+    c = TestClient(create_app(Store(":memory:"), {"fake": FakeProvider()}, SECRET, core_says_active, Down()),
+                   headers={"Authorization": "Bearer " + token()})
+    r = c.get("/v1/audit")
+    assert r.status_code == 503 and "audit chain head" in r.json()["detail"]
