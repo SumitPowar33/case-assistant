@@ -28,11 +28,35 @@ Done in session 39 (31 Oct, scheduled weekend run from about 20:00 IST): screen 
 Done in session 40 (31 Oct, on-demand run from 20:50 IST): server messages in the screen language (case work, front desk, policies, readiness, records, sign-in).
 Done in session 41 (31 Oct, Saturday 21:05 weekly review): weekly review and test audit (7 fixes, see the entry), BNSS 193(3)(ii) progress update recorded (V31).
 Done in session 42 (31 Oct, Sumit asked "research and fix it all yourself"): decisions on the questions of session 41 and the review items, below.
-1. Still open from the weekly review: the AI chain head is kept in the same file (a copy of an older file could be put back whole; anchor it in the core database later); after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42); a state pack could still give a national section a lighter punishment class.
+Done in session 43 (31 Oct, Saturday 21:05 scheduled run): the AI chain head kept in the core database; state punishment tables may only add, never change a national section; bug fixed on the AI settings screen.
+1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 31 Oct 2026, session 43 (scheduled Saturday 21:05 run, Sumit away)
+Started from `setup/seed` at 7b65378 (session 42, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 3 (MH pack) still waits for a reviewer, so I took the two open items of item 1.
+
+Done
+- **Punishment tables, tighten-only (dfdff65)**: `Punishments` merged every pack with `putAll`, in classpath order, for every state. Now the national table (IN) holds everywhere; a state module may only **add** sections the national table does not name, and its additions hold only for FIRs of its own state (the hint and the arrest import read the FIR's station's state). A state table that names a national section, with any class (lighter or heavier) or as "no penalty of its own", stops the application at start-up, as a bad role does. Reason for refusing heavier too: a heavier class moves the default-bail limit from 60 to 90 days, which is the direction that can keep a person in custody longer; a real state amendment needs a prosecutor first (question 1). Tests: `PunishmentsTest` (4), pack test.
+- **Bug fixed, test first (0d0637a)**: since session 42 the gateway's `/health` says only `ok`, but the AI settings screen still read `audit_chain_ok` from it, so every admin saw "Audit log check: broken". It now reads `chain_ok` from `/v1/audit?limit=1` (the screen is for admins only). The web test stubbed the old answer, which is why it passed.
+- **AI chain head kept in the core database (f6ecbbd)**: V35 `ai_chain_anchor` (seq, hash, who, when; kept as written; a head only moves forward, also in the trigger). After every audit row the gateway posts the head to `POST /api/ai-chain-head` on the officer's token, signed `ai-chain-head|seq|hash` with the shared `AUTH_SECRET` (header `X-Chain-Mac`), so an officer cannot move it; an older head is ignored. `/v1/audit` now also asks the core (`GET /api/ai-chain-head`, admins only) and says `chain_ok` only if the file holds that exact head; core down means 503 (fails closed). A failed post never loses the officer's draft. An older copy of the gateway's file put back, or a file rewritten after the kept head, no longer verifies.
+- Tests: database (V35 rules), API (`AiChainApiTest`: forward only, MAC refused for wrong seq/hash/none, bad values, admin read, the same MAC value as the gateway), `SecurityMatrixTest` (admin-only list), gateway (+4: every row anchors, older file fails, signing and fail-closed reading, 503), and a new **browser test with the real gateway** (`tests/e2e/test_ai_gateway.py`, real core + uvicorn gateway + Chromium: heads kept, settings screen says intact, an older file put back says broken). Checked that it fails on the old settings screen.
+
+Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 97.9% lines / 92.8% branches, web 99.8% statements / 93.5% branches / 97.1% functions, gateway 96%. No gate raised (nothing rose 2 points).
+
+Deliberately skipped / not checked
+- The anchor is one sequence for the whole installation (one gateway file), not one per state; fine for one deployment per state, as decided.
+- If the core is down when a row is written, that row's head is not kept until the next row; the gap is only the rows since the last head kept.
+- Not unit-tested: the race branch in `AiChainController` (two heads at the same moment, the older one is ignored; the trigger guards it).
+- The pack test for state punishment tables passes trivially today: no state module has a `punishments.json` yet.
+
+Next: item 3 (rest of the MH pack, waits for a reviewer), then item 6 (legal glossary), item 7 (field names of the answers: tonight's bug is the kind it would catch), item 8 (demo case).
+
+Questions for Sumit
+1. A state amendment that raises a punishment (some states have done this for the old IPC): should a state module be allowed to give a national section a heavier class for its own FIRs, with the amendment cited and a prosecutor's sign-off? Today it is refused.
+2. Still open: a human reviewer for the translations and the legal wording of the MH pack and complaint kinds; and question 1 of session 42 (14 days of a preliminary enquiry from receipt, my choice, or from the DSP's permission).
 
 ## 31 Oct 2026, session 42 (Sumit: "I don't know about that, can you deep research and fix it all yourself?")
 Sumit handed the open questions to me. I read the law and the court orders on each and decided, in the strict direction where the law is silent, then built the fixes. Every decision below can be overruled.
