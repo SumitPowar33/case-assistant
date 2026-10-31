@@ -275,12 +275,15 @@ class AdminController {
     /** The admin log, newest first. */
     @GetMapping("/admin-actions")
     List<Map<String, Object>> actions(@AuthenticationPrincipal Jwt jwt) {
-        requireAdmin(jwt);
+        String scope = scope(requireAdmin(jwt));
+        // a state admin sees the actions on the stations and accounts of their own state only
         return db.sql("""
                 select a.action, a.reason, a.detail, a.at, actor.full_name as actor_name, u.username, u.full_name as user_name, s.name as station_name
                 from admin_action a join app_user actor on actor.id = a.actor_id
                 left join app_user u on u.id = a.user_id left join police_station s on s.id = a.station_id
-                order by a.at desc limit 200""").query().listOfRows();
+                left join police_station us on us.id = u.station_id
+                where ?::text is null or s.state_code = ? or us.state_code = ?
+                order by a.at desc limit 200""").params(scope, scope, scope).query().listOfRows();
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

@@ -284,5 +284,20 @@ class AdminApiTest {
                 .content("{\"role\":\"io\",\"rank\":\"PSI\",\"stationId\":\"%s\",\"reason\":\"Fictional promotion order\"}".formatted(station)))
                 .andExpect(status().isNotFound());
         assertThat(db.sql("select active from app_user where id = ?").param(mhIo).query(Boolean.class).single()).isTrue();
+
+        // regression (weekly review 31 Oct): the admin log and the sign-in log showed every state to a state admin
+        post(admin, "/api/users/" + mhIo + "/disable", "{\"reason\":\"Fictional MH disable reason\"}").andExpect(status().isNoContent());
+        login("io.mh", "wrong-fictional-pass");
+        login("io.in", "wrong-fictional-pass");
+        login("no.such.user", "wrong-fictional-pass");
+        String log = mvc.perform(get("/api/admin-actions").header("Authorization", inAdmin)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(log).contains("io.in", "Demo Second PS").doesNotContain("io.mh", "Demo MH PS", "Fictional MH disable reason");
+        assertThat(mvc.perform(get("/api/admin-actions").header("Authorization", admin)).andReturn().getResponse().getContentAsString())
+                .contains("io.mh", "Demo MH PS", "Fictional MH disable reason");
+        String signIns = mvc.perform(get("/api/sign-ins").header("Authorization", inAdmin)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(signIns).contains("io.in").doesNotContain("io.mh", "no.such.user");
+        mvc.perform(get("/api/sign-ins?username=io.mh").header("Authorization", inAdmin)).andExpect(jsonPath("$.length()").value(0));
+        assertThat(mvc.perform(get("/api/sign-ins").header("Authorization", admin)).andReturn().getResponse().getContentAsString())
+                .contains("io.in", "io.mh", "no.such.user");
     }
 }

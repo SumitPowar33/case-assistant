@@ -162,10 +162,15 @@ class AuthController implements ApplicationRunner {
     List<Map<String, Object>> signIns(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String username) {
         if (!team.can(CaseTeam.user(jwt), "admin.manage"))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the state admin reads the sign-in log.");
+        // a state admin sees the attempts on accounts of their own state; attempts on unknown names only the platform admin
+        String scope = db.sql("select s.state_code from app_user u left join police_station s on s.id = u.station_id where u.id = ?")
+                .param(CaseTeam.user(jwt)).query(String.class).optional().orElse(null);
         return db.sql("""
-                select username_tried, outcome, client_ip, at from sign_in_attempt
-                where ?::text is null or username_tried = lower(btrim(?::text)) order by at desc limit 200""")
-                .params(username, username).query().listOfRows();
+                select a.username_tried, a.outcome, a.client_ip, a.at from sign_in_attempt a
+                left join app_user u on u.id = a.user_id left join police_station s on s.id = u.station_id
+                where (?::text is null or a.username_tried = lower(btrim(?::text))) and (?::text is null or s.state_code = ?)
+                order by a.at desc limit 200""")
+                .params(username, username, scope, scope).query().listOfRows();
     }
 
     /**
