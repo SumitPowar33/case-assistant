@@ -20,7 +20,7 @@ Rule of this project (Sumit, 28 Oct 2026): **every piece of code gets tests, and
 | Part | Gate | Today (29 Oct) |
 |---|---|---|
 | Core (JaCoCo, `mvn verify`) | lines 95%, branches 90% | 97.7% / 91.9% (30 Oct) |
-| Web (vitest) | statements 95%, branches 89%, functions 88% | 99.8% / 93.4% / 97.0% (31 Oct, session 39) |
+| Web (vitest) | statements 95%, branches 89%, functions 88% | 99.8% / 93.7% / 97.0% (31 Oct, session 40) |
 | AI gateway (pytest-cov) | 92% incl. branches | 96% (31 Oct) |
 The gate fails the build below the number. When coverage rises by 2 points or more, raise the gate in the same commit.
 

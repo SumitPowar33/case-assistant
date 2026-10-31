@@ -25,10 +25,36 @@ Done in session 36 (31 Oct, on-demand run from 16:50 IST): screen language, part
 Done in session 37 (31 Oct, scheduled weekend run from about 18:00 IST): screen language, part 4 (arrests, chargesheets, closure report); contract test for request field names.
 Done in session 38 (31 Oct, on-demand run from 18:20 IST): screen language, part 5 (notices, FIR, person and evidence forms, action taken); web branch gate raised to 89.
 Done in session 39 (31 Oct, scheduled weekend run from about 20:00 IST): screen language, part 6 (policies, load data, admin, AI settings, typing); contract test for AI gateway bodies; API test on an upgraded database.
+Done in session 40 (31 Oct, on-demand run from 20:50 IST): server messages in the screen language (case work, front desk, policies, readiness, records, sign-in).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 31 Oct 2026, session 40 (on-demand run started by Sumit from the build monitor, about 20:50 IST)
+Started from `setup/seed` at a4e3999 (session 39, nothing newer, no new answers). PostgreSQL was already running. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 1 (MH pack) still waits for your answer; of item 2, the complaint-kind labels wait for question 3 of session 35, so I built the next part, server messages.
+
+Done
+- **Server messages in the screen language (a0ccd6f)**: the core keeps writing English; the web app shows a message in the screen language when a `server.*` text of the catalogs matches it whole (`translateServer` in `i18n.ts`, used by every call in `api.ts`). A `{name}` in a text stands for a value the server puts in (the 30 of "asks for 30 or less", a time, an HTTP status); the most specific text wins. A message no catalog knows stays as the server wrote it, so nothing is lost. No server change and no new dependency. 74 texts × 10 languages: every refusal of the case team, IO assignment, FIR registration, front desk, policies, readiness check, arrests, chargesheets, closure report, notices, sign-in and password, the "database rejected" answers, and the web app's own "server answered" and "sign-in has ended" lines.
+- New repo rule `tests/repo_rules/test_server_messages.py`: every piece of a `server.*` text must still be written in the core's Java or in `api.ts`, so a reworded server message fails a test instead of quietly going English (checked by rewording one).
+- **Bug found and fixed, test first**: a refusal whose body was JSON `null` made the screen show "Cannot read properties of undefined (reading 'message')" instead of the server's status (`api.ts` `send`).
+- Tests: `i18n.test.ts` (+1: matching, values kept, most specific first, whole message only, unknown message and English unchanged), new `api.test.ts` (Marathi refusals, database refusal, unknown message, 500 and 401; Hindi sign-in refusals incl. the lock-out time; the null body), `App.test.tsx` (a refused language change and a wrong password on the Hindi sign-in page, shown in that language).
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.1% lines / 92.6% branches, web 99.8% statements / 93.7% branches / 97.0% functions, gateway 96%. No gate raised (web branches 1.9 points above the last raise, 2 needed).
+
+Deliberately skipped / not checked
+- Still English: the admin and load-data refusals (`AdminController`, `ImportController`), the row checks of the import files (`FirImport` and the others), Spring's own validation answers, database trigger messages, and the AI gateway's messages. Same mechanism when wanted: add the `server.*` text and its translations.
+- The 74 texts × 10 languages are mine and unchecked. Least sure: "playbook" (kept as a loanword except Tamil வழிகாட்டி), "remand" (Tamil காவல் நீட்டிப்பு), "lapse" of unsigned electronic information.
+- The message matching depends on the server's exact English wording; the repo rule guards it, but a message built from several sentences in Java code paths I did not list will stay English.
+- No new browser test (no new screen).
+
+Next
+1. Rest of the MH pack, once question 2 of session 33 is answered.
+2. Screen language, last parts: admin and load-data server messages and the import row checks; complaint-kind and step labels per language in the packs (question 3 of session 35); then the legal glossary.
+3. Tests: field names of the answers; accessibility checks (axe, question 2 of session 39); load test once paging exists.
+4. End-to-end demo case and demo script (with demo stations in MH).
+
+Questions for Sumit
+1. Still open: the questions of sessions 33, 35 and 39 (translations reviewer, `.coverage` in git, complaint kinds per language, MH content, `axe-core`).
 
 ## 31 Oct 2026, session 39 (scheduled weekend run, Saturday, started about 20:00 IST, Sumit away)
 Started from `setup/seed` at 802c442 (session 38, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 1 (MH pack) still waits for your answer, so I built item 2 (screen language part 6), then used the remaining time on the next tests from "Not covered yet" in `docs/TESTING.md`.
