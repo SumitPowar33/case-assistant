@@ -982,3 +982,15 @@ def test_the_ai_chain_head_is_kept_as_written_and_only_moves_forward(db):
         db.execute("UPDATE ai_chain_anchor SET hash=%s", ("d" * 64,))
     with pytest.raises(psycopg.errors.RaiseException):
         db.execute("DELETE FROM ai_chain_anchor")
+
+
+def test_the_fir_list_finds_an_officers_cases_through_an_index(db):
+    # V36 (load test 1 Nov 2026): the list asks for the FIRs naming the officer as IO; without an index that read every FIR
+    st, io, fir = seed_case(db)
+    db.execute("INSERT INTO police_station(state_code,district_id,name) SELECT 'IN', district_id_of('IN','D'||(g%5)), 'Fictional PS '||g FROM generate_series(1,50) g")
+    db.execute("""INSERT INTO fir(station_id,fir_year,fir_no,gd_entry_no,registered_at,information_received_at,contents_original,contents_language,action_taken)
+                  SELECT s.id, 2026, g, 'GD', now(), now(), 'Fictional', 'en', 'investigate' FROM police_station s, generate_series(1,400) g
+                  WHERE s.name LIKE 'Fictional PS %'""")
+    db.execute("ANALYZE fir")
+    plan = "\n".join(r[0] for r in db.execute("EXPLAIN SELECT id FROM fir WHERE io_id = %s OR station_id = ANY(ARRAY[%s]::uuid[])", (io, st)))
+    assert "fir_io" in plan and "Seq Scan on fir" not in plan, plan
