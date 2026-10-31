@@ -45,6 +45,8 @@ test('a code from the server is shown by its label, or as it is when no catalog 
 
 test('a server message is shown in the screen language when a server text matches it whole, with its values kept', () => {
   expect(translateServer('mr', 'Only the case team can do this.')).toBe('फक्त प्रकरणाची टीम हे करू शकते.')
+  expect(translateServer('mr', 'The first remand cannot be after today.')).toBe('पहिला रिमांड आजनंतरचा असू शकत नाही.')
+  expect(translateServer('hi', 'The update cannot be before the FIR was registered.')).toBe('जानकारी एफआईआर दर्ज होने से पहले की नहीं हो सकती।')
   expect(translateServer('hi', 'The unit above already asks for 30 or less; a unit can only be stricter, never looser.'))
     .toBe('ऊपर की इकाई पहले से 30 या उससे कम माँगती है; इकाई केवल अधिक सख़्त हो सकती है, कभी ढीली नहीं।')
   expect(translateServer('ta', 'Too many wrong passwords. Try again after 21:15 IST.')).toBe('பல முறை தவறான கடவுச்சொல். 21:15 IST க்குப் பிறகு மீண்டும் முயலவும்.')

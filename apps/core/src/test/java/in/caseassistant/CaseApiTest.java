@@ -53,6 +53,34 @@ class CaseApiTest {
                 .andExpect(jsonPath("$[0].due_on").value("2026-12-30"));
     }
 
+    org.springframework.test.web.servlet.ResultActions update(String who, String body) throws Exception {
+        return mvc.perform(post("/api/firs/" + fir + "/victim-updates").header("Authorization", who).contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    /** BNSS 193(3)(ii): once the progress update is recorded the 90-day deadline is done; nothing else changes. */
+    @Test
+    void aRecordedProgressUpdateEndsTheVictimUpdateDeadline() throws Exception {
+        String ok = "{\"givenOn\":\"2026-10-20\",\"toldTo\":\"victim\",\"means\":\"phone\"}";
+        update(outsider, ok).andExpect(status().isForbidden());
+        update(malkhana, ok).andExpect(status().isForbidden());
+        update(sho, ok.replace("2026-10-20", "2026-09-30")).andExpect(status().isBadRequest())
+                .andExpect(status().reason("The update cannot be before the FIR was registered."));
+        String tomorrow = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata")).plusDays(1).toString();
+        update(sho, ok.replace("2026-10-20", tomorrow)).andExpect(status().isBadRequest())
+                .andExpect(status().reason("The day the update was given cannot be in the future."));
+        update(sho, ok.replace("victim\"", "neighbour\"")).andExpect(status().isBadRequest());
+        update(sho, ok.replace("phone", "pigeon")).andExpect(status().isBadRequest());
+        update(sho, "{\"toldTo\":\"victim\",\"means\":\"phone\"}").andExpect(status().isBadRequest());
+        mvc.perform(get("/api/firs/" + fir + "/victim-updates").header("Authorization", sho)).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", sho)).andExpect(jsonPath("$[?(@.kind=='victim_progress_update')]").isNotEmpty());
+        update(sho, ok).andExpect(status().isCreated()).andExpect(jsonPath("$.id").isNotEmpty());
+        mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", sho)).andExpect(jsonPath("$[?(@.kind=='victim_progress_update')]").isEmpty());
+        mvc.perform(get("/api/firs/" + fir + "/victim-updates").header("Authorization", sho)).andExpect(jsonPath("$[0].given_on").value("2026-10-20"))
+                .andExpect(jsonPath("$[0].told_to").value("victim")).andExpect(jsonPath("$[0].means").value("phone"))
+                .andExpect(jsonPath("$[0].recorded_by_name").value("Insp Fictional Head"));
+        mvc.perform(get("/api/firs/" + fir + "/victim-updates").header("Authorization", outsider)).andExpect(status().isNotFound());
+    }
+
     @Test
     void onlyTheCaseTeamReadsTheCaseAndMalkhanaReadsEvidence() throws Exception {
         for (String who : new String[] {malkhana, outsider})

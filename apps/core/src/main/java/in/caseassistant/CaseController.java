@@ -3,7 +3,10 @@ package in.caseassistant;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -14,6 +17,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 /** Read-only views over deadlines and evidence, plus the append-only custody log (case team or station malkhana only). */
 @RestController
@@ -21,6 +25,10 @@ import org.springframework.web.bind.annotation.*;
 class CaseController {
     record Custody(@NotNull OffsetDateTime at, @NotBlank String handedBy, @NotBlank String receivedBy,
                    @NotBlank String location, @NotBlank String purpose, boolean sealIntact) {}
+
+    /** BNSS 193(3)(ii): the progress of the investigation told to the informant or victim; no names, only to whom and how. */
+    record VictimUpdate(@NotNull LocalDate givenOn, @NotBlank @Pattern(regexp = "informant|victim") String toldTo,
+                        @NotBlank @Pattern(regexp = "in_person|phone|sms|email|letter|other") String means) {}
 
     private final JdbcClient db;
     private final CaseTeam team;
@@ -43,6 +51,28 @@ class CaseController {
     List<Map<String, Object>> deadlines(@PathVariable UUID firId) {
         return db.sql("select kind, due_on, basis from case_deadline where fir_id = ? order by due_on")
                 .param(firId).query().listOfRows();
+    }
+
+    /** The progress updates given (BNSS 193(3)(ii)), oldest first; the first one ends the 90-day deadline. */
+    @GetMapping("/victim-updates")
+    List<Map<String, Object>> victimUpdates(@PathVariable UUID firId) {
+        return db.sql("""
+                select v.given_on, v.told_to, v.means, u.full_name as recorded_by_name, v.recorded_at
+                from victim_update v join app_user u on u.id = v.recorded_by where v.fir_id = ? order by v.given_on, v.recorded_at""")
+                .param(firId).query().listOfRows();
+    }
+
+    @PostMapping("/victim-updates")
+    ResponseEntity<Map<String, UUID>> victimUpdate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody VictimUpdate v) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        if (v.givenOn.isAfter(LocalDate.now(ZoneId.of("Asia/Kolkata"))))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The day the update was given cannot be in the future.");
+        if (db.sql("select ? < ist_date(registered_at) from fir where id = ?").params(v.givenOn, firId).query(Boolean.class).single())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The update cannot be before the FIR was registered.");
+        UUID id = db.sql("insert into victim_update (fir_id, given_on, told_to, means, recorded_by) values (?,?,?,?,?) returning id")
+                .params(firId, v.givenOn, v.toldTo, v.means, me).query(UUID.class).single();
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", id));
     }
 
     @GetMapping("/evidence")

@@ -858,3 +858,26 @@ def test_golden_hour_steps_are_kept_as_recorded(db):
     for sql in ("UPDATE complaint_step SET note='x' WHERE complaint_id=%s", "DELETE FROM complaint_step WHERE complaint_id=%s"):
         with pytest.raises(psycopg.errors.RaiseException):
             db.execute(sql, (c,))
+
+
+def test_a_recorded_progress_update_ends_the_victim_update_deadline_and_is_kept_as_written(db):
+    # BNSS 193(3)(ii); regression (weekly review 31 Oct): the deadline could never be marked as done
+    st, io, fir = seed_case(db)
+    due = lambda: [r[0] for r in db.execute("SELECT due_on FROM case_deadline WHERE kind='victim_progress_update'")]
+    assert due() == [dt.date(2026, 11, 16)]
+    upd = "INSERT INTO victim_update(fir_id,given_on,told_to,means,recorded_by) VALUES (%s,%s,%s,%s,%s) RETURNING id"
+    with pytest.raises(psycopg.errors.CheckViolation):   # before the FIR (18 Aug IST)
+        db.execute(upd, (fir, dt.date(2026, 8, 17), "victim", "phone", io))
+    with pytest.raises(psycopg.errors.CheckViolation):   # in the future
+        db.execute(upd, (fir, dt.date.today() + dt.timedelta(days=2), "victim", "phone", io))
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute(upd, (fir, dt.date(2026, 9, 1), "neighbour", "phone", io))
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute(upd, (fir, dt.date(2026, 9, 1), "victim", "pigeon", io))
+    assert due() == [dt.date(2026, 11, 16)]
+    one(db, upd, fir, dt.date(2026, 8, 18), "informant", "sms", io)   # the day of the FIR counts
+    assert due() == []
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE victim_update SET given_on='2026-09-02'")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM victim_update")

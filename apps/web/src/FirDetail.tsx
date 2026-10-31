@@ -7,6 +7,7 @@ import Arrests from './Arrests'
 import IoAssignment from './IoAssignment'
 import Chargesheets from './Chargesheets'
 import ClosureReport from './ClosureReport'
+import VictimUpdates from './VictimUpdates'
 import { AddEvidenceForm, AddPersonForm } from './Forms'
 import { useState } from 'react'
 import { useT } from './i18n'
@@ -63,6 +64,7 @@ export default function FirDetail({ id }: { id: string }) {
       <Section<Deadline> title={t('fir.deadlines')} path={`/firs/${id}/deadlines`} version={version}>
         {(rows) => <ul>{rows.map((d, i) => <li key={i}>{t('fir.dueBy', { kind: deadlineLabel(t, d.kind), date: d.due_on })} <small>({d.basis})</small></li>)}</ul>}
       </Section>
+      <VictimUpdates firId={id} version={version} onSaved={saved} />
       <Section<Evidence> title={t('fir.evidence')} path={`/firs/${id}/evidence`} version={version} form={<AddEvidenceForm firId={id} onSaved={saved} />}>
         {(rows) => <ul>{rows.map((e) => (
           <li key={e.id}>{e.label} ({t.code('evidenceKind', e.kind)}){e.kind === 'electronic' && ` · ${t(e.court_ready ? 'evidence.courtReady' : 'evidence.notCourtReady')}`}
