@@ -98,6 +98,7 @@
  "outcome.no_offence": "నేరం ఏదీ కనిపించలేదు",
  "outcome.not_signed_in_time": "ఎలక్ట్రానిక్ సమాచారంపై మూడు రోజుల్లో సంతకం కాలేదు",
  "complaint.title": "{name} గారి ఫిర్యాదు",
+ "complaint.withheldName": "పేరు నిలిపివేయబడింది (BNS 72)",
  "complaint.meta": "{kind} · {mode} · అందింది {date} · రాసినవారు {officer}",
  "complaint.readBack": "సమాచారం ఇచ్చినవారికి {language}లో చదివి వినిపించారు, సరైనదని అంగీకరించి సంతకం చేశారు",
  "complaint.signedByInformant": "సమాచారం ఇచ్చినవారు సంతకం చేశారు",

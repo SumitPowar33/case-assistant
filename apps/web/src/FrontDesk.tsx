@@ -9,11 +9,11 @@ import { ScreenLangContext, useT } from './i18n'
 
 type Step = { id: string; text: string; within_minutes: number | null; basis: string | null }
 type Kind = { id: string; label: string; steps: Step[] }
-type Row = { id: string; received_at: string; mode: string; informant_name: string; kind: string; signed_at: string | null; outcome: string | null; steps_overdue: number }
+type Row = { id: string; received_at: string; mode: string; informant_name: string | null; withheld: boolean; kind: string; signed_at: string | null; outcome: string | null; steps_overdue: number }
 type CheckStep = { id: string; text: string; basis: string | null; due_at: string | null; done_at: string | null; done_by_name: string | null; note: string | null; overdue: boolean }
 type Complaint = {
-  id: string; received_at: string; mode: string; informant_name: string; informant_contact: string | null; kind: string; kind_label: string
-  text_original: string; text_language: string; recorded_by_name: string; read_back_language: string | null; signed_at: string | null
+  id: string; received_at: string; mode: string; informant_name: string | null; informant_contact: string | null; kind: string; kind_label: string
+  withheld: boolean; text_original: string | null; text_language: string; recorded_by_name: string; read_back_language: string | null; signed_at: string | null
   signed_by_name: string | null; outcome: string | null; outcome_reason: string | null; fir_id: string | null; fir_no: number | null; fir_year: number | null
   sign_by: string | null; enquiry_due: string | null; steps: CheckStep[]
 }
@@ -60,7 +60,7 @@ export function FrontDeskPage() {
         <tbody>{data.map((c) => (
           <tr key={c.id}>
             <td><a href={`#/complaints/${c.id}`}>{fmt(c.received_at)}</a></td>
-            <td>{c.informant_name}</td>
+            <td>{c.withheld ? t('complaint.withheldName') : c.informant_name}</td>
             <td>{kinds.find((k) => k.id === c.kind)?.label ?? c.kind}</td>
             <td>{t(c.signed_at ? 'desk.signed' : 'desk.notSigned')}{c.steps_overdue > 0 && <strong> · {c.steps_overdue > 1 ? t('desk.overdueMany', { n: c.steps_overdue }) : t('desk.overdueOne')}</strong>}</td>
           </tr>
@@ -84,15 +84,15 @@ export function ComplaintPage({ id }: { id: string }) {
   return (
     <section aria-labelledby="complaint-h">
       <p><a href="#/front-desk">{t('nav.frontDesk')}</a></p>
-      <h2 id="complaint-h">{t('complaint.title', { name: c.informant_name })}</h2>
+      <h2 id="complaint-h">{t('complaint.title', { name: c.withheld ? t('complaint.withheldName') : c.informant_name ?? '' })}</h2>
       <p>{t('complaint.meta', { kind: c.kind_label, mode: t.code('mode', c.mode), date: fmt(c.received_at), officer: c.recorded_by_name })}</p>
-      <blockquote lang={c.text_language} className="read-back">{c.text_original}</blockquote>
+      {c.withheld ? <p>{t('fir.withheld')}</p> : <blockquote lang={c.text_language} className="read-back">{c.text_original}</blockquote>}
       {c.signed_at
         ? <p>{t('complaint.recorded', { how: spoken ? t('complaint.readBack', { language: languageName(c.read_back_language ?? '', screen) }) : t('complaint.signedByInformant'), officer: c.signed_by_name ?? '', date: fmt(c.signed_at) })}</p>
         : open && <SignForm c={c} spoken={spoken} onSaved={saved} />}
-      {c.signed_at && <section className="print-copy" aria-label={t('copy.label')}>
+      {c.signed_at && !c.withheld && <section className="print-copy" aria-label={t('copy.label')}>
         <h3>{t('copy.title')}</h3>
-        <p>{t('copy.meta', { name: c.informant_name, kind: c.kind_label, date: fmt(c.received_at) })}</p>
+        <p>{t('copy.meta', { name: c.informant_name ?? '', kind: c.kind_label, date: fmt(c.received_at) })}</p>
         <blockquote lang={c.text_language}>{c.text_original}</blockquote>
         <p>{t('copy.signature', { officer: c.signed_by_name ?? '', date: fmt(c.signed_at) })}</p>
         <button type="button" className="no-print" onClick={() => window.print()}>{t('copy.print')}</button>

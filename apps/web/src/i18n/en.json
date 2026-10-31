@@ -98,6 +98,7 @@
  "outcome.no_offence": "No offence disclosed",
  "outcome.not_signed_in_time": "Electronic information not signed within three days",
  "complaint.title": "Complaint of {name}",
+ "complaint.withheldName": "Name withheld (BNS 72)",
  "complaint.meta": "{kind} · {mode} · received {date} · written down by {officer}",
  "complaint.readBack": "Read over to the informant in {language}, admitted correct and signed",
  "complaint.signedByInformant": "Signed by the informant",

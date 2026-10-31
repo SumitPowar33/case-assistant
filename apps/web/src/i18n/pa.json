@@ -98,6 +98,7 @@
  "outcome.no_offence": "ਕੋਈ ਅਪਰਾਧ ਨਹੀਂ ਬਣਦਾ",
  "outcome.not_signed_in_time": "ਇਲੈਕਟ੍ਰਾਨਿਕ ਸੂਚਨਾ ਉੱਤੇ ਤਿੰਨ ਦਿਨਾਂ ਵਿੱਚ ਦਸਤਖ਼ਤ ਨਹੀਂ",
  "complaint.title": "{name} ਦੀ ਸ਼ਿਕਾਇਤ",
+ "complaint.withheldName": "ਨਾਮ ਰੋਕਿਆ ਗਿਆ (BNS 72)",
  "complaint.meta": "{kind} · {mode} · ਪ੍ਰਾਪਤ {date} · {officer} ਵੱਲੋਂ ਲਿਖੀ",
  "complaint.readBack": "ਸੂਚਨਾ ਦੇਣ ਵਾਲੇ ਨੂੰ {language} ਵਿੱਚ ਪੜ੍ਹ ਕੇ ਸੁਣਾਈ, ਸਹੀ ਮੰਨੀ ਅਤੇ ਦਸਤਖ਼ਤ ਕੀਤੇ",
  "complaint.signedByInformant": "ਸੂਚਨਾ ਦੇਣ ਵਾਲੇ ਨੇ ਦਸਤਖ਼ਤ ਕੀਤੇ",

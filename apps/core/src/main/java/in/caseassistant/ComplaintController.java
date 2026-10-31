@@ -89,6 +89,9 @@ class ComplaintController {
                 select id, received_at, mode, informant_name, kind, signed_at, outcome, fir_id from complaint
                 where station_id = ? and (not ? or outcome is null) order by received_at desc limit 200""").params(station, open).query().listOfRows()) {
             var row = new LinkedHashMap<>(r);
+            boolean withheld = withheld(me, (UUID) r.get("fir_id"));
+            if (withheld) row.put("informant_name", null);
+            row.put("withheld", withheld);
             row.put("steps_overdue", steps((UUID) r.get("id"), r).stream().filter(s -> Boolean.TRUE.equals(s.get("overdue"))).count());
             out.add(row);
         }
@@ -99,6 +102,9 @@ class ComplaintController {
     Map<String, Object> one(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         var c = open(jwt, id);
         var out = new LinkedHashMap<>(c);
+        boolean withheld = withheld(CaseTeam.user(jwt), (UUID) c.get("fir_id"));
+        if (withheld) for (String k : new String[] {"informant_name", "informant_contact", "text_original"}) out.put(k, null);
+        out.put("withheld", withheld);
         out.put("kind_label", kinds.get((String) c.get("kind")).label());
         out.put("steps", steps(id, c));
         out.put("sign_by", c.get("mode").equals("electronic") ? ((java.sql.Timestamp) c.get("received_at")).toInstant().plus(E_SIGN_LIMIT) : null);
@@ -179,6 +185,14 @@ class ComplaintController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such complaint.");
         db.sql("select 1 from complaint where id = ? for update").param(id).query().listOfRows();
         return c;
+    }
+
+    /**
+     * Once an FIR is registered from the complaint it carries the same text (BNSS 173(1)), so on a case that protects the
+     * victim's identity (BNS 72) the text, informant and contact are withheld here too from anyone outside the case team.
+     */
+    private boolean withheld(UUID me, UUID firId) {
+        return firId != null && team.identityProtected(firId) && !team.includes(me, firId);
     }
 
     /** The golden-hour steps of the complaint's kind: due time (from receipt), done or not, overdue while open. */

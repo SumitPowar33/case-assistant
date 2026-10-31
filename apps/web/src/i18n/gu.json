@@ -98,6 +98,7 @@
  "outcome.no_offence": "કોઈ ગુનો બનતો નથી",
  "outcome.not_signed_in_time": "ઇલેક્ટ્રોનિક માહિતી પર ત્રણ દિવસમાં સહી થઈ નથી",
  "complaint.title": "{name}ની ફરિયાદ",
+ "complaint.withheldName": "નામ રોકેલ છે (BNS 72)",
  "complaint.meta": "{kind} · {mode} · મળી {date} · લખનાર {officer}",
  "complaint.readBack": "માહિતી આપનારને {language}માં વાંચી સંભળાવી, સાચી સ્વીકારી અને સહી કરી",
  "complaint.signedByInformant": "માહિતી આપનારે સહી કરી",

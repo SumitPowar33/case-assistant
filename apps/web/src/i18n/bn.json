@@ -98,6 +98,7 @@
  "outcome.no_offence": "কোনো অপরাধ প্রকাশ পায়নি",
  "outcome.not_signed_in_time": "ইলেকট্রনিক তথ্যে তিন দিনের মধ্যে সই হয়নি",
  "complaint.title": "{name} এর অভিযোগ",
+ "complaint.withheldName": "নাম আটকানো (BNS 72)",
  "complaint.meta": "{kind} · {mode} · পাওয়া {date} · লিখেছেন {officer}",
  "complaint.readBack": "তথ্যদাতাকে {language} ভাষায় পড়ে শোনানো হয়েছে, সঠিক বলে মেনেছেন ও সই করেছেন",
  "complaint.signedByInformant": "তথ্যদাতা সই করেছেন",

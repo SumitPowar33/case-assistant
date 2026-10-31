@@ -98,6 +98,7 @@
  "outcome.no_offence": "കുറ്റകൃത്യമൊന്നും വെളിപ്പെട്ടില്ല",
  "outcome.not_signed_in_time": "ഇലക്ട്രോണിക് വിവരത്തിൽ മൂന്ന് ദിവസത്തിനകം ഒപ്പിട്ടില്ല",
  "complaint.title": "{name} നൽകിയ പരാതി",
+ "complaint.withheldName": "പേര് തടഞ്ഞുവച്ചു (BNS 72)",
  "complaint.meta": "{kind} · {mode} · ലഭിച്ചത് {date} · എഴുതിയത് {officer}",
  "complaint.readBack": "വിവരം നൽകുന്നയാളെ {language}യിൽ വായിച്ചു കേൾപ്പിച്ചു, ശരിയെന്ന് സമ്മതിച്ച് ഒപ്പിട്ടു",
  "complaint.signedByInformant": "വിവരം നൽകുന്നയാൾ ഒപ്പിട്ടു",

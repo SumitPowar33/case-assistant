@@ -98,6 +98,7 @@
  "outcome.no_offence": "குற்றம் எதுவும் வெளிப்படவில்லை",
  "outcome.not_signed_in_time": "மின்னணு தகவலுக்கு மூன்று நாட்களுக்குள் கையொப்பமில்லை",
  "complaint.title": "{name} அவர்களின் புகார்",
+ "complaint.withheldName": "பெயர் மறைக்கப்பட்டது (BNS 72)",
  "complaint.meta": "{kind} · {mode} · பெறப்பட்டது {date} · எழுதியவர் {officer}",
  "complaint.readBack": "தகவல் தருபவருக்கு {language} மொழியில் படித்துக் காட்டப்பட்டது, சரி என ஏற்று கையொப்பமிட்டார்",
  "complaint.signedByInformant": "தகவல் தருபவர் கையொப்பமிட்டார்",

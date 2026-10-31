@@ -193,3 +193,16 @@ test('the Save button of a form follows the screen language', async () => {
   expect(within(sign).getByRole('button', { name: 'सहेजें' })).toBeTruthy()
   expect(within(sign).queryByLabelText('किस भाषा में पढ़कर सुनाई')).toBeNull()   // written information is not read over
 })
+
+test('on a protected case the complaint, its informant and the printable copy are withheld outside the case team', async () => {
+  const withheld = { ...base, withheld: true, informant_name: null, text_original: null, signed_at: '2026-10-30T04:50:00Z', signed_by_name: 'HC Fictional', outcome: 'fir', fir_id: 'f1', fir_no: 4, fir_year: 2026, steps: [] }
+  stub({ '/complaints/c1': withheld, '/complaints?open=true': [{ id: 'c1', received_at: base.received_at, mode: 'oral', informant_name: null, withheld: true, kind: 'other', signed_at: null, outcome: null, steps_overdue: 0 }], '/complaint-kinds': kinds })
+  render(<ComplaintPage id="c1" />)
+  expect(await screen.findByRole('heading', { name: 'Complaint of Name withheld (BNS 72)' })).toBeTruthy()
+  expect(screen.getByText(/Complaint text withheld/)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Print the copy' })).toBeNull()
+  expect(document.querySelector('blockquote')).toBeNull()
+  cleanup()
+  render(<FrontDeskPage />)
+  expect(await screen.findByRole('cell', { name: 'Name withheld (BNS 72)' })).toBeTruthy()
+})

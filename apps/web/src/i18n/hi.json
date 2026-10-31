@@ -98,6 +98,7 @@
  "outcome.no_offence": "कोई अपराध नहीं बनता",
  "outcome.not_signed_in_time": "इलेक्ट्रॉनिक सूचना पर तीन दिन में हस्ताक्षर नहीं",
  "complaint.title": "{name} की शिकायत",
+ "complaint.withheldName": "नाम रोका गया (BNS 72)",
  "complaint.meta": "{kind} · {mode} · प्राप्त {date} · {officer} द्वारा लिखी गई",
  "complaint.readBack": "सूचनाकर्ता को {language} में पढ़कर सुनाई गई, सही मानी गई और हस्ताक्षर किए गए",
  "complaint.signedByInformant": "सूचनाकर्ता द्वारा हस्ताक्षरित",

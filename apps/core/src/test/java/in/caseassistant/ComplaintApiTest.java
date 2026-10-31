@@ -193,6 +193,35 @@ class ComplaintApiTest {
     }
 
     @Test
+    void onAProtectedCaseTheComplaintTextAndInformantAreWithheldFromStationStaffOutsideTheCaseTeam() throws Exception {
+        // regression (weekly review 31 Oct): the FIR withheld the text (BNS 72) but the complaint it came from still showed it
+        UUID c = take("written", "sexual_offence", Instant.now().minus(5, ChronoUnit.MINUTES));
+        mvc.perform(get("/api/complaints/" + c).header("Authorization", clerk)).andExpect(jsonPath("$.withheld").value(false))
+                .andExpect(jsonPath("$.informant_name").value("Fictional Informant"));   // still being written down: the desk needs it
+        send(clerk, "POST", "/api/complaints/" + c + "/sign", Map.of()).andExpect(status().isNoContent());
+        var body = fir(c);
+        body.put("sections", java.util.List.of(Map.of("act", "BNS", "section", "64")));
+        send(clerk, "POST", "/api/firs", body).andExpect(status().isCreated());
+        for (String who : new String[] {clerk, user("io", station, "SI Fictional Not On Case")}) {
+            mvc.perform(get("/api/complaints/" + c).header("Authorization", who)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.withheld").value(true)).andExpect(jsonPath("$.text_original").value((Object) null))
+                    .andExpect(jsonPath("$.informant_name").value((Object) null)).andExpect(jsonPath("$.informant_contact").value((Object) null));
+            String list = mvc.perform(get("/api/complaints").header("Authorization", who)).andReturn().getResponse().getContentAsString();
+            assertThat(list).doesNotContain("Fictional Informant").contains("\"withheld\":true");
+        }
+        mvc.perform(get("/api/complaints/" + c).header("Authorization", sho)).andExpect(jsonPath("$.withheld").value(false))   // case team
+                .andExpect(jsonPath("$.text_original").value(org.hamcrest.Matchers.startsWith("Fictional caller")));
+        // an unprotected case keeps showing it to the desk
+        UUID plain = take("written", "other", Instant.now());
+        send(clerk, "POST", "/api/complaints/" + plain + "/sign", Map.of()).andExpect(status().isNoContent());
+        var b2 = fir(plain);
+        b2.put("firNo", 77);
+        send(clerk, "POST", "/api/firs", b2).andExpect(status().isCreated());
+        mvc.perform(get("/api/complaints/" + plain).header("Authorization", clerk)).andExpect(jsonPath("$.withheld").value(false))
+                .andExpect(jsonPath("$.informant_name").value("Fictional Informant"));
+    }
+
+    @Test
     void badComplaintsAreRefused() throws Exception {
         var future = complaint("oral", "other", Instant.now().plus(1, ChronoUnit.HOURS));
         send(clerk, "POST", "/api/complaints", future).andExpect(status().isBadRequest());

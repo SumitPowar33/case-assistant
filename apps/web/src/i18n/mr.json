@@ -98,6 +98,7 @@
  "outcome.no_offence": "कोणताही गुन्हा दिसत नाही",
  "outcome.not_signed_in_time": "इलेक्ट्रॉनिक माहितीवर तीन दिवसांत सही झाली नाही",
  "complaint.title": "{name} यांची तक्रार",
+ "complaint.withheldName": "नाव रोखून ठेवले (BNS 72)",
  "complaint.meta": "{kind} · {mode} · मिळाली {date} · लिहिणारे {officer}",
  "complaint.readBack": "माहिती देणाऱ्याला {language} मध्ये वाचून दाखवली, बरोबर असल्याचे मान्य केले आणि सही केली",
  "complaint.signedByInformant": "माहिती देणाऱ्याने सही केली",

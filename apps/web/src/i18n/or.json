@@ -98,6 +98,7 @@
  "outcome.no_offence": "କୌଣସି ଅପରାଧ ପ୍ରକାଶ ପାଇନାହିଁ",
  "outcome.not_signed_in_time": "ଇଲେକ୍ଟ୍ରୋନିକ ସୂଚନାରେ ତିନି ଦିନ ମଧ୍ୟରେ ଦସ୍ତଖତ ହୋଇନାହିଁ",
  "complaint.title": "{name}ଙ୍କ ଅଭିଯୋଗ",
+ "complaint.withheldName": "ନାମ ଅଟକାଯାଇଛି (BNS 72)",
  "complaint.meta": "{kind} · {mode} · ମିଳିଲା {date} · ଲେଖିଲେ {officer}",
  "complaint.readBack": "ସୂଚନାଦାତାଙ୍କୁ {language}ରେ ପଢ଼ି ଶୁଣାଗଲା, ଠିକ୍ ବୋଲି ମାନିଲେ ଓ ଦସ୍ତଖତ କଲେ",
  "complaint.signedByInformant": "ସୂଚନାଦାତା ଦସ୍ତଖତ କଲେ",
