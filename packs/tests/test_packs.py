@@ -61,6 +61,19 @@ def test_punishment_tables_use_known_classes():
         assert not set(t["sections"]) & set(t.get("no_penalty_of_their_own", []))
 
 
+def test_a_state_module_adds_punishments_only_for_sections_the_national_table_does_not_name():
+    # Punishments.java refuses the same at start-up: a state cannot give a national section another class,
+    # lighter or heavier, or take it out of the table.
+    nat = json.loads((ROOT / "IN" / "punishments.json").read_text(encoding="utf-8"))
+    national = set(nat["sections"]) | set(nat.get("no_penalty_of_their_own", []))
+    for path in ROOT.glob("*/punishments.json"):
+        if path.parent.name == "IN":
+            continue
+        t = json.loads(path.read_text(encoding="utf-8"))
+        named = set(t.get("sections", {})) | set(t.get("no_penalty_of_their_own", []))
+        assert not named & national, f"{path.parent.name} changes national sections {sorted(named & national)}"
+
+
 def test_roles_files_use_declared_permissions_and_valid_scopes():
     files = sorted(ROOT.glob("*/roles.json"))
     assert files

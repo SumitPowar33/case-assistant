@@ -304,14 +304,16 @@ class ImportController {
 
     /** The FIRs of the station with this number (of this year, or of any year), with their accused and the arrests already recorded. */
     private List<ArrestImport.Fir> firsOf(UUID station, Integer year, int no, Map<String, String> existing) {
-        return db.sql("select id, registered_at, concluded from fir where station_id = ? and fir_no = ? and (?::int is null or fir_year = ?)")
+        return db.sql("""
+                select f.id, s.state_code, f.registered_at, f.concluded from fir f join police_station s on s.id = f.station_id
+                where f.station_id = ? and f.fir_no = ? and (?::int is null or f.fir_year = ?)""")
                 .params(station, no, year, year).query().listOfRows().stream().map(f -> {
                     UUID id = (UUID) f.get("id");
                     db.sql("""
                             select a.person_id, ist_date(a.arrested_at)::text as day, coalesce(a.source_hash, '') as h from arrest a
                             join person p on p.id = a.person_id where p.fir_id = ?""").param(id).query().listOfRows()
                             .forEach(a -> existing.put(a.get("person_id") + "|" + a.get("day"), (String) a.get("h")));
-                    return new ArrestImport.Fir(id, ((java.sql.Timestamp) f.get("registered_at")).toInstant(), (Boolean) f.get("concluded"),
+                    return new ArrestImport.Fir(id, (String) f.get("state_code"), ((java.sql.Timestamp) f.get("registered_at")).toInstant(), (Boolean) f.get("concluded"),
                             db.sql("select act, section from fir_section where fir_id = ?").param(id).query().listOfRows().stream()
                                     .map(x -> (Map<String, Object>) new HashMap<>(x)).toList(),
                             db.sql("select id, label, full_name from person where fir_id = ? and role = 'accused'").param(id).query().listOfRows().stream()

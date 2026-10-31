@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 /** Row checks of the notices import. Fictional data only. */
 class NoticeImportTest {
     static final Instant NOW = Instant.parse("2026-10-28T10:00:00Z");
-    static final ArrestImport.Fir OLD = new ArrestImport.Fir(UUID.randomUUID(), Instant.parse("2024-03-05T04:30:00Z"), false, List.of(), List.of());
-    static final ArrestImport.Fir NEW = new ArrestImport.Fir(UUID.randomUUID(), Instant.parse("2024-06-30T18:30:00Z"), false, List.of(), List.of());  // 1 July 2024, 00:00 IST
+    static final ArrestImport.Fir OLD = new ArrestImport.Fir(UUID.randomUUID(), "XX", Instant.parse("2024-03-05T04:30:00Z"), false, List.of(), List.of());
+    static final ArrestImport.Fir NEW = new ArrestImport.Fir(UUID.randomUUID(), "XX", Instant.parse("2024-06-30T18:30:00Z"), false, List.of(), List.of());  // 1 July 2024, 00:00 IST
     static final UUID SIGNER = UUID.randomUUID();
     final NoticeImport rules = new NoticeImport();
 

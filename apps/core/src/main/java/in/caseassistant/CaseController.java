@@ -43,7 +43,9 @@ class CaseController {
     /** Suggests the highest-punishment class (so 60 or 90 days) from the FIR's sections. The officer still chooses. */
     @GetMapping("/punishment-hint")
     Map<String, Object> punishmentHint(@PathVariable UUID firId) {
-        return punishments.hint(db.sql("select act, section from fir_section where fir_id = ? order by act, section")
+        String state = db.sql("select s.state_code from fir f join police_station s on s.id = f.station_id where f.id = ?")
+                .param(firId).query(String.class).single();
+        return punishments.hint(state, db.sql("select act, section from fir_section where fir_id = ? order by act, section")
                 .param(firId).query().listOfRows());
     }
 

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 /** Row checks of the evidence register import. Fictional data only. */
 class EvidenceImportTest {
     static final Instant NOW = Instant.parse("2026-10-28T10:00:00Z");
-    static final ArrestImport.Fir FIR = new ArrestImport.Fir(UUID.randomUUID(), Instant.parse("2026-03-05T09:00:00Z"), false, List.of(), List.of());
+    static final ArrestImport.Fir FIR = new ArrestImport.Fir(UUID.randomUUID(), "XX", Instant.parse("2026-03-05T09:00:00Z"), false, List.of(), List.of());
     static final String SHA = "ab".repeat(32);
     final EvidenceImport rules = new EvidenceImport();
 

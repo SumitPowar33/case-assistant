@@ -27,7 +27,7 @@ class ArrestImportTest {
     }
 
     static ArrestImport.Fir fir(boolean concluded, List<Map<String, Object>> sections) {
-        return new ArrestImport.Fir(UUID.randomUUID(), Instant.parse("2026-03-05T09:00:00Z"), concluded, sections, List.of(A1, A2, A3));
+        return new ArrestImport.Fir(UUID.randomUUID(), "XX", Instant.parse("2026-03-05T09:00:00Z"), concluded, sections, List.of(A1, A2, A3));
     }
 
     FirImport.Result check(String... kv) {

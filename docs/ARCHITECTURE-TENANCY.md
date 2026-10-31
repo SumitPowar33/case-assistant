@@ -37,7 +37,7 @@ A **module is a pack folder**: `packs/IN` (national), `packs/MH` (Maharashtra), 
 |---|---|
 | `roles.json` | roles and permissions |
 | `policies.json` | policies a unit may tighten (section 4) |
-| `punishments.json` | highest punishment per section (suggests 60 or 90 days; draft until a prosecutor checks it) |
+| `punishments.json` | highest punishment per section (suggests 60 or 90 days; draft until a prosecutor checks it). A state module may only add sections the national table does not name, and they hold only for FIRs of its own state; a national section cannot be re-classed (lighter or heavier) or exempted (refused at start-up, 1 Nov 2026) |
 | `playbooks/*.json` | charge ingredients and readiness rules |
 | `module.json` | id (= folder name, the state code), name, version, languages, `depends` (every module but `IN` depends on `IN`). At start-up each module gets its `state_pack` row (status untouched), so a fresh installation can add stations at once (`Modules`) |
 

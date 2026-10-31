@@ -15,7 +15,7 @@ class ChargesheetImportTest {
     static final ArrestImport.Accused A1 = new ArrestImport.Accused(UUID.randomUUID(), "A1", "Fictional Accused One");
     static final ArrestImport.Accused A2 = new ArrestImport.Accused(UUID.randomUUID(), "A2", "Fictional Accused Two");
     static final ArrestImport.Accused A3 = new ArrestImport.Accused(UUID.randomUUID(), "A3", "Fictional  accused two.");
-    static final ArrestImport.Fir FIR = new ArrestImport.Fir(UUID.randomUUID(), Instant.parse("2026-03-05T09:00:00Z"), false, List.of(), List.of(A1, A2, A3));
+    static final ArrestImport.Fir FIR = new ArrestImport.Fir(UUID.randomUUID(), "XX", Instant.parse("2026-03-05T09:00:00Z"), false, List.of(), List.of(A1, A2, A3));
     final ChargesheetImport rules = new ChargesheetImport();
 
     FirImport.Result check(String... kv) {

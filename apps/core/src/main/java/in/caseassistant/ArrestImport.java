@@ -26,7 +26,8 @@ class ArrestImport {
     /** An accused already in a FIR (label A1, A2 ...). */
     record Accused(UUID id, String label, String name) {}
 
-    record Fir(UUID id, Instant registeredAt, boolean concluded, List<Map<String, Object>> sections, List<Accused> accused) {}
+    /** state: the state of the FIR's station, for its punishment table. */
+    record Fir(UUID id, String state, Instant registeredAt, boolean concluded, List<Map<String, Object>> sections, List<Accused> accused) {}
 
     private final Punishments punishments;
 
@@ -113,7 +114,7 @@ class ArrestImport {
         String cls = get.apply("max_punishment").toLowerCase(Locale.ROOT).replaceAll("[\\s\\-]+", "_");
         if (cls.equals("life_imprisonment")) cls = "life";
         if (cls.isEmpty() && fir != null) {
-            cls = punishments.hint(fir.sections()).get("suggested") instanceof String s ? s : "";
+            cls = punishments.hint(fir.state(), fir.sections()).get("suggested") instanceof String s ? s : "";
             if (!cls.isEmpty()) msgs.add(new FirImport.Message("warning", "max_punishment", "Not in the file; taken as '" + cls
                     + "' from the sections of the FIR (draft table). It sets 60 or 90 days, so check it."));
             else msgs.add(new FirImport.Message("error", "max_punishment", "The class of the highest punishment is not in the file and cannot be worked out from the sections of the FIR; add the column."));
