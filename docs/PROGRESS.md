@@ -21,10 +21,34 @@ Done in session 32 (31 Oct, 02:05 IST run): upgrade test, web-to-core route cont
 Done in session 33 (31 Oct, Saturday run at about 14:20 IST): hard-coded role names replaced by permissions from the packs (web and gateway); bug fixed: the admin screen made every new state admin an all-state admin.
 Done in session 34 (31 Oct, on-demand run from 14:34 IST): screen language, part 1 (header, menu, sign-in, password in English + 10 draft translations, kept per officer).
 Done in session 35 (31 Oct, scheduled weekend run from about 16:30 IST): screen language, part 2 (FIR list, FIR screen, front desk and complaint screens, Save button of every form).
+Done in session 36 (31 Oct, on-demand run from 16:50 IST): screen language, part 3 (readiness check, IO assignment, BSA 63(4) certificates).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 31 Oct 2026, session 36 (on-demand run started by Sumit from the build monitor, about 16:50 IST)
+Started from `setup/seed` at b8e7f82 (session 35, nothing newer, no new answers). PostgreSQL was already running. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 1 (MH pack) still waits for your answer, so I went on with item 2, taking the legal parts of the case page first.
+
+Done (screen language, part 3)
+- **Readiness check (850c1e2)**: heading, playbook choice, open-gap count, the line "This lists what the case file contains. It does not judge anyone.", 63(4) state of linked evidence, links, gaps and their acceptance with a reason, the withdrawn list (its kind, evidence link / accused link / accepted gap, by label), checks to confirm, account holders and the withdraw forms. Charge, ingredient, gap and rule texts come from the playbooks and stay English.
+- **IO assignment (850c1e2)**: IO line, assign/change form and its refusal, IO history lines.
+- **BSA 63(4) certificates (0b8dea7)**: Part A/B, each certificate line, hash matches / does not match the seizure hash, correction and replaced marks, the add form with its placeholders, and the three refusals (short SHA-256, correction of the other part, correction without a reason).
+- Tests: `Readiness.test.tsx` (+1 Marathi, incl. withdrawn list and withdraw button), `IoAssignment.test.tsx` (+1 Hindi history with reason), `Notices.test.tsx` (+1 Marathi certificate line, option, two refusals; the "other part" refusal had no test before).
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.1% lines / 92.6% branches, web 99.5% statements / 89.8% branches / 95.3% functions, gateway 96%. No gate raised.
+
+Deliberately skipped / not checked
+- Same as session 35: translations unchecked, playbook and pack texts and server messages still English. Kinds of account-holder link (from the playbook) are shown as words of their code.
+- Not looked at by eye in a browser; no new browser test (no new screen; the English texts the browser tests read are unchanged).
+
+Next
+1. Rest of the MH pack, once question 2 of session 33 is answered.
+2. Screen language, part 4: arrests, chargesheets, closure report, notices, evidence and person forms (`Forms.tsx`) on the case page; then policies, load data, admin, AI settings, typing; complaint-kind and step labels per language in the packs; server messages; then the legal glossary.
+3. Contract test for field names; API tests on an upgraded dump; accessibility checks (axe).
+4. End-to-end demo case and demo script (with demo stations in MH).
+
+Questions for Sumit
+1. The questions of session 35 (who checks the translations, removing `.coverage` from git, pack texts per language) are still open; nothing new this run.
 
 ## 31 Oct 2026, session 35 (scheduled weekend run, Saturday, started about 16:30 IST, Sumit away)
 Started from `setup/seed` at f953d64 (nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Next item 1 (MH pack) still waits for your answer, so I built item 2, screen language part 2. The Saturday test audit was already done in session 33 today.
