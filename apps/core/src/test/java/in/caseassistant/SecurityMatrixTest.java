@@ -101,6 +101,24 @@ class SecurityMatrixTest {
     }
 
     @Test
+    void anEncodedLetterOrAHeadRequestDoesNotGetAnOutsiderPastTheCaseTeamCheck() throws Exception {
+        // regression (weekly review 31 Oct): the check read the raw URI, so /api/fir%73/{id}/... skipped it; HEAD was not checked
+        int checked = 0;
+        for (Route r : all()) {
+            if (!r.method().equals("GET") || !r.path().startsWith("/api/firs/{")) continue;
+            String path = fill(r.path());
+            for (String p : new String[] {path.replaceFirst("/api/firs/", "/api/fir%73/"), path.replaceFirst("/api/firs/", "/api/%66irs/")}) {
+                int status = mvc.perform(request(HttpMethod.GET, java.net.URI.create(p)).header("Authorization", outsider)).andReturn().getResponse().getStatus();
+                assertThat(status).as(p).isIn(400, 404);
+            }
+            int head = mvc.perform(request(HttpMethod.HEAD, path).header("Authorization", outsider)).andReturn().getResponse().getStatus();
+            assertThat(head).as("HEAD " + r.key()).isEqualTo(404);
+            checked++;
+        }
+        assertThat(checked).isGreaterThan(15);
+    }
+
+    @Test
     void loadingExistingRecordsIsRefusedToAnOrdinaryOfficerAndBatchesAreInvisibleToThem() throws Exception {
         assertThat(all().stream().map(Route::key)).contains("GET /api/imports/profiles", "POST /api/imports/inspect", "POST /api/imports",
                 "POST /api/imports/{id}/commit", "POST /api/imports/{id}/undo", "POST /api/imports/{id}/discard");

@@ -32,16 +32,19 @@ class ReadAccess implements HandlerInterceptor, WebMvcConfigurer {
     @Override
     @SuppressWarnings("unchecked")
     public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) throws Exception {
-        if (!"GET".equals(req.getMethod())) return true;
+        // HEAD runs the GET handler, so it is a read too
+        if (!"GET".equals(req.getMethod()) && !"HEAD".equals(req.getMethod())) return true;
         var vars = (Map<String, String>) req.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
         // only sub-resources: the FIR itself (/api/firs/{id}) is checked in FirController. The id is named firId or id
-        // depending on the controller.
-        if (!req.getRequestURI().matches("/api/firs/[^/]+/.+")) return true;
+        // depending on the controller. Decided by the route that matched, never the raw URI: /api/fir%73/... reaches the
+        // same handler but would not match a pattern on the URI.
+        String route = String.valueOf(req.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE));
+        if (!route.matches("/api/firs/\\{[^}]+}/.+")) return true;
         String id = vars == null ? null : vars.getOrDefault("firId", vars.get("id"));
         if (id == null) return true;
         UUID me = SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof Jwt jwt ? CaseTeam.user(jwt) : null;
         UUID fir = UUID.fromString(id);
-        boolean evidence = req.getRequestURI().contains("/evidence");
+        boolean evidence = route.contains("/evidence");
         if (evidence ? team.isCustodian(me, fir) : team.includes(me, fir)) return true;
         res.sendError(HttpServletResponse.SC_NOT_FOUND);
         return false;
