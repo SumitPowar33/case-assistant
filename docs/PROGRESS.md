@@ -33,7 +33,7 @@ Done in session 44 (1 Nov, 02:05 IST scheduled run): the legal glossary (item 6)
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
-7. Contract test: fields of nested types (lists inside an answer). Load: the front-desk complaint list asks 2 or 3 queries per row (up to 200 rows); measure before real use. Accessibility: Indian-language rendering checks.
+7. Contract test: a field written only in another answer is not caught (the test reads source, not answers); a run-time check in the browser tests could close that. Load: the front-desk complaint list asks 2 or 3 queries per row (up to 200 rows); measure before real use. Accessibility: Indian-language rendering checks.
 8. End-to-end demo case and demo script.
 
 ## 1 Nov 2026, session 44 (scheduled 02:05 IST run, last of the night, Sumit away)
@@ -44,17 +44,18 @@ Done
 - **Punjabi wording fix (91c6dc1)**: the Punjabi screens called an accused person ਦੋਸ਼ੀ, which means guilty. Now ਮੁਲਜ਼ਮ (14 texts). Found by writing the glossary.
 - **Contract test for the answers (0c5c71d)**: `tests/repo_rules/test_web_answer_fields.py` checks 298 fields of 45 typed reads: each field a screen reads must be a word its server writes (the route's controller, a class it names, a migration for views, or the gateway source). Checked by hand that it fails on session 43's settings bug (`audit_chain_ok`) and on a made-up arrest field.
 - **FIR list for real volumes (6d01abf)**: a load test found that `GET /api/firs` checked every FIR of the installation for every call: with 210,000 FIRs an SP's first page took 8 s and an SHO's 0.7 s. The list now starts from the user's reach (cases naming them as IO, new index V36 `fir_io`; the stations they read whole, through the existing station index): 2 to 7 ms on the same data. Same access rule: `FirListReachApiTest` compares, for 12 kinds of account (named IO, other IO, front desk in and out, SHO in and out, SP in and out of the district, malkhana, prosecutor without a station, an inactive SHO), the list with what `canReadFirSql` lets each open. Load test `tests/e2e/test_load_lists.py`: the real core jar on its own database with 150,000 FIRs in 150 stations; each account's first and a deep page under 0.3 s, nothing past its own; it failed (0.53 s, SHO) on the old query. Database test: the list's query uses `fir_io`, no full scan.
+- **Nested answer fields (e37fa09)**: the answer-field test now also reads the objects inside an answer (an inline `{...}` or a type of the same file, in a list or not): 373 fields. Found on the way: the front desk's step type said `within_minutes`, but the core writes `withinMinutes` (a Java record); the field was not shown anywhere, so no screen broke. Type fixed, and `ComplaintApiTest` now checks the name the web reads.
 - Tests added: core `GlossaryTest`, `GlossaryApiTest`, `FirListReachApiTest`; pack tests (glossary shape, every word in its own script, screen labels use the glossary word); web `Glossary.test.tsx` (4) and the language tool in the axe check (it caught an empty table header, fixed); browser `test_glossary.py`; database V36; the contract test; the load test.
 
 Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser (all 8). Coverage: core 98.0% lines / 92.9% branches, web 99.8% statements / 93.7% branches / 97.1% functions, gateway 96%; no gate raised (nothing rose 2 points).
 
 Deliberately skipped / not checked
 - The glossary's 290 words in 10 languages are mine and unchecked, like the screen texts; least sure: Tamil and Malayalam for cognizable / non-cognizable (long descriptions or loanwords), Odia "judicial custody", Bengali "panchnama" (জব্দ তালিকা, a seizure list). Meanings are short aids, not legal advice; section numbers only where I was sure (no number for officer in charge, panchnama, bail).
-- The answer-field test catches a name the server never writes, not a name written in a different answer; nested fields are not checked yet.
+- The answer-field test catches a name the server never writes anywhere, not a name written in a different answer or only read (the `within_minutes` mismatch passed it because the core reads that name from the pack file).
 - The load test has a time limit (0.3 s, best of three); if a slow CI machine makes it flaky, raise the limit with a note rather than retrying.
 - Not changed: the front-desk complaint list asks 2 or 3 queries per complaint (up to 200); fine per station, measure before real use. `CaseTeam.canAt`'s "no case scope" branch and the "not on the team" masking in the arrest lists are not reachable through the API (defence in depth); JaCoCo also shows lines that throw (`badRequest(...)`) as missed although the refusal tests run them.
 
-Next: item 3 (MH pack, waits for a reviewer), item 7 (nested answer fields, the complaint list), item 8 (demo case and demo script).
+Next: item 3 (MH pack, waits for a reviewer), item 7 (the complaint list's queries per row; Indian-language rendering checks), item 8 (demo case and demo script).
 
 Questions for Sumit
 1. A native speaker and a lawyer to review the glossary (29 terms × 10 languages) and the screen texts: who can do it, and in which language first (Marathi for the pilot)?
