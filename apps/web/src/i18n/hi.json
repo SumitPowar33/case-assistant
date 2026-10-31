@@ -672,5 +672,16 @@
  "server.answered": "सर्वर ने {status} उत्तर दिया",
  "server.answeredFor": "सर्वर ने {path} के लिए {status} उत्तर दिया",
  "server.answeredTryAgain": "सर्वर ने {status} उत्तर दिया। कृपया फिर कोशिश करें।",
- "server.ioReason": "जाँच अधिकारी बदलने का कारण लिखें (कम से कम 10 अक्षर)।"
+ "server.ioReason": "जाँच अधिकारी बदलने का कारण लिखें (कम से कम 10 अक्षर)।",
+ "gloss.heading": "विधिक शब्दावली",
+ "gloss.draft": "मसौदा: इन शब्दों की जाँच किसी मूल भाषी या वकील ने नहीं की है। इन पर भरोसा करने से पहले जाँच लें।",
+ "gloss.search": "शब्द खोजें",
+ "gloss.language": "भाषा",
+ "gloss.colTerm": "शब्द (अंग्रेज़ी)",
+ "gloss.colLaw": "कानून",
+ "gloss.colWord": "चुनी गई भाषा में",
+ "gloss.colMeaning": "अर्थ (अंग्रेज़ी)",
+ "gloss.add": "जोड़ें",
+ "gloss.addWord": "{word} को पाठ में जोड़ें",
+ "gloss.none": "कोई शब्द नहीं मिला।"
 }

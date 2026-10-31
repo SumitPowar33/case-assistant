@@ -672,5 +672,16 @@
  "server.answered": "ସର୍ଭର {status} ଉତ୍ତର ଦେଲା",
  "server.answeredFor": "ସର୍ଭର {path} ପାଇଁ {status} ଉତ୍ତର ଦେଲା",
  "server.answeredTryAgain": "ସର୍ଭର {status} ଉତ୍ତର ଦେଲା। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
- "server.ioReason": "ତଦନ୍ତକାରୀ ଅଧିକାରୀ ବଦଳର କାରଣ ଲେଖନ୍ତୁ (ଅତି କମରେ 10 ଅକ୍ଷର)।"
+ "server.ioReason": "ତଦନ୍ତକାରୀ ଅଧିକାରୀ ବଦଳର କାରଣ ଲେଖନ୍ତୁ (ଅତି କମରେ 10 ଅକ୍ଷର)।",
+ "gloss.heading": "ଆଇନଗତ ଶବ୍ଦକୋଷ",
+ "gloss.draft": "ଡ୍ରାଫ୍ଟ: ଏହି ଶବ୍ଦଗୁଡ଼ିକ କୌଣସି ମାତୃଭାଷୀ ବା ଓକିଲ ଯାଞ୍ଚ କରିନାହାନ୍ତି। ଭରସା କରିବା ପୂର୍ବରୁ ଯାଞ୍ଚ କରନ୍ତୁ।",
+ "gloss.search": "ଶବ୍ଦ ଖୋଜନ୍ତୁ",
+ "gloss.language": "ଭାଷା",
+ "gloss.colTerm": "ଶବ୍ଦ (ଇଂରାଜୀ)",
+ "gloss.colLaw": "ଆଇନ",
+ "gloss.colWord": "ବଛା ଯାଇଥିବା ଭାଷାରେ",
+ "gloss.colMeaning": "ଅର୍ଥ (ଇଂରାଜୀ)",
+ "gloss.add": "ଯୋଡ଼ନ୍ତୁ",
+ "gloss.addWord": "{word} ଲେଖାରେ ଯୋଡ଼ନ୍ତୁ",
+ "gloss.none": "କୌଣସି ଶବ୍ଦ ମିଳିଲା ନାହିଁ।"
 }

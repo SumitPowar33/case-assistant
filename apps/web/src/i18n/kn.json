@@ -672,5 +672,16 @@
  "server.answered": "ಸರ್ವರ್ {status} ಎಂದು ಉತ್ತರಿಸಿತು",
  "server.answeredFor": "ಸರ್ವರ್ {path} ಗಾಗಿ {status} ಎಂದು ಉತ್ತರಿಸಿತು",
  "server.answeredTryAgain": "ಸರ್ವರ್ {status} ಎಂದು ಉತ್ತರಿಸಿತು. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
- "server.ioReason": "ತನಿಖಾಧಿಕಾರಿ ಬದಲಿಸುವ ಕಾರಣ ಬರೆಯಿರಿ (ಕನಿಷ್ಠ 10 ಅಕ್ಷರಗಳು)."
+ "server.ioReason": "ತನಿಖಾಧಿಕಾರಿ ಬದಲಿಸುವ ಕಾರಣ ಬರೆಯಿರಿ (ಕನಿಷ್ಠ 10 ಅಕ್ಷರಗಳು).",
+ "gloss.heading": "ಕಾನೂನು ಪದಕೋಶ",
+ "gloss.draft": "ಕರಡು: ಈ ಪದಗಳನ್ನು ಮಾತೃಭಾಷಿಕರು ಅಥವಾ ವಕೀಲರು ಪರಿಶೀಲಿಸಿಲ್ಲ. ಅವಲಂಬಿಸುವ ಮೊದಲು ಪರಿಶೀಲಿಸಿ.",
+ "gloss.search": "ಪದ ಹುಡುಕಿ",
+ "gloss.language": "ಭಾಷೆ",
+ "gloss.colTerm": "ಪದ (ಇಂಗ್ಲಿಷ್)",
+ "gloss.colLaw": "ಕಾನೂನು",
+ "gloss.colWord": "ಆಯ್ದ ಭಾಷೆಯಲ್ಲಿ",
+ "gloss.colMeaning": "ಅರ್ಥ (ಇಂಗ್ಲಿಷ್)",
+ "gloss.add": "ಸೇರಿಸಿ",
+ "gloss.addWord": "{word} ಪಠ್ಯಕ್ಕೆ ಸೇರಿಸಿ",
+ "gloss.none": "ಯಾವ ಪದವೂ ಹೊಂದಿಕೆಯಾಗಲಿಲ್ಲ."
 }

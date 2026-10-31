@@ -672,5 +672,16 @@
  "server.answered": "সার্ভার {status} উত্তর দিয়েছে",
  "server.answeredFor": "সার্ভার {path}-এর জন্য {status} উত্তর দিয়েছে",
  "server.answeredTryAgain": "সার্ভার {status} উত্তর দিয়েছে। আবার চেষ্টা করুন।",
- "server.ioReason": "তদন্তকারী অফিসার বদলের কারণ লিখুন (অন্তত 10 অক্ষর)।"
+ "server.ioReason": "তদন্তকারী অফিসার বদলের কারণ লিখুন (অন্তত 10 অক্ষর)।",
+ "gloss.heading": "আইনি শব্দকোষ",
+ "gloss.draft": "খসড়া: এই শব্দগুলি কোনো মাতৃভাষী বা আইনজীবী যাচাই করেননি। ভরসা করার আগে যাচাই করুন।",
+ "gloss.search": "শব্দ খুঁজুন",
+ "gloss.language": "ভাষা",
+ "gloss.colTerm": "শব্দ (ইংরেজি)",
+ "gloss.colLaw": "আইন",
+ "gloss.colWord": "বেছে নেওয়া ভাষায়",
+ "gloss.colMeaning": "অর্থ (ইংরেজি)",
+ "gloss.add": "যোগ করুন",
+ "gloss.addWord": "{word} লেখায় যোগ করুন",
+ "gloss.none": "কোনো শব্দ মেলেনি।"
 }

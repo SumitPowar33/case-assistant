@@ -146,6 +146,7 @@ function TypePageIn({ screenLang, lang }: { screenLang: string; lang: TypingLang
 }
 
 test('the typing page in English and Marathi names the typing language the way the screen language does', () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ status: 'draft', entries: [] }) })))
   render(<TypePageIn screenLang="en" lang="en" />)
   expect(screen.getByText(/^Choose a typing language at the top of the page/)).toBeTruthy()
   expect((screen.getByRole('button', { name: 'Convert all English-letter words' }) as HTMLButtonElement).disabled).toBe(true)

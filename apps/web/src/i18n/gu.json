@@ -672,5 +672,16 @@
  "server.answered": "સર્વરે {status} જવાબ આપ્યો",
  "server.answeredFor": "સર્વરે {path} માટે {status} જવાબ આપ્યો",
  "server.answeredTryAgain": "સર્વરે {status} જવાબ આપ્યો. કૃપા કરી ફરી પ્રયાસ કરો.",
- "server.ioReason": "તપાસ અધિકારી બદલવાનું કારણ લખો (ઓછામાં ઓછા 10 અક્ષર)."
+ "server.ioReason": "તપાસ અધિકારી બદલવાનું કારણ લખો (ઓછામાં ઓછા 10 અક્ષર).",
+ "gloss.heading": "કાનૂની શબ્દકોશ",
+ "gloss.draft": "મુસદ્દો: આ શબ્દો કોઈ માતૃભાષી કે વકીલે તપાસ્યા નથી. તેના પર આધાર રાખતા પહેલાં તપાસો.",
+ "gloss.search": "શબ્દ શોધો",
+ "gloss.language": "ભાષા",
+ "gloss.colTerm": "શબ્દ (અંગ્રેજી)",
+ "gloss.colLaw": "કાયદો",
+ "gloss.colWord": "પસંદ કરેલી ભાષામાં",
+ "gloss.colMeaning": "અર્થ (અંગ્રેજી)",
+ "gloss.add": "ઉમેરો",
+ "gloss.addWord": "{word} લખાણમાં ઉમેરો",
+ "gloss.none": "કોઈ શબ્દ મળતો નથી."
 }

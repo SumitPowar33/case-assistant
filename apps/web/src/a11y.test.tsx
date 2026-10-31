@@ -8,6 +8,7 @@ import LoginPage from './LoginPage'
 import FirList from './FirList'
 import FirDetail from './FirDetail'
 import { ComplaintPage, FrontDeskPage } from './FrontDesk'
+import TypePage from './TypePage'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -19,6 +20,7 @@ const data: Record<string, unknown> = {
   '/complaints/c1': { id: 'c1', received_at: '2026-10-30T04:30:00Z', mode: 'written', informant_name: 'Fictional Informant', informant_contact: null, kind: 'other', kind_label: 'Other information',
     withheld: false, text_original: 'Fictional words.', text_language: 'en', recorded_by_name: 'HC Fictional', read_back_language: null, signed_at: null, signed_by_name: null,
     outcome: null, outcome_reason: null, fir_id: null, fir_no: null, fir_year: null, sign_by: null, enquiry_due: null, steps: [] },
+  '/glossary': { status: 'draft', entries: [{ id: 'remand', term: 'Remand', law: 'BNSS 187', meaning: 'Custody ordered by a Magistrate.', terms: { hi: 'रिमांड' } }] },
 }
 beforeEach(() => {
   setSession({ token: 't', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional', rank: 'SI', role: 'io', station_id: 's1' } })
@@ -37,6 +39,7 @@ test.each([
   ['FIR screen', () => <FirDetail id="f1" />, 'Deadlines'],
   ['front desk', () => <FrontDeskPage />, 'Take a complaint'],
   ['complaint', () => <ComplaintPage id="c1" />, 'Fictional words.'],
+  ['language tool and glossary', () => <TypePage />, 'BNSS 187'],
 ])('the %s screen has no accessibility faults axe can see', async (_name, screenOf, ready) => {
   render(screenOf())
   await screen.findAllByText(new RegExp(ready.replace(/[()/.]/g, '\\$&')))

@@ -213,3 +213,46 @@ def test_complaint_kinds_are_well_formed_and_marked_as_draft_until_reviewed():
                 assert re.fullmatch(r"[a-z][a-z0-9_]{1,59}", s["id"]) and s["text"].strip()
                 assert isinstance(s.get("within_minutes", 0), int) and s.get("within_minutes", 0) >= 0
     assert "other" in seen and "cyber_financial_fraud" in seen
+
+
+SCRIPT = {"hi": 0x900, "mr": 0x900, "bn": 0x980, "pa": 0xA00, "gu": 0xA80, "or": 0xB00, "ta": 0xB80, "te": 0xC00, "kn": 0xC80, "ml": 0xD00}
+
+
+def test_glossary_is_a_labelled_draft_with_every_term_in_its_own_script():
+    """packs/*/glossary.json: one word per legal term in every Indian language of the national module (Glossary checks the shape at start-up)."""
+    langs = set(json.loads((ROOT / "IN" / "module.json").read_text(encoding="utf-8"))["languages"]) - {"en"}
+    assert langs == set(SCRIPT)
+    files = sorted(ROOT.glob("*/glossary.json"))
+    assert ROOT / "IN" / "glossary.json" in files
+    seen = set()
+    for path in files:
+        f = json.loads(path.read_text(encoding="utf-8"))
+        assert f["module"] == path.parent.name
+        assert f["status"] == "reviewed" or (f["status"] == "draft" and "not reviewed" in f["review_note"]), path
+        for e in f["entries"]:
+            assert re.fullmatch(r"[a-z][a-z0-9_]{1,59}", e["id"]) and e["id"] not in seen, e["id"]
+            seen.add(e["id"])
+            assert e["term"].strip() and e["meaning"].strip(), e["id"]
+            assert re.fullmatch(r"(BNSS|BNS|BSA) \d+(\(\w+\))*", e.get("law", "BNS 1")), e["id"]
+            assert set(e["terms"]) == langs, e["id"]
+            for lang, word in e["terms"].items():
+                # every letter in the script of its language (a word pasted into the wrong language is caught);
+                # digits, spaces, brackets and hyphens may stand between, and the joiners that some scripts need
+                letters = [ch for ch in word if ch not in " 0123456789()-‌‍"]
+                assert letters and all(SCRIPT[lang] <= ord(ch) < SCRIPT[lang] + 0x80 for ch in letters), (e["id"], lang, word)
+    assert {"fir", "remand", "default_bail", "closure_report", "electronic_record_certificate"} <= seen
+
+
+def test_screen_labels_use_the_glossary_word():
+    """A glossary entry's screen_keys name screen texts that are exactly that term, so the screens and the glossary agree."""
+    i18n = ROOT.parent / "apps" / "web" / "src" / "i18n"
+    catalogs = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in i18n.glob("*.json")}
+    checked = 0
+    for path in sorted(ROOT.glob("*/glossary.json")):
+        for e in json.loads(path.read_text(encoding="utf-8"))["entries"]:
+            for key in e.get("screen_keys", []):
+                assert catalogs["en"][key].lower() == e["term"].lower(), (e["id"], key)
+                for lang, word in e["terms"].items():
+                    assert catalogs[lang][key] == word, (e["id"], key, lang, catalogs[lang][key], word)
+                    checked += 1
+    assert checked >= 50

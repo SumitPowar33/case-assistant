@@ -672,5 +672,16 @@
  "server.answered": "ਸਰਵਰ ਨੇ {status} ਜਵਾਬ ਦਿੱਤਾ",
  "server.answeredFor": "ਸਰਵਰ ਨੇ {path} ਲਈ {status} ਜਵਾਬ ਦਿੱਤਾ",
  "server.answeredTryAgain": "ਸਰਵਰ ਨੇ {status} ਜਵਾਬ ਦਿੱਤਾ। ਕਿਰਪਾ ਕਰਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
- "server.ioReason": "ਜਾਂਚ ਅਧਿਕਾਰੀ ਬਦਲਣ ਦਾ ਕਾਰਨ ਲਿਖੋ (ਘੱਟੋ-ਘੱਟ 10 ਅੱਖਰ)।"
+ "server.ioReason": "ਜਾਂਚ ਅਧਿਕਾਰੀ ਬਦਲਣ ਦਾ ਕਾਰਨ ਲਿਖੋ (ਘੱਟੋ-ਘੱਟ 10 ਅੱਖਰ)।",
+ "gloss.heading": "ਕਾਨੂੰਨੀ ਸ਼ਬਦਾਵਲੀ",
+ "gloss.draft": "ਖਰੜਾ: ਇਹ ਸ਼ਬਦ ਕਿਸੇ ਮਾਂ-ਬੋਲੀ ਵਾਲੇ ਜਾਂ ਵਕੀਲ ਨੇ ਨਹੀਂ ਜਾਂਚੇ। ਇਨ੍ਹਾਂ 'ਤੇ ਭਰੋਸਾ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਜਾਂਚ ਕਰੋ।",
+ "gloss.search": "ਸ਼ਬਦ ਲੱਭੋ",
+ "gloss.language": "ਭਾਸ਼ਾ",
+ "gloss.colTerm": "ਸ਼ਬਦ (ਅੰਗਰੇਜ਼ੀ)",
+ "gloss.colLaw": "ਕਾਨੂੰਨ",
+ "gloss.colWord": "ਚੁਣੀ ਗਈ ਭਾਸ਼ਾ ਵਿੱਚ",
+ "gloss.colMeaning": "ਅਰਥ (ਅੰਗਰੇਜ਼ੀ)",
+ "gloss.add": "ਜੋੜੋ",
+ "gloss.addWord": "{word} ਲਿਖਤ ਵਿੱਚ ਜੋੜੋ",
+ "gloss.none": "ਕੋਈ ਸ਼ਬਦ ਨਹੀਂ ਮਿਲਿਆ।"
 }

@@ -1,0 +1,542 @@
+{
+ "module": "IN",
+ "status": "draft",
+ "review_note": "DRAFT, not reviewed. The English meanings are short aids, not legal advice; the terms in the ten Indian languages were written without a native-speaker or legal review. A reviewer must check every line before an officer relies on it.",
+ "entries": [
+  {
+   "id": "fir",
+   "term": "First Information Report (FIR)",
+   "law": "BNSS 173",
+   "meaning": "Information about a cognizable offence, written down, read over to the informant and signed; it starts the investigation.",
+   "terms": {
+    "hi": "प्रथम सूचना रिपोर्ट (एफआईआर)",
+    "mr": "प्रथम खबरी अहवाल (एफआयआर)",
+    "gu": "પ્રથમ માહિતી અહેવાલ (એફઆઈઆર)",
+    "bn": "প্রাথমিক তথ্য বিবরণী (এফআইআর)",
+    "pa": "ਪਹਿਲੀ ਸੂਚਨਾ ਰਿਪੋਰਟ (ਐਫਆਈਆਰ)",
+    "or": "ପ୍ରାଥମିକ ସୂଚନା ରିପୋର୍ଟ (ଏଫଆଇଆର)",
+    "ta": "முதல் தகவல் அறிக்கை (எஃப்ஐஆர்)",
+    "te": "ప్రథమ సమాచార నివేదిక (ఎఫ్ఐఆర్)",
+    "kn": "ಪ್ರಥಮ ಮಾಹಿತಿ ವರದಿ (ಎಫ್ಐಆರ್)",
+    "ml": "പ്രഥമ വിവര റിപ്പോർട്ട് (എഫ്ഐആർ)"
+   }
+  },
+  {
+   "id": "zero_fir",
+   "term": "Zero FIR",
+   "law": "BNSS 173(1)",
+   "meaning": "An FIR registered at any police station whatever the place of the offence, then sent to the station that has jurisdiction.",
+   "terms": {
+    "hi": "शून्य एफआईआर",
+    "mr": "शून्य एफआयआर",
+    "gu": "ઝીરો એફઆઈઆર",
+    "bn": "জিরো এফআইআর",
+    "pa": "ਜ਼ੀਰੋ ਐਫਆਈਆਰ",
+    "or": "ଜିରୋ ଏଫଆଇଆର",
+    "ta": "பூஜ்ய எஃப்ஐஆர்",
+    "te": "జీరో ఎఫ్ఐఆర్",
+    "kn": "ಶೂನ್ಯ ಎಫ್ಐಆರ್",
+    "ml": "സീറോ എഫ്ഐആർ"
+   }
+  },
+  {
+   "id": "cognizable_offence",
+   "term": "Cognizable offence",
+   "law": "BNSS 2",
+   "meaning": "An offence for which a police officer may arrest without a warrant; information about it is registered as an FIR.",
+   "terms": {
+    "hi": "संज्ञेय अपराध",
+    "mr": "दखलपात्र गुन्हा",
+    "gu": "દખલપાત્ર ગુનો",
+    "bn": "আমলযোগ্য অপরাধ",
+    "pa": "ਸੰਗਿਆਨਯੋਗ ਅਪਰਾਧ",
+    "or": "ସଂଜ୍ଞେୟ ଅପରାଧ",
+    "ta": "பிடியாணையின்றி கைது செய்யக்கூடிய குற்றம்",
+    "te": "కాగ్నిజబుల్ నేరం",
+    "kn": "ಸಂಜ್ಞೇಯ ಅಪರಾಧ",
+    "ml": "കോഗ്നിസബിൾ കുറ്റം"
+   }
+  },
+  {
+   "id": "non_cognizable_offence",
+   "term": "Non-cognizable offence",
+   "law": "BNSS 174",
+   "meaning": "An offence for which the police may not arrest without a warrant; it is entered in the station diary and the informant is sent to the Magistrate.",
+   "terms": {
+    "hi": "असंज्ञेय अपराध",
+    "mr": "अदखलपात्र गुन्हा",
+    "gu": "બિનદખલપાત્ર ગુનો",
+    "bn": "আমল-অযোগ্য অপরাধ",
+    "pa": "ਗੈਰ-ਸੰਗਿਆਨਯੋਗ ਅਪਰਾਧ",
+    "or": "ଅସଂଜ୍ଞେୟ ଅପରାଧ",
+    "ta": "பிடியாணையின்றி கைது செய்ய முடியாத குற்றம்",
+    "te": "నాన్-కాగ్నిజబుల్ నేరం",
+    "kn": "ಅಸಂಜ್ಞೇಯ ಅಪರಾಧ",
+    "ml": "നോൺ-കോഗ്നിസബിൾ കുറ്റം"
+   }
+  },
+  {
+   "id": "preliminary_enquiry",
+   "term": "Preliminary enquiry",
+   "law": "BNSS 173(3)",
+   "meaning": "For offences punishable with 3 years or more but less than 7, an enquiry within 14 days, with a DSP's permission, to see whether there is a prima facie case.",
+   "terms": {
+    "hi": "प्रारंभिक जांच",
+    "mr": "प्राथमिक चौकशी",
+    "gu": "પ્રાથમિક તપાસ",
+    "bn": "প্রাথমিক অনুসন্ধান",
+    "pa": "ਮੁੱਢਲੀ ਜਾਂਚ",
+    "or": "ପ୍ରାରମ୍ଭିକ ଯାଞ୍ଚ",
+    "ta": "ஆரம்ப விசாரணை",
+    "te": "ప్రాథమిక విచారణ",
+    "kn": "ಪ್ರಾಥಮಿಕ ವಿಚಾರಣೆ",
+    "ml": "പ്രാഥമിക അന്വേഷണം"
+   }
+  },
+  {
+   "id": "investigating_officer",
+   "term": "Investigating officer",
+   "law": "BNSS 176",
+   "meaning": "The police officer named to investigate the case.",
+   "terms": {
+    "hi": "जाँच अधिकारी",
+    "mr": "तपास अधिकारी",
+    "gu": "તપાસ અધિકારી",
+    "bn": "তদন্তকারী অফিসার",
+    "pa": "ਜਾਂਚ ਅਧਿਕਾਰੀ",
+    "or": "ତଦନ୍ତକାରୀ ଅଧିକାରୀ",
+    "ta": "புலனாய்வு அதிகாரி",
+    "te": "దర్యాప్తు అధికారి",
+    "kn": "ತನಿಖಾಧಿಕಾರಿ",
+    "ml": "അന്വേഷണ ഉദ്യോഗസ്ഥൻ"
+   },
+   "screen_keys": [
+    "io.label"
+   ]
+  },
+  {
+   "id": "informant",
+   "term": "Informant",
+   "meaning": "The person who gives the information about an offence to the police; not always the victim.",
+   "terms": {
+    "hi": "सूचनाकर्ता",
+    "mr": "माहिती देणारा",
+    "gu": "માહિતી આપનાર",
+    "bn": "তথ্যদাতা",
+    "pa": "ਸੂਚਨਾ ਦੇਣ ਵਾਲਾ",
+    "or": "ସୂଚନାଦାତା",
+    "ta": "தகவல் தருபவர்",
+    "te": "సమాచారం ఇచ్చినవారు",
+    "kn": "ಮಾಹಿತಿದಾರ",
+    "ml": "വിവരം നൽകുന്നയാൾ"
+   },
+   "screen_keys": [
+    "desk.colInformant"
+   ]
+  },
+  {
+   "id": "victim",
+   "term": "Victim",
+   "law": "BNSS 2",
+   "meaning": "A person who has suffered loss or injury because of the offence. For some offences the identity must not be made known (BNS 72).",
+   "terms": {
+    "hi": "पीड़ित",
+    "mr": "पीडित",
+    "gu": "પીડિત",
+    "bn": "ভুক্তভোগী",
+    "pa": "ਪੀੜਤ",
+    "or": "ପୀଡ଼ିତ",
+    "ta": "பாதிக்கப்பட்டவர்",
+    "te": "బాధితులు",
+    "kn": "ಸಂತ್ರಸ್ತ",
+    "ml": "ഇര"
+   },
+   "screen_keys": [
+    "person.victim"
+   ]
+  },
+  {
+   "id": "accused",
+   "term": "Accused",
+   "meaning": "A person against whom an offence is alleged. Being accused is not being found guilty; only a court decides guilt.",
+   "terms": {
+    "hi": "आरोपी",
+    "mr": "आरोपी",
+    "gu": "આરોપી",
+    "bn": "অভিযুক্ত",
+    "pa": "ਮੁਲਜ਼ਮ",
+    "or": "ଅଭିଯୁକ୍ତ",
+    "ta": "குற்றம் சாட்டப்பட்டவர்",
+    "te": "నిందితుడు",
+    "kn": "ಆರೋಪಿ",
+    "ml": "പ്രതി"
+   },
+   "screen_keys": [
+    "person.accused",
+    "holders.accused",
+    "arrest.accused"
+   ]
+  },
+  {
+   "id": "witness",
+   "term": "Witness",
+   "meaning": "A person who knows facts of the case and may be examined.",
+   "terms": {
+    "hi": "गवाह",
+    "mr": "साक्षीदार",
+    "gu": "સાક્ષી",
+    "bn": "সাক্ষী",
+    "pa": "ਗਵਾਹ",
+    "or": "ସାକ୍ଷୀ",
+    "ta": "சாட்சி",
+    "te": "సాక్షి",
+    "kn": "ಸಾಕ್ಷಿ",
+    "ml": "സാക്ഷി"
+   },
+   "screen_keys": [
+    "person.witness"
+   ]
+  },
+  {
+   "id": "witness_statement",
+   "term": "Statement of a witness",
+   "law": "BNSS 180",
+   "meaning": "What a person acquainted with the facts tells the police during the investigation, written down; it may also be recorded by audio-video means.",
+   "terms": {
+    "hi": "गवाह का बयान",
+    "mr": "साक्षीदाराचा जबाब",
+    "gu": "સાક્ષીનું નિવેદન",
+    "bn": "সাক্ষীর জবানবন্দি",
+    "pa": "ਗਵਾਹ ਦਾ ਬਿਆਨ",
+    "or": "ସାକ୍ଷୀଙ୍କ ବୟାନ",
+    "ta": "சாட்சியின் வாக்குமூலம்",
+    "te": "సాక్షి వాంగ్మూలం",
+    "kn": "ಸಾಕ್ಷಿಯ ಹೇಳಿಕೆ",
+    "ml": "സാക്ഷിമൊഴി"
+   }
+  },
+  {
+   "id": "arrest",
+   "term": "Arrest",
+   "law": "BNSS 35",
+   "meaning": "Taking a person into custody. The grounds must be told to the person and a relative or friend informed (BNSS 47, 48).",
+   "terms": {
+    "hi": "गिरफ़्तारी",
+    "mr": "अटक",
+    "gu": "ધરપકડ",
+    "bn": "গ্রেপ্তার",
+    "pa": "ਗ੍ਰਿਫ਼ਤਾਰੀ",
+    "or": "ଗିରଫଦାରି",
+    "ta": "கைது",
+    "te": "అరెస్టు",
+    "kn": "ಬಂಧನ",
+    "ml": "അറസ്റ്റ്"
+   }
+  },
+  {
+   "id": "magistrate",
+   "term": "Magistrate",
+   "meaning": "The judicial officer before whom an arrested person is produced and to whom the police report goes.",
+   "terms": {
+    "hi": "मजिस्ट्रेट",
+    "mr": "दंडाधिकारी",
+    "gu": "મેજિસ્ટ્રેટ",
+    "bn": "ম্যাজিস্ট্রেট",
+    "pa": "ਮੈਜਿਸਟ੍ਰੇਟ",
+    "or": "ମାଜିଷ୍ଟ୍ରେଟ",
+    "ta": "நீதித்துறை நடுவர்",
+    "te": "మేజిస్ట్రేట్",
+    "kn": "ಮ್ಯಾಜಿಸ್ಟ್ರೇಟ್",
+    "ml": "മജിസ്ട്രേറ്റ്"
+   }
+  },
+  {
+   "id": "production_24_hours",
+   "term": "Production within 24 hours",
+   "law": "BNSS 58",
+   "meaning": "A person arrested without a warrant must be taken before a Magistrate within 24 hours, journey time excluded.",
+   "terms": {
+    "hi": "24 घंटे के भीतर पेशी",
+    "mr": "24 तासांच्या आत हजर करणे",
+    "gu": "24 કલાકમાં રજૂઆત",
+    "bn": "24 ঘণ্টার মধ্যে হাজির করা",
+    "pa": "24 ਘੰਟਿਆਂ ਵਿੱਚ ਪੇਸ਼ੀ",
+    "or": "24 ଘଣ୍ଟା ମଧ୍ୟରେ ହାଜର",
+    "ta": "24 மணி நேரத்தில் ஆஜர்படுத்துதல்",
+    "te": "24 గంటల్లో హాజరుపరచడం",
+    "kn": "24 ಗಂಟೆಗಳಲ್ಲಿ ಹಾಜರುಪಡಿಸುವುದು",
+    "ml": "24 മണിക്കൂറിനകം ഹാജരാക്കൽ"
+   }
+  },
+  {
+   "id": "remand",
+   "term": "Remand",
+   "law": "BNSS 187",
+   "meaning": "A Magistrate's order to keep an arrested person in police or judicial custody while the investigation goes on.",
+   "terms": {
+    "hi": "रिमांड",
+    "mr": "कोठडी (रिमांड)",
+    "gu": "રિમાન્ડ",
+    "bn": "রিমান্ড",
+    "pa": "ਰਿਮਾਂਡ",
+    "or": "ରିମାଣ୍ଡ",
+    "ta": "காவல் நீட்டிப்பு (ரிமாண்ட்)",
+    "te": "రిమాండ్",
+    "kn": "ರಿಮ್ಯಾಂಡ್",
+    "ml": "റിമാൻഡ്"
+   }
+  },
+  {
+   "id": "police_custody",
+   "term": "Police custody",
+   "law": "BNSS 187(2)",
+   "meaning": "Custody with the police, ordered by a Magistrate; at most 15 days in all, within the first 40 or 60 days.",
+   "terms": {
+    "hi": "पुलिस अभिरक्षा",
+    "mr": "पोलीस कोठडी",
+    "gu": "પોલીસ કસ્ટડી",
+    "bn": "পুলিশ হেফাজত",
+    "pa": "ਪੁਲਿਸ ਹਿਰਾਸਤ",
+    "or": "ପୋଲିସ ହେପାଜତ",
+    "ta": "காவல்துறை காவல்",
+    "te": "పోలీసు కస్టడీ",
+    "kn": "ಪೊಲೀಸ್ ವಶ",
+    "ml": "പോലീസ് കസ്റ്റഡി"
+   }
+  },
+  {
+   "id": "judicial_custody",
+   "term": "Judicial custody",
+   "law": "BNSS 187",
+   "meaning": "Custody in prison under the Magistrate's order.",
+   "terms": {
+    "hi": "न्यायिक अभिरक्षा",
+    "mr": "न्यायालयीन कोठडी",
+    "gu": "ન્યાયિક કસ્ટડી",
+    "bn": "বিচারবিভাগীয় হেফাজত",
+    "pa": "ਨਿਆਂਇਕ ਹਿਰਾਸਤ",
+    "or": "ବିଚାର ବିଭାଗୀୟ ହେପାଜତ",
+    "ta": "நீதிமன்றக் காவல்",
+    "te": "జ్యుడీషియల్ కస్టడీ",
+    "kn": "ನ್ಯಾಯಾಂಗ ಬಂಧನ",
+    "ml": "ജുഡീഷ്യൽ കസ്റ്റഡി"
+   }
+  },
+  {
+   "id": "bail",
+   "term": "Bail",
+   "meaning": "Release of an accused person from custody on a bond, with or without sureties, until the case is decided.",
+   "terms": {
+    "hi": "जमानत",
+    "mr": "जामीन",
+    "gu": "જામીન",
+    "bn": "জামিন",
+    "pa": "ਜ਼ਮਾਨਤ",
+    "or": "ଜାମିନ",
+    "ta": "பிணை",
+    "te": "బెయిల్",
+    "kn": "ಜಾಮೀನು",
+    "ml": "ജാമ്യം"
+   }
+  },
+  {
+   "id": "default_bail",
+   "term": "Default bail",
+   "law": "BNSS 187(3)",
+   "meaning": "Bail the accused is entitled to when the police report is not filed within 60 or 90 days of the first remand.",
+   "terms": {
+    "hi": "डिफ़ॉल्ट जमानत",
+    "mr": "डिफॉल्ट जामीन",
+    "gu": "ડિફોલ્ટ જામીન",
+    "bn": "ডিফল্ট জামিন",
+    "pa": "ਡਿਫਾਲਟ ਜ਼ਮਾਨਤ",
+    "or": "ଡିଫଲ୍ଟ ଜାମିନ",
+    "ta": "இயல்புநிலைப் பிணை",
+    "te": "డిఫాల్ట్ బెయిల్",
+    "kn": "ಡೀಫಾಲ್ಟ್ ಜಾಮೀನು",
+    "ml": "ഡിഫോൾട്ട് ജാമ്യം"
+   }
+  },
+  {
+   "id": "chargesheet",
+   "term": "Chargesheet (police report)",
+   "law": "BNSS 193",
+   "meaning": "The report the police send to the Magistrate at the end of the investigation when there is evidence against the accused.",
+   "terms": {
+    "hi": "आरोप-पत्र",
+    "mr": "दोषारोपपत्र",
+    "gu": "ચાર્જશીટ",
+    "bn": "চার্জশিট",
+    "pa": "ਚਾਰਜਸ਼ੀਟ",
+    "or": "ଚାର୍ଜସିଟ୍",
+    "ta": "குற்றப்பத்திரிகை",
+    "te": "ఛార్జిషీట్",
+    "kn": "ಆರೋಪಪಟ್ಟಿ",
+    "ml": "കുറ്റപത്രം"
+   }
+  },
+  {
+   "id": "closure_report",
+   "term": "Closure report",
+   "law": "BNSS 193",
+   "meaning": "A police report saying the case should not go to trial (accused not traced, not enough evidence, no offence); the Magistrate decides on it.",
+   "terms": {
+    "hi": "क्लोज़र रिपोर्ट",
+    "mr": "समाप्ती अहवाल",
+    "gu": "ક્લોઝર રિપોર્ટ",
+    "bn": "সমাপনী রিপোর্ট",
+    "pa": "ਕਲੋਜ਼ਰ ਰਿਪੋਰਟ",
+    "or": "କ୍ଲୋଜର ରିପୋର୍ଟ",
+    "ta": "முடிவு அறிக்கை",
+    "te": "ముగింపు నివేదిక",
+    "kn": "ಮುಕ್ತಾಯ ವರದಿ",
+    "ml": "ക്ലോഷർ റിപ്പോർട്ട്"
+   },
+   "screen_keys": [
+    "closure.heading"
+   ]
+  },
+  {
+   "id": "further_investigation",
+   "term": "Further investigation",
+   "law": "BNSS 193(9)",
+   "meaning": "More investigation after a police report has been sent; during the trial only with the court's permission and within 90 days unless extended.",
+   "terms": {
+    "hi": "अग्रिम जाँच",
+    "mr": "पुढील तपास",
+    "gu": "વધુ તપાસ",
+    "bn": "অধিকতর তদন্ত",
+    "pa": "ਅਗਲੇਰੀ ਜਾਂਚ",
+    "or": "ଅଧିକ ତଦନ୍ତ",
+    "ta": "மேல் புலனாய்வு",
+    "te": "తదుపరి దర్యాప్తు",
+    "kn": "ಮುಂದಿನ ತನಿಖೆ",
+    "ml": "തുടരന്വേഷണം"
+   }
+  },
+  {
+   "id": "notice_of_appearance",
+   "term": "Notice of appearance",
+   "law": "BNSS 35(3)",
+   "meaning": "A notice asking a person to appear before the police instead of being arrested, where arrest is not required.",
+   "terms": {
+    "hi": "उपस्थिति की सूचना",
+    "mr": "हजर राहण्याची नोटीस",
+    "gu": "હાજર રહેવાની નોટિસ",
+    "bn": "হাজিরার নোটিস",
+    "pa": "ਹਾਜ਼ਰ ਹੋਣ ਦਾ ਨੋਟਿਸ",
+    "or": "ହାଜର ହେବା ନୋଟିସ୍",
+    "ta": "ஆஜராவதற்கான அறிவிப்பு",
+    "te": "హాజరు నోటీసు",
+    "kn": "ಹಾಜರಾಗಲು ನೋಟಿಸ್",
+    "ml": "ഹാജരാകാനുള്ള നോട്ടീസ്"
+   }
+  },
+  {
+   "id": "order_to_produce",
+   "term": "Order to produce a document or thing",
+   "law": "BNSS 94",
+   "meaning": "A written order from the officer in charge asking a person to produce a document, electronic record or other thing needed for the investigation.",
+   "terms": {
+    "hi": "दस्तावेज़ या वस्तु पेश करने का आदेश",
+    "mr": "कागदपत्र किंवा वस्तू हजर करण्याचा आदेश",
+    "gu": "દસ્તાવેજ અથવા વસ્તુ રજૂ કરવાનો આદેશ",
+    "bn": "নথি বা বস্তু পেশ করার আদেশ",
+    "pa": "ਦਸਤਾਵੇਜ਼ ਜਾਂ ਵਸਤੂ ਪੇਸ਼ ਕਰਨ ਦਾ ਹੁਕਮ",
+    "or": "ଦଲିଲ ବା ବସ୍ତୁ ଦାଖଲ କରିବା ଆଦେଶ",
+    "ta": "ஆவணம் அல்லது பொருளை ஒப்படைக்கும் உத்தரவு",
+    "te": "పత్రం లేదా వస్తువు సమర్పించాలన్న ఉత్తర్వు",
+    "kn": "ದಾಖಲೆ ಅಥವಾ ವಸ್ತು ಹಾಜರುಪಡಿಸುವ ಆದೇಶ",
+    "ml": "രേഖയോ വസ്തുവോ ഹാജരാക്കാനുള്ള ഉത്തരവ്"
+   }
+  },
+  {
+   "id": "seizure",
+   "term": "Seizure",
+   "law": "BNSS 106",
+   "meaning": "Taking into police custody property connected with an offence, reported to the Magistrate.",
+   "terms": {
+    "hi": "जब्ती",
+    "mr": "जप्ती",
+    "gu": "જપ્તી",
+    "bn": "জব্দ",
+    "pa": "ਜ਼ਬਤੀ",
+    "or": "ଜବତ",
+    "ta": "பறிமுதல்",
+    "te": "జప్తు",
+    "kn": "ಜಪ್ತಿ",
+    "ml": "പിടിച്ചെടുക്കൽ"
+   }
+  },
+  {
+   "id": "panchnama",
+   "term": "Panchnama (seizure memo)",
+   "meaning": "The written record of a search or seizure, made on the spot and signed by independent witnesses.",
+   "terms": {
+    "hi": "पंचनामा",
+    "mr": "पंचनामा",
+    "gu": "પંચનામું",
+    "bn": "জব্দ তালিকা",
+    "pa": "ਪੰਚਨਾਮਾ",
+    "or": "ଜବତ ତାଲିକା",
+    "ta": "கைப்பற்றல் மகஜர்",
+    "te": "పంచనామా",
+    "kn": "ಮಹಜರು",
+    "ml": "മഹസർ"
+   }
+  },
+  {
+   "id": "case_property",
+   "term": "Case property",
+   "meaning": "Things seized in a case, kept in the station's property room (malkhana) with a record of every hand they pass through.",
+   "terms": {
+    "hi": "मुकदमे की संपत्ति",
+    "mr": "मुद्देमाल",
+    "gu": "મુદ્દામાલ",
+    "bn": "মামলার সম্পত্তি",
+    "pa": "ਕੇਸ ਦੀ ਸੰਪਤੀ",
+    "or": "ମାମଲା ସମ୍ପତ୍ତି",
+    "ta": "வழக்குச் சொத்து",
+    "te": "కేసు ఆస్తి",
+    "kn": "ಪ್ರಕರಣದ ಸ್ವತ್ತು",
+    "ml": "തൊണ്ടിമുതൽ"
+   }
+  },
+  {
+   "id": "electronic_record_certificate",
+   "term": "Certificate for an electronic record",
+   "law": "BSA 63(4)",
+   "meaning": "The certificate that must go with an electronic record given in evidence: Part A by the person who produced it, Part B by an expert, with the hash value.",
+   "terms": {
+    "hi": "इलेक्ट्रॉनिक अभिलेख का प्रमाणपत्र",
+    "mr": "इलेक्ट्रॉनिक अभिलेखाचे प्रमाणपत्र",
+    "gu": "ઇલેક્ટ્રોનિક રેકોર્ડનું પ્રમાણપત્ર",
+    "bn": "ইলেকট্রনিক রেকর্ডের সার্টিফিকেট",
+    "pa": "ਇਲੈਕਟ੍ਰਾਨਿਕ ਰਿਕਾਰਡ ਦਾ ਸਰਟੀਫਿਕੇਟ",
+    "or": "ଇଲେକ୍ଟ୍ରୋନିକ ରେକର୍ଡର ପ୍ରମାଣପତ୍ର",
+    "ta": "மின்னணு பதிவுக்கான சான்றிதழ்",
+    "te": "ఎలక్ట్రానిక్ రికార్డు ధ్రువీకరణ పత్రం",
+    "kn": "ಎಲೆಕ್ಟ್ರಾನಿಕ್ ದಾಖಲೆಯ ಪ್ರಮಾಣಪತ್ರ",
+    "ml": "ഇലക്ട്രോണിക് രേഖയുടെ സർട്ടിഫിക്കറ്റ്"
+   }
+  },
+  {
+   "id": "hash_value",
+   "term": "Hash value",
+   "law": "BSA 63(4)",
+   "meaning": "A fingerprint of a file (for example SHA-256); the same file always gives the same value, so a change can be noticed.",
+   "terms": {
+    "hi": "हैश मान",
+    "mr": "हॅश मूल्य",
+    "gu": "હેશ મૂલ્ય",
+    "bn": "হ্যাশ মান",
+    "pa": "ਹੈਸ਼ ਮੁੱਲ",
+    "or": "ହ୍ୟାସ ମୂଲ୍ୟ",
+    "ta": "ஹாஷ் மதிப்பு",
+    "te": "హాష్ విలువ",
+    "kn": "ಹ್ಯಾಶ್ ಮೌಲ್ಯ",
+    "ml": "ഹാഷ് മൂല്യം"
+   }
+  }
+ ]
+}

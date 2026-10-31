@@ -672,5 +672,16 @@
  "server.answered": "The server answered {status}",
  "server.answeredFor": "The server answered {status} for {path}",
  "server.answeredTryAgain": "The server answered {status}. Please try again.",
- "server.ioReason": "Give the reason for changing the IO (at least 10 characters)."
+ "server.ioReason": "Give the reason for changing the IO (at least 10 characters).",
+ "gloss.heading": "Legal glossary",
+ "gloss.draft": "Draft: these terms have not been checked by a native speaker or a lawyer. Check them before you rely on them.",
+ "gloss.search": "Find a term",
+ "gloss.language": "Language",
+ "gloss.colTerm": "Term (English)",
+ "gloss.colLaw": "Law",
+ "gloss.colWord": "In the chosen language",
+ "gloss.colMeaning": "Meaning (English)",
+ "gloss.add": "Add",
+ "gloss.addWord": "Add {word} to the text",
+ "gloss.none": "No term matches."
 }

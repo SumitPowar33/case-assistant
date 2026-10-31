@@ -1,9 +1,10 @@
 import { useContext, useState } from 'react'
 import TypingField from './TypingField'
+import Glossary from './Glossary'
 import { LANGS, TypingContext, convertAll } from './typing'
 import { ScreenLangContext, useT } from './i18n'
 
-/** Language tool: a scratch box for typing (or pasting) text in English letters and getting the chosen script. */
+/** Language tool: a scratch box for typing (or pasting) text in English letters and getting the chosen script, and the legal glossary. */
 export default function TypePage() {
   const { lang } = useContext(TypingContext)
   const screenLang = useContext(ScreenLangContext)
@@ -22,6 +23,7 @@ export default function TypePage() {
         {t('type.convertAll')}
       </button>
       <p><small>{t('type.spellingsOnly')}</small></p>
+      <Glossary onUse={(word) => setText((s) => (s ? `${s} ${word}` : word))} />
     </>
   )
 }

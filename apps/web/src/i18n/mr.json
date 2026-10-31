@@ -672,5 +672,16 @@
  "server.answered": "सर्व्हरने {status} उत्तर दिले",
  "server.answeredFor": "सर्व्हरने {path} साठी {status} उत्तर दिले",
  "server.answeredTryAgain": "सर्व्हरने {status} उत्तर दिले. कृपया पुन्हा प्रयत्न करा.",
- "server.ioReason": "तपास अधिकारी बदलण्याचे कारण लिहा (किमान 10 अक्षरे)."
+ "server.ioReason": "तपास अधिकारी बदलण्याचे कारण लिहा (किमान 10 अक्षरे).",
+ "gloss.heading": "कायदेशीर शब्दकोश",
+ "gloss.draft": "मसुदा: या शब्दांची तपासणी मातृभाषक किंवा वकिलाने केलेली नाही. त्यावर विसंबण्यापूर्वी तपासा.",
+ "gloss.search": "शब्द शोधा",
+ "gloss.language": "भाषा",
+ "gloss.colTerm": "शब्द (इंग्रजी)",
+ "gloss.colLaw": "कायदा",
+ "gloss.colWord": "निवडलेल्या भाषेत",
+ "gloss.colMeaning": "अर्थ (इंग्रजी)",
+ "gloss.add": "जोडा",
+ "gloss.addWord": "{word} मजकुरात जोडा",
+ "gloss.none": "कोणताही शब्द जुळत नाही."
 }
