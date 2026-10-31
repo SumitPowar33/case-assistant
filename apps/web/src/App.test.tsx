@@ -153,3 +153,32 @@ test.each(['#/front-desk', '#/policies', '#/password', '#/import', '#/admin', '#
   fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
   expect(await screen.findByLabelText('Username')).toBeTruthy()
 })
+
+test('the screen language is chosen in the header, kept on the server, and the menu follows it; a refusal is shown', async () => {
+  const fetch = mockApi()
+  routes['/api/me/language'] = null
+  const { unmount } = render(<App />)
+  const nav = () => within(screen.getByRole('navigation'))
+  fireEvent.change(screen.getByLabelText('Screen language'), { target: { value: 'mr' } })
+  expect(await nav().findByRole('link', { name: 'एफआयआर' })).toBeTruthy()
+  expect(fetch).toHaveBeenCalledWith('/api/me/language', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ language: 'mr' }) }))
+  expect(document.documentElement.lang).toBe('mr')
+  expect(screen.getByRole('option', { name: /मराठी \(Marathi\) – भाषांतराचा मसुदा/ })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'साइन आउट' })).toBeTruthy()
+  unmount()
+  // the next sign-in starts in the kept language; a refused change leaves it and says why
+  delete routes['/api/me/language']
+  render(<App />)
+  fireEvent.change(screen.getByLabelText('स्क्रीनची भाषा'), { target: { value: 'ta' } })
+  expect(await screen.findByRole('alert')).toBeTruthy()
+  expect(nav().getByRole('link', { name: 'एफआयआर' })).toBeTruthy()
+})
+
+test('before sign-in the chosen screen language is used on the sign-in page', () => {
+  setSession(null)
+  mockApi()
+  render(<App />)
+  fireEvent.change(screen.getByLabelText('Screen language'), { target: { value: 'hi' } })
+  expect(screen.getByRole('heading', { name: 'साइन इन' })).toBeTruthy()
+  expect(screen.getByLabelText('यूज़रनेम')).toBeTruthy()
+})

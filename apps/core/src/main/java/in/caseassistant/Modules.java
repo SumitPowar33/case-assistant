@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.Set;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.springframework.core.io.Resource;
@@ -64,6 +66,11 @@ public class Modules {
                 if (!modules.containsKey(d) || d.equals(m.id())) throw new IllegalStateException(m.id() + ": depends on unknown module " + d);
             if (!m.id().equals("IN") && !deps.contains("IN")) throw new IllegalStateException(m.id() + ": every module must depend on IN");
         }
+    }
+
+    /** Every language some module offers (screen language choices). */
+    Set<String> languages() {
+        return modules.values().stream().flatMap(m -> m.languages().stream()).collect(Collectors.toCollection(java.util.TreeSet::new));
     }
 
     /** Gives every module its state_pack row; name, version and languages follow the file. */

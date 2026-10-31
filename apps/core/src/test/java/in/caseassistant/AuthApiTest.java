@@ -173,4 +173,22 @@ class AuthApiTest {
         assertThat(db.sql("select outcome from sign_in_attempt order by at").query(String.class).list())
                 .containsExactly("ok", "wrong_current_password", "password_changed", "wrong_password", "ok");
     }
+
+    /** The screen language is the user's own choice among the languages of the installed modules (module.json). */
+    @Test
+    void theScreenLanguageIsKeptForTheUserAndOnlyAKnownOne() throws Exception {
+        String token = "Bearer " + json.readTree(login("admin.one", ADMIN_PW, 200)).get("token").asText();
+        mvc.perform(language(token, "{\"language\":\"mr\"}")).andExpect(status().isNoContent());
+        mvc.perform(get("/api/me").header("Authorization", token)).andExpect(jsonPath("$.ui_language").value("mr"));
+        assertThat(json.readTree(login("admin.one", ADMIN_PW, 200)).at("/user/ui_language").asText()).isEqualTo("mr");
+        for (String bad : new String[] {"{\"language\":\"xx\"}", "{\"language\":\"\"}", "{\"language\":\"en-IN-x\"}", "{}"})
+            mvc.perform(language(token, bad)).andExpect(status().isBadRequest());
+        mvc.perform(language(null, "{\"language\":\"hi\"}")).andExpect(status().isUnauthorized());
+        assertThat(db.sql("select ui_language from app_user").query(String.class).single()).isEqualTo("mr");
+    }
+
+    static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder language(String token, String body) {
+        var r = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/me/language").contentType(MediaType.APPLICATION_JSON).content(body);
+        return token == null ? r : r.header("Authorization", token);
+    }
 }

@@ -36,6 +36,8 @@ import org.springframework.web.server.ResponseStatusException;
 class AuthController implements ApplicationRunner {
     record Login(@NotBlank @Size(max = 200) String username, @NotBlank @Size(max = 200) String password) {}
 
+    record Language(@NotBlank @Size(max = 3) String language) {}
+
     record PasswordChange(@NotBlank String currentPassword, @NotBlank @Size(min = 12, max = 200) String newPassword) {}
 
     /** 5 wrong passwords within 15 minutes lock the username for 15 minutes. */
@@ -49,12 +51,13 @@ class AuthController implements ApplicationRunner {
     private final CaseTeam team;
     private final Policies policies;
     private final Roles roles;
+    private final Modules modules;
     private final String bootstrapUser;
     private final String bootstrapPassword;
     /** Checked when the username is unknown, so a wrong username takes as long as a wrong password. */
     private final String dummyHash;
 
-    AuthController(JdbcClient db, PasswordEncoder passwords, JwtEncoder tokens, CaseTeam team, Policies policies, Roles roles,
+    AuthController(JdbcClient db, PasswordEncoder passwords, JwtEncoder tokens, CaseTeam team, Policies policies, Roles roles, Modules modules,
                    @Value("${BOOTSTRAP_ADMIN_USERNAME:}") String bootstrapUser,
                    @Value("${BOOTSTRAP_ADMIN_PASSWORD:}") String bootstrapPassword) {
         this.db = db;
@@ -63,6 +66,7 @@ class AuthController implements ApplicationRunner {
         this.team = team;
         this.policies = policies;
         this.roles = roles;
+        this.modules = modules;
         this.bootstrapUser = bootstrapUser;
         this.bootstrapPassword = bootstrapPassword;
         this.dummyHash = passwords.encode(UUID.randomUUID().toString());
@@ -116,6 +120,15 @@ class AuthController implements ApplicationRunner {
         user.put("case_scope", known ? roles.caseScope(role) : "none");
         user.put("can_import", team.can(id, "import.run"));
         user.put("can_set_policy", team.can(id, "policy.set") || team.can(id, "admin.manage"));
+    }
+
+    /** The signed-in user's screen language: one of the languages the installed modules offer (module.json). */
+    @PutMapping("/me/language")
+    ResponseEntity<Void> language(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody Language l) {
+        if (!modules.languages().contains(l.language))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such screen language.");
+        db.sql("update app_user set ui_language = ? where id = ?").params(l.language, CaseTeam.user(jwt)).update();
+        return ResponseEntity.noContent().build();
     }
 
     /** Changes the signed-in user's own password. Every older token stops working; a fresh one is returned. */
