@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import Notices from './Notices'
 import Certificates from './Certificates'
 import { setSession } from './api'
+import { ScreenLangContext } from './i18n'
 
 // Fictional data only.
 beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional', rank: 'SI', role: 'io', station_id: 's1' } }))
@@ -175,6 +176,25 @@ test('a replaced certificate is marked and cannot be replaced again', async () =
   expect(screen.getByText(/matches the seizure hash/)).toBeTruthy()
   const options = within(screen.getByLabelText('Corrects an earlier certificate?')).getAllByRole('option')
   expect(options).toHaveLength(2) // "No" and the current certificate only
+})
+
+test('in Marathi a certificate reads in Marathi, and the form refuses a short hash and a correction of the other part in Marathi', async () => {
+  stub({ '/firs/f1/evidence/e1/certificates': [{ ...certA, device_ids: 'IMEI 000000000000000' }] })
+  render(<ScreenLangContext.Provider value="mr"><Certificates firId="f1" item={{ id: 'e1', label: 'E-01', sha256: SHA }} onSaved={() => {}} /></ScreenLangContext.Provider>)
+  const line = (await screen.findByText(/जप्तीच्या हॅशशी जुळत नाही/)).closest('li')!
+  expect(line.textContent).toMatch(/^भाग A \(उपकरणाचा प्रभारी\): Fictional Signer, phone \(IMEI 000000000000000\), .* रोजी Testpur येथे सही\. SHA256 जप्तीच्या/)
+  expect(screen.getByText('E-01 साठी 63(4) प्रमाणपत्र जोडा')).toBeTruthy()
+  expect(screen.getByRole('option', { name: /^A, Fictional Signer यांची सही, .* ऐवजी$/ })).toBeTruthy()
+  type('सही करणारे', 'Fictional Signer'); type('उपकरणाचा प्रकार', 'phone'); type('ठिकाण', 'Testpur')
+  type('प्रमाणपत्रावर लिहिलेला हॅश', 'abc')
+  type(/^सही \(तारीख/, '2026-10-04T10:00')
+  fireEvent.click(screen.getByRole('button', { name: 'जतन करा' }))
+  expect((await screen.findByRole('alert')).textContent).toBe('SHA-256 हॅशमध्ये 64 अक्षरे असतात (0-9, a-f).')
+  type('प्रमाणपत्रावर लिहिलेला हॅश', SHA)
+  type('भाग', 'B')
+  type('आधीच्या प्रमाणपत्राची दुरुस्ती?', 'c1')
+  fireEvent.click(screen.getByRole('button', { name: 'जतन करा' }))
+  await vi.waitFor(() => expect(screen.getByRole('alert').textContent).toBe('दुरुस्ती ज्या प्रमाणपत्राची जागा घेते त्याच भागाची असली पाहिजे.'))
 })
 
 test('an old notice loaded from a file keeps its CrPC section and may have no signer on record', async () => {
