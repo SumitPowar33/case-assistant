@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { ComplaintPage, FrontDeskPage } from './FrontDesk'
 import { setSession } from './api'
+import { ScreenLangContext } from './i18n'
 
 // Fictional data only.
 beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'hc.fictional', full_name: 'HC Fictional', rank: 'HC', role: 'front_desk', station_id: 's1' } }))
@@ -163,4 +164,32 @@ test('a signed complaint has a copy for the informant to print; a preliminary en
   render(<ComplaintPage id="c1" />)
   await screen.findByText('Fictional caller took money.')
   expect(screen.queryByLabelText('Copy for the informant')).toBeNull()
+})
+
+test('in Marathi the front desk, one overdue step, the signed complaint, its copy and its outcome are in Marathi; names and the signed words stay', async () => {
+  stub({ '/complaints?open=true': [{ id: 'c1', received_at: base.received_at, mode: 'oral', informant_name: 'Fictional Informant', kind: 'other', signed_at: '2026-10-30T04:50:00Z', outcome: null, steps_overdue: 1 }],
+    '/complaint-kinds': kinds,
+    '/complaints/c1': { ...base, signed_at: '2026-10-30T04:50:00Z', signed_by_name: 'HC Fictional', read_back_language: 'mr', outcome: 'preliminary_enquiry',
+      outcome_reason: 'Fictional reason for an enquiry', enquiry_due: '2026-11-13T04:50:00Z' } })
+  const { unmount } = render(<ScreenLangContext.Provider value="mr"><FrontDeskPage /></ScreenLangContext.Provider>)
+  expect(await screen.findByRole('heading', { name: 'फ्रंट डेस्क' })).toBeTruthy()
+  expect(screen.getByText('तक्रार घ्या')).toBeTruthy()
+  expect(screen.getByRole('option', { name: 'पोलीस ठाण्यात तोंडी' })).toBeTruthy()
+  expect(screen.getByText(/सही झाली/).textContent).toContain('1 पायरी मुदत उलटली')
+  unmount()
+  render(<ScreenLangContext.Provider value="mr"><ComplaintPage id="c1" /></ScreenLangContext.Provider>)
+  expect(await screen.findByRole('heading', { name: 'Fictional Informant यांची तक्रार' })).toBeTruthy()
+  expect(screen.getByText(/माहिती देणाऱ्याला मराठी मध्ये वाचून दाखवली, बरोबर असल्याचे मान्य केले आणि सही केली; HC Fictional यांनी .* रोजी नोंदवले/)).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'माहिती देणाऱ्यासाठी प्रत (BNSS 173(2), मोफत)' })).toBeTruthy()
+  expect(screen.getAllByText('Fictional caller took money.')).toHaveLength(2)   // the signed words are never translated
+  expect(screen.getByText(/प्राथमिक चौकशी \(BNSS 173\(3\)\) \(.* पर्यंत पूर्ण करायची, 14 दिवस/).textContent).toContain(': Fictional reason for an enquiry')
+  expect(screen.getByText(/मुदत उलटली, .* पर्यंत होती/)).toBeTruthy()
+})
+
+test('the Save button of a form follows the screen language', async () => {
+  stub({ '/complaints/c1': { ...base, mode: 'written' } })
+  render(<ScreenLangContext.Provider value="hi"><ComplaintPage id="c1" /></ScreenLangContext.Provider>)
+  const sign = (await screen.findByText('सूचनाकर्ता द्वारा हस्ताक्षरित')).closest('details')!
+  expect(within(sign).getByRole('button', { name: 'सहेजें' })).toBeTruthy()
+  expect(within(sign).queryByLabelText('किस भाषा में पढ़कर सुनाई')).toBeNull()   // written information is not read over
 })

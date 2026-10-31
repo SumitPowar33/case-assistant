@@ -3,10 +3,12 @@ import { can, currentSession, send } from './api'
 import TypingField from './TypingField'
 import { TypingContext } from './typing'
 import { istIso, parseSections, text } from './formats'
+import { useT } from './i18n'
 
 export function Form({ title, submit, onSaved, children }: {
   title: string; submit: (f: FormData) => Promise<unknown>; onSaved: (result: unknown) => void; children: ReactNode
 }) {
+  const t = useT()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   async function go(e: FormEvent<HTMLFormElement>) {
@@ -28,7 +30,7 @@ export function Form({ title, submit, onSaved, children }: {
       <form className="record-form" onSubmit={go}>
         {children}
         {error && <p role="alert">{error}</p>}
-        <button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+        <button type="submit" disabled={busy}>{t(busy ? 'form.saving' : 'form.save')}</button>
       </form>
     </details>
   )
