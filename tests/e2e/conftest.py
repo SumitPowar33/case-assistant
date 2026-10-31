@@ -68,16 +68,16 @@ class Api:
 
 
 @contextlib.contextmanager
-def running_core(db, *args, fresh=True):
-    """The core jar on database db (dropped and made again when fresh), started with the extra args;
-    yields (Api, bootstrap admin username, password) once the admin can sign in."""
+def running_core(db, *args, fresh=True, secret=None):
+    """The core jar on database db (dropped and made again when fresh), started with the extra args (and the given
+    AUTH_SECRET, else a new one); yields (Api, bootstrap admin username, password) once the admin can sign in."""
     if fresh:
         with psycopg.connect(dbname="postgres", autocommit=True, **PG) as c:
             c.execute(f"drop database if exists {db} with (force)")
             c.execute(f"create database {db}")
     port = free_port()
     admin, password = "e2e.admin", secrets.token_urlsafe(18)
-    env = {**os.environ, "DATABASE_URL": f"jdbc:postgresql://{PG['host']}/{db}", "AUTH_SECRET": secrets.token_urlsafe(48),
+    env = {**os.environ, "DATABASE_URL": f"jdbc:postgresql://{PG['host']}/{db}", "AUTH_SECRET": secret or secrets.token_urlsafe(48),
            "BOOTSTRAP_ADMIN_USERNAME": admin, "BOOTSTRAP_ADMIN_PASSWORD": password}
     log = open(ROOT / f"apps/core/target/e2e-core-{db}.log", "w")
     proc = subprocess.Popen(["java", "-jar", core_jar(), f"--server.port={port}", *args], env=env, stdout=log, stderr=subprocess.STDOUT)
@@ -109,12 +109,12 @@ def core():
         yield c
 
 
-@pytest.fixture(scope="session")
-def web(core):
-    """The built web app on a free port; /api goes to the core app. Yields its base URL."""
+@contextlib.contextmanager
+def serving_web(core_base, gateway_base=None):
+    """The built web app on a free port; /api goes to the core app and, given a gateway, /ai to it (without the
+    /ai, as Vite does in development). Yields its base URL."""
     if not (DIST / "index.html").exists():
         subprocess.run(["npm", "run", "build"], cwd=ROOT / "apps/web", check=True)
-    target = core[0].base
 
     class Handler(http.server.SimpleHTTPRequestHandler):
         def __init__(self, *a, **kw):
@@ -125,7 +125,8 @@ def web(core):
 
         def proxy(self):
             length = int(self.headers.get("content-length") or 0)
-            req = urllib.request.Request(target + self.path, method=self.command, data=self.rfile.read(length) if length else None)
+            target = gateway_base + self.path[3:] if self.path.startswith("/ai/") else core_base + self.path
+            req = urllib.request.Request(target, method=self.command, data=self.rfile.read(length) if length else None)
             for h in ("authorization", "content-type"):
                 if self.headers.get(h):
                     req.add_header(h, self.headers[h])
@@ -144,7 +145,7 @@ def web(core):
                 pass  # the browser left the page (or closed) before the answer came
 
         def do_GET(self):
-            self.proxy() if self.path.startswith("/api/") else super().do_GET()
+            self.proxy() if self.path.startswith("/api/") or (gateway_base and self.path.startswith("/ai/")) else super().do_GET()
 
         def do_POST(self):
             self.proxy()
@@ -154,8 +155,17 @@ def web(core):
 
     server = http.server.ThreadingHTTPServer(("127.0.0.1", free_port()), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    yield f"http://127.0.0.1:{server.server_address[1]}"
-    server.shutdown()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}"
+    finally:
+        server.shutdown()
+
+
+@pytest.fixture(scope="session")
+def web(core):
+    """The built web app on a free port; /api goes to the core app. Yields its base URL."""
+    with serving_web(core[0].base) as url:
+        yield url
 
 
 @pytest.fixture
