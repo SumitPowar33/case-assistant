@@ -2,6 +2,7 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import Readiness from './Readiness'
+import { ScreenLangContext } from './i18n'
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
@@ -99,4 +100,19 @@ test('a link or an accepted gap is withdrawn with a reason; withdrawn records st
   fireEvent.click(screen.getByRole('button', { name: 'Withdraw acceptance' }))
   await vi.waitFor(() => expect(calls.filter((c) => c.method === 'POST').length).toBe(2))
   expect(calls.filter((c) => c.method === 'POST')[1].url).toBe('/api/firs/f1/readiness/overrides/o1/withdraw')
+})
+
+test('in Marathi the check, its gaps, the withdrawn list and the no-judging line are in Marathi; playbook texts and labels stay', async () => {
+  mock((url) => url.endsWith('/readiness') ? { status: 200, body: { ...report, openGaps: 2,
+    charges: [{ ...report.charges[0], ingredients: [{ ...report.charges[0].ingredients[0], evidence: [{ id: 'e2', linkId: 'l2', label: 'E-02', kind: 'electronic', courtReady: false }] }] }],
+    withdrawn: [{ what: 'evidence link', detail: 'S-01 for cheating/deception', reason: 'Linked to the wrong item', withdrawn_by: 'SI Fictional', withdrawn_at: '' }] } } : undefined)
+  render(<ScreenLangContext.Provider value="mr"><Readiness firId="f1" /></ScreenLangContext.Provider>)
+  expect(await screen.findByRole('heading', { name: 'तयारी तपासणी' })).toBeTruthy()
+  expect(screen.getByText('2 त्रुटी उघड्या.')).toBeTruthy()
+  expect(screen.getByText(/हे कोणाचेही मूल्यमापन करत नाही/)).toBeTruthy()
+  expect(screen.getByText(/E-02 \(63\(4\) प्रमाणपत्र नाही\)/)).toBeTruthy()
+  expect(screen.getByText('पुराव्याचा दुवा: S-01 for cheating/deception. SI Fictional यांनी मागे घेतले: “Linked to the wrong item”')).toBeTruthy()
+  expect(screen.getByText(/SI Fictional यांनी स्वीकारले/)).toBeTruthy()
+  expect(screen.getByText('Record the bank nodal officer statement.')).toBeTruthy()   // playbook text is not translated here
+  expect(screen.getAllByRole('button', { name: /E-02 चा दुवा मागे घ्या/ })).toHaveLength(1)
 })

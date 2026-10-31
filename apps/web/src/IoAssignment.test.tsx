@@ -2,6 +2,7 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import IoAssignment from './IoAssignment'
+import { ScreenLangContext } from './i18n'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -88,4 +89,15 @@ test('a role a state adds with a station scope may assign; the role name alone g
   render(<IoAssignment firId="f1" ioName={null} version={0} onSaved={() => {}} />)
   await screen.findByText('IO history')
   expect(screen.queryByRole('button', { name: 'Save' })).toBeNull()
+})
+
+test('in Hindi the IO line, the form and the history are in Hindi; a change with its reason reads in order', async () => {
+  as('sho', 'station')
+  stub({ ...lists, '/firs/f1/io-history': [...lists['/firs/f1/io-history'],
+    { at: '2026-10-05T05:00:00Z', from_name: 'SI Fictional One', to_name: 'SI Fictional Two', assigned_by_name: 'PI Fictional SHO', reason: 'Fictional transfer reason' }] })
+  render(<ScreenLangContext.Provider value="hi"><IoAssignment firId="f1" ioName="SI Fictional Two" version={0} onSaved={() => {}} /></ScreenLangContext.Provider>)
+  expect(screen.getByText('जाँच अधिकारी: SI Fictional Two')).toBeTruthy()
+  expect(await screen.findByText('मामला दूसरे जाँच अधिकारी को दें')).toBeTruthy()
+  expect(screen.getByText(/: SI Fictional One नियुक्त, PI Fictional SHO द्वारा$/)).toBeTruthy()
+  expect(screen.getByText(/: SI Fictional One से SI Fictional Two, PI Fictional SHO द्वारा\. कारण: “Fictional transfer reason”$/)).toBeTruthy()
 })
