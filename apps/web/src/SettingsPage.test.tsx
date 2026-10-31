@@ -2,6 +2,7 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import SettingsPage from './SettingsPage'
+import { ScreenLangContext } from './i18n'
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
@@ -41,4 +42,35 @@ test('a broken audit chain is shown plainly', async () => {
   mockGateway(false)
   render(<SettingsPage />)
   expect(await screen.findByText(/Audit log check: broken/)).toBeTruthy()
+})
+
+test('in Marathi: headings, the audit check, every control and the saved line; feature labels, providers and models stay as the gateway sends them', async () => {
+  const calls = mockGateway()
+  render(<ScreenLangContext.Provider value="mr"><SettingsPage /></ScreenLangContext.Provider>)
+  expect(await screen.findByRole('heading', { name: 'AI सेटिंग्ज' })).toBeTruthy()
+  expect(screen.getByText(/ऑडिट लॉग तपासणी: अबाधित\./)).toBeTruthy()
+  expect(screen.getByText(/^फक्त राज्य ॲडमिन बदल जतन करू शकतात\./)).toBeTruthy()
+  for (const name of ['सुविधा', 'प्रदाता', 'मॉडेल', 'अधिकारी बदलू शकतात']) expect(screen.getByRole('columnheader', { name })).toBeTruthy()
+  fireEvent.change(screen.getByLabelText('Draft notices साठी प्रदाता'), { target: { value: 'fake' } })
+  fireEvent.change(screen.getByLabelText('Draft notices साठी मॉडेल'), { target: { value: 'fake-1' } })
+  fireEvent.click(screen.getByLabelText('Draft notices साठी अधिकारी बदलू शकतात'))
+  fireEvent.click(screen.getByRole('button', { name: 'Draft notices जतन करा' }))
+  expect(await screen.findByText('जतन केले: Draft notices आता fake / fake-1 वापरते.')).toBeTruthy()
+  expect(calls.find((c) => c.method === 'PUT')!.body).toEqual({ provider: 'fake', model: 'fake-1', officer_may_switch: false })
+  cleanup()
+  mockGateway(false)
+  render(<ScreenLangContext.Provider value="hi"><SettingsPage /></ScreenLangContext.Provider>)
+  expect(await screen.findByText('ऑडिट लॉग जाँच: टूटा हुआ। राज्य एडमिन को इसकी सूचना दें।')).toBeTruthy()
+})
+
+test('a refused save (not the state admin) is shown and nothing is claimed saved', async () => {
+  mockGateway()
+  const inner = vi.mocked(fetch).getMockImplementation()!
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => init?.method === 'PUT'
+    ? { ok: false, status: 403, json: async () => ({ detail: 'Only an account allowed to manage the installation may change AI settings.' }) }
+    : inner(url, init)))
+  render(<SettingsPage />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Save Draft notices' }))
+  expect((await screen.findByRole('alert')).textContent).toMatch(/403|manage the installation/)
+  expect(screen.queryByText(/^Saved:/)).toBeNull()
 })

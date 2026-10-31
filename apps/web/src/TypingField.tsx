@@ -1,5 +1,6 @@
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { LANGS, TypingContext, suggestions, wordBefore } from './typing'
+import { useT } from './i18n'
 
 type Props = { label: string; value: string; onChange: (value: string) => void; multiline?: boolean; speech?: boolean }
 type Recognition = {
@@ -20,6 +21,7 @@ type Field = HTMLInputElement | HTMLTextAreaElement
  */
 export default function TypingField({ label, value, onChange, multiline, speech }: Props) {
   const { lang } = useContext(TypingContext)
+  const t = useT()
   const id = useId()
   const ref = useRef<Field>(null)
   const [word, setWord] = useState('')
@@ -51,7 +53,7 @@ export default function TypingField({ label, value, onChange, multiline, speech 
         }
       }
     }
-    r.onerror = (e) => setSpeechError(`Speech input stopped: ${e.error}. You can still type.`)
+    r.onerror = (e) => setSpeechError(t('typing.speechStopped', { error: e.error }))
     r.onend = () => { rec.current = null; setListening(false) }
     setSpeechError('')
     rec.current = r
@@ -105,11 +107,11 @@ export default function TypingField({ label, value, onChange, multiline, speech 
       {multiline
         ? <textarea ref={ref as React.Ref<HTMLTextAreaElement>} rows={6} {...common} />
         : <input ref={ref as React.Ref<HTMLInputElement>} {...common} />}
-      {Rec && <button type="button" className="no-print" aria-pressed={listening} onClick={toggleSpeech}>{listening ? 'Stop speaking' : 'Speak'}</button>}
+      {Rec && <button type="button" className="no-print" aria-pressed={listening} onClick={toggleSpeech}>{t(listening ? 'typing.stop' : 'typing.speak')}</button>}
       {speechError && <p role="alert">{speechError}</p>}
       <div aria-live="polite">
         {options.length > 0 && (
-          <ul className="suggestions" aria-label={`Suggestions for ${word}`}>
+          <ul className="suggestions" aria-label={t('typing.suggestionsFor', { word })}>
             {options.map((s) => (
               <li key={s}>
                 <button type="button" lang={s === word ? 'en' : tag} onMouseDown={(e) => e.preventDefault()} onClick={() => put(s, '')}>{s}</button>

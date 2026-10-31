@@ -3,6 +3,8 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { useState } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import TypingField from './TypingField'
+import TypePage from './TypePage'
+import { ScreenLangContext } from './i18n'
 import { TypingContext, type TypingLang, wordBefore } from './typing'
 
 function Harness({ lang, multiline }: { lang: TypingLang; multiline?: boolean }) {
@@ -125,4 +127,39 @@ test('a speech error is shown and typing still works; leaving the page stops lis
   expect(screen.getByRole('alert').textContent).toContain('not-allowed')
   unmount()
   expect(made[0].started).toBe(false)
+})
+
+test('on a Hindi screen the speech button, its error and the suggestion list speak Hindi', () => {
+  const made = fakeRecogniser()
+  render(<ScreenLangContext.Provider value="hi"><SpeechHarness speech /></ScreenLangContext.Provider>)
+  const box = screen.getByLabelText('Statement') as HTMLTextAreaElement
+  type(box, 'police')
+  expect(screen.getByRole('list', { name: 'police के सुझाव' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'बोलें' }))
+  expect(screen.getByRole('button', { name: 'बोलना बंद करें' })).toBeTruthy()
+  act(() => made[0].onerror({ error: 'network' }))
+  expect(screen.getByRole('alert').textContent).toBe('बोलकर लिखना रुक गया: network। आप अब भी टाइप कर सकते हैं।')
+})
+
+function TypePageIn({ screenLang, lang }: { screenLang: string; lang: TypingLang }) {
+  return <ScreenLangContext.Provider value={screenLang}><TypingContext.Provider value={{ lang, setLang: () => {} }}><TypePage /></TypingContext.Provider></ScreenLangContext.Provider>
+}
+
+test('the typing page in English and Marathi names the typing language the way the screen language does', () => {
+  render(<TypePageIn screenLang="en" lang="en" />)
+  expect(screen.getByText(/^Choose a typing language at the top of the page/)).toBeTruthy()
+  expect((screen.getByRole('button', { name: 'Convert all English-letter words' }) as HTMLButtonElement).disabled).toBe(true)
+  cleanup()
+  render(<TypePageIn screenLang="en" lang="ta" />)
+  expect(screen.getByText(/^Typing in Tamil\. Space puts in/)).toBeTruthy()
+  cleanup()
+  render(<TypePageIn screenLang="mr" lang="ta" />)
+  expect(screen.getByRole('heading', { name: 'तुमच्या भाषेत टाइप करा' })).toBeTruthy()
+  expect(screen.getByText(/^தமிழ் मध्ये टायपिंग\./)).toBeTruthy()
+  const box = screen.getByLabelText('मजकूर') as HTMLTextAreaElement
+  fireEvent.change(box, { target: { value: 'vanakkam' } })
+  fireEvent.click(screen.getByRole('button', { name: 'इंग्रजी अक्षरांतील सर्व शब्द बदला' }))
+  expect(box.value).not.toBe('vanakkam')   // converted to Tamil script
+  expect(/[\u0B80-\u0BFF]/.test(box.value)).toBe(true)
+  expect(screen.getByText(/^सूचना फक्त शब्दलेखन आहेत\./)).toBeTruthy()
 })

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { ai } from './api'
+import { useT } from './i18n'
 
 type Setting = { label: string; provider: string; model: string; officer_may_switch: boolean }
 type Features = { providers: string[]; default_models: Record<string, string> }
 
 /** Admin screen: which AI provider and model each feature uses, and whether officers may switch. Every save is audit-logged by the gateway. */
 export default function SettingsPage() {
+  const t = useT()
   const [settings, setSettings] = useState<Record<string, Setting>>()
   const [features, setFeatures] = useState<Features>()
   const [chainOk, setChainOk] = useState<boolean>()
@@ -18,7 +20,7 @@ export default function SettingsPage() {
   }, [])
 
   if (error && !settings) return <p role="alert">{error}</p>
-  if (!settings || !features) return <p>Loading…</p>
+  if (!settings || !features) return <p>{t('common.loading')}</p>
 
   const edit = (feature: string, change: Partial<Setting>) =>
     setSettings((cur) => cur && { ...cur, [feature]: { ...cur[feature], ...change } })
@@ -30,7 +32,7 @@ export default function SettingsPage() {
         method: 'PUT', body: { provider: s.provider, model: s.model || null, officer_may_switch: s.officer_may_switch },
       })
       edit(feature, out)
-      setSaved(`Saved: ${out.label} now uses ${out.provider} / ${out.model}.`)
+      setSaved(t('settings.saved', { feature: out.label, provider: out.provider, model: out.model }))
     } catch (e) {
       setError((e as Error).message)
     }
@@ -38,27 +40,26 @@ export default function SettingsPage() {
 
   return (
     <>
-      <h1>AI settings</h1>
-      <p>Choose the AI provider and model for each feature. Every change is written to the audit log.
-        {' '}{chainOk ? 'Audit log check: intact.' : <strong>Audit log check: broken. Report this to the state admin.</strong>}</p>
-      <p><small>Only the state admin can save changes. "fake" gives offline demo drafts.</small></p>
+      <h1>{t('nav.settings')}</h1>
+      <p>{t('settings.intro')}{' '}{chainOk ? t('settings.chainOk') : <strong>{t('settings.chainBroken')}</strong>}</p>
+      <p><small>{t('settings.onlyAdmin')}</small></p>
       {error && <p role="alert">{error}</p>}
       <p aria-live="polite">{saved}</p>
       <table>
-        <caption>Provider per feature</caption>
-        <thead><tr><th scope="col">Feature</th><th scope="col">Provider</th><th scope="col">Model</th><th scope="col">Officer may switch</th><th scope="col"><span className="visually-hidden">Save</span></th></tr></thead>
+        <caption>{t('settings.caption')}</caption>
+        <thead><tr><th scope="col">{t('settings.colFeature')}</th><th scope="col">{t('settings.colProvider')}</th><th scope="col">{t('settings.colModel')}</th><th scope="col">{t('settings.colSwitch')}</th><th scope="col"><span className="visually-hidden">{t('form.save')}</span></th></tr></thead>
         <tbody>
           {Object.entries(settings).map(([f, s]) => (
             <tr key={f}>
               <th scope="row">{s.label}</th>
               <td>
-                <select aria-label={`Provider for ${s.label}`} value={s.provider} onChange={(e) => edit(f, { provider: e.target.value, model: '' })}>
+                <select aria-label={t('settings.providerFor', { feature: s.label })} value={s.provider} onChange={(e) => edit(f, { provider: e.target.value, model: '' })}>
                   {features.providers.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </td>
-              <td><input aria-label={`Model for ${s.label}`} value={s.model} placeholder={features.default_models[s.provider]} onChange={(e) => edit(f, { model: e.target.value })} /></td>
-              <td><input type="checkbox" aria-label={`Officer may switch for ${s.label}`} checked={s.officer_may_switch} onChange={(e) => edit(f, { officer_may_switch: e.target.checked })} /></td>
-              <td><button type="button" aria-label={`Save ${s.label}`} onClick={() => save(f)}>Save</button></td>
+              <td><input aria-label={t('settings.modelFor', { feature: s.label })} value={s.model} placeholder={features.default_models[s.provider]} onChange={(e) => edit(f, { model: e.target.value })} /></td>
+              <td><input type="checkbox" aria-label={t('settings.switchFor', { feature: s.label })} checked={s.officer_may_switch} onChange={(e) => edit(f, { officer_may_switch: e.target.checked })} /></td>
+              <td><button type="button" aria-label={t('settings.saveFor', { feature: s.label })} onClick={() => save(f)}>{t('form.save')}</button></td>
             </tr>
           ))}
         </tbody>
