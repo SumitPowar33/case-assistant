@@ -175,7 +175,9 @@ class RecordsController {
                   m.informed_name, m.informed_contact, m.memo_correction_id is not null as memo_corrected, u.full_name as arresting_officer_name, c.max_punishment, c.first_remand_on,
                   arrest_last_day(a.id) as chargesheet_last_day, earlier_custody_days(a.id) as earlier_custody_days,
                   r.full_name as remand_recorded_by_name, c.released_on, c.release_basis,
-                  chargesheet_filed_for(a.person_id) as chargesheet_filed_on, c.correction_id is not null as corrected
+                  chargesheet_filed_for(a.person_id) as chargesheet_filed_on, c.correction_id is not null as corrected,
+                  c.arrested_at + interval '24 hours' as produce_by,
+                  coalesce(c.first_remand_on > ist_date(c.arrested_at + interval '24 hours'), false) as remand_after_24_hours
                 from arrest a join arrest_current c on c.id = a.id join arrest_memo_current m on m.id = a.id join person p on p.id = a.person_id
                   left join app_user u on u.id = a.arresting_officer left join app_user r on r.id = a.remand_recorded_by
                 where p.fir_id = ? order by c.arrested_at, a.id""")
@@ -313,6 +315,9 @@ class RecordsController {
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
         requireReason(c.reason);
         checkRemand(c.firstRemandOn, arrestedAt);
+        // a recorded remand can be corrected but not cleared: clearing it would silently drop the BNSS 187(3) limit
+        if (c.firstRemandOn == null && db.sql("select first_remand_on is not null from arrest_current where id = ?").param(arrestId).query(Boolean.class).single())
+            badRequest("A first remand is on record; a correction must restate its date.");
         if ((c.releasedOn == null) != (c.releaseBasis == null)) badRequest("A release needs both its date and how it happened.");
         if (c.releasedOn != null) {
             if (c.releasedOn.isBefore(arrestedAt.atZoneSameInstant(IST).toLocalDate())) badRequest("The release cannot be before the day of arrest.");

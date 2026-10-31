@@ -62,6 +62,15 @@ class CaseTeam {
         if (!ok) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the SHO of the station or the SP of the district can assign the IO.");
     }
 
+    /** Whether the user's role sees every case of this station (station scope) or of its district (district scope). */
+    boolean supervisesStation(UUID userId, UUID stationId) {
+        return userId != null && stationId != null && db.sql("""
+                select exists (select 1 from app_user u join police_station fs on fs.id = ?
+                  left join police_station us on us.id = u.station_id
+                  where u.id = ? and u.active and (%s))""".formatted(stationOrDistrict.replace("f.station_id", "fs.id")))
+                .params(stationId, userId).query(Boolean.class).single();
+    }
+
     /** Who can be the IO of an FIR: an active user of a role with "case.lead" posted at the FIR's police station. */
     boolean canBeIo(UUID userId, UUID stationId) {
         return db.sql("select exists (select 1 from app_user where id = ? and active and role in " + Roles.in(roles.with("case.lead"))

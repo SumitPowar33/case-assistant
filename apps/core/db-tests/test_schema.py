@@ -881,3 +881,85 @@ def test_a_recorded_progress_update_ends_the_victim_update_deadline_and_is_kept_
         db.execute("UPDATE victim_update SET given_on='2026-09-02'")
     with pytest.raises(psycopg.errors.RaiseException):
         db.execute("DELETE FROM victim_update")
+
+
+def test_v32_moves_an_old_preliminary_enquiry_out_of_the_outcome_so_it_can_still_end_in_an_fir():
+    # BNSS 173(3): an enquiry is a step, not an outcome (decided 31 Oct 2026)
+    schema = "t_" + uuid.uuid4().hex[:10]
+    conn = psycopg.connect(URL, autocommit=True)
+    try:
+        conn.execute(f"CREATE SCHEMA {schema}")
+        conn.execute(f"SET search_path TO {schema}, public")
+        upto = lambda n: [m for m in MIGRATIONS if int(m.name[1:].split("__")[0]) <= n]
+        for m in upto(31):
+            conn.execute(m.read_text())
+        st, io, fir = seed_case(conn)
+        c = one(conn, """INSERT INTO complaint(station_id,received_at,mode,informant_name,kind,text_original,text_language,recorded_by,
+                         signed_at,signed_recorded_by,outcome,outcome_reason,outcome_at,outcome_by)
+                         VALUES (%s,'2026-10-29 10:00+05:30','written','Demo Informant','other','Demo words','en',%s,
+                         '2026-10-29 10:05+05:30',%s,'preliminary_enquiry','Demo: punishable 3 to 7 years','2026-10-29 10:10+05:30',%s)
+                         RETURNING id""", st, io, io, io)[0]
+        for m in MIGRATIONS[len(upto(31)):]:
+            conn.execute(m.read_text())
+        row = one(conn, "SELECT outcome, enquiry_reason, enquiry_permitted_by, enquiry_at FROM complaint WHERE id=%s", c)
+        assert row[0] is None and row[1] == "Demo: punishable 3 to 7 years" and row[2].startswith("not recorded") and row[3] is not None
+        with pytest.raises(psycopg.errors.CheckViolation):   # no longer an outcome
+            conn.execute("UPDATE complaint SET outcome='preliminary_enquiry', outcome_reason='Demo reason text', outcome_at=now(), outcome_by=%s WHERE id=%s", (io, c))
+        with pytest.raises(psycopg.errors.RaiseException):   # recorded once
+            conn.execute("UPDATE complaint SET enquiry_reason='Something else entirely' WHERE id=%s", (c,))
+        conn.execute("UPDATE complaint SET outcome='no_offence', outcome_reason='Demo: no prima facie case', outcome_at=now(), outcome_by=%s WHERE id=%s", (io, c))
+        v = one(conn, """INSERT INTO complaint_version(complaint_id,informant_name,kind,text_original,text_language,replaced_by)
+                         VALUES (%s,'Demo','other','Old words','en',%s) RETURNING id""", c, io)[0]
+        with pytest.raises(psycopg.errors.RaiseException):
+            conn.execute("UPDATE complaint_version SET text_original='x' WHERE id=%s", (v,))
+        with pytest.raises(psycopg.errors.RaiseException):
+            conn.execute("DELETE FROM complaint_version")
+    finally:
+        conn.execute(f"DROP SCHEMA {schema} CASCADE")
+        conn.close()
+
+
+def test_bnss_58_production_deadline_runs_24_hours_from_arrest_until_a_remand_or_release(db):
+    st, io, fir = seed_case(db)
+    a1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A1','Demo One') RETURNING id", fir)[0]
+    ar = one(db, ARREST.replace("'2026-09-12 00:30+05:30'", "'2026-09-12 22:30+05:30'"), a1, io, io)[0]
+    row = lambda: db.execute("SELECT due_on, basis FROM case_deadline WHERE kind='production_before_magistrate'").fetchall()
+    assert row() == [(dt.date(2026, 9, 13), "BNSS 58, 24 hours from arrest (journey time excluded): by 13 Sep 2026 22:30 IST")]
+    db.execute("UPDATE arrest SET first_remand_on='2026-09-13', remand_recorded_by=%s, remand_recorded_at=now() WHERE id=%s", (io, ar))
+    assert row() == []
+    # an arrest loaded from old records gives no production deadline
+    a2 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A2','Demo Two') RETURNING id", fir)[0]
+    b = one(db, """INSERT INTO import_batch(station_id,entity,profile,filename,file_sha256,complaint_language,rows_total,created_by)
+                   VALUES (%s,'arrest','demo','a.csv',%s,'en',1,%s) RETURNING id""", st, "c" * 64, io)[0]
+    db.execute("""INSERT INTO arrest(person_id,arrested_at,place,grounds,informed_name,max_punishment,recorded_by,import_batch_id)
+                  VALUES (%s,'2026-09-14 10:00+05:30','Demo place','{x}','Demo relative','life',%s,%s)""", (a2, io, b))
+    assert row() == []
+
+
+def test_replies_sections_and_playbook_choices_are_kept_and_go_only_with_their_parent(db):
+    # weekly review, 31 Oct 2026
+    st, io, fir = seed_case(db)
+    add_section(db, fir, "BNS", "318(4)")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE fir_section SET section='303(2)'")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM fir_section")
+    n = one(db, """INSERT INTO notice(fir_id,kind,addressee,items_requested,body,signed_by,issued_at,reply_due_on,status)
+                   VALUES (%s,'BNSS_94','Bank of Demo','{statements}','Demo body',%s,'2026-09-20 10:00+05:30','2026-10-30','sent') RETURNING id""", fir, io)[0]
+    db.execute("INSERT INTO notice_reply(notice_id,received_at,channel) VALUES (%s,'2026-09-25 10:00+05:30','email')", (n,))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE notice_reply SET channel='post'")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM notice_reply")
+    db.execute("INSERT INTO case_playbook(fir_id,playbook_id,playbook_version,chosen_by) VALUES (%s,'cyber_fraud','1',%s)", (fir, io))
+    db.execute("UPDATE case_playbook SET playbook_id='theft', playbook_version='2'")
+    assert sorted(r[0] for r in db.execute("SELECT playbook_id FROM case_playbook_choice")) == ["cyber_fraud", "theft"]   # both choices kept
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("DELETE FROM case_playbook")
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE case_playbook_choice SET playbook_id='x'")
+    # the parent goes (as an import undo does): its children go with it
+    db.execute("DELETE FROM notice WHERE id=%s", (n,))
+    db.execute("DELETE FROM fir WHERE id=%s", (fir,))
+    assert one(db, "SELECT count(*) FROM fir_section")[0] == 0 and one(db, "SELECT count(*) FROM case_playbook_choice")[0] == 0
+    assert one(db, "SELECT count(*) FROM notice_reply")[0] == 0

@@ -9,13 +9,15 @@ import { ScreenLangContext, useT } from './i18n'
 
 type Step = { id: string; text: string; within_minutes: number | null; basis: string | null }
 type Kind = { id: string; label: string; steps: Step[] }
-type Row = { id: string; received_at: string; mode: string; informant_name: string | null; withheld: boolean; kind: string; signed_at: string | null; outcome: string | null; steps_overdue: number }
+type Row = { id: string; received_at: string; mode: string; informant_name: string | null; withheld: boolean; kind: string; signed_at: string | null; outcome: string | null; steps_overdue: number; enquiry_overdue?: boolean }
 type CheckStep = { id: string; text: string; basis: string | null; due_at: string | null; done_at: string | null; done_by_name: string | null; note: string | null; overdue: boolean }
 type Complaint = {
   id: string; received_at: string; mode: string; informant_name: string | null; informant_contact: string | null; kind: string; kind_label: string
   withheld: boolean; text_original: string | null; text_language: string; recorded_by_name: string; read_back_language: string | null; signed_at: string | null
   signed_by_name: string | null; outcome: string | null; outcome_reason: string | null; fir_id: string | null; fir_no: number | null; fir_year: number | null
   sign_by: string | null; enquiry_due: string | null; steps: CheckStep[]
+  enquiry_at?: string | null; enquiry_permitted_by?: string | null; enquiry_reason?: string | null; enquiry_overdue?: boolean
+  versions?: { text_original: string; replaced_at: string; replaced_by_name: string }[]
 }
 
 const MODES = ['oral', 'phone', 'written', 'electronic']
@@ -62,7 +64,7 @@ export function FrontDeskPage() {
             <td><a href={`#/complaints/${c.id}`}>{fmt(c.received_at)}</a></td>
             <td>{c.withheld ? t('complaint.withheldName') : c.informant_name}</td>
             <td>{kinds.find((k) => k.id === c.kind)?.label ?? c.kind}</td>
-            <td>{t(c.signed_at ? 'desk.signed' : 'desk.notSigned')}{c.steps_overdue > 0 && <strong> · {c.steps_overdue > 1 ? t('desk.overdueMany', { n: c.steps_overdue }) : t('desk.overdueOne')}</strong>}</td>
+            <td>{t(c.signed_at ? 'desk.signed' : 'desk.notSigned')}{c.steps_overdue > 0 && <strong> · {c.steps_overdue > 1 ? t('desk.overdueMany', { n: c.steps_overdue }) : t('desk.overdueOne')}</strong>}{c.enquiry_overdue && <strong> · {t('desk.enquiryOverdue')}</strong>}</td>
           </tr>
         ))}</tbody>
       </table>}
@@ -87,6 +89,9 @@ export function ComplaintPage({ id }: { id: string }) {
       <h2 id="complaint-h">{t('complaint.title', { name: c.withheld ? t('complaint.withheldName') : c.informant_name ?? '' })}</h2>
       <p>{t('complaint.meta', { kind: c.kind_label, mode: t.code('mode', c.mode), date: fmt(c.received_at), officer: c.recorded_by_name })}</p>
       {c.withheld ? <p>{t('fir.withheld')}</p> : <blockquote lang={c.text_language} className="read-back">{c.text_original}</blockquote>}
+      {!!c.versions?.length && <details><summary>{t('versions.title', { n: c.versions.length })}</summary>
+        <ul>{c.versions.map((v, i) => <li key={i}>{t('versions.item', { date: fmt(v.replaced_at), officer: v.replaced_by_name })} <q lang={c.text_language}>{v.text_original}</q></li>)}</ul>
+      </details>}
       {c.signed_at
         ? <p>{t('complaint.recorded', { how: spoken ? t('complaint.readBack', { language: languageName(c.read_back_language ?? '', screen) }) : t('complaint.signedByInformant'), officer: c.signed_by_name ?? '', date: fmt(c.signed_at) })}</p>
         : open && <SignForm c={c} spoken={spoken} onSaved={saved} />}
@@ -108,8 +113,10 @@ export function ComplaintPage({ id }: { id: string }) {
         ))}</ul>
       </>}
       <h3>{t('outcome.title')}</h3>
+      {c.enquiry_at && <p>{t('enquiry.state', { who: c.enquiry_permitted_by ?? '', date: fmt(c.enquiry_at), reason: c.enquiry_reason ?? '' })}
+        {c.enquiry_due && !c.outcome && <> {c.enquiry_overdue ? <strong>{t('enquiry.overdue', { date: fmt(c.enquiry_due) })}</strong> : t('outcome.enquiryDue', { date: fmt(c.enquiry_due) })}</>}</p>}
       {c.outcome
-        ? <p>{t.code('outcome', c.outcome)}{c.enquiry_due && <> {t('outcome.enquiryDue', { date: fmt(c.enquiry_due) })}</>}{c.fir_id ? <>: <a href={`#/firs/${c.fir_id}`}>{t('fir.title', { no: c.fir_no ?? '', year: c.fir_year ?? '' })}</a></> : `: ${c.outcome_reason}`}</p>
+        ? <p>{t.code('outcome', c.outcome)}{c.fir_id ? <>: <a href={`#/firs/${c.fir_id}`}>{t('fir.title', { no: c.fir_no ?? '', year: c.fir_year ?? '' })}</a></> : `: ${c.outcome_reason}`}</p>
         : c.signed_at ? <><NewFirForm complaintId={c.id} /><OutcomeForm c={c} onSaved={saved} /></>
           : <>{c.mode === 'electronic' && c.sign_by && <p>{t('outcome.signBy', { date: fmt(c.sign_by) })}</p>}
             {c.mode === 'electronic' && <OutcomeForm c={c} onSaved={saved} lapsedOnly />}
@@ -143,12 +150,13 @@ function StepForm({ complaintId, step, onSaved }: { complaintId: string; step: C
 
 function OutcomeForm({ c, onSaved, lapsedOnly }: { c: Complaint; onSaved: () => void; lapsedOnly?: boolean }) {
   const t = useT()
-  const choices = OUTCOMES.filter((k) => k !== 'fir' && (lapsedOnly ? k === 'not_signed_in_time' : k !== 'not_signed_in_time'))
+  const choices = OUTCOMES.filter((k) => k !== 'fir' && (lapsedOnly ? k === 'not_signed_in_time' : k !== 'not_signed_in_time') && !(k === 'preliminary_enquiry' && c.enquiry_at))
   return (
     <Form title={t('outcome.close')} onSaved={onSaved}
-      submit={(f) => send(`/complaints/${c.id}/outcome`, 'POST', { outcome: f.get('outcome'), reason: text(f, 'reason') })}>
+      submit={(f) => send(`/complaints/${c.id}/outcome`, 'POST', { outcome: f.get('outcome'), reason: text(f, 'reason'), permittedBy: text(f, 'permittedBy') })}>
       <label>{t('outcome.title')} <select name="outcome">{choices.map((k) => <option key={k} value={k}>{t.code('outcome', k)}</option>)}</select></label>
       <label>{t('outcome.reason')} <input name="reason" required minLength={10} maxLength={2000} /></label>
+      {choices.includes('preliminary_enquiry') && <label>{t('enquiry.permittedBy')} <input name="permittedBy" maxLength={200} /></label>}
     </Form>
   )
 }

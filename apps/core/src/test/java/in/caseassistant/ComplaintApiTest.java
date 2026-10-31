@@ -130,19 +130,71 @@ class ComplaintApiTest {
         mvc.perform(get("/api/complaints").header("Authorization", clerk)).andExpect(jsonPath("$[0].outcome").value("ncr"));
     }
 
+    /** BNSS 173(3): a preliminary enquiry is a step with a DSP's permission; its 14 days run from receipt; it ends in an FIR or an outcome. */
     @Test
-    void aPreliminaryEnquiryMustEndWithinFourteenDaysOfTheDecision() throws Exception {
-        UUID c = take("written", "other", Instant.now().minus(1, ChronoUnit.HOURS));
-        mvc.perform(get("/api/complaints/" + c).header("Authorization", clerk)).andExpect(jsonPath("$.enquiry_due").doesNotExist());
+    void aPreliminaryEnquiryNeedsPermissionRunsFourteenDaysFromReceiptAndEndsInAnFirOrAnOutcome() throws Exception {
+        Instant received = Instant.now().minus(15, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+        UUID c = take("written", "other", received);
+        mvc.perform(get("/api/complaints/" + c).header("Authorization", clerk)).andExpect(jsonPath("$.enquiry_due").value((Object) null));
+        var enquiry = new HashMap<String, Object>(Map.of("outcome", "preliminary_enquiry", "reason", "Fictional: offence punishable 3 to 7 years"));
+        send(clerk, "POST", "/api/complaints/" + c + "/outcome", enquiry).andExpect(status().isConflict());           // not signed
         send(clerk, "POST", "/api/complaints/" + c + "/sign", Map.of()).andExpect(status().isNoContent());
-        send(clerk, "POST", "/api/complaints/" + c + "/outcome", Map.of("outcome", "preliminary_enquiry", "reason", "Fictional: offence punishable 3 to 7 years")).andExpect(status().isNoContent());
-        var due = db.sql("select outcome_at + interval '14 days' from complaint where id = ?").param(c).query(java.sql.Timestamp.class).single().toInstant();
-        var seen = json.readTree(mvc.perform(get("/api/complaints/" + c).header("Authorization", clerk)).andReturn().getResponse().getContentAsString()).get("enquiry_due").asText();
-        assertThat(Instant.parse(seen)).isEqualTo(due);
+        mvc.perform(post("/api/complaints/" + c + "/outcome").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(enquiry))).andExpect(status().isBadRequest())
+                .andExpect(status().reason("Name the officer (DSP or above) who permitted the preliminary enquiry (BNSS 173(3))."));
+        enquiry.put("permittedBy", "DSP Fictional Sub-Division");
+        send(clerk, "POST", "/api/complaints/" + c + "/outcome", enquiry).andExpect(status().isNoContent());
+        send(clerk, "POST", "/api/complaints/" + c + "/outcome", enquiry).andExpect(status().isConflict());           // once
+        var seen = json.readTree(mvc.perform(get("/api/complaints/" + c).header("Authorization", clerk)).andExpect(jsonPath("$.outcome").value((Object) null))
+                .andExpect(jsonPath("$.enquiry_permitted_by").value("DSP Fictional Sub-Division")).andExpect(jsonPath("$.enquiry_overdue").value(true))
+                .andReturn().getResponse().getContentAsString());
+        assertThat(Instant.parse(seen.get("enquiry_due").asText())).isEqualTo(received.plus(14, ChronoUnit.DAYS));
+        mvc.perform(get("/api/complaints?open=true").header("Authorization", clerk)).andExpect(jsonPath("$[0].enquiry_overdue").value(true));
+        // the enquiry found a prima facie case: the FIR takes the signed text
+        send(clerk, "POST", "/api/firs", fir(c)).andExpect(status().isCreated());
+        mvc.perform(get("/api/complaints/" + c).header("Authorization", clerk)).andExpect(jsonPath("$.outcome").value("fir"))
+                .andExpect(jsonPath("$.enquiry_overdue").value(false)).andExpect(jsonPath("$.enquiry_permitted_by").value("DSP Fictional Sub-Division"));
+        // or it found none: closed with a reason
         UUID n = take("written", "other", Instant.now().minus(1, ChronoUnit.HOURS));
         send(clerk, "POST", "/api/complaints/" + n + "/sign", Map.of()).andExpect(status().isNoContent());
-        send(clerk, "POST", "/api/complaints/" + n + "/outcome", Map.of("outcome", "ncr", "reason", "Fictional: non-cognizable, NCR entry")).andExpect(status().isNoContent());
-        mvc.perform(get("/api/complaints/" + n).header("Authorization", clerk)).andExpect(jsonPath("$.enquiry_due").doesNotExist());
+        send(clerk, "POST", "/api/complaints/" + n + "/outcome", enquiry).andExpect(status().isNoContent());
+        mvc.perform(get("/api/complaints/" + n).header("Authorization", clerk)).andExpect(jsonPath("$.enquiry_overdue").value(false));
+        send(clerk, "POST", "/api/complaints/" + n + "/outcome", Map.of("outcome", "no_offence", "reason", "Fictional: enquiry found no prima facie case")).andExpect(status().isNoContent());
+        // a closed complaint cannot go to an enquiry afterwards
+        send(clerk, "POST", "/api/complaints/" + n + "/outcome", enquiry).andExpect(status().isConflict());
+    }
+
+    @Test
+    void correctionsBeforeSigningKeepTheEarlierWording() throws Exception {
+        UUID c = take("oral", "other", Instant.now());
+        var fix = Map.of("informantName", "Fictional Informant", "kind", "other", "text", "Fictional corrected words.", "textLanguage", "en");
+        send(clerk, "PUT", "/api/complaints/" + c, fix).andExpect(status().isNoContent());
+        mvc.perform(get("/api/complaints/" + c).header("Authorization", clerk)).andExpect(jsonPath("$.text_original").value("Fictional corrected words."))
+                .andExpect(jsonPath("$.versions.length()").value(1))
+                .andExpect(jsonPath("$.versions[0].text_original").value(org.hamcrest.Matchers.startsWith("Fictional caller took Rs 40,000")))
+                .andExpect(jsonPath("$.versions[0].replaced_by_name").value("HC Fictional Clerk"));
+        send(clerk, "POST", "/api/complaints/" + c + "/sign", Map.of("readBackLanguage", "en")).andExpect(status().isNoContent());
+        send(clerk, "PUT", "/api/complaints/" + c, fix).andExpect(status().isConflict());
+        assertThat(db.sql("select count(*) from complaint_version where complaint_id = ?").param(c).query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void anOpenSexualOffenceComplaintIsReadOnlyByItsRecorderAndTheStationsSupervisors() throws Exception {
+        // BNS 72; Nipun Saxena v Union of India (2018): the information names the victim before any FIR exists
+        UUID c = take("written", "sexual_offence", Instant.now().minus(5, ChronoUnit.MINUTES));
+        String colleague = user("front_desk", station, "HC Fictional Colleague");
+        mvc.perform(get("/api/complaints/" + c).header("Authorization", colleague)).andExpect(jsonPath("$.withheld").value(true))
+                .andExpect(jsonPath("$.text_original").value((Object) null)).andExpect(jsonPath("$.versions.length()").value(0));
+        assertThat(mvc.perform(get("/api/complaints").header("Authorization", colleague)).andReturn().getResponse().getContentAsString()).doesNotContain("Fictional Informant");
+        send(colleague, "POST", "/api/complaints/" + c + "/sign", Map.of()).andExpect(status().isForbidden());
+        send(colleague, "PUT", "/api/complaints/" + c, Map.of("informantName", "X", "kind", "other", "text", "Changed", "textLanguage", "en")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/complaints/" + c).header("Authorization", sho)).andExpect(jsonPath("$.withheld").value(false));
+        send(clerk, "POST", "/api/complaints/" + c + "/sign", Map.of()).andExpect(status().isNoContent());
+        send(colleague, "POST", "/api/firs", fir(c)).andExpect(status().isForbidden());
+        send(colleague, "POST", "/api/complaints/" + c + "/outcome", Map.of("outcome", "no_offence", "reason", "Fictional reason text")).andExpect(status().isForbidden());
+        String id = json.readTree(send(clerk, "POST", "/api/firs", fir(c)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        // the FIR protects the victim's identity even though no section was given yet
+        assertThat(db.sql("select identity_protected_case(?::uuid)").param(id).query(Boolean.class).single()).isTrue();
     }
 
     @Test

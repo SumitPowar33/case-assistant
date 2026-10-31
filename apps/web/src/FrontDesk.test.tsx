@@ -111,7 +111,15 @@ test('a signed complaint offers the FIR from its text, or closing it with a reas
   fireEvent.change(within(close).getByLabelText(/^Reason/), { target: { value: 'Fictional: non-cognizable' } })
   fireEvent.click(within(close).getByRole('button', { name: 'Save' }))
   await vi.waitFor(() => expect(writes).toHaveLength(2))
-  expect(writes[1]).toEqual({ url: '/api/complaints/c1/outcome', body: { outcome: 'ncr', reason: 'Fictional: non-cognizable' } })
+  expect(writes[1]).toEqual({ url: '/api/complaints/c1/outcome', body: { outcome: 'ncr', reason: 'Fictional: non-cognizable', permittedBy: null } })
+  await screen.findByText(/Read over to the informant in Marathi/)
+  const again = screen.getByText('Close without an FIR').closest('details')!
+  fireEvent.change(within(again).getByLabelText('Outcome'), { target: { value: 'preliminary_enquiry' } })
+  fireEvent.change(within(again).getByLabelText(/^Reason/), { target: { value: 'Fictional: punishable 3 to 7 years' } })
+  fireEvent.change(within(again).getByLabelText(/^Permitted by/), { target: { value: 'DSP Fictional' } })
+  fireEvent.click(await within(again).findByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(3))
+  expect(writes[2].body).toEqual({ outcome: 'preliminary_enquiry', reason: 'Fictional: punishable 3 to 7 years', permittedBy: 'DSP Fictional' })
 })
 
 test('electronic information shows its signing deadline and may lapse; a closed complaint shows its outcome', async () => {
@@ -156,9 +164,24 @@ test('a signed complaint has a copy for the informant to print; a preliminary en
   fireEvent.click(within(copy).getByRole('button', { name: 'Print the copy' }))
   expect(print).toHaveBeenCalledOnce()
   cleanup()
-  stub({ '/complaints/c1': { ...base, signed_at: '2026-10-30T04:50:00Z', outcome: 'preliminary_enquiry', outcome_reason: 'Fictional: 3 to 7 years', enquiry_due: '2026-11-13T05:00:00Z', steps: [] } })
+  const enquiry = { ...base, signed_at: '2026-10-30T04:50:00Z', enquiry_at: '2026-10-30T05:00:00Z', enquiry_permitted_by: 'DSP Fictional', enquiry_reason: 'Fictional: 3 to 7 years', enquiry_due: '2026-11-13T04:30:00Z', steps: [],
+    versions: [{ text_original: 'Fictional first words.', replaced_at: '2026-10-30T04:45:00Z', replaced_by_name: 'HC Fictional' }] }
+  stub({ '/complaints/c1': enquiry })
   render(<ComplaintPage id="c1" />)
-  expect(await screen.findByText(/to be finished by 13 Nov 2026/)).toBeTruthy()
+  expect((await screen.findByText(/Preliminary enquiry \(BNSS 173\(3\)\) permitted by DSP Fictional/)).textContent).toContain('to be finished by 13 Nov 2026')
+  expect(screen.getByText('Register the FIR from this complaint')).toBeTruthy()   // the enquiry can still end in an FIR
+  const close = screen.getByText('Close without an FIR').closest('details')!
+  expect(within(close).queryByRole('option', { name: /Preliminary enquiry/ })).toBeNull()
+  expect(screen.getByText('Earlier wordings (1)')).toBeTruthy()
+  expect(screen.getByText('Fictional first words.')).toBeTruthy()
+  cleanup()
+  stub({ '/complaints/c1': { ...enquiry, enquiry_overdue: true } })
+  render(<ComplaintPage id="c1" />)
+  expect(await screen.findByText(/The 14 days ended on 13 Nov 2026/)).toBeTruthy()
+  cleanup()
+  stub({ '/complaints?open=true': [{ id: 'c1', received_at: base.received_at, mode: 'oral', informant_name: 'Fictional Informant', kind: 'other', signed_at: '2026-10-30T04:50:00Z', outcome: null, steps_overdue: 0, enquiry_overdue: true }], '/complaint-kinds': kinds })
+  render(<FrontDeskPage />)
+  expect(await screen.findByText('· preliminary enquiry overdue')).toBeTruthy()
   cleanup()
   stub({ '/complaints/c1': { ...base, steps: [] } })
   render(<ComplaintPage id="c1" />)
@@ -169,8 +192,8 @@ test('a signed complaint has a copy for the informant to print; a preliminary en
 test('in Marathi the front desk, one overdue step, the signed complaint, its copy and its outcome are in Marathi; names and the signed words stay', async () => {
   stub({ '/complaints?open=true': [{ id: 'c1', received_at: base.received_at, mode: 'oral', informant_name: 'Fictional Informant', kind: 'other', signed_at: '2026-10-30T04:50:00Z', outcome: null, steps_overdue: 1 }],
     '/complaint-kinds': kinds,
-    '/complaints/c1': { ...base, signed_at: '2026-10-30T04:50:00Z', signed_by_name: 'HC Fictional', read_back_language: 'mr', outcome: 'preliminary_enquiry',
-      outcome_reason: 'Fictional reason for an enquiry', enquiry_due: '2026-11-13T04:50:00Z' } })
+    '/complaints/c1': { ...base, signed_at: '2026-10-30T04:50:00Z', signed_by_name: 'HC Fictional', read_back_language: 'mr', enquiry_at: '2026-10-30T05:00:00Z',
+      enquiry_permitted_by: 'DSP Fictional', enquiry_reason: 'Fictional reason for an enquiry', enquiry_due: '2026-11-13T04:50:00Z' } })
   const { unmount } = render(<ScreenLangContext.Provider value="mr"><FrontDeskPage /></ScreenLangContext.Provider>)
   expect(await screen.findByRole('heading', { name: 'फ्रंट डेस्क' })).toBeTruthy()
   expect(screen.getByText('तक्रार घ्या')).toBeTruthy()
@@ -182,7 +205,7 @@ test('in Marathi the front desk, one overdue step, the signed complaint, its cop
   expect(screen.getByText(/माहिती देणाऱ्याला मराठी मध्ये वाचून दाखवली, बरोबर असल्याचे मान्य केले आणि सही केली; HC Fictional यांनी .* रोजी नोंदवले/)).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'माहिती देणाऱ्यासाठी प्रत (BNSS 173(2), मोफत)' })).toBeTruthy()
   expect(screen.getAllByText('Fictional caller took money.')).toHaveLength(2)   // the signed words are never translated
-  expect(screen.getByText(/प्राथमिक चौकशी \(BNSS 173\(3\)\) \(.* पर्यंत पूर्ण करायची, 14 दिवस/).textContent).toContain(': Fictional reason for an enquiry')
+  expect(screen.getByText(/प्राथमिक चौकशी \(BNSS 173\(3\)\), परवानगी DSP Fictional/).textContent).toMatch(/: Fictional reason for an enquiry .* पर्यंत पूर्ण करायची, 14 दिवस/)
   expect(screen.getByText(/मुदत उलटली, .* पर्यंत होती/)).toBeTruthy()
 })
 

@@ -13,7 +13,7 @@ type Arrest = {
   informed_contact: string | null; arresting_officer_name: string | null; max_punishment: string; first_remand_on: string | null
   chargesheet_last_day: string | null; earlier_custody_days: number; remand_recorded_by_name: string | null
   released_on: string | null; release_basis: string | null; chargesheet_filed_on: string | null; corrected: boolean; memo_corrected: boolean
-  time_corrected: boolean
+  time_corrected: boolean; produce_by?: string; remand_after_24_hours?: boolean
 }
 type Correction = {
   id: string; arrest_id: string; first_remand_on: string | null; max_punishment: string; released_on: string | null
@@ -201,7 +201,8 @@ export default function Arrests({ firId, version, onSaved }: { firId: string; ve
               ? <>{a.remand_recorded_by_name
                 ? t('arrest.remandLineBy', { date: a.first_remand_on, name: a.remand_recorded_by_name, days: days(a.max_punishment) })
                 : t('arrest.remandLine', { date: a.first_remand_on, days: days(a.max_punishment) })} <strong>{a.chargesheet_last_day}</strong> <small>(BNSS 187(3){a.earlier_custody_days > 0 ? `; ${t('arrest.earlierDays', { days: a.earlier_custody_days })}` : ''})</small></>
-              : <>{t('arrest.noRemand')}</>}
+              : <>{t('arrest.noRemand')}{!a.released_on && a.produce_by && <> <strong>{t('arrest.produceBy', { date: fmt(a.produce_by) })}</strong></>}</>}
+            {a.remand_after_24_hours && <><br /><strong role="note">{t('arrest.remandLate')}</strong></>}
             {limitStatus(t, a) && <><br />{limitStatus(t, a)}</>}
             {(fixes ?? []).filter((c) => c.arrest_id === a.id).map((c) => (
               <small key={c.id}><br />{t('arrest.fixLine', {

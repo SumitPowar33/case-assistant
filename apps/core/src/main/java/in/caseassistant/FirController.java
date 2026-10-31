@@ -75,13 +75,20 @@ class FirController {
         if (f.ioId != null && !team.canBeIo(f.ioId, f.stationId))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The IO must be an active IO or SHO of this police station.");
         Object received = f.informationReceivedAt, contents = f.contentsOriginal, language = f.contentsLanguage;
+        boolean sexualOffence = f.sexualOffence;
         if (f.complaintId != null) {
             // from a signed complaint of this station: the FIR carries its text and time of receipt unchanged
-            var c = db.sql("select station_id, received_at, text_original, text_language, signed_at, outcome from complaint where id = ? for update")
+            var c = db.sql("select station_id, received_at, text_original, text_language, signed_at, outcome, kind, recorded_by from complaint where id = ? for update")
                     .param(f.complaintId).query().listOfRows().stream().findFirst().orElse(null);
             if (c == null || !f.stationId.equals(c.get("station_id"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such complaint at this police station.");
             if (c.get("signed_at") == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "The informant has not signed the complaint yet (BNSS 173(1)).");
             if (c.get("outcome") != null) throw new ResponseStatusException(HttpStatus.CONFLICT, "This complaint is already closed.");
+            if (ComplaintController.SEXUAL_OFFENCE.equals(c.get("kind"))) {
+                // BNS 72: only those who may read the information register it, and the FIR protects the victim's identity
+                if (!me.equals(c.get("recorded_by")) && !team.supervisesStation(me, f.stationId))
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the officer who wrote it down, the station's supervisors or the case team handle this complaint (BNS 72).");
+                sexualOffence = true;
+            }
             received = c.get("received_at");
             contents = c.get("text_original");
             language = c.get("text_language");
@@ -94,7 +101,7 @@ class FirController {
                 values (?,?,?,?,?,?,?,?,?,?,?,?,?,?) returning id""")
                 .params(f.stationId, f.firYear, f.firNo, f.gdEntryNo, f.registeredAt, received,
                         f.zeroFir, f.outsideLimitsPlace, contents, language, f.actionTaken,
-                        f.actionReason, f.ioId, f.sexualOffence)
+                        f.actionReason, f.ioId, sexualOffence)
                 .query(UUID.class).single();
         if (f.complaintId != null)
             db.sql("update complaint set outcome = 'fir', fir_id = ?, outcome_at = clock_timestamp(), outcome_by = ? where id = ?").params(id, me, f.complaintId).update();

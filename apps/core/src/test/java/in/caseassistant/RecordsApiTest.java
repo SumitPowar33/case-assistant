@@ -76,6 +76,16 @@ class RecordsApiTest {
     }
 
     @Test
+    void aFirstRemandAfterTheDayThe24HoursEndIsFlaggedForChecking() throws Exception {
+        String pid = idOf(send("/people", "{\"role\":\"accused\",\"label\":\"A9\",\"identityKnown\":false}", 201));
+        String arrest = idOf(send("/arrests", """
+                {"personId":"%s","arrestedAt":"2026-09-12T10:00:00+05:30","place":"Testpur","grounds":["proper investigation"],
+                 "informedName":"Fictional Friend","firstRemandOn":"2026-09-15","maxPunishment":"less_than_10_years"}""".formatted(pid), 201));
+        mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", auth))
+                .andExpect(jsonPath("$[?(@.id=='" + arrest + "')].remand_after_24_hours").value(true));
+    }
+
+    @Test
     void firstRemandIsRecordedOnceAndDecidesTheDeadline() throws Exception {
         String pid = idOf(send("/people", "{\"role\":\"accused\",\"label\":\"A2\",\"identityKnown\":false}", 201));
         // 00:30 IST on 12 Sep is still 11 Sep in UTC: the arrest day is 12 Sep.
@@ -95,10 +105,21 @@ class RecordsApiTest {
                          "informedName":"Fictional Friend","firstRemandOn":"%s","maxPunishment":"life"}""".formatted(pid, tomorrow))).andExpect(status().isBadRequest())
                 .andExpect(status().reason("The first remand cannot be after today."));
         org.assertj.core.api.Assertions.assertThat(db.sql("select count(*) from arrest where first_remand_on is not null").query(Long.class).single()).isZero();
+        // BNSS 58: produce before the Magistrate within 24 hours of the arrest (journey time excluded)
+        mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", auth))
+                .andExpect(jsonPath("$[?(@.kind=='production_before_magistrate')].due_on").value("2026-09-13"))
+                .andExpect(jsonPath("$[?(@.kind=='production_before_magistrate')].basis").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.endsWith("by 13 Sep 2026 00:30 IST"))));
         send("/arrests/" + UUID.randomUUID() + "/first-remand", "{\"firstRemandOn\":\"2026-09-13\"}", 404);
         send("/arrests/" + arrest + "/first-remand", "{\"firstRemandOn\":\"2026-09-13\"}", 204);
         send("/arrests/" + arrest + "/first-remand", "{\"firstRemandOn\":\"2026-09-14\"}", 409);
+        mvc.perform(get("/api/firs/" + fir + "/deadlines").header("Authorization", auth)).andExpect(jsonPath("$[?(@.kind=='production_before_magistrate')]").isEmpty());
+        // a correction may change the remand date but never clear it (that would drop the BNSS 187(3) limit)
+        mvc.perform(post("/api/firs/" + fir + "/arrests/" + arrest + "/corrections").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"maxPunishment\":\"life\",\"reason\":\"Fictional: class confirmed\"}")).andExpect(status().isBadRequest())
+                .andExpect(status().reason("A first remand is on record; a correction must restate its date."));
         mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", auth))
+                .andExpect(jsonPath("$[0].produce_by").value(org.hamcrest.Matchers.startsWith("2026-09-12T19:00")))   // 00:30 IST on 13 Sep
+                .andExpect(jsonPath("$[0].remand_after_24_hours").value(false))
                 .andExpect(jsonPath("$[0].chargesheet_last_day").value("2026-12-11"))   // 90 days, 13 Sep is day 1
                 .andExpect(jsonPath("$[0].remand_recorded_by_name").value("SI Asha Rao"));
         // someone outside the case team cannot read the case at all (404), and cannot write to it

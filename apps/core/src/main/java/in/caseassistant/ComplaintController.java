@@ -46,8 +46,9 @@ class ComplaintController {
 
     record Step(@NotBlank String stepId, @Size(max = 2000) String note) {}
 
+    /** A closing outcome, or "preliminary_enquiry" (BNSS 173(3)), which is a step: it needs who permitted it and ends later in an FIR or an outcome. */
     record Outcome(@NotBlank @Pattern(regexp = "ncr|preliminary_enquiry|transferred|no_offence|not_signed_in_time") String outcome,
-                   @NotBlank @Size(min = 10, max = 2000) String reason) {}
+                   @NotBlank @Size(min = 10, max = 2000) String reason, @Size(max = 200) String permittedBy) {}
 
     private final JdbcClient db;
     private final CaseTeam team;
@@ -86,10 +87,12 @@ class ComplaintController {
         if (station == null || !team.canRegisterAt(me, station)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only station staff who register FIRs see its complaints.");
         var out = new ArrayList<Map<String, Object>>();
         for (var r : db.sql("""
-                select id, received_at, mode, informant_name, kind, signed_at, outcome, fir_id from complaint
+                select id, station_id, received_at, mode, informant_name, kind, signed_at, outcome, fir_id, enquiry_at, recorded_by from complaint
                 where station_id = ? and (not ? or outcome is null) order by received_at desc limit 200""").params(station, open).query().listOfRows()) {
             var row = new LinkedHashMap<>(r);
-            boolean withheld = withheld(me, (UUID) r.get("fir_id"));
+            row.remove("recorded_by");
+            enquiry(row, r);
+            boolean withheld = withheld(me, r);
             if (withheld) row.put("informant_name", null);
             row.put("withheld", withheld);
             row.put("steps_overdue", steps((UUID) r.get("id"), r).stream().filter(s -> Boolean.TRUE.equals(s.get("overdue"))).count());
@@ -102,13 +105,17 @@ class ComplaintController {
     Map<String, Object> one(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         var c = open(jwt, id);
         var out = new LinkedHashMap<>(c);
-        boolean withheld = withheld(CaseTeam.user(jwt), (UUID) c.get("fir_id"));
+        boolean withheld = withheld(CaseTeam.user(jwt), c);
         if (withheld) for (String k : new String[] {"informant_name", "informant_contact", "text_original"}) out.put(k, null);
         out.put("withheld", withheld);
+        out.put("versions", withheld ? List.of() : db.sql("""
+                select v.informant_name, v.informant_contact, v.kind, v.text_original, v.text_language, v.replaced_at, u.full_name as replaced_by_name
+                from complaint_version v join app_user u on u.id = v.replaced_by where v.complaint_id = ? order by v.replaced_at""")
+                .param(id).query().listOfRows());
         out.put("kind_label", kinds.get((String) c.get("kind")).label());
         out.put("steps", steps(id, c));
         out.put("sign_by", c.get("mode").equals("electronic") ? ((java.sql.Timestamp) c.get("received_at")).toInstant().plus(E_SIGN_LIMIT) : null);
-        out.put("enquiry_due", "preliminary_enquiry".equals(c.get("outcome")) ? ((java.sql.Timestamp) c.get("outcome_at")).toInstant().plus(ENQUIRY_LIMIT) : null);
+        enquiry(out, c);
         return out;
     }
 
@@ -116,8 +123,13 @@ class ComplaintController {
     @PutMapping("/complaints/{id}")
     @Transactional
     ResponseEntity<Void> correct(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody Correction c) {
-        open(jwt, id);
+        handle(jwt, id);
         requireKind(c.kind);
+        // the wording being replaced is kept (read over and corrected before signing)
+        db.sql("""
+                insert into complaint_version (complaint_id, informant_name, informant_contact, kind, text_original, text_language, replaced_by)
+                select id, informant_name, informant_contact, kind, text_original, text_language, ? from complaint
+                where id = ? and signed_at is null and outcome is null""").params(CaseTeam.user(jwt), id).update();
         if (db.sql("""
                 update complaint set informant_name = ?, informant_contact = ?, kind = ?, text_original = ?, text_language = ?
                 where id = ? and signed_at is null and outcome is null""")
@@ -133,7 +145,7 @@ class ComplaintController {
     @PostMapping("/complaints/{id}/sign")
     @Transactional
     ResponseEntity<Void> sign(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody Sign s) {
-        var c = open(jwt, id);
+        var c = handle(jwt, id);
         if (c.get("signed_at") != null || c.get("outcome") != null) throw new ResponseStatusException(HttpStatus.CONFLICT, "This complaint is already signed or closed.");
         boolean spoken = c.get("mode").equals("oral") || c.get("mode").equals("phone");
         if (spoken && (s.readBackLanguage == null || s.readBackLanguage.isBlank()))
@@ -160,8 +172,17 @@ class ComplaintController {
     @PostMapping("/complaints/{id}/outcome")
     @Transactional
     ResponseEntity<Void> outcome(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody Outcome o) {
-        var c = open(jwt, id);
+        var c = handle(jwt, id);
         if (c.get("outcome") != null) throw new ResponseStatusException(HttpStatus.CONFLICT, "This complaint is already closed.");
+        if (o.outcome.equals("preliminary_enquiry")) {
+            if (c.get("signed_at") == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "The informant has not signed the text yet.");
+            if (c.get("enquiry_at") != null) throw new ResponseStatusException(HttpStatus.CONFLICT, "A preliminary enquiry is already recorded for this complaint.");
+            if (o.permittedBy == null || o.permittedBy.trim().length() < 3)
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name the officer (DSP or above) who permitted the preliminary enquiry (BNSS 173(3)).");
+            db.sql("update complaint set enquiry_permitted_by = ?, enquiry_reason = ?, enquiry_at = clock_timestamp(), enquiry_by = ? where id = ?")
+                    .params(o.permittedBy.trim(), o.reason.trim(), CaseTeam.user(jwt), id).update();
+            return ResponseEntity.noContent().build();
+        }
         if (o.outcome.equals("not_signed_in_time")) {
             if (!c.get("mode").equals("electronic") || c.get("signed_at") != null)
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only unsigned electronic information can lapse.");
@@ -173,6 +194,14 @@ class ComplaintController {
     }
 
     // ---------------------------------------------------------------------------------------------
+
+    /** The complaint for a step that needs its text read: refused to station staff from whom the text is withheld. */
+    private Map<String, Object> handle(Jwt jwt, UUID id) {
+        var c = open(jwt, id);
+        if (withheld(CaseTeam.user(jwt), c))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the officer who wrote it down, the station's supervisors or the case team handle this complaint (BNS 72).");
+        return c;
+    }
 
     /** The complaint, locked for this transaction, or 404 for anyone who may not register FIRs at its station. */
     private Map<String, Object> open(Jwt jwt, UUID id) {
@@ -191,8 +220,21 @@ class ComplaintController {
      * Once an FIR is registered from the complaint it carries the same text (BNSS 173(1)), so on a case that protects the
      * victim's identity (BNS 72) the text, informant and contact are withheld here too from anyone outside the case team.
      */
-    private boolean withheld(UUID me, UUID firId) {
-        return firId != null && team.identityProtected(firId) && !team.includes(me, firId);
+    private boolean withheld(UUID me, Map<String, Object> c) {
+        UUID firId = (UUID) c.get("fir_id");
+        if (firId != null) return team.identityProtected(firId) && !team.includes(me, firId);
+        // before an FIR exists: information about a sexual offence names the victim (BNS 72; Nipun Saxena v Union of
+        // India, 2018), so only the officer who wrote it down and the station's supervisors read it
+        return SEXUAL_OFFENCE.equals(c.get("kind")) && !me.equals(c.get("recorded_by")) && !team.supervisesStation(me, (UUID) c.get("station_id"));
+    }
+
+    static final String SEXUAL_OFFENCE = "sexual_offence";
+
+    /** BNSS 173(3): the 14 days of a preliminary enquiry, counted from the receipt of the information. */
+    private static void enquiry(Map<String, Object> out, Map<String, Object> c) {
+        Instant due = c.get("enquiry_at") == null ? null : ((java.sql.Timestamp) c.get("received_at")).toInstant().plus(ENQUIRY_LIMIT);
+        out.put("enquiry_due", due);
+        out.put("enquiry_overdue", due != null && c.get("outcome") == null && Instant.now().isAfter(due));
     }
 
     /** The golden-hour steps of the complaint's kind: due time (from receipt), done or not, overdue while open. */
