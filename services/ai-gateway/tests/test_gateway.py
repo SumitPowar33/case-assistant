@@ -335,3 +335,30 @@ def test_admin_settings_follow_the_permission_from_the_core_never_the_role_name(
     assert put({"role": "state_admin", "permissions": "admin.manage", "ai_cloud_allowed": True}).status_code == 403
     # a role a state adds that holds admin.manage may set them
     assert put({"role": "state_security_cell", "permissions": ["admin.manage"], "ai_cloud_allowed": True}).status_code == 200
+
+
+def test_a_network_failure_of_the_provider_is_502_and_logged():
+    # regression (weekly review 31 Oct): a timeout escaped as a 500 with no audit row, though case text may have been sent
+    def timeout(req):
+        raise httpx.ConnectTimeout("timed out", request=req)
+    store = Store(":memory:")
+    c = client(store, {"claude": ClaudeProvider("k", mock_client(timeout)), "gemini": GeminiProvider("k"), "fake": FakeProvider()})
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "case_ref": "FIR 9/2026"})
+    assert r.status_code == 502 and "ConnectTimeout" in r.json()["detail"]
+    row = store.audit_rows()[0]
+    assert row["action"] == "ai_error" and row["case_ref"] == "FIR 9/2026" and "ConnectTimeout" in row["detail"]["error"]
+    assert store.verify_chain()
+
+
+def test_only_the_officer_who_asked_decides_on_a_draft_once_and_for_its_own_case(setup):
+    # regression (weekly review 31 Oct): anyone could log a decision on someone else's draft, for any case, many times
+    c, store = setup
+    rid = c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "test@1", "case_ref": "fir-1"}).json()["request_id"]
+    other = client(store, {"fake": FakeProvider()}, role="io", sub="user-other")
+    r = other.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "notice_draft", "case_ref": "fir-1"})
+    assert r.status_code == 404
+    r = c.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "notice_draft", "case_ref": "fir-2"})
+    assert r.status_code == 422
+    assert c.post("/v1/decisions", json={"request_id": rid, "decision": "rejected", "feature": "notice_draft", "case_ref": "fir-1"}).status_code == 200
+    assert c.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "notice_draft", "case_ref": "fir-1"}).status_code == 409
+    assert [r["action"] for r in store.audit_rows()][:2] == ["rejected", "ai_request"]

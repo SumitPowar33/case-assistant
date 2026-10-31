@@ -143,10 +143,11 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
                     "prompt_sha256": hashlib.sha256(f"{system}\n\n{body.prompt}".encode()).hexdigest()}
         try:
             out = providers[provider_name].complete(model=model, system=system, prompt=body.prompt, max_tokens=body.max_tokens)
-        except ProviderError as e:
+        except Exception as e:  # a timeout or a broken answer too: the text may already have left, so it is logged
+            error = str(e) if isinstance(e, ProviderError) else f"{provider_name} could not be reached ({type(e).__name__})"
             store.log(u["sub"], "ai_error", body.feature, body.case_ref,
-                      {"request_id": request_id, "provider": provider_name, "model": model, **versions, "error": str(e)})
-            raise HTTPException(502, str(e))
+                      {"request_id": request_id, "provider": provider_name, "model": model, **versions, "error": error})
+            raise HTTPException(502, error)
         store.log(u["sub"], "ai_request", body.feature, body.case_ref, {
             "request_id": request_id, "provider": out.provider, "model": out.model, **versions,
             "prompt_chars": len(body.prompt), "output_chars": len(out.text),
@@ -159,10 +160,15 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         if body.decision not in {"accepted", "edited", "rejected"}:
             raise HTTPException(422, "decision must be accepted, edited or rejected")
         req = store.find_request(body.request_id)
-        if req is None:
+        # only the officer who asked for the draft decides on it, once, for the case it was drafted for
+        if req is None or req["actor"] != u["sub"]:
             raise HTTPException(404, "no AI request with that id")
         if req["feature"] != body.feature:
             raise HTTPException(422, "feature does not match the AI request")
+        if req["case_ref"] != body.case_ref:
+            raise HTTPException(422, "case does not match the AI request")
+        if store.decided(body.request_id):
+            raise HTTPException(409, "a decision on this AI draft is already logged")
         seq = store.log(u["sub"], body.decision, body.feature, body.case_ref, {"request_id": body.request_id, "note": body.note})
         return {"logged": seq}
 
