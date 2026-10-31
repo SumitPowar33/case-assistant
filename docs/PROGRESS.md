@@ -18,13 +18,39 @@ Done in session 29: front desk, typed intake, read-back and golden-hour checklis
 Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)).
 Done in session 31: speech input at the front desk; module 1 is finished.
 Done in session 32 (31 Oct, 02:05 IST run): upgrade test, web-to-core route contract test, a date-dependent test fixed, more tests for old code. The rest of the MH pack waits for answers (questions 1 and 2 below).
-Done in session 33 (31 Oct, Saturday 21:05 IST run): hard-coded role names replaced by permissions from the packs (web and gateway); bug fixed: the admin screen made every new state admin an all-state admin.
+Done in session 33 (31 Oct, Saturday run at about 14:20 IST): hard-coded role names replaced by permissions from the packs (web and gateway); bug fixed: the admin screen made every new state admin an all-state admin.
+Done in session 34 (31 Oct, on-demand run from 14:34 IST): screen language, part 1 (header, menu, sign-in, password in English + 10 draft translations, kept per officer).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
 
-## 31 Oct 2026, session 33 (scheduled weekend run, Saturday 21:05 IST, Sumit away)
+## 31 Oct 2026, session 34 (on-demand run started by Sumit at 14:34 IST)
+Started from `setup/seed` at d9c201a (nothing newer, no new answers). PostgreSQL was already running. Baseline `scripts/test-all.sh`: all 8 lines PASS. Next item 1 (MH pack) still waits for question 2 of session 33, so I started item 2, "screens in the 10 languages".
+
+Done (screen language, part 1; d059cf5)
+- **Mechanism**: `apps/web/src/i18n.ts` with one catalog per language in `apps/web/src/i18n/*.json` (English base; every catalog has the same keys, a missing key shows English). No new dependency. The header has a **Screen language** list (English plus the 10 languages of `packs/IN/module.json`); each non-English one is labelled "draft translation" in its own language until a native speaker checks it (`REVIEWED` in `i18n.ts`). The page's `lang` attribute follows the choice (screen readers, fonts).
+- **Kept per officer**: new `PUT /api/me/language` stores `ui_language` (the column existed since V1, never used); only a language some installed module offers is accepted (`Modules.languages()`), anything else is 400, no token is 401. `/api/login` and `/api/me` already return it, so the next sign-in starts in it. Before sign-in the choice applies to the sign-in page only.
+- **Translated so far**: header and menu, sign-in page, change-password page (28 texts × 10 languages). All other screens are still English.
+- Tests: `AuthApiTest` (+1: keep, refuse unknown/empty/long/missing, no token), web `i18n.test.ts` (catalog per module language, same keys, nothing empty, each text in its own script, fallback), `App.test.tsx` (+2: choose Marathi, kept on the server, menu and `lang` follow, refusal shown; Hindi on the sign-in page), new browser test `tests/e2e/test_screen_language.py` (choose Marathi, sign out, reload, sign in again: Marathi; `/api/me` says `mr`).
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.1% lines / 92.6% branches, web 99.5% statements / 89.4% branches / 95.2% functions, gateway 96%. No gate raised.
+
+Deliberately skipped / not checked
+- The 10 translations are mine and unchecked; Marathi and Hindi I am fairly sure of, Odia, Punjabi, Bengali, Malayalam less so. Words like FIR, password, sign in are kept as the English loanword in the script (as officers say them); the legal glossary will decide the official terms.
+- Error messages from the server and from `api.ts` ("Wrong username or password." and others) are still English. No database constraint on `ui_language` (checked by the API only). Not looked at in a real browser by eye for font rendering; the browser test only checks the text is there.
+- In the session 33 entry I had written "21:05 IST"; it actually ran at about 14:20 IST. Corrected.
+
+Next
+1. Rest of the MH pack, once question 2 of session 33 is answered.
+2. Screen language, part 2: the FIR list and FIR screen, front desk, then the other screens; server messages; then the legal glossary.
+3. Contract test for field names; API tests on an upgraded dump; accessibility checks (axe).
+4. End-to-end demo case and demo script (with demo stations in MH).
+
+Questions for Sumit
+1. Who can check the screen translations, at least Marathi and Hindi first? Until someone does, every language but English is shown as "draft translation".
+2. Should the screen use English loanwords officers use (एफआयआर, पासवर्ड) or official Hindi/Marathi terms (प्रथम खबर अहवाल, संकेतशब्द)? I used the loanwords.
+
+## 31 Oct 2026, session 33 (scheduled weekend run, Saturday, started about 14:20 IST, Sumit away)
 Started from `setup/seed` at 9523355 (nothing newer). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Built Next item 2 (item 1, the MH pack, still waits for your answer to question 1 of session 32).
 
 Done
