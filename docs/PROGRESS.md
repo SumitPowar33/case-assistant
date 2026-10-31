@@ -23,10 +23,38 @@ Done in session 34 (31 Oct, on-demand run from 14:34 IST): screen language, part
 Done in session 35 (31 Oct, scheduled weekend run from about 16:30 IST): screen language, part 2 (FIR list, FIR screen, front desk and complaint screens, Save button of every form).
 Done in session 36 (31 Oct, on-demand run from 16:50 IST): screen language, part 3 (readiness check, IO assignment, BSA 63(4) certificates).
 Done in session 37 (31 Oct, scheduled weekend run from about 18:00 IST): screen language, part 4 (arrests, chargesheets, closure report); contract test for request field names.
+Done in session 38 (31 Oct, on-demand run from 18:20 IST): screen language, part 5 (notices, FIR, person and evidence forms, action taken); web branch gate raised to 89.
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Screens in the 10 languages, then the legal glossary.
 7. Upgrade test, contract test web-to-core, load and accessibility checks.
 8. End-to-end demo case and demo script.
+
+## 31 Oct 2026, session 38 (on-demand run started by Sumit from the build monitor, about 18:20 IST)
+Started from `setup/seed` at 5c5c800 (session 37, nothing newer, no new answers). PostgreSQL was already running. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 1 (MH pack) still waits for your answer, so I went on with item 2.
+
+Done
+- **Screen language part 5 (e22e32f)**: notices on the case page (list, the 4 BNSS kinds and 3 old CrPC kinds, states, issued/due/AI-drafted/replies lines, received and missing items, the send and reply forms, the new-notice form with its AI draft box and refusals), the FIR registration form, the add-person and add-evidence forms with their refusals, and the action taken on the FIR list and case page (it showed the raw code, e.g. `investigate`). 91 texts × 10 languages.
+- Kept English on purpose: the check stored for a notice without items ("Reply answers the notice fully", stored in the reply record) and the AI prompt (versioned and audit-logged as written; the notice kind in it is the English label whatever the screen language). Tested.
+- **Consistency fix**: my texts of sessions 37 and 38 wrote "FIR" in Latin letters; the earlier screens write it in each script (एफआयआर, এফআইআর ...). All catalogs now use the script form.
+- Tests: `Notices.test.tsx` (+2: Marathi list, reply, AI draft, refusals, English stored check and prompt; Hindi empty-text refusal and a decision that could not be logged), `Forms.test.tsx` (+2: Marathi FIR, person and evidence forms and refusals, codes sent unchanged; Hindi FIR from a complaint and non-station account), `FirList.test.tsx` and `FirDetail.test.tsx` (action taken by its label).
+- **Gate raised (39a5a23)**: web branches 86 to 89 (coverage 91.8%, 3.4 points above the last raise).
+- Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.1% lines / 92.6% branches, web 99.7% statements / 91.8% branches / 95.4% functions, gateway 96%.
+
+Deliberately skipped / not checked
+- The 91 new texts × 10 languages are mine and unchecked. Least sure: "General diary entry" (रोजनामचा / स्टेशन डायरी differ by state), "seizure memo" (Marathi पंचनामा, Malayalam മഹസർ), "default bail".
+- Error messages that come from the server or the AI gateway ("The AI gateway answered 503: ...") stay English inside the translated sentence.
+- Person gender is still free text; "Label" placeholders (A1, E-01) stay as they are.
+- Not looked at by eye in a browser; no new browser test (no new screen; the English texts the browser tests read are unchanged apart from curly quotes in one refusal).
+
+Next
+1. Rest of the MH pack, once question 2 of session 33 is answered.
+2. Screen language part 6: policies, load data, admin, AI settings and typing screens; complaint-kind and step labels per language in the packs; server messages; then the legal glossary.
+3. Contract test for answer field names and gateway bodies; API tests on an upgraded dump; accessibility checks (axe).
+4. End-to-end demo case and demo script (with demo stations in MH).
+
+Questions for Sumit
+1. Open from sessions 35 to 37: who checks the translations (now about 320 texts per language), may `services/ai-gateway/.coverage` leave git, complaint-kind texts per language in the packs, and loanwords for legal terms.
+2. Should "General diary entry" follow each state's own word (रोजनामचा, स्टेशन डायरी, जीडी)? That would make it pack data per state rather than a screen text.
 
 ## 31 Oct 2026, session 37 (scheduled weekend run, Saturday, started about 18:00 IST, Sumit away)
 Started from `setup/seed` at a06d3b1 (session 36, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 1 (MH pack) still waits for your answer, so I built item 2 (screen language part 4, the legal parts first), then used the remaining time on item 3 (the next test from "Not covered yet").
