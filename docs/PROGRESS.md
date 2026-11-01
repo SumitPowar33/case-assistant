@@ -41,12 +41,36 @@ Done in session 48 (1 Nov, Sunday scheduled run, Sumit away): the FIR screen on 
 Done in session 49 (1 Nov, on-demand run from 16:13 IST): AI feature names in the screen language; the run-time contract test with the gateway and with the reads that were empty in the demo (item 7 finished).
 Done in session 50 (1 Nov, Sunday 21:05 scheduled run): mutation testing of the database's keep-as-written and masking rules, with the database tests it showed were missing.
 Done in session 51 (2 Nov, 02:05 IST scheduled run): audit of reads of protected victim details (ARCHITECTURE-TENANCY section 5, item 4), with its screen.
+Done in session 52 (1 Nov 23:35 IST scheduled run, overlapped sessions 50 and 51): a cross-check of session 50's mutation test found 15 untested columns of a signed complaint; tests and the missing kind of change added.
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: offline use when the network drops (waits for question 1 of session 47: what may be kept on a phone); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
+
+## 2 Nov 2026, session 52 (1 Nov 23:35 IST scheduled run, Sumit away; ran alongside sessions 50 and 51)
+Started from `setup/seed` at 4e7c369: session 50 (21:05) was still running and had not pushed yet, so this session took the same item (mutation testing of the database trigger rules) and wrote its own version. At push time sessions 50 and 51 were already on the branch, so I dropped my duplicate script and tests (kept locally only) and used my version as an **independent cross-check** of session 50's: I ran my 243 changes against session 50's tests.
+
+Baseline `scripts/test-all.sh` (fresh sandbox: PostgreSQL started, role and databases created, Python packages and `npm ci` installed): all 8 PASS.
+
+Done
+- **Cross-check found 16 changes session 50's tests did not notice.** Its script never leaves a column out of a kept-as-written comparison, and for the signed complaint (BNSS 173(1)) **15 of its 19 kept columns** were untested: after signing, the language, time of receipt, mode, informant name, kind, station, signature time and officer, the outcome, its time, officer and FIR, and the enquiry's time, officer and permitting DSP could each have been changed without any database test failing. Also the five-minute clock allowance of an arrest time, which session 50 listed as untestable: the transaction's `now()` writes the exact edge. No rule was wrong.
+- **Tests (6661e12)**, in session 50's `apps/core/db-tests/test_kept_rules.py`: every signed field and the signature, every outcome field, the FIR named as the outcome, every enquiry field, each refused alone; the arrest time at exactly five minutes ahead (allowed) and five minutes one second (refused). 
+- **Script (98b0c40)**: `mutate_trigger_sql.py` now also leaves each column out of a `(NEW.a, ...) IS DISTINCT FROM (OLD.a, ...)` comparison (19 changes) and makes the five-minute change (taken off its equivalent list); 361 changes in all with V37. Checked: complaint rules 64 of 64, arrest time 16 of 16, the new read log's trigger 4 of 4; the other functions' changes were all noticed before and only tests were added. `mutate_legal_sql.py`: a view now ends at the first `;` outside quoted text (the deadline view's label has one and cut the view short, so its last two numbers were never changed): 52 of 52; comments are blanked so they are not mutated.
+
+Final `scripts/test-all.sh` (on top of session 51): PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser (all 8). Coverage: core 98.0% lines / 93.0% branches, web 99.8% / 93.7% / 97.2%, gateway 96%; no gate raised (no app code changed).
+
+Deliberately skipped / not checked
+- Not a full 361-change run after the rebase (about 70 minutes); only the functions whose tests or changes are new were rerun.
+- My own version of the script and its other operators (switch a guard off, AND/OR inside conditions) found nothing more than the 16 above, so it was not added.
+- Overlap risk: the 21:05 run took more than 2.5 hours, so this 23:35 run started from an older branch and repeated its item. See question 1.
+
+Next: as session 51 lists (offline waits for the answer; load the people once on the FIR screen; Stryker for the web app; account lifecycle).
+
+Questions for Sumit
+1. Sessions overlap when one runs past the next start (tonight 21:05 and 23:35 did the same item). Should a session push a short "in progress: item X" line to PROGRESS.md at its start, so a later one picks another item? (I can add that to the session prompt's rules if you agree.)
+2. The other open questions are in session 51's entry above.
 
 ## 2 Nov 2026, session 51 (02:05 IST scheduled run, last of the night, Sumit away)
 
