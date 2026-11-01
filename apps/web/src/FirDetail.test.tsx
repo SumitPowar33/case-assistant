@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, test, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { ScreenLangContext } from './i18n'
 import FirDetail from './FirDetail'
 import { setSession } from './api'
@@ -79,4 +79,28 @@ test('in Marathi the case page shows its headings, roles, deadlines and evidence
   expect(await screen.findByText('V1 (पीडित): Victim V1 (ओळख संरक्षित)')).toBeTruthy()
   expect(await screen.findByText(/पीडितेला प्रगतीची माहिती: 2026-12-30 पर्यंत/)).toBeTruthy()
   expect(await screen.findByText(/Phone \(इलेक्ट्रॉनिक\) · अजून न्यायालयासाठी तयार नाही/)).toBeTruthy()
+})
+
+test('on a phone one part of the FIR shows at a time: the picker lists every part and marks only the chosen one as shown', async () => {
+  stub({ '/firs/f1/people': [{ id: 'p1', role: 'accused', label: 'A1', display_name: 'Fictional Accused', age_years: null, identity_masked: false }] })
+  render(<FirDetail id="f1" />)
+  const picker = await screen.findByRole('combobox', { name: 'Show' })
+  expect([...(picker as HTMLSelectElement).options].map((o) => o.text)).toEqual(
+    ['Case details', 'People', 'Arrests', 'Chargesheets', 'Closure report', 'Deadlines', 'Evidence', 'Notices', 'Readiness check'])
+  const partOf = (el: HTMLElement) => el.closest('.fir-part')!
+  const people = await screen.findByText(/A1 \(accused\): Fictional Accused/)
+  expect(partOf(screen.getByText('Fictional complaint words')).classList.contains('shown')).toBe(true)
+  expect(partOf(people).classList.contains('shown')).toBe(false)   // still in the page (a desktop shows it), hidden on a phone
+  fireEvent.change(picker, { target: { value: 'people' } })
+  expect(partOf(people).classList.contains('shown')).toBe(true)
+  expect(partOf(screen.getByText('Fictional complaint words')).classList.contains('shown')).toBe(false)
+  expect(document.querySelectorAll('.fir-part.shown')).toHaveLength(1)
+  expect(document.querySelectorAll('.fir-part')).toHaveLength(9)
+})
+
+test('the part picker is in the screen language', async () => {
+  stub({})
+  render(<ScreenLangContext.Provider value="mr"><FirDetail id="f1" /></ScreenLangContext.Provider>)
+  const picker = await screen.findByRole('combobox', { name: 'दाखवा' })
+  expect((picker as HTMLSelectElement).options[0].text).toBe('प्रकरणाचा तपशील')
 })

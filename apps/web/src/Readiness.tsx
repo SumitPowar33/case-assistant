@@ -96,10 +96,14 @@ export default function Readiness({ firId }: { firId: string }) {
             <li key={g.key}>{g.text}{' '}
               {g.override ? <><small>{t('readiness.acceptedBy', { name: g.override.decidedBy, reason: g.override.reason })}</small>{' '}
                 <Withdraw firId={firId} kind="overrides" id={g.override.id} what={t('readiness.acceptance')} act={act} /></> : (
-                <form className="inline" onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/readiness/overrides`, 'POST', { gapKey: g.key, reason: f.get('reason') }))}>
-                  <label>{t('readiness.reasonAccept')}{' '}<input name="reason" minLength={10} required /></label>{' '}
-                  <button type="submit">{t('readiness.accept')}</button>
-                </form>
+                // folded like Withdraw, so a list of gaps stays short (a phone in the field); the reason is still required
+                <details className="inline">
+                  <summary>{t('readiness.acceptSummary')}</summary>
+                  <form className="inline" onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/readiness/overrides`, 'POST', { gapKey: g.key, reason: f.get('reason') }))}>
+                    <label>{t('readiness.reasonAccept')}{' '}<input name="reason" minLength={10} required /></label>{' '}
+                    <button type="submit">{t('readiness.accept')}</button>
+                  </form>
+                </details>
               )}
             </li>
           ))}</ul>}

@@ -82,6 +82,10 @@ def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page, wi
     api, admin, password = core
     demo = load_demo(api.base, admin, password, tag=f"scripts{width}")   # a case with records, so the FIR screen is full
     screens = SCREENS + (f"#/firs/{demo['fir_id']}", f"#/complaints/{demo['complaint_id']}")
+    fir = f"#/firs/{demo['fir_id']}"
+    views = [(sc, None) for sc in screens]
+    if width < 640:
+        views[screens.index(fir) + 1:screens.index(fir) + 1] = [(fir, i) for i in range(1, 9)]
     page.set_viewport_size({"width": width, "height": 900})
     sign_in(page, f"sho.scripts{width}", demo["accounts"][f"sho.scripts{width}"])
     cdp = page.context.new_cdp_session(page)
@@ -95,8 +99,12 @@ def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page, wi
         expect(page.locator("html")).to_have_attribute("lang", lang)
         catalog = json.loads((ROOT / f"apps/web/src/i18n/{lang}.json").read_text())
         loading = catalog.get("common.loading") or "Loading…"
-        for screen in screens:
-            page.evaluate(f"location.hash = '{screen}'")
+        for screen, part in views:
+            if part is None:
+                page.evaluate(f"location.hash = '{screen}'")
+            else:   # a phone shows one part of the FIR screen at a time (FirDetail.tsx): read each
+                page.locator(".fir-parts select").select_option(index=part)
+                screen = f"{screen} part {part}"
             page.wait_for_load_state("networkidle")
             expect(page.get_by_text(loading, exact=True)).to_have_count(0)   # the screen's data has arrived
             page.evaluate("document.fonts.ready")

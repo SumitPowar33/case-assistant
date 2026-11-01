@@ -8,6 +8,8 @@ from playwright.sync_api import expect
 
 from conftest import ROOT
 
+SHOTS = None   # set to a folder (pathlib.Path) to look at the phone screens by hand
+
 sys.path.insert(0, str(ROOT / "scripts"))
 from demo_case import load_demo  # noqa: E402
 
@@ -67,8 +69,46 @@ def test_an_officer_can_use_the_case_on_a_phone(core, page):
     card.get_by_role("link").click()
     expect(page.get_by_role("main")).to_contain_text("Rs 40,000 went out of my account by UPI")
     check("FIR screen")
-    page.locator("summary").first.click()   # a folded form, open
-    check("FIR screen, form open")
+
+    # the FIR screen shows one part at a time, chosen in one list at the top; every part is short and fits
+    picker = page.get_by_label("Show")
+    parts = picker.locator("option").all_inner_texts()
+    assert parts[0] == "Case details" and len(parts) == 9
+    assert page.locator(".fir-part:visible").count() == 1
+    case_height = page.evaluate("document.documentElement.scrollHeight")
+    for part in parts:
+        picker.select_option(label=part)
+        expect(page.locator(".fir-part.shown")).to_have_count(1)
+        assert page.locator(".fir-part:visible").count() == 1
+        check(f"FIR screen, {part}")
+        if part == "People":
+            page.locator(".fir-part.shown summary").first.click()   # a folded form, open
+            check("FIR screen, People, form open")
+    assert case_height < 2 * 844, f"the first part of the FIR screen is {case_height} px long"
+
+    # the readiness check on a phone: link evidence to an ingredient, then withdraw that link with a reason
+    picker.select_option(label="Readiness check")
+    part = page.locator(".fir-part.shown")
+    links = part.locator("form.inline:has(button:text-is('Link'))")
+    box = links.first.bounding_box()
+    assert box["width"] > 390 * 0.8, "the link controls take their own full-width line"
+    # each gap's reason field is folded behind "Accept this gap" until the officer chooses it, so the list stays short
+    expect(part.locator("summary", has_text="Accept this gap")).not_to_have_count(0)
+    for field in part.get_by_label("Reason to accept this gap").all():
+        expect(field).to_be_hidden()
+    withdraw = part.locator("summary", has_text="Withdraw")
+    before = withdraw.count()
+    links.nth(1).get_by_role("button", name="Link").click()
+    expect(withdraw).to_have_count(before + 1)
+    check("readiness, after linking")
+    withdraw.last.click()
+    check("readiness, withdraw open")
+    # the picker stays at the top of the screen while the officer scrolls a long part
+    page.mouse.wheel(0, 1500)
+    page.wait_for_timeout(200)
+    assert 0 <= page.get_by_label("Show").bounding_box()["y"] < 80
+    if SHOTS:
+        page.screenshot(path=SHOTS / "phone-readiness.png")
 
     for screen in ("#/front-desk", f"#/complaints/{demo['complaint_id']}", "#/type", "#/policies", "#/password"):
         page.evaluate(f"location.hash = '{screen}'")

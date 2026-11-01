@@ -47,7 +47,11 @@ test('accepting a gap sends the reason; a refusal from the server is shown', asy
   const calls = mock((url, init) => url.endsWith('/overrides') && init?.method === 'POST'
     ? { status: 403, body: { message: 'Only the case team can do this.' } } : undefined)
   render(<Readiness firId="f1" />)
-  fireEvent.change(await screen.findByLabelText('Reason to accept this gap'), { target: { value: 'Bank reply due on 30 Oct' } })
+  const reason = await screen.findByLabelText('Reason to accept this gap')
+  expect(reason.closest('details')!.open).toBe(false)   // folded until the officer chooses to accept, so the gap list stays short
+  fireEvent.click(screen.getByText('Accept this gap'))
+  expect(reason.closest('details')!.open).toBe(true)
+  fireEvent.change(reason, { target: { value: 'Bank reply due on 30 Oct' } })
   fireEvent.click(screen.getByRole('button', { name: 'Accept with reason' }))
   expect((await screen.findByRole('alert')).textContent).toBe('Only the case team can do this.')
   expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ gapKey: 'ingredient:cheating/delivery', reason: 'Bank reply due on 30 Oct' })
