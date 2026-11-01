@@ -8,7 +8,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 function mockGateway(chainOk = true) {
   const calls: { url: string; method: string; body?: unknown }[] = []
-  let notice = { label: 'Draft notices', provider: 'claude', model: 'claude-sonnet-5-5', officer_may_switch: true }
+  let notice = { label: 'Draft BNSS 94 notices and follow-up letters', provider: 'claude', model: 'claude-sonnet-5-5', officer_may_switch: true }
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     calls.push({ url, method: init?.method ?? 'GET', body: init?.body && JSON.parse(init.body as string) })
     let body: unknown
@@ -31,11 +31,11 @@ test('admin switches a feature to Gemini and locks it; the gateway default model
   const calls = mockGateway()
   render(<SettingsPage />)
   expect(await screen.findByText(/Audit log check: intact/)).toBeTruthy()
-  fireEvent.change(screen.getByLabelText('Provider for Draft notices'), { target: { value: 'gemini' } })
-  expect((screen.getByLabelText('Model for Draft notices') as HTMLInputElement).placeholder).toBe('gemini-3.7-flash')
-  fireEvent.click(screen.getByLabelText('Officer may switch for Draft notices'))
-  fireEvent.click(screen.getByRole('button', { name: 'Save Draft notices' }))
-  expect(await screen.findByText('Saved: Draft notices now uses gemini / gemini-3.7-flash.')).toBeTruthy()
+  fireEvent.change(screen.getByLabelText('Provider for Draft BNSS 94 notices and follow-up letters'), { target: { value: 'gemini' } })
+  expect((screen.getByLabelText('Model for Draft BNSS 94 notices and follow-up letters') as HTMLInputElement).placeholder).toBe('gemini-3.7-flash')
+  fireEvent.click(screen.getByLabelText('Officer may switch for Draft BNSS 94 notices and follow-up letters'))
+  fireEvent.click(screen.getByRole('button', { name: 'Save Draft BNSS 94 notices and follow-up letters' }))
+  expect(await screen.findByText('Saved: Draft BNSS 94 notices and follow-up letters now uses gemini / gemini-3.7-flash.')).toBeTruthy()
   const put = calls.find((c) => c.method === 'PUT')!
   expect(put.body).toEqual({ provider: 'gemini', model: null, officer_may_switch: false })
 })
@@ -46,23 +46,33 @@ test('a broken audit chain is shown plainly', async () => {
   expect(await screen.findByText(/Audit log check: broken/)).toBeTruthy()
 })
 
-test('in Marathi: headings, the audit check, every control and the saved line; feature labels, providers and models stay as the gateway sends them', async () => {
+test('in Marathi: headings, the audit check, every control and the saved line; the feature names from the screen catalog; providers and models stay as the gateway sends them', async () => {
   const calls = mockGateway()
   render(<ScreenLangContext.Provider value="mr"><SettingsPage /></ScreenLangContext.Provider>)
   expect(await screen.findByRole('heading', { name: 'AI सेटिंग्ज' })).toBeTruthy()
   expect(screen.getByText(/ऑडिट लॉग तपासणी: अबाधित\./)).toBeTruthy()
   expect(screen.getByText(/^फक्त राज्य ॲडमिन बदल जतन करू शकतात\./)).toBeTruthy()
   for (const name of ['सुविधा', 'प्रदाता', 'मॉडेल', 'अधिकारी बदलू शकतात']) expect(screen.getByRole('columnheader', { name })).toBeTruthy()
-  fireEvent.change(screen.getByLabelText('Draft notices साठी प्रदाता'), { target: { value: 'fake' } })
-  fireEvent.change(screen.getByLabelText('Draft notices साठी मॉडेल'), { target: { value: 'fake-1' } })
-  fireEvent.click(screen.getByLabelText('Draft notices साठी अधिकारी बदलू शकतात'))
-  fireEvent.click(screen.getByRole('button', { name: 'Draft notices जतन करा' }))
-  expect(await screen.findByText('जतन केले: Draft notices आता fake / fake-1 वापरते.')).toBeTruthy()
+  fireEvent.change(screen.getByLabelText('BNSS 94 नोटिसा आणि स्मरणपत्रांचा मसुदा साठी प्रदाता'), { target: { value: 'fake' } })
+  fireEvent.change(screen.getByLabelText('BNSS 94 नोटिसा आणि स्मरणपत्रांचा मसुदा साठी मॉडेल'), { target: { value: 'fake-1' } })
+  fireEvent.click(screen.getByLabelText('BNSS 94 नोटिसा आणि स्मरणपत्रांचा मसुदा साठी अधिकारी बदलू शकतात'))
+  fireEvent.click(screen.getByRole('button', { name: 'BNSS 94 नोटिसा आणि स्मरणपत्रांचा मसुदा जतन करा' }))
+  expect(await screen.findByText('जतन केले: BNSS 94 नोटिसा आणि स्मरणपत्रांचा मसुदा आता fake / fake-1 वापरते.')).toBeTruthy()
   expect(calls.find((c) => c.method === 'PUT')!.body).toEqual({ provider: 'fake', model: 'fake-1', officer_may_switch: false })
   cleanup()
   mockGateway(false)
   render(<ScreenLangContext.Provider value="hi"><SettingsPage /></ScreenLangContext.Provider>)
   expect(await screen.findByText('ऑडिट लॉग जाँच: टूटा हुआ। राज्य एडमिन को इसकी सूचना दें।')).toBeTruthy()
+})
+
+test('a feature the screen catalogs do not name yet shows the gateway\'s own label', async () => {
+  mockGateway()
+  const inner = vi.mocked(fetch).getMockImplementation()!
+  vi.mocked(fetch).mockImplementation(async (url, init) => url === '/ai/v1/settings'
+    ? { ok: true, status: 200, json: async () => ({ new_feature: { label: 'Fictional new feature', provider: 'fake', model: 'fake-1', officer_may_switch: false } }) } as Response
+    : inner(url, init))
+  render(<ScreenLangContext.Provider value="mr"><SettingsPage /></ScreenLangContext.Provider>)
+  expect(await screen.findByRole('rowheader', { name: 'Fictional new feature' })).toBeTruthy()
 })
 
 test('a refused save (not the state admin) is shown and nothing is claimed saved', async () => {
@@ -72,7 +82,7 @@ test('a refused save (not the state admin) is shown and nothing is claimed saved
     ? { ok: false, status: 403, json: async () => ({ detail: 'Only an account allowed to manage the installation may change AI settings.' }) }
     : inner(url, init)))
   render(<SettingsPage />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Save Draft notices' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Save Draft BNSS 94 notices and follow-up letters' }))
   expect((await screen.findByRole('alert')).textContent).toMatch(/403|manage the installation/)
   expect(screen.queryByText(/^Saved:/)).toBeNull()
 })

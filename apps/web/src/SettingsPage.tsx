@@ -19,6 +19,9 @@ export default function SettingsPage() {
       .then(([s, f, a]) => { setSettings(s); setFeatures(f); setChainOk(a.chain_ok) }, (e: Error) => setError(e.message))
   }, [])
 
+  // the gateway's label is English; the screen catalogs name each feature (aiFeature.<id>), else the gateway's label shows
+  const name = (feature: string) => { const x = t.code('aiFeature', feature); return x === feature ? settings?.[feature]?.label ?? feature : x }
+
   if (error && !settings) return <p role="alert">{error}</p>
   if (!settings || !features) return <p>{t('common.loading')}</p>
 
@@ -32,7 +35,7 @@ export default function SettingsPage() {
         method: 'PUT', body: { provider: s.provider, model: s.model || null, officer_may_switch: s.officer_may_switch },
       })
       edit(feature, out)
-      setSaved(t('settings.saved', { feature: out.label, provider: out.provider, model: out.model }))
+      setSaved(t('settings.saved', { feature: name(feature), provider: out.provider, model: out.model }))
     } catch (e) {
       setError((e as Error).message)
     }
@@ -51,15 +54,15 @@ export default function SettingsPage() {
         <tbody>
           {Object.entries(settings).map(([f, s]) => (
             <tr key={f}>
-              <th scope="row">{s.label}</th>
+              <th scope="row">{name(f)}</th>
               <td>
-                <select aria-label={t('settings.providerFor', { feature: s.label })} value={s.provider} onChange={(e) => edit(f, { provider: e.target.value, model: '' })}>
+                <select aria-label={t('settings.providerFor', { feature: name(f) })} value={s.provider} onChange={(e) => edit(f, { provider: e.target.value, model: '' })}>
                   {features.providers.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </td>
-              <td><input aria-label={t('settings.modelFor', { feature: s.label })} value={s.model} placeholder={features.default_models[s.provider]} onChange={(e) => edit(f, { model: e.target.value })} /></td>
-              <td><input type="checkbox" aria-label={t('settings.switchFor', { feature: s.label })} checked={s.officer_may_switch} onChange={(e) => edit(f, { officer_may_switch: e.target.checked })} /></td>
-              <td><button type="button" aria-label={t('settings.saveFor', { feature: s.label })} onClick={() => save(f)}>{t('form.save')}</button></td>
+              <td><input aria-label={t('settings.modelFor', { feature: name(f) })} value={s.model} placeholder={features.default_models[s.provider]} onChange={(e) => edit(f, { model: e.target.value })} /></td>
+              <td><input type="checkbox" aria-label={t('settings.switchFor', { feature: name(f) })} checked={s.officer_may_switch} onChange={(e) => edit(f, { officer_may_switch: e.target.checked })} /></td>
+              <td><button type="button" aria-label={t('settings.saveFor', { feature: name(f) })} onClick={() => save(f)}>{t('form.save')}</button></td>
             </tr>
           ))}
         </tbody>
