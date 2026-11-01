@@ -19,16 +19,16 @@ export default function FirList() {
   return (
     <>
     <NewFirForm />
-    {!data.length ? <p>{t('firs.empty')}</p> : <table>
+    {!data.length ? <p>{t('firs.empty')}</p> : <table className="cards">
       <caption>{t('nav.firs')}</caption>
       <thead><tr><th scope="col">{t('firs.colFir')}</th><th scope="col">{t('firs.colRegistered')}</th><th scope="col">{t('firs.colType')}</th><th scope="col">{t('firs.colAction')}</th></tr></thead>
       <tbody>
         {data.map((f) => (
           <tr key={f.id}>
-            <td><a href={`#/firs/${f.id}`}>{f.fir_no}/{f.fir_year}</a></td>
-            <td>{fmt(f.registered_at)}</td>
-            <td>{t(f.is_zero_fir ? 'firs.zero' : 'firs.plain')}{f.sexual_offence ? ` · ${t('firs.sexualOffence')}` : ''}</td>
-            <td>{t.code('action', f.action_taken)}</td>
+            <td data-label={t('firs.colFir')}><a href={`#/firs/${f.id}`}>{f.fir_no}/{f.fir_year}</a></td>
+            <td data-label={t('firs.colRegistered')}>{fmt(f.registered_at)}</td>
+            <td data-label={t('firs.colType')}>{t(f.is_zero_fir ? 'firs.zero' : 'firs.plain')}{f.sexual_offence ? ` · ${t('firs.sexualOffence')}` : ''}</td>
+            <td data-label={t('firs.colAction')}>{t.code('action', f.action_taken)}</td>
           </tr>
         ))}
       </tbody>

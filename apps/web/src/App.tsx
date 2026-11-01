@@ -16,8 +16,9 @@ import { LANGS, TypingContext, type TypingLang } from './typing'
 export default function App() {
   const [hash, setHash] = useState(window.location.hash)
   const [lang, setLang] = useState<TypingLang>('en')
+  const [menuOpen, setMenuOpen] = useState(false)   // phones: the menu and language choices fold away
   useEffect(() => {
-    const on = () => setHash(window.location.hash)
+    const on = () => { setHash(window.location.hash); setMenuOpen(false) }
     window.addEventListener('hashchange', on)
     return () => window.removeEventListener('hashchange', on)
   }, [])
@@ -42,7 +43,9 @@ export default function App() {
     <TypingContext.Provider value={{ lang, setLang }}>
       <header>
         <strong>Case Assistant</strong> <small>{t('app.tagline')}</small>
-        {session && <nav aria-label={t('nav.main')}><a href="#/">{t('nav.firs')}</a>{session.user.station_id && <> <a href="#/front-desk">{t('nav.frontDesk')}</a></>} <a href="#/type">{t('nav.type')}</a> <a href="#/policies">{t('nav.policies')}</a> <a href="#/password">{t('nav.password')}</a>{session.user.can_import && <> <a href="#/import">{t('nav.import')}</a></>}{admin && <> <a href="#/admin">{t('nav.admin')}</a> <a href="#/settings">{t('nav.settings')}</a></>}</nav>}
+        <button type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="header-menu" onClick={() => setMenuOpen(!menuOpen)}>{t('header.menu')}</button>
+        <div id="header-menu" className={menuOpen ? 'header-menu open' : 'header-menu'}>
+        {session && <nav aria-label={t('nav.main')} onClick={() => setMenuOpen(false)}><a href="#/">{t('nav.firs')}</a>{session.user.station_id && <> <a href="#/front-desk">{t('nav.frontDesk')}</a></>} <a href="#/type">{t('nav.type')}</a> <a href="#/policies">{t('nav.policies')}</a> <a href="#/password">{t('nav.password')}</a>{session.user.can_import && <> <a href="#/import">{t('nav.import')}</a></>}{admin && <> <a href="#/admin">{t('nav.admin')}</a> <a href="#/settings">{t('nav.settings')}</a></>}</nav>}
         <label>{t('header.screenLanguage')}{' '}
           <select value={screen} onChange={(e) => void chooseScreen(e.target.value)}>
             {SCREEN_LANGS.map((code) => <option key={code} value={code} lang={code}>
@@ -59,6 +62,7 @@ export default function App() {
         </label>
         {session && <span className="who">{session.user.full_name} ({session.user.rank})
           <button type="button" onClick={() => setSession(null)}>{t('header.signOut')}</button></span>}
+        </div>
       </header>
       <main>{!session ? <LoginPage /> : firId ? <FirDetail id={firId} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : <FirList />}</main>
     </TypingContext.Provider>

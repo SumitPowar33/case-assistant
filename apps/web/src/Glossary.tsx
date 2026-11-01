@@ -27,11 +27,11 @@ export default function Glossary({ onUse }: { onUse: (word: string) => void }) {
             {(Object.keys(LANGS) as Lang[]).map((l) => <option key={l} value={l}>{LANGS[l].label}</option>)}
           </select></label>
           {!shown.length ? <p>{t('gloss.none')}</p> : (
-            <table>
+            <table className="cards">
               <thead><tr><th>{t('gloss.colTerm')}</th><th>{t('gloss.colLaw')}</th><th>{t('gloss.colWord')}</th><th>{t('gloss.colMeaning')}</th><th>{t('gloss.add')}</th></tr></thead>
               <tbody>{shown.map((e) => (
                 <tr key={e.id}>
-                  <td>{e.term}</td><td>{e.law}</td><td lang={lang}>{e.terms[lang]}</td><td>{e.meaning}</td>
+                  <td data-label={t('gloss.colTerm')}>{e.term}</td><td data-label={t('gloss.colLaw')}>{e.law}</td><td data-label={t('gloss.colWord')} lang={lang}>{e.terms[lang]}</td><td data-label={t('gloss.colMeaning')}>{e.meaning}</td>
                   <td><button type="button" aria-label={t('gloss.addWord', { word: e.terms[lang] })} onClick={() => onUse(e.terms[lang])}>{t('gloss.add')}</button></td>
                 </tr>
               ))}</tbody>

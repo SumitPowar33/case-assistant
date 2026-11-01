@@ -56,15 +56,15 @@ export function FrontDeskPage() {
         <label>{t('desk.kind')} <select name="kind" defaultValue="other">{kinds.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}</select></label>
         <TypingField label={t('desk.words')} value={words} onChange={setWords} multiline speech={me?.ai_cloud_allowed === true} />
       </Form>
-      {!data.length ? <p>{t('desk.noOpen')}</p> : <table>
+      {!data.length ? <p>{t('desk.noOpen')}</p> : <table className="cards">
         <caption>{t('desk.openCaption')}</caption>
         <thead><tr><th scope="col">{t('desk.colReceived')}</th><th scope="col">{t('desk.colInformant')}</th><th scope="col">{t('desk.kind')}</th><th scope="col">{t('desk.colState')}</th></tr></thead>
         <tbody>{data.map((c) => (
           <tr key={c.id}>
-            <td><a href={`#/complaints/${c.id}`}>{fmt(c.received_at)}</a></td>
-            <td>{c.withheld ? t('complaint.withheldName') : c.informant_name}</td>
-            <td>{kinds.find((k) => k.id === c.kind)?.label ?? c.kind}</td>
-            <td>{t(c.signed_at ? 'desk.signed' : 'desk.notSigned')}{c.steps_overdue > 0 && <strong> · {c.steps_overdue > 1 ? t('desk.overdueMany', { n: c.steps_overdue }) : t('desk.overdueOne')}</strong>}{c.enquiry_overdue && <strong> · {t('desk.enquiryOverdue')}</strong>}</td>
+            <td data-label={t('desk.colReceived')}><a href={`#/complaints/${c.id}`}>{fmt(c.received_at)}</a></td>
+            <td data-label={t('desk.colInformant')}>{c.withheld ? t('complaint.withheldName') : c.informant_name}</td>
+            <td data-label={t('desk.kind')}>{kinds.find((k) => k.id === c.kind)?.label ?? c.kind}</td>
+            <td data-label={t('desk.colState')}>{t(c.signed_at ? 'desk.signed' : 'desk.notSigned')}{c.steps_overdue > 0 && <strong> · {c.steps_overdue > 1 ? t('desk.overdueMany', { n: c.steps_overdue }) : t('desk.overdueOne')}</strong>}{c.enquiry_overdue && <strong> · {t('desk.enquiryOverdue')}</strong>}</td>
           </tr>
         ))}</tbody>
       </table>}

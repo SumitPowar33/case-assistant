@@ -10,6 +10,7 @@
  "nav.admin": "Admin",
  "nav.settings": "AI settings",
  "header.screenLanguage": "Screen language",
+ "header.menu": "Menu",
  "header.typingLanguage": "Typing language",
  "header.noConversion": "English (no conversion)",
  "header.signOut": "Sign out",

@@ -47,7 +47,7 @@ def sign_in(page, username, password):
     page.get_by_label("Username").fill(username)
     page.get_by_label("Password").fill(password)
     page.get_by_role("button", name="Sign in").click()
-    expect(page.get_by_role("navigation", name="Main")).to_be_visible()
+    expect(page.locator("#header-menu nav")).to_be_attached()   # on a phone the menu is folded away behind "Menu"
 
 
 def load(page, layout, filename, csv, expect_counts):

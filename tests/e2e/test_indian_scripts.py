@@ -41,10 +41,12 @@ MARK = """(range) => {
     window.__wrapped.push(span)
     marked.push(t.textContent.trim().slice(0, 40))
   }
+  // text kept for screen readers only (.visually-hidden, the column heads of a card list on a phone)
+  const hiddenOnPurpose = (el) => { for (let a = el; a && a !== document.body; a = a.parentElement) if (getComputedStyle(a).clip !== 'auto') return true; return false }
   for (const el of document.body.querySelectorAll('*')) {
     const s = getComputedStyle(el)
     if ((s.overflowX === 'hidden' || s.overflowX === 'clip' || s.textOverflow === 'ellipsis') && el.scrollWidth > el.clientWidth + 1
-        && !el.classList.contains('visually-hidden')) clipped.push(el.textContent.trim().slice(0, 40))
+        && !hiddenOnPurpose(el)) clipped.push(el.textContent.trim().slice(0, 40))
   }
   // the innermost elements that reach past the window's right edge: what makes the page too wide
   const wide = [...document.body.querySelectorAll('*')].filter(el => el.getBoundingClientRect().right > innerWidth + 1
@@ -87,6 +89,8 @@ def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page, wi
     cdp.send("CSS.enable")
     problems = []
     for lang, script in SCRIPTS.items():
+        if page.locator(".menu-toggle").is_visible():   # a phone: the language choice is in the folded menu
+            page.locator(".menu-toggle").click()
         page.locator("header select").first.select_option(lang)   # its label is in the language chosen
         expect(page.locator("html")).to_have_attribute("lang", lang)
         catalog = json.loads((ROOT / f"apps/web/src/i18n/{lang}.json").read_text())

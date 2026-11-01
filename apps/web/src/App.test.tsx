@@ -186,3 +186,20 @@ test('before sign-in the chosen screen language is used on the sign-in page', ()
   fireEvent.click(screen.getByRole('button', { name: 'साइन इन करें' }))
   return screen.findByText('गलत यूज़रनेम या पासवर्ड।')
 })
+
+test('on a phone the menu folds behind one button, which says whether it is open and closes when a screen is chosen', async () => {
+  mockApi()
+  render(<App />)
+  const toggle = screen.getByRole('button', { name: 'Menu' })
+  expect(toggle.getAttribute('aria-expanded')).toBe('false')
+  expect(document.getElementById(toggle.getAttribute('aria-controls')!)!.className).toBe('header-menu')
+  fireEvent.click(toggle)
+  expect(toggle.getAttribute('aria-expanded')).toBe('true')
+  expect(document.getElementById('header-menu')!.className).toBe('header-menu open')
+  window.location.hash = '#/type'
+  window.dispatchEvent(new HashChangeEvent('hashchange'))
+  await waitFor(() => expect(toggle.getAttribute('aria-expanded')).toBe('false'))
+  fireEvent.click(toggle)
+  fireEvent.click(screen.getByRole('link', { name: 'Type' }))   // the screen already shown: no hash change, the menu still folds
+  expect(toggle.getAttribute('aria-expanded')).toBe('false')
+})
