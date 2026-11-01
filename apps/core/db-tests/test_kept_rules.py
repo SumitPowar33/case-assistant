@@ -255,3 +255,70 @@ def test_an_open_complaint_goes_to_an_enquiry_then_closes_and_its_contact_may_st
     db.execute(ENQUIRY, ("2026-08-18 11:00+05:30", io, c))
     db.execute("UPDATE complaint SET outcome='no_offence', outcome_reason='Demo: the enquiry found no offence', outcome_at='2026-08-25 12:00+05:30', outcome_by=%s WHERE id=%s", (io, c))
     db.execute("UPDATE complaint SET informant_contact='Demo contact' WHERE id=%s", (c,))
+
+
+def test_an_arrest_time_correction_may_be_five_minutes_ahead_of_the_clock_but_not_more(db):
+    # now() is the time the transaction started, so the same statement can write the exact edge
+    st, io, fir = seed_case(db)
+    ar = _arrest(db, fir, io, "A1")
+    ins = "INSERT INTO arrest_time_correction(arrest_id,arrested_at,reason,recorded_by) VALUES (%s,{},'the device clock was fast',%s)"
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute(ins.format("now() + interval '5 minutes 1 second'"), (ar, io))
+    db.execute(ins.format("now() + interval '5 minutes'"), (ar, io))
+
+
+# ---- a signed complaint keeps every field the informant signed, and the signature, outcome and enquiry are each
+# ---- recorded once (BNSS 173(1)); found by leaving one column out of the trigger's kept-as-written comparison
+
+def _signed_complaint(db):
+    st, io, fir = seed_case(db)
+    db.execute("INSERT INTO police_station(state_code,district_id,name) VALUES ('IN',district_id_of('IN','Demo City'),'Demo Second PS')")
+    db.execute("INSERT INTO app_user(full_name,rank,role,station_id) VALUES ('Demo Clerk','HC','front_desk',%s)", (st,))
+    c = one(db, SIGNED, st, "2026-08-18 10:30+05:30", "written", io, "2026-08-18 10:40+05:30", io, None, None, None, None)[0]
+    return st, io, c
+
+
+CLERK = "(SELECT id FROM app_user WHERE full_name='Demo Clerk')"
+
+
+@pytest.mark.parametrize("change", [
+    "text_original='Changed words'", "text_language='en'", "received_at='2026-08-18 10:20+05:30'", "mode='electronic'",
+    "informant_name='Demo Other'", "kind='theft'", "station_id=(SELECT id FROM police_station WHERE name='Demo Second PS')",
+    "signed_at='2026-08-18 10:50+05:30'", f"signed_recorded_by={CLERK}", "read_back_language='en'",
+])
+def test_a_signed_complaint_keeps_each_signed_field_and_its_signature(db, change):
+    st, io, c = _signed_complaint(db)
+    with pytest.raises(KEPT):
+        db.execute(f"UPDATE complaint SET {change} WHERE id=%s", (c,))
+
+
+@pytest.mark.parametrize("change", [
+    "outcome='no_offence'", "outcome_reason='Demo: another reason entirely'", "outcome_at='2026-08-19 10:00+05:30'", f"outcome_by={CLERK}",
+])
+def test_the_outcome_of_a_complaint_is_recorded_once_field_by_field(db, change):
+    st, io, c = _signed_complaint(db)
+    db.execute("UPDATE complaint SET outcome='ncr', outcome_reason='Demo: non-cognizable, entered in the NCR', outcome_at='2026-08-18 12:00+05:30', outcome_by=%s WHERE id=%s", (io, c))
+    with pytest.raises(KEPT):
+        db.execute(f"UPDATE complaint SET {change} WHERE id=%s", (c,))
+
+
+def test_the_fir_a_complaint_became_is_kept(db):
+    st, io, c = _signed_complaint(db)
+    same = """INSERT INTO fir(station_id,fir_year,fir_no,gd_entry_no,registered_at,information_received_at,contents_original,
+              contents_language,action_taken) VALUES (%s,2026,%s,'GD-18','2026-08-18 11:00+05:30','2026-08-18 10:30+05:30',
+              'Demo information as given','mr','investigate') RETURNING id"""
+    f1, f2 = one(db, same, st, 215)[0], one(db, same, st, 216)[0]
+    db.execute("UPDATE complaint SET outcome='fir', fir_id=%s, outcome_at='2026-08-18 11:00+05:30', outcome_by=%s WHERE id=%s", (f1, io, c))
+    with pytest.raises(KEPT):
+        db.execute("UPDATE complaint SET fir_id=%s WHERE id=%s", (f2, c))
+
+
+@pytest.mark.parametrize("change", [
+    "enquiry_at='2026-08-19 10:00+05:30'", f"enquiry_by={CLERK}", "enquiry_permitted_by='Demo DSP Two'",
+    "enquiry_reason='Demo: another reason entirely'",
+])
+def test_a_preliminary_enquiry_is_recorded_once_field_by_field(db, change):
+    st, io, c = _signed_complaint(db)
+    db.execute(ENQUIRY, ("2026-08-18 11:00+05:30", io, c))
+    with pytest.raises(KEPT):
+        db.execute(f"UPDATE complaint SET {change} WHERE id=%s", (c,))
