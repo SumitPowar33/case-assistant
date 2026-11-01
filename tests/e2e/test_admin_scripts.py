@@ -26,15 +26,15 @@ def admin_web(tmp_path_factory):
     """Core with the demo station and its accounts (so the admin's lists are not empty), the gateway, the web app."""
     secret = secrets.token_urlsafe(48)
     with running_core(DB, secret=secret) as (api, admin, password):
-        load_demo(api.base, admin, password, tag="adminui")
+        demo = load_demo(api.base, admin, password, tag="adminui")
         with running_gateway(api.base, secret, tmp_path_factory.mktemp("gw") / "gateway.sqlite3", "e2e-gateway-admin-ui.log") as gw:
             with serving_web(api.base, gw.base) as web:
-                yield web, admin, password
+                yield web, admin, password, demo
 
 
 @pytest.mark.parametrize("width", (1280, 390))
 def test_the_admin_screens_are_drawn_with_real_glyphs_and_fit(admin_web, width):
-    web, admin, password = admin_web
+    web, admin, password, _ = admin_web
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": width, "height": 900})
