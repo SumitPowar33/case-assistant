@@ -1,4 +1,11 @@
-body { font-family: system-ui, sans-serif; margin: 0; color: #1a1a1a; }
+/* Latin from the system; every Indian script from the app's own fonts (main.tsx), whatever the PC has installed */
+body {
+  font-family: system-ui, 'Noto Sans Devanagari Variable', 'Noto Sans Bengali Variable', 'Noto Sans Gurmukhi Variable',
+    'Noto Sans Gujarati Variable', 'Noto Sans Oriya Variable', 'Noto Sans Tamil Variable', 'Noto Sans Telugu Variable',
+    'Noto Sans Kannada Variable', 'Noto Sans Malayalam Variable', sans-serif;
+  margin: 0; color: #1a1a1a;
+}
+button, input, select, textarea { font-family: inherit; }
 header { display: flex; gap: 1rem; align-items: baseline; padding: .75rem 1rem; background: #12355b; color: #fff; }
 header a { color: #fff; }
 main { max-width: 60rem; margin: 1rem auto; padding: 0 1rem; }
