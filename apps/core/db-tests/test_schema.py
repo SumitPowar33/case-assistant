@@ -11,7 +11,8 @@ import uuid
 import psycopg
 import pytest
 
-MIGRATIONS = sorted((pathlib.Path(__file__).parents[1] / "src/main/resources/db/migration").glob("V*__*.sql"),
+# MIGRATIONS_DIR: only scripts/mutate_legal_sql.py sets it, to run these tests on a changed copy of the migrations
+MIGRATIONS = sorted(pathlib.Path(os.environ.get("MIGRATIONS_DIR") or pathlib.Path(__file__).parents[1] / "src/main/resources/db/migration").glob("V*__*.sql"),
                     key=lambda p: int(p.name[1:].split("__")[0]))
 URL = os.environ.get("DATABASE_URL", "postgresql://caseapp:caseapp@localhost/caseapp_test")
 
@@ -994,3 +995,59 @@ def test_the_fir_list_finds_an_officers_cases_through_an_index(db):
     db.execute("ANALYZE fir")
     plan = "\n".join(r[0] for r in db.execute("EXPLAIN SELECT id FROM fir WHERE io_id = %s OR station_id = ANY(ARRAY[%s]::uuid[])", (io, st)))
     assert "fir_io" in plan and "Seq Scan on fir" not in plan, plan
+
+
+# ---- found by the mutation test of the legal numbers (scripts/mutate_legal_sql.py, 1 Nov 2026): each list and limit
+# ---- at its edges, so a changed number fails a test
+
+@pytest.mark.parametrize("act,section,applies", [
+    ("BNS", "63", False), ("BNS", "64(2)", True), ("BNS", "65(1)", True), ("BNS", "66", True), ("BNS", "67", True),
+    ("BNS", "68", True), ("BNS", "69", False), ("BNS", "70(1)", True), ("BNS", "71", True), ("BNS", "72", False),
+    ("POCSO Act", "3", False), ("POCSO Act", "4", True), ("POCSO Act", "5", False), ("POCSO Act", "6", True), ("POCSO Act", "7", False),
+    ("POCSO Act", "8", True), ("POCSO Act", "9", False), ("POCSO Act", "10", True), ("POCSO Act", "11", False),
+    ("IPC", "375", False), ("IPC", "376", True), ("IPC", "377", False),
+])
+def test_bnss_193_2_two_months_apply_exactly_to_the_listed_sections(db, act, section, applies):
+    # BNSS 193(2): BNS 64 to 68, 70, 71 and POCSO 4, 6, 8, 10 (and the old IPC 376 for FIRs registered under it)
+    st, io, fir = seed_case(db)
+    add_section(db, fir, act, section)
+    assert one(db, "SELECT bnss_193_2_applies(%s)", fir)[0] is applies
+
+
+@pytest.mark.parametrize("act,section,protected", [
+    ("BNS", "63", False), ("BNS", "64(1)", True), ("BNS", "69", True), ("BNS", "71", True), ("BNS", "72", False),
+    ("POCSO Act", "12", True), ("IPC", "375", False), ("IPC", "376(1)", True), ("IPC", "377", False),
+])
+def test_victim_identity_is_protected_for_bns_64_to_71_pocso_and_ipc_376(db, act, section, protected):
+    st, io, fir = seed_case(db)
+    add_section(db, fir, act, section)
+    assert one(db, "SELECT identity_protected_case(%s)", fir)[0] is protected
+
+
+@pytest.mark.parametrize("arrested,due", [("2026-09-12 00:30+05:30", dt.date(2026, 9, 13)), ("2026-09-12 23:30+05:30", dt.date(2026, 9, 13))])
+def test_bnss_58_due_day_is_24_hours_after_the_arrest_at_either_end_of_the_day(db, arrested, due):
+    st, io, fir = seed_case(db)
+    a1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A1','Demo One') RETURNING id", fir)[0]
+    one(db, ARREST.replace("'2026-09-12 00:30+05:30'", f"'{arrested}'"), a1, io, io)
+    assert one(db, "SELECT due_on FROM case_deadline WHERE kind='production_before_magistrate'")[0] == due
+
+
+def test_victim_update_says_earlier_only_when_a_unit_made_it_shorter_than_90_days(db):
+    st, io, fir = seed_case(db)
+    basis = lambda: one(db, "SELECT basis FROM case_deadline WHERE kind='victim_progress_update'")[0]
+    assert basis() == "BNSS 193(3)(ii), 90 days"
+    db.execute("INSERT INTO policy_setting(level,state_code,station_id,key,value,reason,set_by) VALUES ('station','IN',%s,'victim_update_days','89','Fictional order 2 of 2026',%s)", (st, io))
+    assert basis() == "BNSS 193(3)(ii), 90 days; earlier by unit policy: 89 days"
+
+
+def test_an_earlier_custody_of_one_day_counts_one_day(db):
+    # remanded and released the same day: one day already spent in custody (BNSS 187(3) counts it)
+    st, io, fir = seed_case(db)
+    remanded = """INSERT INTO arrest(person_id,arrested_at,place,grounds,informed_name,arresting_officer,max_punishment,
+                  first_remand_on,remand_recorded_by,remand_recorded_at)
+                  VALUES (%s,%s,'Demo place','{proper investigation}','Demo relative',%s,'less_than_10_years',%s,%s,now()) RETURNING id"""
+    a1 = one(db, "INSERT INTO person(fir_id,role,label,full_name) VALUES (%s,'accused','A1','Demo One') RETURNING id", fir)[0]
+    first = one(db, remanded, a1, "2026-09-01 10:00+05:30", io, "2026-09-01", io)[0]
+    db.execute("UPDATE arrest SET released_on='2026-09-01', release_basis='bail', release_recorded_by=%s, release_recorded_at=now() WHERE id=%s", (io, first))
+    second = one(db, remanded, a1, "2026-10-01 10:00+05:30", io, "2026-10-01", io)[0]
+    assert one(db, "SELECT earlier_custody_days(%s), arrest_last_day(%s)", second, second) == (1, dt.date(2026, 11, 28))
