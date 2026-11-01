@@ -28,9 +28,9 @@ def newest(name):
     found = None
     for f in sorted(MIGRATIONS.glob("V*__*.sql"), key=lambda p: int(p.name[1:].split("__")[0])):
         text = f.read_text(encoding="utf-8")
-        for m in re.finditer(r"CREATE (?:OR REPLACE )?(?:FUNCTION|VIEW) " + name + r"\b", text):
+        for m in re.finditer(r"CREATE (?:OR REPLACE )?(FUNCTION|VIEW) " + name + r"\b", text):
             end = text.find("$$;", m.end())
-            end = text.find(";", m.end()) + 1 if end == -1 or name == "case_deadline" else end + 3
+            end = text.find(";", m.end()) + 1 if end == -1 or m[1] == "VIEW" else end + 3
             found = (f, m.start(), end)
     return found
 
