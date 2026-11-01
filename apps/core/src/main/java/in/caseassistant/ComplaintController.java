@@ -85,17 +85,25 @@ class ComplaintController {
         UUID me = CaseTeam.user(jwt);
         UUID station = db.sql("select station_id from app_user where id = ?").param(me).query(UUID.class).optional().orElse(null);
         if (station == null || !team.canRegisterAt(me, station)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only station staff who register FIRs see its complaints.");
+        // a fixed number of queries for up to 200 rows (not two or three per complaint): withheld and the steps done are
+        // read with the list, by the same rules as one complaint (withheld, steps)
+        var rows = db.sql("""
+                select c.id, c.station_id, c.received_at, c.mode, c.informant_name, c.kind, c.signed_at, c.outcome, c.fir_id, c.enquiry_at,
+                  case when c.fir_id is not null then identity_protected_case(c.fir_id) and not %s
+                       else c.kind = ? and c.recorded_by <> ? and not ? end as withheld
+                from complaint c where c.station_id = ? and (not ? or c.outcome is null) order by c.received_at desc limit 200"""
+                .formatted(team.includesSql("c.fir_id")))
+                .params(me, SEXUAL_OFFENCE, me, team.supervisesStation(me, station), station, open).query().listOfRows();
+        var done = new HashMap<UUID, List<Map<String, Object>>>();
+        if (!rows.isEmpty())
+            db.sql("select complaint_id, step_id from complaint_step where complaint_id = any(?)").param(rows.stream().map(r -> r.get("id")).toArray(UUID[]::new))
+                    .query().listOfRows().forEach(d -> done.computeIfAbsent((UUID) d.get("complaint_id"), k -> new ArrayList<>()).add(d));
         var out = new ArrayList<Map<String, Object>>();
-        for (var r : db.sql("""
-                select id, station_id, received_at, mode, informant_name, kind, signed_at, outcome, fir_id, enquiry_at, recorded_by from complaint
-                where station_id = ? and (not ? or outcome is null) order by received_at desc limit 200""").params(station, open).query().listOfRows()) {
+        for (var r : rows) {
             var row = new LinkedHashMap<>(r);
-            row.remove("recorded_by");
             enquiry(row, r);
-            boolean withheld = withheld(me, r);
-            if (withheld) row.put("informant_name", null);
-            row.put("withheld", withheld);
-            row.put("steps_overdue", steps((UUID) r.get("id"), r).stream().filter(s -> Boolean.TRUE.equals(s.get("overdue"))).count());
+            if (Boolean.TRUE.equals(r.get("withheld"))) row.put("informant_name", null);
+            row.put("steps_overdue", steps(r, done.getOrDefault((UUID) r.get("id"), List.of())).stream().filter(s -> Boolean.TRUE.equals(s.get("overdue"))).count());
             out.add(row);
         }
         return out;
@@ -113,7 +121,8 @@ class ComplaintController {
                 from complaint_version v join app_user u on u.id = v.replaced_by where v.complaint_id = ? order by v.replaced_at""")
                 .param(id).query().listOfRows());
         out.put("kind_label", kinds.get((String) c.get("kind")).label());
-        out.put("steps", steps(id, c));
+        out.put("steps", steps(c, db.sql("select d.step_id, d.done_at, d.note, u.full_name as done_by_name from complaint_step d join app_user u on u.id = d.done_by where d.complaint_id = ?")
+                .param(id).query().listOfRows()));
         out.put("sign_by", c.get("mode").equals("electronic") ? ((java.sql.Timestamp) c.get("received_at")).toInstant().plus(E_SIGN_LIMIT) : null);
         enquiry(out, c);
         return out;
@@ -237,11 +246,10 @@ class ComplaintController {
         out.put("enquiry_overdue", due != null && c.get("outcome") == null && Instant.now().isAfter(due));
     }
 
-    /** The golden-hour steps of the complaint's kind: due time (from receipt), done or not, overdue while open. */
-    private List<Map<String, Object>> steps(UUID id, Map<String, Object> c) {
+    /** The golden-hour steps of the complaint's kind (with the steps recorded for it): due time (from receipt), done or not, overdue while open. */
+    private List<Map<String, Object>> steps(Map<String, Object> c, List<Map<String, Object>> recorded) {
         var done = new HashMap<String, Map<String, Object>>();
-        db.sql("select d.step_id, d.done_at, d.note, u.full_name as done_by_name from complaint_step d join app_user u on u.id = d.done_by where d.complaint_id = ?")
-                .param(id).query().listOfRows().forEach(r -> done.put((String) r.get("step_id"), r));
+        recorded.forEach(r -> done.put((String) r.get("step_id"), r));
         Instant received = ((java.sql.Timestamp) c.get("received_at")).toInstant();
         var out = new ArrayList<Map<String, Object>>();
         for (var s : kinds.get((String) c.get("kind")).steps()) {

@@ -42,13 +42,17 @@ class CaseTeam {
     }
 
     boolean includes(UUID userId, UUID firId) {
-        return userId != null && db.sql("""
-                select exists (select 1 from app_user u
-                  join fir f on f.id = ?
+        return userId != null && db.sql("select " + includesSql("?")).params(firId, userId).query(Boolean.class).single();
+    }
+
+    /** SQL test (one ? = user id) that the user is on the case team of the FIR whose id is the SQL expression {@code firId}. */
+    String includesSql(String firId) {
+        return """
+                exists (select 1 from app_user u
+                  join fir f on f.id = %s
                   join police_station fs on fs.id = f.station_id
                   left join police_station us on us.id = u.station_id
-                  where u.id = ? and u.active and (f.io_id = u.id or %s))""".formatted(stationOrDistrict))
-                .params(firId, userId).query(Boolean.class).single();
+                  where u.id = ? and u.active and (f.io_id = u.id or %s))""".formatted(firId, stationOrDistrict);
     }
 
     /** 403 unless the user is on the case team. An unknown FIR also gives 403, so it reveals nothing. */

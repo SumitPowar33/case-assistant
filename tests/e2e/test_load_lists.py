@@ -1,7 +1,8 @@
 """Load test of the FIR list (TESTING.md, "Not covered yet" 4): the real core jar on its own throwaway database with
 150,000 FIRs in 150 stations. Every kind of account gets its first page and a deep page quickly, and only its own FIRs.
 Before 1 Nov 2026 the list checked every FIR of the installation for every call: an SP's page took 8 s at 210,000 FIRs,
-an SHO's 0.7 s. All data is fictional."""
+an SHO's 0.7 s. The front-desk complaint list (200 of 30,000 complaints) asked 2 or 3 queries per row until 1 Nov 2026
+(session 45); ComplaintListQueriesApiTest counts them. All data is fictional."""
 import time
 
 import psycopg
@@ -13,7 +14,7 @@ DB = "caseapp_load"
 LIMIT_SECONDS = 0.3   # best of three calls, HTTP included; today a few milliseconds
 
 
-def test_the_fir_list_stays_fast_and_bounded_with_150000_firs():
+def test_the_fir_and_complaint_lists_stay_fast_and_bounded_with_150000_firs():
     with running_core(DB) as core:
         api = core[0]
         accounts = setup_station(core, "load", roles=("sho", "sp", "front_desk", "io"))
@@ -45,3 +46,24 @@ def test_the_fir_list_stays_fast_and_bounded_with_150000_firs():
                 assert best < LIMIT_SECONDS, f"{username} offset {offset}: {best:.3f} s"
             status, last = api.call("GET", f"/api/firs?limit=51&offset={total}", token=token)
             assert status == 200 and last == [], (username, "nothing past the officer's own FIRs")
+
+        # the front-desk complaint list: 30,000 complaints of a busy station over years, 200 shown, with golden-hour steps
+        with psycopg.connect(dbname=DB, autocommit=True, **PG) as c:
+            desk = c.execute("SELECT id FROM app_user WHERE username = 'front_desk.load'").fetchone()[0]
+            c.execute("""INSERT INTO complaint(station_id,received_at,mode,informant_name,kind,text_original,text_language,recorded_by)
+                         SELECT %s, now() - make_interval(mins => g), 'written', 'Fictional informant '||g,
+                           (array['cyber_financial_fraud','sexual_offence','other'])[1 + g %% 3], 'Fictional information', 'en', %s
+                         FROM generate_series(1,30000) g""", (own[0], desk))
+            c.execute("""INSERT INTO complaint_step(complaint_id,step_id,done_at,done_by)
+                         SELECT id, 'report_1930', now(), %s FROM complaint WHERE kind = 'cyber_financial_fraud'""", (desk,))
+            c.execute("ANALYZE")
+        for username in ("front_desk.load", "sho.load"):
+            token = api.token(username, accounts[username])
+            best = None
+            for _ in range(3):
+                start = time.perf_counter()
+                status, rows = api.call("GET", "/api/complaints", token=token)
+                took = time.perf_counter() - start
+                assert status == 200 and len(rows) == 200, (username, status)
+                best = took if best is None else min(best, took)
+            assert best < LIMIT_SECONDS, f"{username} complaint list: {best:.3f} s"
