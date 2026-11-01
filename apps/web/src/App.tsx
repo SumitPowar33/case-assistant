@@ -7,6 +7,7 @@ import PasswordPage from './PasswordPage'
 import AdminPage from './AdminPage'
 import ImportPage from './ImportPage'
 import PoliciesPage from './PoliciesPage'
+import ReadsPage from './ReadsPage'
 import LoginPage from './LoginPage'
 import { ComplaintPage, FrontDeskPage } from './FrontDesk'
 import { currentSession, onSessionChange, setMessageLanguage, setScreenLanguage, setSession } from './api'
@@ -26,6 +27,7 @@ export default function App() {
   const firId = /^#\/firs\/([\w-]+)$/.exec(hash)?.[1]
   const complaintId = /^#\/complaints\/([\w-]+)$/.exec(hash)?.[1]
   const admin = session?.user.permissions?.includes('admin.manage') ?? false
+  const auditor = session?.user.permissions?.includes('audit.read_protected') ?? false
   // the signed-in user's screen language (kept on the server); before sign-in, the one chosen on this page
   const [chosen, setChosen] = useState('en')
   const [langError, setLangError] = useState('')
@@ -45,7 +47,7 @@ export default function App() {
         <strong>Case Assistant</strong> <small>{t('app.tagline')}</small>
         <button type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="header-menu" onClick={() => setMenuOpen(!menuOpen)}>{t('header.menu')}</button>
         <div id="header-menu" className={menuOpen ? 'header-menu open' : 'header-menu'}>
-        {session && <nav aria-label={t('nav.main')} onClick={() => setMenuOpen(false)}><a href="#/">{t('nav.firs')}</a>{session.user.station_id && <> <a href="#/front-desk">{t('nav.frontDesk')}</a></>} <a href="#/type">{t('nav.type')}</a> <a href="#/policies">{t('nav.policies')}</a> <a href="#/password">{t('nav.password')}</a>{session.user.can_import && <> <a href="#/import">{t('nav.import')}</a></>}{admin && <> <a href="#/admin">{t('nav.admin')}</a> <a href="#/settings">{t('nav.settings')}</a></>}</nav>}
+        {session && <nav aria-label={t('nav.main')} onClick={() => setMenuOpen(false)}><a href="#/">{t('nav.firs')}</a>{session.user.station_id && <> <a href="#/front-desk">{t('nav.frontDesk')}</a></>} <a href="#/type">{t('nav.type')}</a> <a href="#/policies">{t('nav.policies')}</a> <a href="#/password">{t('nav.password')}</a>{session.user.can_import && <> <a href="#/import">{t('nav.import')}</a></>}{auditor && <> <a href="#/reads">{t('nav.reads')}</a></>}{admin && <> <a href="#/admin">{t('nav.admin')}</a> <a href="#/settings">{t('nav.settings')}</a></>}</nav>}
         <label>{t('header.screenLanguage')}{' '}
           <select value={screen} onChange={(e) => void chooseScreen(e.target.value)}>
             {SCREEN_LANGS.map((code) => <option key={code} value={code} lang={code}>
@@ -64,7 +66,7 @@ export default function App() {
           <button type="button" onClick={() => setSession(null)}>{t('header.signOut')}</button></span>}
         </div>
       </header>
-      <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : <FirList />}</main>
+      <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : <FirList />}</main>
     </TypingContext.Provider>
     </ScreenLangContext.Provider>
   )

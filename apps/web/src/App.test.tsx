@@ -143,6 +143,20 @@ test('the Admin menu follows the permission admin.manage, not the role name', ()
   expect(nav().getByRole('link', { name: 'Admin' })).toBeTruthy()
 })
 
+test('the Protected reads link follows the permission audit.read_protected, not the role name', async () => {
+  mockApi()
+  const { unmount } = render(<App />)
+  const nav = () => within(screen.getByRole('navigation', { name: 'Main' }))
+  expect(nav().queryByRole('link', { name: 'Protected reads' })).toBeNull()
+  unmount()
+  Object.assign(routes, { '/api/stations': [] })
+  setSession({ ...io, user: { ...io.user, role: 'district_cell', permissions: ['audit.read_protected'] } })
+  window.location.hash = '#/reads'
+  render(<App />)
+  expect(nav().getByRole('link', { name: 'Protected reads' }).getAttribute('href')).toBe('#/reads')
+  expect(await screen.findByRole('heading', { name: 'Who read protected victim details' })).toBeTruthy()
+})
+
 test.each(['#/front-desk', '#/policies', '#/password', '#/import', '#/admin', '#/settings', '#/complaints/c1'])('the page at %s opens and a sign-out leaves the login screen', async (hash) => {
   mockApi()
   setSession(admin)

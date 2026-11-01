@@ -9,6 +9,7 @@ import FirList from './FirList'
 import FirDetail from './FirDetail'
 import { ComplaintPage, FrontDeskPage } from './FrontDesk'
 import TypePage from './TypePage'
+import ReadsPage from './ReadsPage'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -20,6 +21,8 @@ const data: Record<string, unknown> = {
   '/complaints/c1': { id: 'c1', received_at: '2026-10-30T04:30:00Z', mode: 'written', informant_name: 'Fictional Informant', informant_contact: null, kind: 'other', kind_label: 'Other information',
     withheld: false, text_original: 'Fictional words.', text_language: 'en', recorded_by_name: 'HC Fictional', read_back_language: null, signed_at: null, signed_by_name: null,
     outcome: null, outcome_reason: null, fir_id: null, fir_no: null, fir_year: null, sign_by: null, enquiry_due: null, steps: [] },
+  '/stations': [{ id: 's1', district: 'Fictional District', name: 'Fictional PS' }],
+  '/protected-reads': [{ id: 'r1', at: '2026-11-01T04:30:00Z', what: 'people', fir_id: 'f1', fir_ref: '2026/9', complaint_id: null, reader_name: 'SI Fictional', reader_rank: 'SI', reader_username: 'si.fictional' }],
   '/glossary': { status: 'draft', entries: [{ id: 'remand', term: 'Remand', law: 'BNSS 187', meaning: 'Custody ordered by a Magistrate.', terms: { hi: 'रिमांड' } }] },
 }
 beforeEach(() => {
@@ -40,6 +43,7 @@ test.each([
   ['front desk', () => <FrontDeskPage />, 'Take a complaint'],
   ['complaint', () => <ComplaintPage id="c1" />, 'Fictional words.'],
   ['language tool and glossary', () => <TypePage />, 'BNSS 187'],
+  ['protected reads', () => <ReadsPage />, 'People of the case'],
 ])('the %s screen has no accessibility faults axe can see', async (_name, screenOf, ready) => {
   render(screenOf())
   await screen.findAllByText(new RegExp(ready.replace(/[()/.]/g, '\\$&')))

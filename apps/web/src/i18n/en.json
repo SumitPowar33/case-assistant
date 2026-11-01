@@ -694,5 +694,22 @@
  "gloss.colMeaning": "Meaning (English)",
  "gloss.add": "Add",
  "gloss.addWord": "Add {word} to the text",
- "gloss.none": "No term matches."
+ "gloss.none": "No term matches.",
+ "nav.reads": "Protected reads",
+ "reads.title": "Who read protected victim details",
+ "reads.intro": "Each time the real name, phone or address of a protected victim (BNS 72, POCSO 23), or the complaint text that names them, is shown to someone, it is kept here. Nobody can change or remove these lines.",
+ "reads.caption": "Reads at this police station, newest first",
+ "reads.colWhen": "When",
+ "reads.colWho": "Who",
+ "reads.colWhat": "What was shown",
+ "reads.colCase": "Case",
+ "reads.what.people": "People of the case",
+ "reads.what.fir_text": "FIR text",
+ "reads.what.complaint": "Complaint opened",
+ "reads.what.complaint_list": "Informant's name in the complaint list",
+ "reads.fir": "FIR {ref}",
+ "reads.complaint": "Complaint",
+ "reads.none": "No reads of protected details at this police station.",
+ "reads.newer": "Newer",
+ "reads.older": "Older"
 }
