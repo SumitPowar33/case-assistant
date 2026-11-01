@@ -166,6 +166,15 @@ def test_only_supervising_roles_and_the_state_admin_may_load_records():
     assert {c for c, r in roles.items() if "import.run" in r["permissions"]} == {"sho", "sp", "state_admin"}
 
 
+def test_only_supervisors_see_who_read_protected_victim_details():
+    """The read log of protected details is for those above the readers: the SHO, the SP and the state admin, never an
+    IO, the front desk or the malkhana; and a role that audits must have a reach (a case scope, or admin of its state)."""
+    roles = json.loads((ROOT / "IN/roles.json").read_text(encoding="utf-8"))["roles"]
+    auditors = {c for c, r in roles.items() if "audit.read_protected" in r["permissions"]}
+    assert auditors == {"sho", "sp", "state_admin"}
+    assert all(roles[c]["case_scope"] != "none" or "admin.manage" in roles[c]["permissions"] for c in auditors)
+
+
 PACK_DIRS = sorted(p for p in ROOT.iterdir() if p.is_dir() and p.name not in {"tests", "__pycache__"})
 
 

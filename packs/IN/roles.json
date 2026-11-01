@@ -7,7 +7,8 @@
     "evidence.custody": "Hold and hand over evidence of the user's station (malkhana)",
     "admin.manage": "Manage accounts and stations (inside the admin's own state)",
     "policy.set": "Tighten the policies of the user's own unit (station or district, by the role's case_scope)",
-    "import.run": "Load existing records from a file for a police station in the user's reach (station, district or state, by the role)"
+    "import.run": "Load existing records from a file for a police station in the user's reach (station, district or state, by the role)",
+    "audit.read_protected": "See who read protected victim details (BNS 72) at a police station in the user's reach (station, district or state, by the role)"
   },
   "roles": {
     "io": {
@@ -36,7 +37,8 @@
         "fir.register",
         "case.lead",
         "policy.set",
-        "import.run"
+        "import.run",
+        "audit.read_protected"
       ]
     },
     "sp": {
@@ -45,7 +47,8 @@
       "case_scope": "district",
       "permissions": [
         "policy.set",
-        "import.run"
+        "import.run",
+        "audit.read_protected"
       ]
     },
     "malkhana": {
@@ -68,7 +71,8 @@
       "case_scope": "none",
       "permissions": [
         "admin.manage",
-        "import.run"
+        "import.run",
+        "audit.read_protected"
       ]
     }
   }

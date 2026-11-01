@@ -34,10 +34,12 @@ class FirController {
 
     private final JdbcClient db;
     private final CaseTeam team;
+    private final ProtectedReads reads;
 
-    FirController(JdbcClient db, CaseTeam team) {
+    FirController(JdbcClient db, CaseTeam team, ProtectedReads reads) {
         this.db = db;
         this.team = team;
+        this.reads = reads;
     }
 
     @GetMapping
@@ -50,15 +52,17 @@ class FirController {
                 .params(CaseTeam.user(jwt), CaseTeam.user(jwt), limit, offset).query().listOfRows();
     }
 
-    /** The complaint text names the victim, so it is withheld from anyone outside the case team on protected cases. */
+    /** The complaint text names the victim, so it is withheld from anyone outside the case team on protected cases; the team's reads are logged. */
     @GetMapping("/{id}")
     Map<String, Object> one(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
         if (!team.canReadFir(CaseTeam.user(jwt), id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         var fir = db.sql("select * from fir where id = ?").param(id).query().listOfRows().stream().findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         var out = new java.util.LinkedHashMap<>(fir);
-        boolean withheld = team.identityProtected(id) && !team.includes(CaseTeam.user(jwt), id);
+        boolean protectedCase = team.identityProtected(id);
+        boolean withheld = protectedCase && !team.includes(CaseTeam.user(jwt), id);
         if (withheld) out.put("contents_original", null);
+        else if (protectedCase) reads.fir(CaseTeam.user(jwt), id, "fir_text");
         out.put("contents_withheld", withheld);
         out.put("io_name", fir.get("io_id") == null ? null
                 : db.sql("select full_name from app_user where id = ?").param(fir.get("io_id")).query(String.class).single());

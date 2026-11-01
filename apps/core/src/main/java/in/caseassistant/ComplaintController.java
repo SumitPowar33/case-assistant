@@ -52,12 +52,14 @@ class ComplaintController {
 
     private final JdbcClient db;
     private final CaseTeam team;
+    private final ProtectedReads reads;
     private final ComplaintKinds kinds;
 
-    ComplaintController(JdbcClient db, CaseTeam team, ComplaintKinds kinds) {
+    ComplaintController(JdbcClient db, CaseTeam team, ComplaintKinds kinds, ProtectedReads reads) {
         this.db = db;
         this.team = team;
         this.kinds = kinds;
+        this.reads = reads;
     }
 
     @GetMapping("/complaint-kinds")
@@ -90,10 +92,14 @@ class ComplaintController {
         var rows = db.sql("""
                 select c.id, c.station_id, c.received_at, c.mode, c.informant_name, c.kind, c.signed_at, c.outcome, c.fir_id, c.enquiry_at,
                   case when c.fir_id is not null then identity_protected_case(c.fir_id) and not %s
-                       else c.kind = ? and c.recorded_by <> ? and not ? end as withheld
+                       else c.kind = ? and c.recorded_by <> ? and not ? end as withheld,
+                  case when c.fir_id is not null then identity_protected_case(c.fir_id) else c.kind = ? end as protected
                 from complaint c where c.station_id = ? and (not ? or c.outcome is null) order by c.received_at desc limit 200"""
                 .formatted(team.includesSql("c.fir_id")))
-                .params(me, SEXUAL_OFFENCE, me, team.supervisesStation(me, station), station, open).query().listOfRows();
+                .params(me, SEXUAL_OFFENCE, me, team.supervisesStation(me, station), SEXUAL_OFFENCE, station, open).query().listOfRows();
+        // the informant's name of a protected complaint is shown to those who may read it: logged before it is sent
+        reads.complaints(me, rows.stream().filter(r -> Boolean.TRUE.equals(r.get("protected")) && !Boolean.TRUE.equals(r.get("withheld")))
+                .map(r -> (UUID) r.get("id")).toList(), "complaint_list");
         var done = new HashMap<UUID, List<Map<String, Object>>>();
         if (!rows.isEmpty())
             db.sql("select complaint_id, step_id from complaint_step where complaint_id = any(?)").param(rows.stream().map(r -> r.get("id")).toArray(UUID[]::new))
@@ -102,6 +108,7 @@ class ComplaintController {
         for (var r : rows) {
             var row = new LinkedHashMap<>(r);
             enquiry(row, r);
+            row.remove("protected");
             if (Boolean.TRUE.equals(r.get("withheld"))) row.put("informant_name", null);
             row.put("steps_overdue", steps(r, done.getOrDefault((UUID) r.get("id"), List.of())).stream().filter(s -> Boolean.TRUE.equals(s.get("overdue"))).count());
             out.add(row);
@@ -115,6 +122,7 @@ class ComplaintController {
         var out = new LinkedHashMap<>(c);
         boolean withheld = withheld(CaseTeam.user(jwt), c);
         if (withheld) for (String k : new String[] {"informant_name", "informant_contact", "text_original"}) out.put(k, null);
+        else if (isProtected(c)) reads.complaints(CaseTeam.user(jwt), List.of(id), "complaint");
         out.put("withheld", withheld);
         out.put("versions", withheld ? List.of() : db.sql("""
                 select v.informant_name, v.informant_contact, v.kind, v.text_original, v.text_language, v.replaced_at, u.full_name as replaced_by_name
@@ -232,9 +240,16 @@ class ComplaintController {
     private boolean withheld(UUID me, Map<String, Object> c) {
         UUID firId = (UUID) c.get("fir_id");
         if (firId != null) return team.identityProtected(firId) && !team.includes(me, firId);
+        return isProtected(c) && !me.equals(c.get("recorded_by")) && !team.supervisesStation(me, (UUID) c.get("station_id"));
+    }
+
+    /** The complaint names a protected victim: its FIR protects the victim's identity, or before an FIR it is about a sexual offence. */
+    private boolean isProtected(Map<String, Object> c) {
+        UUID firId = (UUID) c.get("fir_id");
+        if (firId != null) return team.identityProtected(firId);
         // before an FIR exists: information about a sexual offence names the victim (BNS 72; Nipun Saxena v Union of
         // India, 2018), so only the officer who wrote it down and the station's supervisors read it
-        return SEXUAL_OFFENCE.equals(c.get("kind")) && !me.equals(c.get("recorded_by")) && !team.supervisesStation(me, (UUID) c.get("station_id"));
+        return SEXUAL_OFFENCE.equals(c.get("kind"));
     }
 
     static final String SEXUAL_OFFENCE = "sexual_offence";
