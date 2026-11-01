@@ -39,12 +39,34 @@ Done in session 46 (1 Nov, on-demand run from 13:01 IST): screens fit a phone, r
 Done in session 47 (1 Nov, Sumit answered live): the app on a phone (menu, touch sizes, card lists).
 Done in session 48 (1 Nov, Sunday scheduled run, Sumit away): the FIR screen on a phone one part at a time, the readiness check's controls on a phone, the rendering test on the admin, settings and load-data screens.
 Done in session 49 (1 Nov, on-demand run from 16:13 IST): AI feature names in the screen language; the run-time contract test with the gateway and with the reads that were empty in the demo (item 7 finished).
+Done in session 50 (1 Nov, Sunday 21:05 scheduled run): mutation testing of the database's keep-as-written and masking rules, with the database tests it showed were missing.
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: offline use when the network drops (waits for question 1 of session 47: what may be kept on a phone); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
+
+## 1 Nov 2026, session 50 (Sunday 21:05 scheduled run, Sumit away)
+Started from `setup/seed` at 4e7c369 (session 49, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. The weekly review of this week was done on Saturday (session 41), so no review tonight. Item 9 (offline) and items 3 and 6 wait for answers, so I took the next item that needs none from session 49's "Next": mutation testing of the database trigger rules (privacy and keep-as-written, the hardest of the two).
+
+Done
+- **`scripts/mutate_trigger_sql.py`** (monthly, not in `test-all.sh`, like `mutate_legal_sql.py`): in the newest definition of every trigger function still used by a trigger, plus `person_masked`, the `person_public` view, `certificate_correction_matches` and `chargesheet_filed_for`, it takes out one refusal (RAISE EXCEPTION), turns one comparison or test round, takes one name out of a list ('victim', 'complainant'), makes a CASE WHEN of the masking view never apply, or drops a trigger or one of its events; runs `apps/core/db-tests` on each copy (2 jobs). Changes that make the migrations fail to apply are counted apart, not as noticed. `--again REPORT` reruns only an earlier run's survivors. Three equivalent changes are listed in the script with the reason. `mutate_legal_sql.py` now tells a view from a function by its CREATE line instead of by name (same 50 changes).
+- **First run: 284 of 339 changes noticed.** Every masking change was noticed. The 55 survivors were test gaps, not wrong rules; no rule had to change. New `apps/core/db-tests/test_kept_rules.py` (35 tests): withdrawing a readiness record (evidence link, accused link, accepted gap: once, with who, when and a reason of 10+ characters, nothing else changed; it had no database test at all); a correction replacing a correction of another record (arrest, memo, time, closure report, chargesheet of another case); same-day edges (remand and release on the arrest day, arrest time on the remand or release day, chargesheet and closure report on the FIR day, a CrPC notice for an FIR registered at 00:10 IST on 1 July 2024); an arrest time in the future with no remand on record; the IO-assignment and sign-in logs; single trigger events (UPDATE of a chargesheet's accused, a closure decision, an account holder; DELETE of a closure correction or a playbook choice); a victim, witness or complainant refused as account holder or accused link while an accused exists; a complaint entered already signed is checked too; a closed complaint cannot be sent to a preliminary enquiry even with an earlier date, while enquiry then closing works. Rerun of the 52 survivors with `--again`: 52 of 52 noticed; then a full run: **335 of 335 noticed** (2 changes do not apply: dropping a trigger that a later migration disables by name).
+
+Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser (all 8). Coverage: core 98.0% lines / 92.9% branches, web 99.8% / 93.7% / 97.2% and gateway 96% unchanged (no core, web or gateway code changed); no gate raised.
+
+Deliberately skipped / not checked
+- The mutation run checks the database tests only; the Java API tests may notice more, but the database rule should be proved where it lives.
+- Not mutated: CHECK constraints and the other views (readiness, current-record views); the legal numbers are `mutate_legal_sql.py`'s. A trigger's column list (`UPDATE OF sha256`) is not changed.
+- Noticed while reading, not changed: `fir_io_assignment` is `ON DELETE CASCADE` from the FIR but its trigger refuses DELETE, so an FIR that has an IO assignment cannot be removed by an import undo. Probably right (work was recorded), but the undo's own check should say so first; to look at with the import code.
+
+Next: item 9 (offline, waits for the answer), then the items waiting for people (3, 6). Without answers: Stryker for the web app's date and form logic (TESTING.md item 6); audit of reads of protected victim data (ARCHITECTURE-TENANCY section 5, item 4).
+
+Questions for Sumit
+1. Still open: may a phone keep case data (encrypted, for a limited time) for offline work, or online only?
+2. Still open: should the FIR screen on a phone open on Deadlines instead of Case details?
+3. Still open: reviewers for the glossary and screen texts (Marathi first?), the heavier state punishment class (session 43), the start of the 14 days of a preliminary enquiry (session 42).
 
 ## 1 Nov 2026, session 49 (on-demand run started by Sumit at 16:13 IST from the build monitor)
 Started from `setup/seed` at 600401c (session 48, same sandbox, nothing newer, no new answers). Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 9's next step (offline) waits for question 1, so I took the open points of session 48's "Next": the settings screen's feature names and the rest of the contract test.
