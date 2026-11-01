@@ -4,6 +4,10 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 1 Nov 2026, Sumit's answers (to sessions 45 and 46)
+1. The app ships its own fonts for the Indian scripts: **yes** (as built in session 45). The demo station names "Fictional Demo PS" / "Fictional Demo District" (MH) stay.
+2. Officers use the app on phones in the field: **yes**. First phone design built in session 47; more to come screen by screen.
+
 ## 30 Oct 2026, Sumit's answers (read this before picking the next item)
 Answers to the open questions from sessions 13, 18 and 25:
 1. Second-approver rule (`import_self_approval` = 0): **yes, for the whole pilot state** (Maharashtra). Set it in the MH pack's `policies.json`, not by hand in the database.
@@ -32,11 +36,33 @@ Done in session 43 (31 Oct, Saturday 21:05 scheduled run): the AI chain head kep
 Done in session 44 (1 Nov, 02:05 IST scheduled run): the legal glossary (item 6), the answer-field contract test (item 7), the FIR list made fast for real volumes with a load test (item 7), Punjabi "accused" fixed.
 Done in session 45 (1 Nov, Sunday scheduled run from about 12:30 IST): complaint list queries (item 7), Indian-script rendering with the app's own fonts (item 7), demo case and demo script (item 8).
 Done in session 46 (1 Nov, on-demand run from 13:01 IST): screens fit a phone, rendering test on the case screens, the contract test's run-time half (item 7 done); mutation testing set up (TESTING.md item 6).
+Done in session 47 (1 Nov, Sumit answered live): the app on a phone (menu, touch sizes, card lists).
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
 7. Done (session 46). What is left of it is in docs/TESTING.md: the AI gateway's answers in the run-time contract test, the rendering test on the admin, settings and load-data screens.
-8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`). Next for it: Sumit's choice of names for the demo station (question 2), and an AI draft step in the script once a demo uses the gateway.
+8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
+9. Phones in the field (Sumit, 1 Nov): first design done (session 47). Next: shorter forms on the FIR screen (the record forms are long single columns), the readiness check's link controls, offline use when the network drops (needs a decision: what may be kept on a phone).
+
+## 1 Nov 2026, session 47 (Sumit answered the questions live: fonts yes, phones yes)
+Started from `setup/seed` at c1360b6. PostgreSQL had stopped in the sandbox, so the first baseline run failed the three database suites; started it again and re-ran on the committed code: all 8 PASS.
+
+Done
+- **The app on a phone (de80c50)**: below 40rem (640 px) the menu and both language choices fold behind one **Menu** button (`aria-expanded`, closes when a screen is chosen, also the screen already shown); everything to tap is at least 44 px high (checkboxes 24 px); text fields use 16 px so phones do not zoom in; forms take the full width; folded forms ("Add a person", "Record an arrest", ...) look like buttons; the FIR list, the front-desk list and the glossary become cards, one per row, each value with its column name (the column heads stay for screen readers). Desktop unchanged. "Menu" added in the 11 screen languages (draft like the rest).
+- Tests: web (the menu button: closed, open, closes on a screen change and on the current screen's link); browser `tests/e2e/test_phone.py` at 390 x 844 on the demo case as the IO: menu folded and the header under 160 px, every control drawn on sign-in, open menu, FIR list, FIR screen with a form open, front desk, complaint, typing tool, policies and password is at least 44 px high with 16 px text, the FIR list is cards, nothing wider than the screen (it failed first on the language list in the open menu, 412 px, fixed). The rendering test now opens the menu on a phone and does not count text hidden on purpose for screen readers as cut off. Looked at screenshots of the menu, the FIR list and the whole FIR screen.
+
+Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser (all 8). Coverage: core 98.0% lines / 92.9% branches, web 99.8% statements / 93.7% branches / 97.2% functions, gateway 96%; no gate raised.
+
+Deliberately skipped / not checked
+- Not tried on a real phone or with a real touch screen (Chromium at phone size). Admin, AI settings and load-data stay desktop screens (wide tables scroll inside their box).
+- The FIR screen on a phone is long (every record and its forms on one page); splitting it into tabs or sections is the next step, not done.
+- No offline use: a phone that loses the network cannot save. That needs a decision on what case data may be kept on a phone (question 1).
+
+Next: item 9 (phone: shorter FIR screen, readiness controls), then the items waiting for people (3, 6).
+
+Questions for Sumit
+1. Offline on phones: may a phone keep case data (encrypted, for a limited time) so an officer can write while the network is down, or must the phone work online only?
+2. Still open: reviewers for the glossary and screen texts (Marathi first?), the heavier state punishment class (session 43), the start of the 14 days of a preliminary enquiry (session 42).
 
 ## 1 Nov 2026, session 46 (on-demand run started by Sumit at 13:01 IST from the build monitor)
 Started from `setup/seed` at 78dfd53 (session 45, same sandbox, nothing newer, no new answers). Baseline `scripts/test-all.sh`: all 8 lines PASS. Items 1, 3 and 6 wait for a person; item 8 was finished in session 45. I finished item 7, then used the remaining time for the next kind of test in TESTING.md (mutation testing).
