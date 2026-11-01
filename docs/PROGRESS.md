@@ -40,12 +40,50 @@ Done in session 47 (1 Nov, Sumit answered live): the app on a phone (menu, touch
 Done in session 48 (1 Nov, Sunday scheduled run, Sumit away): the FIR screen on a phone one part at a time, the readiness check's controls on a phone, the rendering test on the admin, settings and load-data screens.
 Done in session 49 (1 Nov, on-demand run from 16:13 IST): AI feature names in the screen language; the run-time contract test with the gateway and with the reads that were empty in the demo (item 7 finished).
 Done in session 50 (1 Nov, Sunday 21:05 scheduled run): mutation testing of the database's keep-as-written and masking rules, with the database tests it showed were missing.
+Done in session 51 (2 Nov, 02:05 IST scheduled run): audit of reads of protected victim details (ARCHITECTURE-TENANCY section 5, item 4), with its screen.
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: offline use when the network drops (waits for question 1 of session 47: what may be kept on a phone); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
+
+## 2 Nov 2026, session 51 (02:05 IST scheduled run, last of the night, Sumit away)
+
+### Tonight in short (sessions 50 and 51)
+- Session 50 (21:05 IST): mutation test of the database's keep-as-written and masking rules (`scripts/mutate_trigger_sql.py`); 35 database tests added for what it found; now 335 of 335 changes noticed.
+- Session 51 (02:05 IST): **who read protected victim details is now logged and can be seen** (below).
+- `scripts/test-all.sh` at the end of both sessions: all 8 lines PASS (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e browser). Coverage now: core 98.0% lines / 93.0% branches (gate 96/90), web 99.8% statements / 93.6% branches / 97.3% functions (gate 97/89/95), gateway 96% (gate 94). No gate raised (nothing rose 2 points).
+- Nothing blocked tonight beyond the items that wait for answers (offline phones, reviewers, rest of the MH pack).
+
+Started from `setup/seed` at 9e2450c (session 50, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 9 (offline) and items 3 and 6 wait for answers, so I took the harder of the two items session 50 listed without answers: the audit of reads of protected victim data (privacy) before Stryker.
+
+Done
+- **Read log (3d0b6bc)**, V37 `protected_read`: every answer that shows a protected victim's real details adds a line before it is sent (if the line cannot be written, nothing is sent): the people of a case to the case team when a person is protected (a victim or complainant of a BNS 64-71 / POCSO / sexual-offence case, or anyone masked by hand), `people`; the FIR text of a protected case, `fir_text`; a protected complaint opened (its FIR protects the victim, or before an FIR it is about a sexual offence), `complaint`; the informant's name of such a complaint in the front-desk list, `complaint_list`. A line has the reader, station, FIR id and number (kept as it was, so an import undo of the FIR does not lose it; no foreign key on purpose), complaint id and time. Kept as written (trigger). Withheld answers (front desk, outsiders) show nothing and log nothing. **One opening of a screen is one line**: the FIR screen asks for the people four times as it opens, so the same reader, record and kind within a minute is not logged again (question 1).
+- New permission **`audit.read_protected`** in the national `roles.json` (SHO, SP, state admin; a pack test keeps it to roles with a reach). `GET /api/protected-reads?stationId=&limit=&offset=` (newest first, 1 to 200) for those who hold it at that station (`CaseTeam.canAt`: the SHO's own station, the SP's district, the state admin's state, the platform admin everywhere); 403 otherwise. The answer names the reader and the FIR number, never the victim.
+- **Protected reads screen (157abbd)**: menu link by the permission (not the role name); a station list (own station first), when, who (name, rank, username), what was shown, a link to the FIR or complaint; older and newer pages of 100. A new station's list never shows the rows of the one before. 17 texts in the 11 screen languages (draft).
+- Tests: `ProtectedReadsApiTest` (6: what is logged and what not, a hand-masked person and a section added later, complaints and the list, the FIR named once registered from a complaint, one line per opening and a new line after a minute, who may read the log and who may not across station, district and state, paging, kept as written); `db-tests/test_protected_reads.py` (4: kept, survives the FIR's removal, the four kinds and their record, reader and station required); pack test; web `ReadsPage.test.tsx` (5), the menu link in `App.test.tsx`, the screen in the axe check; browser `tests/e2e/test_protected_reads.py` (the IO opens a protected case, the SHO sees both reads, the victim's name is not in the log, the IO has no such link). `MigrationTest` expects V37.
+- Docs: ARCHITECTURE-TENANCY section 5 item 4 marked done with the rules; CLAUDE.md says any new answer showing protected details must call `ProtectedReads`; TESTING.md lists the browser test and today's coverage.
+- Lowest-covered older code: looked at the core's misses. RecordsController's missed lines are refusals that are tested (`RecordsRefusalsApiTest`); JaCoCo counts a line whose call throws as not run. Nothing real to add there tonight.
+
+Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser (all 8). Coverage: core 98.0% / 93.0%, web 99.8% / 93.6% / 97.3%, gateway 96%; no gate raised.
+
+Deliberately skipped / not checked, and risks
+- The FIR screen still loads the people four times (FirDetail, Arrests, Chargesheets, Readiness). Loading once and sharing would be cleaner than the one-minute rule but touches four screens; not done tonight.
+- Several loads in parallel can both pass the "not within a minute" check, so one opening may rarely give two lines of the same kind (more lines, never fewer). The browser test allows that.
+- Not logged: the rows of an import batch (the uploader's own file, which may contain such text), the import's own look-ups of accused names, case text sent to the AI gateway (the gateway's audit log has those calls), the BNSS 173(2) copy printed from the complaint screen (it uses the complaint already read and logged).
+- A refused log read (403) on the screen shows "The server answered 403 ..." like every other read, not the server's reason (reads never show it; changing that touches every screen).
+- The read log is kept forever; no retention rule yet (question 2). Reading the log is not itself logged (it holds no victim detail).
+- The 17 new texts in 10 languages are mine and unchecked.
+
+Next: item 9 (offline, waits for the answer), then the items waiting for people (3, 6). Without answers: load the people once on the FIR screen; Stryker for the web app's date and form logic (TESTING.md item 6); account lifecycle (ARCHITECTURE-TENANCY section 5, item 5: acting charge during leave, open cases on an SHO's transfer).
+
+Questions for Sumit
+1. Read log: one line per reader, record and kind a minute (as built), or must every single answer be its own line?
+2. Read log: keep it forever, or for a set number of years? And should the SHO see it (they are also on every case team), or only the SP and the state admin?
+3. Still open: may a phone keep case data (encrypted, for a limited time) for offline work, or online only?
+4. Still open: should the FIR screen on a phone open on Deadlines instead of Case details?
+5. Still open: reviewers for the glossary and screen texts (Marathi first?), the heavier state punishment class (session 43), the start of the 14 days of a preliminary enquiry (session 42).
 
 ## 1 Nov 2026, session 50 (Sunday 21:05 scheduled run, Sumit away)
 Started from `setup/seed` at 4e7c369 (session 49, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. The weekly review of this week was done on Saturday (session 41), so no review tonight. Item 9 (offline) and items 3 and 6 wait for answers, so I took the next item that needs none from session 49's "Next": mutation testing of the database trigger rules (privacy and keep-as-written, the hardest of the two).
