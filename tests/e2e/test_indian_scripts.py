@@ -41,12 +41,12 @@ MARK = """(range) => {
     window.__wrapped.push(span)
     marked.push(t.textContent.trim().slice(0, 40))
   }
-  // text kept for screen readers only (.visually-hidden, the column heads of a card list on a phone)
+  // only what is drawn (not a field in a closed <details>); text kept for screen readers only (.visually-hidden, the column heads of a card list on a phone)
   const hiddenOnPurpose = (el) => { for (let a = el; a && a !== document.body; a = a.parentElement) if (getComputedStyle(a).clip !== 'auto') return true; return false }
   for (const el of document.body.querySelectorAll('*')) {
     const s = getComputedStyle(el)
     if ((s.overflowX === 'hidden' || s.overflowX === 'clip' || s.textOverflow === 'ellipsis') && el.scrollWidth > el.clientWidth + 1
-        && !hiddenOnPurpose(el)) clipped.push(el.textContent.trim().slice(0, 40))
+        && el.checkVisibility() && !hiddenOnPurpose(el)) clipped.push(el.textContent.trim().slice(0, 40))
   }
   // the innermost elements that reach past the window's right edge: what makes the page too wide
   const wide = [...document.body.querySelectorAll('*')].filter(el => el.getBoundingClientRect().right > innerWidth + 1
@@ -88,6 +88,13 @@ def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page, wi
         views[screens.index(fir) + 1:screens.index(fir) + 1] = [(fir, i) for i in range(1, 9)]
     page.set_viewport_size({"width": width, "height": 900})
     sign_in(page, f"sho.scripts{width}", demo["accounts"][f"sho.scripts{width}"])
+    problems = language_problems(page, views, width)
+    assert not problems, "\n".join(problems[:40]) + f"\n({len(problems)} in all)"
+
+
+def language_problems(page, views, width):
+    """Signed in already: for each of the 10 languages, chosen in the header, every view (a screen, or a part of the FIR
+    screen on a phone) read for its lang, its fonts, cut-off text and page width; gives the problems found."""
     cdp = page.context.new_cdp_session(page)
     cdp.send("DOM.enable")
     cdp.send("CSS.enable")
@@ -118,4 +125,4 @@ def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page, wi
             problems += [f"{lang} {screen}: cut off: {t!r}" for t in seen["clipped"]]
             if seen["pageWidth"] > width:
                 problems.append(f"{lang} {screen}: the page is {seen['pageWidth']} px wide in a {width} px window: {seen['wide']}")
-    assert not problems, "\n".join(problems[:40]) + f"\n({len(problems)} in all)"
+    return problems

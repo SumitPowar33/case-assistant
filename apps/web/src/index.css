@@ -57,7 +57,8 @@ body { overflow-wrap: break-word; }
 .fir-parts { display: none; }
 
 @media (max-width: 40rem) {
-  table { display: block; overflow-x: auto; }
+  /* position: the screen-reader-only texts in a table (absolute) stay inside its scroll box instead of widening the page */
+  table { display: block; overflow-x: auto; position: relative; }
 
   /* phones in the field (Sumit, 1 Nov 2026; tests/e2e/test_phone.py): the menu folds away behind one button,
      everything to tap is at least 44 px high, text fields use 16 px so the phone does not zoom in */
