@@ -1,19 +1,28 @@
 """Indian-language rendering (TESTING.md, "Not covered yet" 5): every screen language drawn in a real browser. For each
 of the 10 languages and the main screens: the page says its language (lang), every piece of Indian-script text that is
 drawn uses the app's own fonts (so no empty boxes, whatever fonts the PC has), and nothing is cut off or makes the page
-wider than a desktop window. Before 1 Nov 2026 (session 45) the screens used whatever font the machine had: on this
+wider than the window, on a desktop (1280 px) and a phone (390 px). Before 1 Nov 2026 (session 45) the screens used whatever font the machine had: on this
 machine Telugu, Kannada and Gujarati fell back to Unifont, a last-resort bitmap font; without it they are empty boxes.
-Fictional data only."""
+The case screens use the demo case (scripts/demo_case.py). On a phone the header did not wrap
+(845 px wide) and long Tamil or Malayalam form labels and tables pushed the page wider until session 46. Fictional data only."""
 
+import pytest
 from playwright.sync_api import expect
 
-from test_load_data import setup_station, sign_in
+import json
+import sys
+
+from conftest import ROOT
+from test_load_data import sign_in
+
+sys.path.insert(0, str(ROOT / "scripts"))
+from demo_case import load_demo  # noqa: E402
 
 # the scripts of the 10 languages of the national module (Unicode blocks)
 SCRIPTS = {"hi": "ऀ-ॿ", "mr": "ऀ-ॿ", "bn": "ঀ-৿", "pa": "਀-੿", "gu": "઀-૿",
            "or": "଀-୿", "ta": "஀-௿", "te": "ఀ-౿", "kn": "ಀ-೿", "ml": "ഀ-ൿ"}
 SCREENS = ("#/", "#/front-desk", "#/type", "#/policies", "#/password")
-WIDTH = 1280   # a station desktop
+WIDTHS = (1280, 390)   # a station desktop, a phone
 
 # wraps every drawn text node in the script (not those in a closed <details>) in a span[data-script] (CDP reports fonts only for the text directly inside an
 # element laid out inline; a label laid out as a grid reports none) and gives what is cut off and how wide the page is
@@ -37,7 +46,11 @@ MARK = """(range) => {
     if ((s.overflowX === 'hidden' || s.overflowX === 'clip' || s.textOverflow === 'ellipsis') && el.scrollWidth > el.clientWidth + 1
         && !el.classList.contains('visually-hidden')) clipped.push(el.textContent.trim().slice(0, 40))
   }
-  return { marked, clipped, pageWidth: document.documentElement.scrollWidth }
+  // the innermost elements that reach past the window's right edge: what makes the page too wide
+  const wide = [...document.body.querySelectorAll('*')].filter(el => el.getBoundingClientRect().right > innerWidth + 1
+    && ![...el.children].some(c => c.getBoundingClientRect().right > innerWidth + 1)
+    && !el.closest('.visually-hidden')).map(el => el.tagName.toLowerCase() + (el.className ? '.' + el.className : '') + ' ' + el.textContent.trim().slice(0, 30))
+  return { marked, clipped, wide: [...new Set(wide)].slice(0, 5), pageWidth: document.documentElement.scrollWidth }
 }"""
 # puts the text nodes back where they were, so the page (React) finds them unchanged
 UNMARK = "() => { for (const span of window.__wrapped || []) span.replaceWith(...span.childNodes); window.__wrapped = [] }"
@@ -62,10 +75,13 @@ def read_screen(page, cdp, script):
     raise AssertionError("the screen kept changing while it was read")
 
 
-def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page):
-    accounts = setup_station(core, "scripts", roles=("sho",))
-    page.set_viewport_size({"width": WIDTH, "height": 900})
-    sign_in(page, "sho.scripts", accounts["sho.scripts"])
+@pytest.mark.parametrize("width", WIDTHS)
+def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page, width):
+    api, admin, password = core
+    demo = load_demo(api.base, admin, password, tag=f"scripts{width}")   # a case with records, so the FIR screen is full
+    screens = SCREENS + (f"#/firs/{demo['fir_id']}", f"#/complaints/{demo['complaint_id']}")
+    page.set_viewport_size({"width": width, "height": 900})
+    sign_in(page, f"sho.scripts{width}", demo["accounts"][f"sho.scripts{width}"])
     cdp = page.context.new_cdp_session(page)
     cdp.send("DOM.enable")
     cdp.send("CSS.enable")
@@ -73,9 +89,12 @@ def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page):
     for lang, script in SCRIPTS.items():
         page.locator("header select").first.select_option(lang)   # its label is in the language chosen
         expect(page.locator("html")).to_have_attribute("lang", lang)
-        for screen in SCREENS:
+        catalog = json.loads((ROOT / f"apps/web/src/i18n/{lang}.json").read_text())
+        loading = catalog.get("common.loading") or "Loading…"
+        for screen in screens:
             page.evaluate(f"location.hash = '{screen}'")
             page.wait_for_load_state("networkidle")
+            expect(page.get_by_text(loading, exact=True)).to_have_count(0)   # the screen's data has arrived
             page.evaluate("document.fonts.ready")
             seen = read_screen(page, cdp, script)
             if not seen["marked"]:
@@ -85,6 +104,6 @@ def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page):
                 if not ours:   # drawn with a font of the machine, or with no font at all (empty boxes)
                     problems.append(f"{lang} {screen}: {text!r} drawn with {[f['familyName'] for f in fonts] or 'no font'}")
             problems += [f"{lang} {screen}: cut off: {t!r}" for t in seen["clipped"]]
-            if seen["pageWidth"] > WIDTH:
-                problems.append(f"{lang} {screen}: the page is {seen['pageWidth']} px wide in a {WIDTH} px window")
+            if seen["pageWidth"] > width:
+                problems.append(f"{lang} {screen}: the page is {seen['pageWidth']} px wide in a {width} px window: {seen['wide']}")
     assert not problems, "\n".join(problems[:40]) + f"\n({len(problems)} in all)"

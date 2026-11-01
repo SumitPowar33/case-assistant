@@ -6,7 +6,10 @@ body {
   margin: 0; color: #1a1a1a;
 }
 button, input, select, textarea { font-family: inherit; }
-header { display: flex; gap: 1rem; align-items: baseline; padding: .75rem 1rem; background: #12355b; color: #fff; }
+header { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: baseline; padding: .75rem 1rem; background: #12355b; color: #fff; }
+nav { display: flex; flex-wrap: wrap; gap: .25rem .75rem; }
+/* nothing wider than the window on a phone: long option texts, inputs and wide tables stay inside it */
+select, input, textarea { max-width: 100%; box-sizing: border-box; }
 header a { color: #fff; }
 main { max-width: 60rem; margin: 1rem auto; padding: 0 1rem; }
 table { border-collapse: collapse; width: 100%; }
@@ -41,4 +44,12 @@ blockquote { margin: 1rem 0; padding-left: 1rem; border-left: 4px solid #12355b;
   .print-copy, .print-copy * { visibility: visible; }
   .print-copy { position: absolute; left: 0; top: 0; width: 100%; }
   .no-print { display: none; }
+}
+
+/* phones (tests/e2e/test_indian_scripts.py checks 390 px): form fields shrink to the column, long words break,
+   and a wide table scrolls inside its own box instead of making the page wider */
+body { overflow-wrap: break-word; }
+.record-form > *, .record-form label, .typing-field, .login label { min-width: 0; }
+@media (max-width: 40rem) {
+  table { display: block; overflow-x: auto; }
 }
