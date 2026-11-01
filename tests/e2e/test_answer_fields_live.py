@@ -56,6 +56,10 @@ def missing_fields(value, literal, text, where, depth=0):
     return out
 
 
+def me_io(api, token):
+    return api.call("GET", "/api/me", token=token)[1]["id"]
+
+
 def test_every_field_a_screen_expects_is_in_the_real_answer(core, page):
     api, admin, password = core
     demo = load_demo(api.base, admin, password, tag="live")
@@ -66,6 +70,30 @@ def test_every_field_a_screen_expects_is_in_the_real_answer(core, page):
                                                      "informantName": "Fictional Second Informant", "kind": "other", "text": "Fictional lost wallet.",
                                                      "textLanguage": "en"}, desk)
     assert status == 201
+    # records the demo leaves empty, so their reads have an answer to check: a victim update and a chargesheet on the demo
+    # FIR, and a second FIR closed by a closure report that was corrected once and decided by the Magistrate
+    io = api.token("io.live", demo["accounts"]["io.live"])
+    case = f"/api/firs/{demo['fir_id']}"
+    status, people = api.call("GET", f"{case}/people", token=io)
+    accused = [p["id"] for p in people if p["role"] == "accused"]
+    for path, body in ((f"{case}/victim-updates", {"givenOn": "2026-10-31", "toldTo": "informant", "means": "phone"}),
+                       (f"{case}/chargesheets", {"filedOn": "2026-10-31", "court": "Fictional JMFC Court", "reportNo": "CS-1/2026",
+                                                 "accusedIds": accused})):
+        status, body = api.call("POST", path, body, io)
+        assert status == 201, (path, body)
+    status, fir2 = api.call("POST", "/api/firs", {"stationId": me["station_id"], "firYear": 2026, "firNo": 2, "gdEntryNo": "GD-20",
+                                                   "registeredAt": "2026-10-20T10:00:00+05:30", "actionTaken": "investigate", "ioId": me_io(api, io),
+                                                   "contentsOriginal": "Fictional theft of a bicycle.", "contentsLanguage": "en",
+                                                   "informationReceivedAt": "2026-10-20T09:30:00+05:30", "sections": [{"act": "BNS", "section": "303(2)"}]}, desk)
+    assert status == 201, fir2
+    closed = f"/api/firs/{fir2['id']}/closure-report"
+    report = {"filedOn": "2026-10-30", "court": "Fictional JMFC Court", "reportNo": "CR-1/2026", "ground": "untraced",
+              "reason": "Fictional: no trace of the bicycle after search.", "informantInformedOn": "2026-10-30"}
+    for path, body in ((closed, report),
+                       (f"{closed}/corrections", {**report, "reportNo": "CR-2/2026", "correctionReason": "Fictional: report number typed wrong"}),
+                       (f"{closed}/decision", {"decision": "accepted", "decidedOn": "2026-10-31", "note": "Fictional order"})):
+        status, body = api.call("POST", path, body, io)
+        assert status in (200, 201), (path, body)
     answers = []
 
     def keep(response):
@@ -76,7 +104,7 @@ def test_every_field_a_screen_expects_is_in_the_real_answer(core, page):
 
     fir, complaint = f"#/firs/{demo['fir_id']}", f"#/complaints/{demo['complaint_id']}"
     visits = {"sho.live": ("#/", fir, complaint, "#/front-desk", "#/policies", "#/type", "#/import"),
-              "io.live": (fir,), "front_desk.live": ("#/front-desk", complaint)}
+              "io.live": (fir, f"#/firs/{fir2['id']}"), "front_desk.live": ("#/front-desk", complaint)}
     for username, screens in visits.items():
         sign_in(page, username, demo["accounts"][username])
         for screen in screens:
@@ -98,4 +126,7 @@ def test_every_field_a_screen_expects_is_in_the_real_answer(core, page):
                 checked.add(url)
                 problems += [f"{name}: {url} expects {m}, not in the answer of {path}" for m in missing_fields(body, literal, text, "answer")]
     assert not problems, "\n".join(sorted(set(problems)))
-    assert len(checked) >= 24, f"only {len(checked)} typed reads had a real answer to check: {sorted(checked)}"
+    for url in ("/firs/${firId}/chargesheets", "/firs/${firId}/closure-report", "/firs/${firId}/closure-report/corrections",
+                "/firs/${firId}/victim-updates"):
+        assert url in checked, f"{url} had no real answer to check"
+    assert len(checked) >= 28, f"only {len(checked)} typed reads had a real answer to check: {sorted(checked)}"
