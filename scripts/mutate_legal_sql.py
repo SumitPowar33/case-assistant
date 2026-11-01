@@ -30,15 +30,17 @@ def newest(name):
         text = f.read_text(encoding="utf-8")
         for m in re.finditer(r"CREATE (?:OR REPLACE )?(FUNCTION|VIEW) " + name + r"\b", text):
             end = text.find("$$;", m.end())
-            end = text.find(";", m.end()) + 1 if end == -1 or m[1] == "VIEW" else end + 3
+            # a view ends at the first ; outside quoted text (the deadline view has one inside a label)
+            end = strip_strings(text).find(";", m.end()) + 1 if end == -1 or m[1] == "VIEW" else end + 3
             found = (f, m.start(), end)
     return found
 
 
 def strip_strings(text):
-    """The text with the inside of every quoted string blanked, except the intervals ('24 hours')."""
+    """The text with comments and the inside of every quoted string blanked, except the intervals ('24 hours'); same length."""
     keep = re.compile(r"'\d+ (?:hours?|days?|months?)'")
-    return re.sub(r"'[^']*'", lambda m: m[0] if keep.fullmatch(m[0]) else "'" + " " * (len(m[0]) - 2) + "'", text)
+    blank = lambda m: " " * len(m[0]) if m[0].startswith("--") else "'" + " " * (len(m[0]) - 2) + "'"
+    return re.sub(r"--[^\n]*|'[^']*'", lambda m: m[0] if keep.fullmatch(m[0]) else blank(m), text)
 
 
 def mutants():

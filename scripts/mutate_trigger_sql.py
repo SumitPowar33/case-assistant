@@ -4,6 +4,7 @@ facts the law lets be added later), and the identity of a protected victim is ma
 person_public view. This changes one thing at a time in the newest definition of each of them, runs apps/core/db-tests
 on that copy, and lists every change the tests did not notice ("survived"):
   - a refusal (RAISE EXCEPTION) taken out, so the row goes through;
+  - one column left out of a kept-as-written comparison ((NEW.a, NEW.b) IS DISTINCT FROM (OLD.a, OLD.b));
   - a comparison or test turned round (= and <>, < and <=, IS NULL and IS NOT NULL, AND and OR, EXISTS and NOT EXISTS,
     IS DISTINCT FROM and IS NOT DISTINCT FROM, a NOT dropped), one name taken out of a list of names ('victim', ...),
     a CASE WHEN that never applies;
@@ -43,13 +44,13 @@ OPS = [
     (re.compile(r"(?<!NOT )\bEXISTS\b"), lambda s: ["NOT EXISTS"]),
     (re.compile(r"\bCASE WHEN\b"), lambda s: ["CASE WHEN false AND"]),
 ]
+KEPT_COLUMNS = re.compile(r"\(([^()]*)\)\s*IS DISTINCT FROM\s*\(([^()]*)\)")   # (NEW.a, NEW.b) IS DISTINCT FROM (OLD.a, OLD.b)
 NAMES = re.compile(r"\bIN \(('\s*'(?:,\s*'\s*')+)\)")          # IN ('victim', 'complainant') with the strings blanked
 URL = os.environ.get("DATABASE_URL", "postgresql://caseapp:caseapp@localhost/caseapp_test")
 # changes that cannot alter what the rule does; each says why (checked by hand, 1 Nov 2026)
 EQUIVALENT = [
     ("allow_only_withdrawal", "line 27: RAISE EXCEPTION", "a delete then has no NEW row, so the withdrawal check below refuses it"),
     ("arrest_allow_only_remand", "line 26: RAISE EXCEPTION", "a delete then has no NEW row, so the kept-as-written check below refuses it"),
-    ("arrest_time_correction_rules", "line 42: > -> >=", "a time exactly five minutes ahead of now() cannot be written in a test"),
 ]
 TRIGGER = re.compile(r"CREATE TRIGGER (\w+)\s+(BEFORE|AFTER) (.+?) ON .+?;", re.S)
 
@@ -122,6 +123,22 @@ def body_mutants(name):
             kept = ", ".join(text[x:y] for j, (x, y) in enumerate(items) if j != k)
             lo, hi = items[0][0], items[-1][1]
             yield name, f, text[:lo] + kept + text[hi:], where(text, a, f"{text[a:b]} taken out of IN ({text[lo:hi]})")
+    for m in KEPT_COLUMNS.finditer(body):
+        new, old = list_items(m[1], begin + m.start(1)), list_items(m[2], begin + m.start(2))
+        for k in range(len(new) if len(new) == len(old) > 1 else 0):
+            rest = lambda cols: ", ".join(text[x:y] for j, (x, y) in enumerate(cols) if j != k)
+            changed = text[:new[0][0]] + rest(new) + text[new[-1][1]:old[0][0]] + rest(old) + text[old[-1][1]:]
+            yield name, f, changed, where(text, new[k][0], f"{text[new[k][0]:new[k][1]]} left out of the kept columns")
+
+
+def list_items(segment, offset):
+    """(start, end) of each comma-separated item of a list (strings blanked), as offsets in the file."""
+    out, pos = [], offset
+    for part in segment.split(","):
+        lead = len(part) - len(part.lstrip())
+        out.append((pos + lead, pos + len(part.rstrip())))
+        pos += len(part) + 1
+    return out
 
 
 def trigger_mutants():
