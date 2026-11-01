@@ -31,11 +31,35 @@ Done in session 42 (31 Oct, Sumit asked "research and fix it all yourself"): dec
 Done in session 43 (31 Oct, Saturday 21:05 scheduled run): the AI chain head kept in the core database; state punishment tables may only add, never change a national section; bug fixed on the AI settings screen.
 Done in session 44 (1 Nov, 02:05 IST scheduled run): the legal glossary (item 6), the answer-field contract test (item 7), the FIR list made fast for real volumes with a load test (item 7), Punjabi "accused" fixed.
 Done in session 45 (1 Nov, Sunday scheduled run from about 12:30 IST): complaint list queries (item 7), Indian-script rendering with the app's own fonts (item 7), demo case and demo script (item 8).
+Done in session 46 (1 Nov, on-demand run from 13:01 IST): screens fit a phone, rendering test on the case screens, the contract test's run-time half (item 7 done); mutation testing set up (TESTING.md item 6).
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
-7. Contract test: a field written only in another answer is not caught (the test reads source, not answers); a run-time check in the browser tests could close that. Rendering: the same check on the case screens (FIR, arrests, notices) and at phone width.
+7. Done (session 46). What is left of it is in docs/TESTING.md: the AI gateway's answers in the run-time contract test, the rendering test on the admin, settings and load-data screens.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`). Next for it: Sumit's choice of names for the demo station (question 2), and an AI draft step in the script once a demo uses the gateway.
+
+## 1 Nov 2026, session 46 (on-demand run started by Sumit at 13:01 IST from the build monitor)
+Started from `setup/seed` at 78dfd53 (session 45, same sandbox, nothing newer, no new answers). Baseline `scripts/test-all.sh`: all 8 lines PASS. Items 1, 3 and 6 wait for a person; item 8 was finished in session 45. I finished item 7, then used the remaining time for the next kind of test in TESTING.md (mutation testing).
+
+Done
+- **Screens fit a phone (4d9cd39)**: the rendering test now runs at 1280 px and at 390 px (a phone) and also covers the FIR screen with every kind of record and the complaint page (from the demo case), and waits for each screen's data. On a phone the header was 845 px wide in every language (it did not wrap); long Tamil and Malayalam labels and the glossary and policy tables also pushed the page wider. Fixed in CSS only: the header and menu wrap, fields shrink to their column, long words break, a wide table scrolls inside its own box on narrow screens. Desktop unchanged.
+- **Contract test, run-time half (c18d696)**: `tests/e2e/test_answer_fields_live.py` goes through the demo case as SHO, IO, front desk and platform admin, keeps every JSON answer of a GET /api route, and checks that every field a screen's type always expects (not `name?:`) is a key of the real answer, also inside lists and objects. 24 typed reads had real answers; no mismatch found. Checked by hand that it fails on a field the static test lets through (a field the arrests controller writes elsewhere but not in this answer).
+- **Mutation testing of the pack rule code (49b3c3c)**: PIT 1.17.0 in a Maven profile `mutation` (build-time only, not in `test-all.sh`; new build dependency because no tool we have does this): first run test strength 93%, 9 changes survived. Tests added: policy bounds at their edges (default at min, at max, a single value; a reason of exactly 10 characters), the national roles read first whatever the order, including a state code that sorts before IN (AP, GJ: the sort was untested), a role without a station. Now 99%; the two survivors are equivalent (see TESTING.md).
+- **Mutation test of the legal numbers in SQL (6f48e0a)**: `scripts/mutate_legal_sql.py` changes one number or comparison at a time in the newest definition of the deadline functions and view and runs the database tests on each copy. **First run: only 26 of 50 changes were noticed.** A wrong section in the BNSS 193(2) list (e.g. POCSO 8 instead of 4) or in the masking range (BNS 63 or 72), the BNSS 58 24 hours changed to 23 or 25, the "earlier by unit policy" wording at exactly 90 days, and a custody released the same day as the remand would all have passed every test. Database tests added for each, at their edges; second run 50 of 50. No legal rule was wrong; only the tests were too thin.
+
+Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser (all 8). Coverage: core 98.0% lines / 92.9% branches, web 99.8% statements / 93.7% branches / 97.1% functions, gateway 96%; no gate raised.
+
+Deliberately skipped / not checked
+- The phone layout was checked for width and cut-off text only; it is not a designed mobile screen (forms are long single columns). Station desktops stay the main target.
+- The run-time contract test does not see the AI gateway's answers, nor reads that were empty in the demo (chargesheets, closure report, victim updates, custody).
+- The SQL mutation test covers the deadline functions and view, not the trigger rules (what may be changed or deleted); the database tests now take about 60 s (98 tests, were 63).
+- Not done: Stryker for the web app.
+
+Next: the rest is waiting for people (items 3 and 6, the questions). Without answers, the next sessions can do: the run-time contract test with the gateway; the rendering test on the admin, settings and load-data screens; mutation testing of the trigger rules; Stryker for the web date logic.
+
+Questions for Sumit
+1. Same as session 45: may the app ship its own fonts (1.3 MB in the build, 30 to 150 KB per screen), and which demo station names do you want?
+2. Should officers use the app on phones in the field? The screens now fit a phone, but a real mobile design (shorter forms, larger buttons) is a separate piece of work.
 
 ## 1 Nov 2026, session 45 (scheduled Sunday run, Sumit away)
 Started from `setup/seed` at 5dfb457 (session 44, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages (gateway requirements, `psycopg[binary]`, `pytest-cov`) and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Items 1, 3 and 6 wait for a person, so I took item 7 and then item 8.
