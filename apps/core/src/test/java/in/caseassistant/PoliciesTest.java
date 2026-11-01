@@ -26,6 +26,10 @@ class PoliciesTest {
         assertThatThrownBy(() -> new Policies(Map.of("ok_key", new Policies.Def("x", 20, 1, 9)), null)).hasMessageContaining("do not fit");
         assertThatThrownBy(() -> new Policies(Map.of("ok_key", new Policies.Def("x", 0, 1, 9)), null)).hasMessageContaining("do not fit");
         assertThatThrownBy(() -> new Policies(Map.of("ok_key", new Policies.Def("x", 5, 9, 1)), null)).hasMessageContaining("do not fit");
+        // the edges are allowed (mutation test, session 46): default at the minimum, at the maximum, a single value
+        assertThat(new Policies(Map.of("ok_key", new Policies.Def("x", 1, 1, 9)), null).def("ok_key").min()).isEqualTo(1);
+        assertThat(new Policies(Map.of("ok_key", new Policies.Def("x", 9, 1, 9)), null).def("ok_key").max()).isEqualTo(9);
+        assertThat(new Policies(Map.of("ok_key", new Policies.Def("x", 5, 5, 5)), null).def("ok_key").defaultValue()).isEqualTo(5);
     }
 
     static final Map<String, Policies.Def> NATIONAL = Map.of("import_self_approval", new Policies.Def("Fictional", 1, 0, 1),
@@ -49,6 +53,7 @@ class PoliciesTest {
         assertThatThrownBy(() -> withStateValue("IN", "import_self_approval", 0, "Fictional state order")).hasMessageContaining("national module sets defaults");
         assertThatThrownBy(() -> withStateValue("MH", "import_self_approval", 0, " too short ")).hasMessageContaining("reason");
         assertThatThrownBy(() -> withStateValue("MH", "import_self_approval", 0, null)).hasMessageContaining("reason");
+        assertThat(withStateValue("MH", "import_self_approval", 0, " ten chars! ").above("state", "MH", null, "import_self_approval")).isZero();   // 10 is enough
     }
 
     @Test

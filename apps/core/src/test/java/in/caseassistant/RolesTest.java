@@ -42,6 +42,27 @@ class RolesTest {
     }
 
     @Test
+    void theNationalPackIsReadFirstWhateverTheOrder() {
+        // mutation test (session 46): without the sort, a state pack read first named the national role
+        // also a state whose code sorts before IN (AP, GJ), so the order is not just alphabetical
+        var state = new Roles.File("MH", Map.of("b.run", "run b"), Map.of("clerk", new Roles.Role("State's own label", true, "none", List.of("b.run"))));
+        var early = new Roles.File("AP", Map.of("b.run", "run b"), Map.of("clerk", new Roles.Role("State's own label", true, "none", List.of("b.run"))));
+        for (var files : List.of(List.of(state, national()), List.of(national(), state), List.of(early, national()))) {
+            var clerk = new Roles(files, null).list().stream().filter(r -> r.get("code").equals("clerk")).findFirst().orElseThrow();
+            assertThat(clerk.get("label")).isEqualTo("Label");
+            assertThat(clerk.get("permissions")).isEqualTo(List.of("a.read", "b.run"));   // national first, then the state's
+        }
+    }
+
+    @Test
+    void aRoleWithoutAStationIsAnsweredSo() {
+        var file = new Roles.File("IN", Map.of("a.read", "read a"), Map.of("advocate", role("none", false, "a.read")));
+        var roles = new Roles(List.of(file), null);
+        assertThat(roles.stationRequired("advocate")).isFalse();
+        assertThat(roles.list().get(0).get("station_required")).isEqualTo(false);
+    }
+
+    @Test
     void badPacksAreRefusedAtStartUp() {
         assertThatThrownBy(() -> new Roles(List.of(new Roles.File("X", Map.of(), Map.of("Bad-Code", role("none", false)))), null))
                 .hasMessageContaining("bad role code");

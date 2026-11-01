@@ -53,4 +53,25 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <!-- Mutation testing (TESTING.md, once a month): `mvn -P mutation test-compile org.pitest:pitest-maven:mutationCoverage`.
+         Changes the rule code of the packs (punishment classes, policy bounds, roles, complaint kinds, playbooks, glossary,
+         modules) one small step at a time and checks a unit test notices. Build-time only; not run by scripts/test-all.sh. -->
+    <profile>
+      <id>mutation</id>
+      <build><plugins><plugin>
+        <groupId>org.pitest</groupId><artifactId>pitest-maven</artifactId><version>1.17.0</version>
+        <dependencies><dependency><groupId>org.pitest</groupId><artifactId>pitest-junit5-plugin</artifactId><version>1.2.1</version></dependency>
+          <dependency><groupId>org.junit.platform</groupId><artifactId>junit-platform-launcher</artifactId><version>1.12.2</version></dependency></dependencies>
+        <configuration>
+          <targetClasses><param>in.caseassistant.Punishments*</param><param>in.caseassistant.Policies*</param><param>in.caseassistant.Roles*</param>
+            <param>in.caseassistant.ComplaintKinds*</param><param>in.caseassistant.Playbooks*</param><param>in.caseassistant.Glossary*</param><param>in.caseassistant.Modules*</param></targetClasses>
+          <targetTests><param>in.caseassistant.PunishmentsTest</param><param>in.caseassistant.PoliciesTest</param><param>in.caseassistant.RolesTest</param>
+            <param>in.caseassistant.ComplaintKindsTest</param><param>in.caseassistant.GlossaryTest</param><param>in.caseassistant.ModulesTest</param></targetTests>
+          <timestampedReports>false</timestampedReports>
+          <outputFormats><param>HTML</param><param>XML</param></outputFormats>
+        </configuration>
+      </plugin></plugins></build>
+    </profile>
+  </profiles>
 </project>
