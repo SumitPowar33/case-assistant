@@ -38,12 +38,35 @@ Done in session 45 (1 Nov, Sunday scheduled run from about 12:30 IST): complaint
 Done in session 46 (1 Nov, on-demand run from 13:01 IST): screens fit a phone, rendering test on the case screens, the contract test's run-time half (item 7 done); mutation testing set up (TESTING.md item 6).
 Done in session 47 (1 Nov, Sumit answered live): the app on a phone (menu, touch sizes, card lists).
 Done in session 48 (1 Nov, Sunday scheduled run, Sumit away): the FIR screen on a phone one part at a time, the readiness check's controls on a phone, the rendering test on the admin, settings and load-data screens.
+Done in session 49 (1 Nov, on-demand run from 16:13 IST): AI feature names in the screen language; the run-time contract test with the gateway and with the reads that were empty in the demo (item 7 finished).
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
-7. Done (session 46). What is left of it is in docs/TESTING.md: the AI gateway's answers in the run-time contract test (the rendering test on the admin screens was done in session 48).
+7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: offline use when the network drops (waits for question 1 of session 47: what may be kept on a phone); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
+
+## 1 Nov 2026, session 49 (on-demand run started by Sumit at 16:13 IST from the build monitor)
+Started from `setup/seed` at 600401c (session 48, same sandbox, nothing newer, no new answers). Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 9's next step (offline) waits for question 1, so I took the open points of session 48's "Next": the settings screen's feature names and the rest of the contract test.
+
+Done
+- **AI feature names in the screen language**: the AI settings screen showed the gateway's English labels ("Draft chargesheet paragraphs", ...) in every language. The screen catalogs now name the 7 features (`aiFeature.<id>`, 11 languages, draft); a feature the catalogs do not name yet shows the gateway's own label. New repo rule `test_ai_feature_names.py`: the catalog's English names are exactly the gateway's `FEATURES` (checked by hand that a changed gateway label fails it). The saved line and the controls' names use the same words.
+- **Contract test, gateway answers at run time**: `tests/e2e/test_answer_fields_gateway.py` uses the real gateway: the platform admin sets the notice draft to the offline `fake` provider on the settings screen, the IO asks for an AI draft of a notice on the demo case; every answer of the 5 gateway reads (settings, each feature in it, features, audit, saved setting, generate) has every field its screen type expects. No mismatch found; checked by hand that a made-up field in the draft type fails it. It shares the admin test's core, gateway and demo case (one start-up).
+- **Contract test, the reads that were empty in the demo**: the live test now adds a victim update and a chargesheet to the demo FIR and a second FIR with a closure report that is corrected and decided, and requires those four reads to be checked (28 typed reads in all). No mismatch found.
+
+Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser (all 8). Coverage: core 98.0% lines / 92.9% branches, web 99.8% statements / 93.7% branches / 97.2% functions, gateway 96%; no gate raised (no core or gateway code changed).
+
+Deliberately skipped / not checked
+- The 7 feature names in 10 languages are mine and unchecked, like the other screen texts.
+- The gateway test uses the platform admin's installation-wide setting, not a state admin's own state setting (the gateway tests cover that).
+- Nothing new for phones: offline still waits for question 1.
+
+Next: item 9 (offline, waits for the answer), then the items waiting for people (3, 6). Without answers: Stryker for the web app's date and form logic (TESTING.md item 6), mutation testing of the database trigger rules.
+
+Questions for Sumit
+1. Still open: may a phone keep case data (encrypted, for a limited time) for offline work, or online only?
+2. Still open from session 48: should the FIR screen on a phone open on Deadlines instead of Case details?
+3. Still open: reviewers for the glossary and screen texts (Marathi first?), the heavier state punishment class (session 43), the start of the 14 days of a preliminary enquiry (session 42).
 
 ## 1 Nov 2026, session 48 (scheduled Sunday run, Sumit away)
 Started from `setup/seed` at 14df922 (session 47, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages (gateway requirements, `psycopg[binary]`, `pytest-cov`, `pytest-playwright`) and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 9 (phones) was first with work that needs no answer, so I took it, then the next test from TESTING.md.
