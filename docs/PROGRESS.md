@@ -37,12 +37,37 @@ Done in session 44 (1 Nov, 02:05 IST scheduled run): the legal glossary (item 6)
 Done in session 45 (1 Nov, Sunday scheduled run from about 12:30 IST): complaint list queries (item 7), Indian-script rendering with the app's own fonts (item 7), demo case and demo script (item 8).
 Done in session 46 (1 Nov, on-demand run from 13:01 IST): screens fit a phone, rendering test on the case screens, the contract test's run-time half (item 7 done); mutation testing set up (TESTING.md item 6).
 Done in session 47 (1 Nov, Sumit answered live): the app on a phone (menu, touch sizes, card lists).
+Done in session 48 (1 Nov, Sunday scheduled run, Sumit away): the FIR screen on a phone one part at a time, the readiness check's controls on a phone, the rendering test on the admin, settings and load-data screens.
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
-7. Done (session 46). What is left of it is in docs/TESTING.md: the AI gateway's answers in the run-time contract test, the rendering test on the admin, settings and load-data screens.
+7. Done (session 46). What is left of it is in docs/TESTING.md: the AI gateway's answers in the run-time contract test (the rendering test on the admin screens was done in session 48).
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
-9. Phones in the field (Sumit, 1 Nov): first design done (session 47). Next: shorter forms on the FIR screen (the record forms are long single columns), the readiness check's link controls, offline use when the network drops (needs a decision: what may be kept on a phone).
+9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: offline use when the network drops (waits for question 1 of session 47: what may be kept on a phone); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
+
+## 1 Nov 2026, session 48 (scheduled Sunday run, Sumit away)
+Started from `setup/seed` at 14df922 (session 47, nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the Python packages (gateway requirements, `psycopg[binary]`, `pytest-cov`, `pytest-playwright`) and `npm ci`. Baseline `scripts/test-all.sh`: all 8 lines PASS. Item 9 (phones) was first with work that needs no answer, so I took it, then the next test from TESTING.md.
+
+Done
+- **FIR screen on a phone, one part at a time (ba2dd4b)**: below 640 px the FIR screen shows one part (Case details: IO, sections, complaint text; People; Arrests; Chargesheets; Closure report; Deadlines with the victim updates; Evidence; Notices; Readiness check), chosen in one "Show" list that stays at the top while scrolling. Every part still loads, so deadlines and readiness are the same whichever is shown; a new FIR starts on Case details. Desktop unchanged (the list is hidden, every part shows). The part names reuse the headings' texts; "Show" and "Case details" are new in the 11 languages (draft).
+- **Readiness check on a phone**: the small forms inside a line (link evidence, accept a gap, withdraw) take their own full-width line; each gap's reason field is now folded behind "Accept this gap" (on every screen size, like "Withdraw"), so the gap list is half as long. The reason is still required. "Accept this gap" in the 11 languages (draft).
+- **Rendering test on the admin, AI settings and load-data screens (c16c8d0)**: `tests/e2e/test_admin_scripts.py`, as the platform admin with the real gateway (offline `fake`), 10 languages at 1280 and 390 px. **It found a bug**: on a phone the screen-reader-only texts inside a wide table (`position: absolute`) escaped the table's scroll box, so the admin and settings screens were 590 to 680 px wide in every Indian language. Fixed in CSS (a table on a phone is the box they stay in). The cut-off check now skips fields not drawn (a field in a closed fold), as the text check already did.
+- Tests: web (`FirDetail.test.tsx`: the picker lists the 9 parts, only the chosen part is shown, in Marathi too; `Readiness.test.tsx`: the reason is folded until "Accept this gap"); browser `test_phone.py` goes through every part at 390 x 844 (touch sizes, width, one part visible), links evidence and opens its Withdraw on the phone, checks the gap reasons are folded and the picker stays in reach; `test_indian_scripts.py` at 390 px reads every part of the FIR screen in all 10 languages (the loop is now a helper shared with the admin test).
+
+Final `scripts/test-all.sh`: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web, PASS database rules, PASS core, PASS e2e browser (all 8). Coverage: core 98.0% lines / 92.9% branches, web 99.8% statements / 93.7% branches / 97.2% functions, gateway 96%; no gate raised (nothing rose 2 points; no core or gateway code changed).
+
+Deliberately skipped / not checked
+- Still not tried on a real phone or touch screen (Chromium at 390 x 844). The admin, settings and load-data screens stay desktop screens: they now fit a phone, but their tables scroll sideways.
+- The AI settings screen shows the feature descriptions in English in every language (they come from the gateway, not the screen catalogs). Not changed: noted for a later session.
+- No offline use (question 1 of session 47 is still open). The complaint page was not split into parts.
+- The new texts ("Show", "Case details", "Accept this gap") are drafts like the other screen texts.
+
+Next: item 9 (offline, waits for the answer), item 7's last piece (the gateway's answers in the run-time contract test), the settings screen's feature names in the screen language; then the items waiting for people (3, 6).
+
+Questions for Sumit
+1. Still open from session 47: may a phone keep case data (encrypted, for a limited time) for offline work, or online only?
+2. On a phone the FIR screen now shows one part at a time from a "Show" list, starting with Case details. Should it open on Deadlines instead (what an officer in the field most often needs)?
+3. Still open: reviewers for the glossary and screen texts (Marathi first?), the heavier state punishment class (session 43), the start of the 14 days of a preliminary enquiry (session 42).
 
 ## 1 Nov 2026, session 47 (Sumit answered the questions live: fonts yes, phones yes)
 Started from `setup/seed` at c1360b6. PostgreSQL had stopped in the sandbox, so the first baseline run failed the three database suites; started it again and re-ran on the committed code: all 8 PASS.
