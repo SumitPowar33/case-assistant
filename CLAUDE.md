@@ -38,6 +38,7 @@ At the end of each session, note in PROGRESS.md anything you deliberately skippe
 - Front desk (module 1): `ComplaintController`, `ComplaintKinds`, V30, `packs/*/complaint-kinds.json` (golden-hour steps, draft), web `FrontDesk.tsx`. Information is written down, read over and signed (BNSS 173(1)); the signed text never changes, and an FIR registered from it (`POST /api/firs` with `complaintId`) takes it unchanged.
 - Reads of protected victim details are logged (`ProtectedReads`, V37, `protected_read`): any new answer that shows a protected victim's real details or the text naming them must call `ProtectedReads.fir` or `.complaints` before it is sent. The log is read on the Protected reads screen (permission `audit.read_protected`).
 - Demo: `scripts/demo_case.py` loads one fictional station (MH) and one online-fraud case through the API; `docs/DEMO.md` is the demo script; `tests/e2e/test_demo_case.py` loads it on every run.
+- Hardening (security review, 2 Nov 2026): request bodies are capped (`BodyLimit`: 1 MiB, 16 MiB for an import); an error never shows SQL or a Java message (`ApiErrors`); passwords are at most 72 bytes (bcrypt); the gateway takes plain model names only and 20 drafts per officer in 10 minutes; the built web page carries a Content-Security-Policy (`vite.config.ts`, checked by `tests/e2e/test_content_policy.py`). Keep them when adding routes or fields.
 - `docs/` – plan, progress, research, `ARCHITECTURE-TENANCY.md` (accounts, roles, policies, modules: read before touching access), `TESTING.md` (what every change must test).
 
 ## Testing rule (Sumit, 28 Oct 2026)
@@ -45,6 +46,9 @@ Every piece of code gets tests (unit, functional, database, security as `docs/TE
 
 ## Who may see and do what
 Case access comes from the role's data in `packs/*/roles.json` (case team = the named IO plus roles scoped to the station or district). A state admin works only inside their own state; an admin without a station is the platform admin. A state, district or station may only tighten a policy (`policies.json`), never loosen what is above it. Do not hard-code role names in new code: use a permission from `roles.json`.
+
+## Start of every session
+After the baseline, push `In progress: item N (session S, started HH:MM IST)` at the top of the Next list in `docs/PROGRESS.md` as the first commit. Skip an item another session marked in progress less than 3 hours ago. Remove the line when you finish.
 
 ## End of every session
 Update `docs/PROGRESS.md`: what was done, what is next, questions for Sumit (numbered, short).

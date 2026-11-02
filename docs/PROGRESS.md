@@ -4,6 +4,46 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
+## 2 Nov 2026, decisions on the open questions (Sumit: "research and resolve the answers yourself", session 55)
+Sumit handed every open question over. Each was decided from the law and court orders where they speak, in the strict
+(privacy-first, custody-safe) direction where they are silent. Each can be overruled. Build from these; do not ask again.
+1. **Offline on phones: online only for case data.** Nothing from a case (people, FIR text, complaints) is kept on the
+   phone. What an officer has typed in an open form stays in the page's memory when the network drops and is sent again
+   when it comes back; nothing goes to the phone's storage. Reason: a lost phone holding a protected victim's details is a
+   BNS 72 disclosure that cannot be undone (Nipun Saxena v Union of India, SC 2018), and DPDP Rules 2025 rule 6 asks for
+   encryption, access control and logs of every access, which a phone outside the station cannot give. Revisit only for
+   state-managed phones (device management, remote wipe) after a pilot.
+2. **SHO on leave or transferred.** BNSS 2(1)(r): when the officer in charge is absent or unable, "the police officer
+   present at the station-house who is next in rank ... above the rank of constable" is the officer in charge (or another
+   officer the State Government directs). So: (a) open cases **stay with their named IO**; an SHO's reach comes from the
+   role at the station, not from the cases. (b) **Acting charge**: the SP of the district (or the state admin) gives an
+   officer of that station a temporary SHO role with a required end date of at most 90 days, and a reason; it ends by
+   itself, and both its start and end are in the admin log. Nobody gives it to themselves. (c) **Transfer**: the state
+   admin moves the account (already logged); the new SHO gets the role. (d) **A transferred IO** loses the old station's
+   cases at once; their open FIRs go on the SHO's "IO has left the station" list until the SHO assigns a new IO.
+3. **Heavier state punishment class: stays refused.** No state law in force raises a BNS punishment for Maharashtra. The
+   Maharashtra BNS amendment bill (introduced 25 Mar 2026, passed by both Houses) awaits the President's assent (needed
+   under Article 254(2)), and it changes BNS 72 (identity of acid-attack survivors) and BNS 75 (online sexual harassment),
+   not punishment classes. When an amendment gets assent, it goes in the MH pack with its notification number and an
+   effective-from date (ARCHITECTURE-TENANCY section 5, item 8), never as a plain override.
+4. **Acid-attack survivors (BNS 124) are masked like sexual-offence victims, in every state, now.** Masking more is the
+   safe direction, the MH bill shows where the law is going, and an IO can already mask a person by hand.
+5. **Reviewers: Marathi first** (the pilot state). Legal terms and legal labels: a Marathi-speaking public prosecutor,
+   checked against the Maharashtra Directorate of Languages' legal glossary (Vidhi Shabdavali); ordinary screen texts:
+   two serving officers of the pilot station. Until then everything stays marked as a draft. **The MH pack is no longer
+   blocked**: build its roles, playbooks and Marathi labels now, marked as unreviewed drafts, like the glossary.
+6. **FIR screen on a phone opens on Deadlines**: yes. In the field the 24-hour production and the 60/90-day limits matter
+   most; Case details is one tap away.
+7. **"In progress" line**: yes. A session pushes `In progress: item N (session S, started HH:MM IST)` to the top of the
+   Next list as its first commit; another session skips an item marked in progress less than 3 hours ago; the finishing
+   session removes the line.
+8. **Read log of protected details**: keep the one-line-a-minute grouping (it shows who saw what, which is what DPDP rule
+   6(c) asks); keep the log at least as long as the case records, never less than one year (rule 6(e)); the SHO sees their
+   station's log, and the SHO's own reads stay visible to the SP and the state admin (as built).
+9. **14 days of a preliminary enquiry**: keep counting from the **receipt of the information** (the strictest reading).
+   No court has fixed the start; the Bombay High Court (Kundan Patil, Dec 2025) criticised enquiries running for months,
+   and the Supreme Court (Imran Pratapgadhi 2025, Ashish Dave Feb 2026) treats the enquiry as a short filter.
+
 ## 1 Nov 2026, Sumit's answers (to sessions 45 and 46)
 1. The app ships its own fonts for the Indian scripts: **yes** (as built in session 45). The demo station names "Fictional Demo PS" / "Fictional Demo District" (MH) stay.
 2. Officers use the app on phones in the field: **yes**. First phone design built in session 47; more to come screen by screen.
@@ -44,12 +84,70 @@ Done in session 51 (2 Nov, 02:05 IST scheduled run): audit of reads of protected
 Done in session 52 (1 Nov 23:35 IST scheduled run, overlapped sessions 50 and 51): a cross-check of session 50's mutation test found 15 untested columns of a signed complaint; tests and the missing kind of change added.
 Done in session 53 (2 Nov, 04:55 UTC scheduled run): the FIR screen reads the people once (was four times).
 Done in session 54 (2 Nov, on-demand run from 10:27 IST): Stryker for the web app's date and form logic (TESTING.md item 6 finished).
+Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question decided (section above); security review with fixes (session 55 entry).
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
-3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
+3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
-9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: offline use when the network drops (waits for question 1 of session 47: what may be kept on a phone); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
+9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: online only (decision 1 of 2 Nov): typed text kept in memory and sent again when the network is back, nothing stored on the phone; the FIR screen opens on Deadlines on a phone (decision 6); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
+10. Account lifecycle (decision 2 of 2 Nov): acting SHO with an end date given by the SP, "IO has left the station" list.
+11. Acid-attack survivors (BNS 124) masked like sexual-offence victims (decision 4 of 2 Nov).
+12. Security, what the review of 2 Nov left (session 55 entry, "Risks"): sign-out that ends the token on the server, a limit on sign-in attempts per address, HTTPS and the policy as a header at installation, an outside penetration test before the pilot.
+
+## 2 Nov 2026, session 55 (Sumit present from 11:26 IST: "resolve the questions yourself, then break it, ethical and non-ethical hacking, and fix it")
+Started from `setup/seed` at 021714b (session 54). Baseline `scripts/test-all.sh`: all 8 PASS.
+
+Decisions: all open questions decided from the law (section "2 Nov 2026, decisions" at the top). Nothing is blocked now.
+
+Security review (attacked a running copy with the demo case, as an outsider officer of another station, as an insider of
+the case team, and with forged tokens; read the code of sign-in, access, admin, import and the gateway; checked every
+dependency against the vulnerability databases)
+
+What held (tested live, nothing to fix): another station's officer gets 404 on every read under the FIR and on its
+complaints, 403 on admin, sign-in log, chain head and protected-read log; a token with `alg: none` or a changed claim is
+refused; the role is always read from the database, never from the token; CSV exports neutralise formulas; import profile
+names cannot walk the file system; React escapes all text (no raw HTML anywhere); the session ends with the browser tab;
+the core sends `X-Frame-Options: DENY`, `nosniff` and `no-store`; npm packages shipped to browsers: no known vulnerability.
+
+Found and fixed, each with a regression test written first
+1. **The SQL leaked to the caller (high).** A refused database write without its own handler answered 500 with the SQL
+   statement and the database's message (a NUL character in a complaint was enough). `ApiErrors`: a refusal answers 400
+   in plain words, anything unexpected 500 with a short reference; the full error goes only to the server log.
+2. **No cap on request size (medium).** A case-team user could store a 15 MB "name" on a case, loaded by every case
+   screen after. `BodyLimit`: 1 MiB per request (16 MiB for loading a file), checked before anything reads the body,
+   counted as it is read when no length is given. The longest complaint allowed (50,000 Indian-script letters) still fits.
+3. **Passwords over 72 bytes (medium).** bcrypt reads 72 bytes; 25 Devanagari letters are 75. A new account or password
+   change with a long Marathi or Hindi password was a 500 showing the encoder's message. Now a plain 400 for the account,
+   the password change and the first admin.
+4. **The AI model name reached the provider's address (medium).** The Gemini model goes into the request path, so an
+   officer allowed to switch models could send `../files` or `x:other?` and use the state's API key on other methods of
+   that API. Model names are now plain names only (letters, digits, `.`, `_`, `-`), for officers and admins.
+5. **No limit on AI drafts (medium).** One token, stolen or misused, could ask without end; each draft is paid for. Now
+   20 drafts in 10 minutes per officer; the next is refused (429, logged) before it reaches a provider. Free-text fields
+   of the gateway (case reference, decision note, ids) have lengths too.
+6. **Vulnerable Starlette (medium).** 14 known advisories in 0.41.3 (Host and path header handling, form and Range
+   parsing). FastAPI 0.115.6 to 0.143.3, Starlette pinned at 1.3.1: none left. Spring Boot 3.5.6 to 3.5.16 (patch line:
+   Tomcat and Spring Security fixes of the last year).
+7. **No Content-Security-Policy on the web app (defence in depth).** The built page now allows only its own scripts,
+   styles, fonts and servers; a browser test signs in, opens seven screens with no violation, and shows an injected
+   inline script does not run. Development is unchanged (Vite needs inline scripts there).
+
+Tests: core `HardeningApiTest` (6), gateway (+4), e2e `test_content_policy.py` (1).
+Final `scripts/test-all.sh`: all 8 PASS. Coverage: core 97.7% lines / 92.7% branches, gateway 96% (gates unchanged). Re-ran the attacks on the fixed build: the NUL complaint gets the plain 400, the 15 MB body is cut off with 413, the long Marathi password gets the plain 400.
+
+Risks, not fixed here (item 12 of the Next list)
+- Signing out removes the token from the browser but the server accepts it until it expires (8 hours). A stolen token
+  stays good that long; disabling the account or changing the password ends it at once (as built).
+- Sign-in is limited per username (5 wrong in 15 minutes), not per address: one machine can try one password on many
+  usernames. Behind the state's reverse proxy the address must come from its header, so this belongs with installation.
+- Nothing here sets up HTTPS, HSTS or the policy as a response header: that is the installation's web server. The
+  policy in the page covers the browser meanwhile.
+- The gateway's draft limit lives in memory: a restart resets it, and two gateway copies would each allow 20.
+- `GET /api/policy-settings` takes the newest 200 changes of the installation and then keeps the user's own: with many
+  states a unit can see fewer than its own 200 (a correctness bug, not a leak).
+- This was a review by the people who built it. Before officers use real case data, an outside penetration test
+  (CERT-In empanelled auditor) should be done; this list is a starting point for it.
 
 ## 2 Nov 2026, session 54 (on-demand run started by Sumit at 10:27 IST)
 Started from `setup/seed` at 39aee22 (session 53, nothing newer, no new answers). Item 9 and items 3 and 6 still wait for answers; took the next item without one: Stryker for the web app's logic.
