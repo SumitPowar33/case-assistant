@@ -85,7 +85,12 @@ class AuthController implements ApplicationRunner {
         var locked = lockedUntil(username);
         if (locked.isPresent()) {
             record(username, userId, "locked", req);
-            return tooMany(locked.get());
+            return tooMany(locked.get(), "Too many wrong passwords. Try again after ");
+        }
+        var blocked = addressBlockedUntil(req.getRemoteAddr());
+        if (blocked.isPresent()) {
+            record(username, userId, "locked", req);
+            return tooMany(blocked.get(), "Too many wrong passwords from this computer. Try again after ");
         }
         String hash = row.map(r -> (String) r.get("password_hash")).orElse(null);
         boolean ok = passwords.matches(l.password, hash != null ? hash : dummyHash) && hash != null;
@@ -167,7 +172,7 @@ class AuthController implements ApplicationRunner {
         var locked = lockedUntil(username);
         if (locked.isPresent()) {
             record(username, id, "locked", req);
-            return tooMany(locked.get());
+            return tooMany(locked.get(), "Too many wrong passwords. Try again after ");
         }
         if (u.get("password_hash") == null || !passwords.matches(c.currentPassword, (String) u.get("password_hash"))) {
             record(username, id, "wrong_current_password", req);
@@ -223,11 +228,33 @@ class AuthController implements ApplicationRunner {
                 .params(username, userId, outcome, req.getRemoteAddr()).update();
     }
 
-    private static ResponseEntity<Map<String, Object>> tooMany(Instant until) {
+    private static ResponseEntity<Map<String, Object>> tooMany(Instant until, String message) {
         long seconds = Math.max(1, Duration.between(Instant.now(), until).toSeconds());
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", String.valueOf(seconds))
-                .body(Map.of("error", "Too many wrong passwords. Try again after "
-                        + DateTimeFormatter.ofPattern("HH:mm").format(until.atZone(IST)) + " IST."));
+                .body(Map.of("error", message + DateTimeFormatter.ofPattern("HH:mm").format(until.atZone(IST)) + " IST."));
+    }
+
+    /**
+     * One machine trying a password on many usernames (5 per username never trips the username lock): 30 wrong passwords
+     * from one address within 15 minutes stop every sign-in from it for 15 minutes after the latest. A whole station
+     * behind one address can make 30 honest mistakes in 15 minutes only rarely; the officer can sign in from another
+     * computer meanwhile. Behind the state's reverse proxy the address is the one it forwards (server.forward-headers-strategy).
+     */
+    static final int MAX_WRONG_PER_ADDRESS = 30;
+
+    Optional<Instant> addressBlockedUntil(String address) {
+        List<OffsetDateTime> wrong = db.sql("""
+                select at from sign_in_attempt where client_ip = ? and outcome = 'wrong_password' and at > now() - interval '15 minutes'
+                order by at desc limit ?""").params(address, MAX_WRONG_PER_ADDRESS).query(OffsetDateTime.class).list();
+        return wrong.size() < MAX_WRONG_PER_ADDRESS ? Optional.empty() : Optional.of(wrong.get(0).toInstant().plus(LOCK));
+    }
+
+    /** Signs out on the server: this token stops working at once here, and at the AI gateway within its 30-second check. */
+    @PostMapping("/logout")
+    ResponseEntity<Void> logout(@AuthenticationPrincipal Jwt jwt) {
+        db.sql("insert into signed_out_token (jti, user_id, expires_at) values (?, ?, ?) on conflict do nothing")
+                .params(UUID.fromString(jwt.getId()), CaseTeam.user(jwt), java.sql.Timestamp.from(jwt.getExpiresAt())).update();
+        return ResponseEntity.noContent().build();
     }
 
     @Override

@@ -32,6 +32,13 @@ export function setSession(s: Session | null) {
   listeners.forEach((fn) => fn())
 }
 
+/** Signs out here and on the server, so a copy of the token stops working too; the screen signs out even if the server is unreachable. */
+export async function signOut() {
+  const s = session
+  setSession(null)
+  if (s) await fetch('/api/logout', { method: 'POST', headers: { Authorization: `Bearer ${s.token}` } }).catch(() => undefined)
+}
+
 export async function login(username: string, password: string) {
   const res = await fetch('/api/login', {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password }),

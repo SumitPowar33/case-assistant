@@ -53,8 +53,10 @@ class SecurityConfig {
             boolean ok;
             try {
                 // the user must be active, and a token from before the last password change no longer counts
-                var changed = db.sql("select password_changed_at from app_user where id = ? and active")
-                        .param(UUID.fromString(jwt.getSubject())).query().listOfRows();
+                // ... and a token signed out (POST /api/logout) is dead; a token without an id is refused
+                var changed = db.sql("select password_changed_at from app_user where id = ? and active"
+                                + " and not exists (select 1 from signed_out_token where jti = ?)")
+                        .params(UUID.fromString(jwt.getSubject()), UUID.fromString(jwt.getId())).query().listOfRows();
                 ok = !changed.isEmpty() && (changed.get(0).get("password_changed_at") == null
                         || Objects.equals(passwordStamp((java.sql.Timestamp) changed.get(0).get("password_changed_at")),
                                 jwt.getClaim(PASSWORD_STAMP) instanceof Number n ? n.longValue() : null));
@@ -103,7 +105,7 @@ class SecurityConfig {
     /** {@code life} comes from the unit's "session_hours" policy (see {@link Policies}); never longer than TOKEN_LIFE. */
     static String issue(JwtEncoder encoder, UUID userId, String role, String name, java.sql.Timestamp passwordChangedAt, Duration life) {
         Instant now = Instant.now();
-        var builder = JwtClaimsSet.builder().issuer("case-assistant").subject(userId.toString())
+        var builder = JwtClaimsSet.builder().id(UUID.randomUUID().toString()).issuer("case-assistant").subject(userId.toString())
                 .issuedAt(now).expiresAt(now.plus(life.compareTo(TOKEN_LIFE) > 0 ? TOKEN_LIFE : life)).claim("role", role).claim("name", name);
         if (passwordChangedAt != null) builder.claim(PASSWORD_STAMP, passwordStamp(passwordChangedAt));
         JwtClaimsSet claims = builder.build();

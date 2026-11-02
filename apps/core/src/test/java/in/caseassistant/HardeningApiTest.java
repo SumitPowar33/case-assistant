@@ -138,4 +138,60 @@ class HardeningApiTest {
         String fits = "पासवर्ड".repeat(3);   // 21 letters, 63 bytes
         send(clerk, "/api/me/password", Map.of("currentPassword", "fictional-pass-123", "newPassword", fits)).andExpect(status().isOk());
     }
+
+    String loginFrom(String address, String username, String password, int expected) throws Exception {
+        return mvc.perform(post("/api/login").with(r -> { r.setRemoteAddr(address); return r; }).contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("username", username, "password", password))))
+                .andExpect(status().is(expected)).andReturn().getResponse().getContentAsString();
+    }
+
+    @Test
+    void signingOutEndsTheTokenOnTheServerNotOnlyInTheBrowser() throws Exception {
+        String first = "Bearer " + json.readTree(loginFrom("10.1.1.1", "clerk.one", "fictional-pass-123", 200)).get("token").asText();
+        String second = "Bearer " + json.readTree(loginFrom("10.1.1.2", "clerk.one", "fictional-pass-123", 200)).get("token").asText();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/me").header("Authorization", first)).andExpect(status().isOk());
+        mvc.perform(post("/api/logout").header("Authorization", first)).andExpect(status().isNoContent());
+        // the copied token is dead at once (it used to work for the rest of its 8 hours); the officer's other sign-in is not
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/me").header("Authorization", first)).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/logout").header("Authorization", first)).andExpect(status().isUnauthorized());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/me").header("Authorization", second)).andExpect(status().isOk());
+        assertThat(db.sql("select count(*) from signed_out_token where user_id = ?").param(clerkId).query(Long.class).single()).isOne();
+    }
+
+    @Test
+    void aTokenWithoutAnIdIsRefused() throws Exception {
+        var claims = org.springframework.security.oauth2.jwt.JwtClaimsSet.builder().issuer("case-assistant").subject(clerkId.toString())
+                .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(600)).build();
+        String noId = tokens.encode(org.springframework.security.oauth2.jwt.JwtEncoderParameters.from(
+                org.springframework.security.oauth2.jwt.JwsHeader.with(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256).build(), claims)).getTokenValue();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/me").header("Authorization", "Bearer " + noId))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void oneAddressTryingManyUsernamesIsStopped() throws Exception {
+        // a password tried on many accounts from one machine: 5 per username never trips the username lock
+        for (int i = 0; i < AuthController.MAX_WRONG_PER_ADDRESS; i++)
+            loginFrom("10.6.6.6", "officer" + (i % 10) + ".nobody", "Spring2026!pass", 401);
+        String body = loginFrom("10.6.6.6", "clerk.one", "fictional-pass-123", 429);   // even a right password, from there
+        assertThat(body).contains("this computer");
+        loginFrom("10.7.7.7", "clerk.one", "fictional-pass-123", 200);                  // the officer elsewhere is not locked out
+        assertThat(db.sql("select count(*) from sign_in_attempt where client_ip = '10.6.6.6' and outcome = 'locked'").query(Long.class).single()).isOne();
+    }
+
+    @Test
+    void aUnitSeesItsOwnPolicyChangesHoweverBusyOtherUnitsAre() throws Exception {
+        // the list took the newest 200 changes of the whole installation and only then kept the user's own units
+        UUID far = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','South'),'Fictional South PS') returning id").query(UUID.class).single();
+        UUID farSho = userId("sho", far, "sho.far");
+        UUID mySho = db.sql("select id from app_user where username = 'sho.one'").query(UUID.class).single();
+        db.sql("insert into policy_setting (level, state_code, station_id, key, value, reason, set_by, set_at) values ('station','IN',?,'victim_update_days','30','Fictional order of my station',?, now() - interval '1 day')")
+                .params(station, mySho).update();
+        for (int i = 0; i < 205; i++)
+            db.sql("insert into policy_setting (level, state_code, station_id, key, value, reason, set_by) values ('station','IN',?,'victim_update_days','30','Fictional order of the far station',?)")
+                    .params(far, farSho).update();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/policy-settings").header("Authorization", sho))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].reason").value("Fictional order of my station"));
+    }
 }

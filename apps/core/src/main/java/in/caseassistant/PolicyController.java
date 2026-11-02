@@ -57,9 +57,12 @@ class PolicyController {
                   coalesce(p.district_id, s.district_id) as unit_district_id
                 from policy_setting p join app_user u on u.id = p.set_by left join police_station s on s.id = p.station_id
                 left join district d on d.id = p.district_id left join district sd on sd.id = s.district_id
-                order by p.set_at desc limit 200""").query().listOfRows().stream()
+                order by p.set_at desc""").query().listOfRows().stream()
+                // the user's own units first, then the newest 200 of them (a policy change is a rare, written order, so
+                // reading them all stays small; taking 200 first hid a unit's own changes behind busier units)
                 .filter(r -> mayManage(me, (String) r.get("level"), (String) r.get("state_code"),
                         (UUID) r.get("unit_district_id"), (UUID) r.get("station_id")))
+                .limit(200)
                 .map(r -> { var m = new java.util.LinkedHashMap<>(r); m.remove("unit_district_id"); return (Map<String, Object>) m; })
                 .toList();
     }

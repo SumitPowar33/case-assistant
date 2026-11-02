@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, test, vi } from 'vitest'
-import { ai, can, changePassword, currentSession, get, getText, login, onSessionChange, send, setMessageLanguage, setScreenLanguage, setSession } from './api'
+import { ai, can, changePassword, currentSession, get, getText, login, onSessionChange, send, setMessageLanguage, setScreenLanguage, setSession, signOut } from './api'
 
 // Fictional data only.
 afterEach(() => { vi.unstubAllGlobals(); setMessageLanguage('en'); setSession(null) })
@@ -122,4 +122,21 @@ test('changing the password swaps the token and keeps the user; a refusal says w
   await setScreenLanguage('mr')
   expect(lang[0]).toMatchObject({ url: '/api/me/language', init: { method: 'PUT', body: '{"language":"mr"}' } })
   expect(currentSession()?.user.ui_language).toBe('mr')
+})
+
+test('signing out ends the token on the server too, and the screen signs out even when the server cannot be reached', async () => {
+  setSession({ token: 'tok-1', user: { id: 'u1', username: 'io.one', full_name: 'IO One', rank: 'SI', role: 'io', station_id: 's1' } })
+  const fetch = vi.fn(async () => ({ ok: true, status: 204, json: async () => null }))
+  vi.stubGlobal('fetch', fetch)
+  await signOut()
+  expect(currentSession()).toBeNull()
+  expect(fetch).toHaveBeenCalledWith('/api/logout', { method: 'POST', headers: { Authorization: 'Bearer tok-1' } })
+  setSession({ token: 'tok-2', user: { id: 'u1', username: 'io.one', full_name: 'IO One', rank: 'SI', role: 'io', station_id: 's1' } })
+  vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('network down') }))
+  await signOut()
+  expect(currentSession()).toBeNull()
+  vi.stubGlobal('fetch', fetch)
+  fetch.mockClear()
+  await signOut()                         // nobody signed in: nothing to send
+  expect(fetch).not.toHaveBeenCalled()
 })

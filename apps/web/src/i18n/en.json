@@ -711,5 +711,10 @@
  "reads.complaint": "Complaint",
  "reads.none": "No reads of protected details at this police station.",
  "reads.newer": "Newer",
- "reads.older": "Older"
+ "reads.older": "Older",
+ "server.tooManyHere": "Too many wrong passwords from this computer. Try again after {time} IST.",
+ "server.passwordBytes": "A password can be at most 72 bytes: about 24 letters of an Indian script, or 72 English letters and digits.",
+ "server.dbRefusedChar": "The database refused this entry (a rule, a duplicate, or a character it cannot store).",
+ "server.unexpected": "Something went wrong on the server. Reference {ref} (give it to the admin).",
+ "server.tooLarge": "This is too large to send (at most {mb} MB)."
 }

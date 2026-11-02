@@ -10,7 +10,7 @@ import PoliciesPage from './PoliciesPage'
 import ReadsPage from './ReadsPage'
 import LoginPage from './LoginPage'
 import { ComplaintPage, FrontDeskPage } from './FrontDesk'
-import { currentSession, onSessionChange, setMessageLanguage, setScreenLanguage, setSession } from './api'
+import { currentSession, onSessionChange, setMessageLanguage, setScreenLanguage, signOut } from './api'
 import { REVIEWED, SCREEN_LANGS, ScreenLangContext, translate, type Key } from './i18n'
 import { LANGS, TypingContext, type TypingLang } from './typing'
 
@@ -63,7 +63,7 @@ export default function App() {
           </select>
         </label>
         {session && <span className="who">{session.user.full_name} ({session.user.rank})
-          <button type="button" onClick={() => setSession(null)}>{t('header.signOut')}</button></span>}
+          <button type="button" onClick={() => void signOut()}>{t('header.signOut')}</button></span>}
         </div>
       </header>
       <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : <FirList />}</main>
