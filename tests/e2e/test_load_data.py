@@ -98,7 +98,7 @@ def test_load_firs_then_arrests_then_chargesheets(core, page):
     expect(main).to_contain_text("Chargesheet naming A1 filed on 2024-04-20.")
     evidence = page.locator("section", has=page.get_by_role("heading", name="Evidence", exact=True))
     expect(evidence).to_contain_text("1/E-01 (physical)")
-    expect(evidence).to_contain_text("1/E-02 (electronic) · not court-ready yet (BSA 63(4))")   # imported without its certificate
+    expect(evidence).to_contain_text("1/E-02 (electronic) not court-ready yet (BSA 63(4))")   # imported without its certificate
     expect(evidence).not_to_contain_text("1/E-03")                                              # no hash, not loaded
     expect(main).to_contain_text("CrPC 91 (old law): produce documents to Fictional Bank Ltd sent, waiting for reply")
     expect(main).not_to_contain_text("Fictional Telecom Ltd")

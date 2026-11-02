@@ -95,8 +95,10 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
       </div>
       <div className={shown('evidence')}>
         <Section<Evidence> title={t('fir.evidence')} path={`/firs/${id}/evidence`} version={version} form={<AddEvidenceForm firId={id} onSaved={saved} />}>
-          {(rows) => <ul>{rows.map((e) => (
-            <li key={e.id}>{e.label} ({t.code('evidenceKind', e.kind)}){e.kind === 'electronic' && ` · ${t(e.court_ready ? 'evidence.courtReady' : 'evidence.notCourtReady')}`}
+          {(rows) => <ul className="plain">{rows.map((e) => (
+            <li key={e.id} className="card"><strong>{e.label}</strong> ({t.code('evidenceKind', e.kind)})
+              {e.kind === 'electronic' && <> <span className={`chip ${e.court_ready ? 'c-ok' : 'c-warn'}`}>{t(e.court_ready ? 'evidence.courtReady' : 'evidence.notCourtReady')}</span></>}
+              {e.sha256 && <> · <code title={e.sha256}>{e.sha256.slice(0, 4)}…{e.sha256.slice(-4)}</code></>}
               {e.kind === 'electronic' && <Certificates firId={id} item={e} onSaved={saved} />}</li>
           ))}</ul>}
         </Section>

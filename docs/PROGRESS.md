@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 13 Evidence restyle (board 5) (session 63, started 03:00 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -102,7 +101,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
    a. DONE (session 59): frame, look, Dashboard (board 1), FIR parts as pages, readiness chips (board 9).
    b. DONE (session 59): Case diary, BNSS 192 (board 14, V39).
-   Front desk complaint page done (session 61). Notices list restyled (session 62: one card per notice with a status chip). Still to restyle closer to their boards (look already applied): Notices reply checklist with Yes/No chips (board 4), Evidence (board 5); Type (board 17).
+   Front desk complaint page done (session 61). Notices list restyled (session 62: one card per notice with a status chip). Evidence list restyled (session 63). Still to restyle closer to their boards (look already applied): Notices reply checklist with Yes/No chips (board 4), Evidence custody chain and 63(4) card (board 5, needs data the app lacks); Type (board 17).
    c. Statements and witnesses (board 6): BNSS 180 statements, typed or spoken, read-back, kept as written.
    d. Draft chargesheet and sign (board 10): BNSS 193 report drafted from the file (AI drafts through the gateway, officer confirms each part), SHO approval.
    e. Supervisor review (board 11): SHO/SP queue of cases near a deadline or waiting approval; approve or return with a reason.
@@ -121,6 +120,16 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 2 Nov 2026, session 63 (scheduled run, last of the night, Sumit away)
+### Tonight in short
+- Last scheduled session of the night. One item built: Evidence list restyle (board 5). `scripts/test-all.sh` at the end: all 8 PASS (repo rules, packs, xlit, gateway, web, database rules, core, e2e). Coverage gates unchanged (core 96/90, web 97/89, gateway 94); coverage numbers not re-read.
+- Baseline: fresh container lacked the `caseapp` role/databases, Python packages (psycopg, gateway requirements) and `npm ci`; installed, then all 8 PASS. Not a code fault.
+- Item 13, Evidence (board 5): each item is a card; the court-ready state is a green/amber chip (word always shown); a stored hash shows short (first 4 and last 4 characters, whole on hover). Web test extended; e2e text in `test_load_data.py` adjusted. The Tamil phone check failed first (chip 407 px in a 390 px window); chips now wrap inside these cards.
+- Differences from the board, on purpose: no table columns, video record, custody chain or 63(4) side card (the app has no such data yet; not faked); certificates stay under each electronic item.
+- Skipped: screenshot comparison with the board at 1280 and 390 px not taken this session (the phone-width e2e check passes); do it next time. No time left for extra tests of older code.
+- Next: Type restyle (board 17), then 13c Statements and witnesses.
+Questions for Sumit: none new.
 
 ## 2 Nov 2026, session 62 (scheduled run, Sumit away)
 - Baseline: fresh container needed PostgreSQL started, a `caseapp` role and `npm ci`; then all 8 suites PASS (6.5 min).

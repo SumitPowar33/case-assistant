@@ -124,6 +124,7 @@ section.flush > h2 { padding: 18px 20px; margin: 0; border-bottom: 1px solid var
 .ingredients { list-style: none; padding: 0; margin: 0; }
 .ingredients > li { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-start; padding: 11px 0; margin: 0; border-top: 1px solid var(--line-soft); }
 .ingredients > li > .chip { margin-top: 2px; }
+main ul.plain > li > .chip { white-space: normal; text-align: left; }
 .ingredients > li > div { flex: 1 1 300px; min-width: 0; }
 .gaps { list-style: none; padding: 0; display: grid; gap: 10px; }
 .gaps > li { border: 1px solid #F3C9C4; background: #FFF8F7; border-radius: 10px; padding: 12px 14px; margin: 0; }

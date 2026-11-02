@@ -39,9 +39,12 @@ test('a full case page: sections, people, deadlines and electronic evidence with
   expect(await screen.findByText(/Chargesheet for an accused in custody: by 2026-11-30/)).toBeTruthy()
   expect(screen.getByText(/Reply to the notice from Fictional Bank Ltd: by 2026-11-10/)).toBeTruthy()
   expect(screen.getByText(/a_kind_added_later: by 2026-12-01/)).toBeTruthy()   // a code no catalog knows shows as it is
-  expect(await screen.findByText(/Phone \(electronic\) · not court-ready yet \(BSA 63\(4\)\)/)).toBeTruthy()
-  expect(screen.getByText(/Laptop \(electronic\) · court-ready/)).toBeTruthy()
-  expect(screen.getByText('Knife (physical)')).toBeTruthy()
+  const chip = (text: RegExp) => screen.getByText(text).closest('.chip')!
+  expect((await screen.findByText(/not court-ready yet/)).className).toContain('c-warn')
+  expect(chip(/^court-ready$/).className).toContain('c-ok')
+  expect(screen.getByText('Phone', { selector: 'strong' }).closest('li')!.className).toContain('card')
+  expect(screen.getByText('aaaa…aaaa').getAttribute('title')).toBe('a'.repeat(64))   // a stored hash is shown short, whole on hover
+  expect(screen.getByText('Knife', { selector: 'strong' }).closest('li')!.textContent).toBe('Knife (physical)')   // no chip, no hash for a physical item
 })
 
 test('a zero FIR with no sections, and a protected case that withholds the complaint text', async () => {
@@ -78,7 +81,7 @@ test('in Marathi the case page shows its headings, roles, deadlines and evidence
   expect(screen.getByRole('heading', { name: 'व्यक्ती' })).toBeTruthy()
   expect(await screen.findByText('V1 (पीडित): Victim V1 (ओळख संरक्षित)')).toBeTruthy()
   expect(await screen.findByText(/पीडितेला प्रगतीची माहिती: 2026-12-30 पर्यंत/)).toBeTruthy()
-  expect(await screen.findByText(/Phone \(इलेक्ट्रॉनिक\) · अजून न्यायालयासाठी तयार नाही/)).toBeTruthy()
+  expect(await screen.findByText(/अजून न्यायालयासाठी तयार नाही/)).toBeTruthy()
 })
 
 test('on a phone one part of the FIR shows at a time: the picker lists every part and marks only the chosen one as shown', async () => {
