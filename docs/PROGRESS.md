@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 12 (session 56, started 13:30 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -86,6 +85,7 @@ Done in session 52 (1 Nov 23:35 IST scheduled run, overlapped sessions 50 and 51
 Done in session 53 (2 Nov, 04:55 UTC scheduled run): the FIR screen reads the people once (was four times).
 Done in session 54 (2 Nov, on-demand run from 10:27 IST): Stryker for the web app's date and form logic (TESTING.md item 6 finished).
 Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question decided (section above); security review with fixes (session 55 entry).
+Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
@@ -94,7 +94,44 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: online only (decision 1 of 2 Nov): typed text kept in memory and sent again when the network is back, nothing stored on the phone; the FIR screen opens on Deadlines on a phone (decision 6); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
 10. Account lifecycle (decision 2 of 2 Nov): acting SHO with an end date given by the SP, "IO has left the station" list.
 11. Acid-attack survivors (BNS 124) masked like sexual-offence victims (decision 4 of 2 Nov).
-12. Security, what the review of 2 Nov left (session 55 entry, "Risks"): sign-out that ends the token on the server, a limit on sign-in attempts per address, HTTPS and the policy as a header at installation, an outside penetration test before the pilot.
+12. Security: done in code (sessions 55 and 56). Left for people: an outside penetration test (CERT-In empanelled auditor) before real case data; the installation itself (deploy/nginx.conf, a real certificate).
+
+## 2 Nov 2026, session 56 (Sumit present from 13:29 IST: "fix all the security issues")
+Started from `setup/seed` at ddea2ad (session 55, nothing newer). Took item 12, the risks session 55 left open.
+
+Done, each with a test written first
+1. **Signing out ends the token on the server** (V38 `signed_out_token`, `POST /api/logout`). Every token now has an id
+   (jti); a signed-out id is refused at once by the core and within 30 seconds by the gateway (its sign-in check). A
+   token without an id is refused, so everyone signs in once more after this update. Sign out on the screen calls it and
+   still signs out when the server cannot be reached. The other sign-ins of the same officer go on working. The table is
+   kept as written (it is also the record of who signed out when).
+2. **Sign-in limit per address**: 30 wrong passwords from one address within 15 minutes stop every sign-in from it for
+   15 minutes after the latest, a right password too ("Too many wrong passwords from this computer..."); the username
+   lock stays as it was. Index on the address (V38). The core takes the address its reverse proxy forwards
+   (`server.forward-headers-strategy=native`: Tomcat trusts the header only from internal addresses).
+3. **The AI draft limit holds across a restart**: counted from the audit log too (20 per officer in 10 minutes), with an
+   index on actor and time; the memory count still stops a burst sent at once.
+4. **Policy changes list**: a unit's own changes are found first, then the newest 200 (busier units used to hide them).
+5. **Installation file** `deploy/nginx.conf`: HTTP only redirects to HTTPS; TLS 1.2 and 1.3; HSTS; the page's
+   Content-Security-Policy as a header plus `frame-ancestors 'none'`; nosniff, DENY, no-referrer, a permissions policy
+   (microphone for speech input only); 16 MB bodies; the client address replaced, never appended, so a made-up
+   X-Forwarded-For cannot reach the core; no nginx version shown. `tests/repo_rules/test_deploy_config.py` keeps it in
+   step with the app; `tests/e2e/test_https_proxy.py` runs it in a real nginx in front of the real core (skipped where
+   nginx is not installed; this sandbox installed it with apt).
+6. Five server messages of session 55 and 56 (address lock, 72-byte password, database refusal, unexpected error, too
+   large) are in the 11 catalogs (draft translations, unchecked like the others).
+
+Tests: core `HardeningApiTest` +4 (sign-out, token without id, address limit, policy list), gateway +1 (restart), web
++1 (sign-out), repo rules +3, e2e +2.
+Final: all 8 suites PASS (`scripts/test-all.sh`; core and e2e re-run after the migration-number fix in `MigrationTest`). Coverage: core 97.8% lines / 92.7% branches, gateway 96% (gates unchanged).
+
+Deliberately skipped / not checked
+- The gateway still accepts a signed-out token for up to 30 seconds (its cached check), as for a disabled account.
+- The address limit can lock out a whole station behind one address for 15 minutes after 30 wrong passwords there; an
+  officer can sign in from another computer. If that happens often, a state can ask for a higher number.
+- Anyone who can reach the core directly (not through nginx) from an internal address could write their own
+  X-Forwarded-For; the core and gateway must listen on 127.0.0.1 only (said at the top of deploy/nginx.conf).
+- An outside penetration test is still needed before real case data (people, not code).
 
 ## 2 Nov 2026, session 55 (Sumit present from 11:26 IST: "resolve the questions yourself, then break it, ethical and non-ethical hacking, and fix it")
 Started from `setup/seed` at 021714b (session 54). Baseline `scripts/test-all.sh`: all 8 PASS.
