@@ -16,7 +16,10 @@ from __future__ import annotations
 
 import hashlib
 import os
+import threading
+import time
 import uuid
+from collections import deque
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
@@ -35,29 +38,60 @@ SAFETY_SYSTEM = (
 )
 
 
+# A model name goes into the provider's request path (Gemini: .../models/{model}:generateContent), so only plain names
+# are taken: no "/", "?", ":" or "..", which would send the state's API key to another method of that API.
+MODEL_NAME = r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+# Each draft is paid for, so one officer's token (or a stolen one) may ask for at most this many in the window.
+DRAFTS_PER_WINDOW = 20
+DRAFT_WINDOW_SECONDS = 600
+
+
+class DraftLimit:
+    """At most `limit` drafts per officer in any `window` seconds, kept in memory (a restart forgets it)."""
+
+    def __init__(self, limit: int, window: float, clock=time.monotonic):
+        self.limit, self.window, self.clock = limit, window, clock
+        self.seen: dict[str, deque] = {}
+        self.lock = threading.Lock()
+
+    def wait(self, who: str) -> int:
+        """0 and counted when this request may go ahead; otherwise the seconds until it may."""
+        now = self.clock()
+        with self.lock:
+            q = self.seen.setdefault(who, deque())
+            while q and q[0] <= now - self.window:
+                q.popleft()
+            if len(q) >= self.limit:
+                return max(1, int(q[0] + self.window - now) + 1)
+            q.append(now)
+            if len(self.seen) > 10000:   # forget officers with nothing in the window
+                self.seen = {k: v for k, v in self.seen.items() if v and v[-1] > now - self.window}
+            return 0
+
+
 class GenerateIn(BaseModel):
     model_config = ConfigDict(extra="forbid")   # an unknown field (e.g. a caller's own "system" text) is refused, not ignored
-    feature: str
+    feature: str = Field(max_length=60)
     prompt: str = Field(min_length=1, max_length=60000)
     # Which prompt template the caller used, e.g. "notice_draft/bnss94@1". Logged with every request.
     prompt_version: str = Field(min_length=1, max_length=80, pattern=r"^[\w./@-]+$")
-    case_ref: str | None = None
-    provider: str | None = None  # officer override, if allowed
-    model: str | None = None
+    case_ref: str | None = Field(default=None, max_length=200)
+    provider: str | None = Field(default=None, max_length=20)  # officer override, if allowed
+    model: str | None = Field(default=None, pattern=MODEL_NAME)
     max_tokens: int = Field(default=1024, ge=1, le=8192)
 
 
 class DecisionIn(BaseModel):
-    request_id: str
-    decision: str  # accepted | edited | rejected
-    feature: str
-    case_ref: str | None = None
-    note: str = ""
+    request_id: str = Field(max_length=64)
+    decision: str = Field(max_length=10)  # accepted | edited | rejected
+    feature: str = Field(max_length=60)
+    case_ref: str | None = Field(default=None, max_length=200)
+    note: str = Field(default="", max_length=2000)
 
 
 class SettingIn(BaseModel):
-    provider: str
-    model: str | None = None
+    provider: str = Field(max_length=20)
+    model: str | None = Field(default=None, pattern=MODEL_NAME)
     officer_may_switch: bool = True
 
 
@@ -73,6 +107,7 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
     store = store or Store(os.environ.get("AI_GATEWAY_DB", "ai-gateway.sqlite3"), os.environ.get("AI_AUDIT_KEY") or None)
     providers = providers or {"claude": ClaudeProvider(), "gemini": GeminiProvider(), "fake": FakeProvider()}
     app = FastAPI(title="Case Assistant AI gateway", version="0.1.0")
+    drafts = DraftLimit(DRAFTS_PER_WINDOW, DRAFT_WINDOW_SECONDS)
 
     def user(authorization: str = Header(default="")) -> dict:
         scheme, _, token = authorization.partition(" ")
@@ -137,10 +172,15 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
     def generate(body: GenerateIn, u: dict = Depends(user)):
         request_id = str(uuid.uuid4())
 
-        def refuse(status: int, message: str, **detail):
+        def refuse(status: int, message: str, headers: dict | None = None, **detail):
             # every refusal is logged, with who asked and why it was refused (the text itself is not kept)
             log(u, "ai_refused", body.feature, body.case_ref, {"request_id": request_id, "status": status, "reason": message, **detail})
-            raise HTTPException(status, message)
+            raise HTTPException(status, message, headers=headers)
+
+        wait = drafts.wait(str(u["sub"]))
+        if wait:
+            refuse(429, f"Too many AI drafts in a short time ({DRAFTS_PER_WINDOW} in {DRAFT_WINDOW_SECONDS // 60} minutes). "
+                        f"Try again in {wait} seconds.", headers={"Retry-After": str(wait)})
 
         settings = store.get_settings(u["state"])
         if body.feature not in settings:

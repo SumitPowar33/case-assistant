@@ -540,3 +540,61 @@ def test_the_audit_check_says_so_when_the_core_app_cannot_give_the_head():
                    headers={"Authorization": "Bearer " + token()})
     r = c.get("/v1/audit")
     assert r.status_code == 503 and "audit chain head" in r.json()["detail"]
+
+
+# --- security review, 2 Nov 2026 -------------------------------------------------------------------------------
+
+def test_a_model_name_cannot_reach_another_address_of_the_provider():
+    """The Gemini model name goes into the request path; '../' or '?' in it used to send the state's API key to any
+    other method of that API (files, tuned models). Only plain model names are taken, from the officer and the admin."""
+    seen = []
+    def handler(request):
+        seen.append(request.url.path)
+        return gemini_ok(request)
+    c = client(Store(":memory:"), {"claude": ClaudeProvider("k"), "gemini": GeminiProvider("test-gemini", mock_client(handler)), "fake": FakeProvider()})
+    for bad in ["../../files", "gemini-x:generateContent?alt=sse#", "a/b", "gemini x", "x" * 81]:
+        r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "gemini", "model": bad})
+        assert r.status_code == 422, bad
+        assert c.put("/v1/settings/case_qa", json={"provider": "gemini", "model": bad}).status_code == 422, bad
+    assert seen == []
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "gemini", "model": "gemini-3.7-flash"})
+    assert r.status_code == 200 and seen == ["/v1beta/models/gemini-3.7-flash:generateContent"]
+
+
+def test_free_text_fields_have_a_length_limit():
+    store = Store(":memory:")
+    c = client(store, {"claude": ClaudeProvider("k"), "gemini": GeminiProvider("k"), "fake": FakeProvider()}, role="io", sub="user-io")
+    assert c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "t@1", "case_ref": "F" * 201}).status_code == 422
+    assert c.post("/v1/decisions", json={"request_id": "r", "decision": "accepted", "feature": "notice_draft", "note": "n" * 2001}).status_code == 422
+    assert c.post("/v1/decisions", json={"request_id": "r" * 65, "decision": "accepted", "feature": "notice_draft"}).status_code == 422
+
+
+def test_one_officer_cannot_spend_the_ai_budget_in_a_burst():
+    """A stolen or misused token used to ask without limit (each draft is paid for). 20 drafts in 10 minutes per
+    officer; the next is refused and logged, and another officer is not affected."""
+    calls = []
+    def handler(request):
+        calls.append(1)
+        return claude_ok(request)
+    store = Store(":memory:")
+    providers = {"claude": ClaudeProvider("test-claude", mock_client(handler)), "gemini": GeminiProvider("k"), "fake": FakeProvider()}
+    app = create_app(store, providers, SECRET, core_says_active)
+    io = TestClient(app, headers={"Authorization": "Bearer " + token("user-io", "io")})
+    other = TestClient(app, headers={"Authorization": "Bearer " + token("user-io-2", "io")})
+    body = {"feature": "notice_draft", "prompt": "x", "prompt_version": "t@1"}
+    for _ in range(gateway_main.DRAFTS_PER_WINDOW):
+        assert io.post("/v1/generate", json=body).status_code == 200
+    r = io.post("/v1/generate", json=body)
+    assert r.status_code == 429 and "Retry-After" in r.headers
+    assert len(calls) == gateway_main.DRAFTS_PER_WINDOW            # the refused one never reached the provider
+    assert store.audit_rows(5)[0]["action"] == "ai_refused"
+    assert other.post("/v1/generate", json=body).status_code == 200
+
+
+def test_the_draft_limit_window_moves_on():
+    clock = [1000.0]
+    limiter = gateway_main.DraftLimit(2, 600, clock=lambda: clock[0])
+    assert limiter.wait("a") == 0 and limiter.wait("a") == 0
+    assert limiter.wait("a") > 0
+    clock[0] += 601
+    assert limiter.wait("a") == 0
