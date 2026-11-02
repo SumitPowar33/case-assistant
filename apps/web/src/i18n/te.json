@@ -347,7 +347,7 @@
  "notice.status.reply_incomplete": "సమాధానం అసంపూర్ణం",
  "notice.status.complete": "పూర్తి",
  "notice.status.cancelled": "రద్దు",
- "notice.toLine": "{addressee}కు: {status}",
+ "notice.toLine": "{addressee}కు",
  "notice.issuedLine": "{date}న జారీ",
  "notice.issuedBy": "{date}న {name} జారీ చేశారు",
  "notice.dueLine": "సమాధానం {date} లోపు",

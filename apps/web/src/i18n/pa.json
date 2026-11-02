@@ -347,7 +347,7 @@
  "notice.status.reply_incomplete": "ਜਵਾਬ ਅਧੂਰਾ",
  "notice.status.complete": "ਪੂਰਾ",
  "notice.status.cancelled": "ਰੱਦ",
- "notice.toLine": "{addressee} ਨੂੰ: {status}",
+ "notice.toLine": "{addressee} ਨੂੰ",
  "notice.issuedLine": "{date} ਨੂੰ ਜਾਰੀ",
  "notice.issuedBy": "{date} ਨੂੰ {name} ਵੱਲੋਂ ਜਾਰੀ",
  "notice.dueLine": "ਜਵਾਬ {date} ਤੱਕ",

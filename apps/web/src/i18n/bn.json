@@ -347,7 +347,7 @@
  "notice.status.reply_incomplete": "উত্তর অসম্পূর্ণ",
  "notice.status.complete": "সম্পূর্ণ",
  "notice.status.cancelled": "বাতিল",
- "notice.toLine": "{addressee}-কে: {status}",
+ "notice.toLine": "{addressee}-কে",
  "notice.issuedLine": "{date} তারিখে জারি",
  "notice.issuedBy": "{date} তারিখে {name} জারি করেছেন",
  "notice.dueLine": "উত্তর {date}-এর মধ্যে",

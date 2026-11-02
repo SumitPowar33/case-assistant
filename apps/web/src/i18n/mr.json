@@ -347,7 +347,7 @@
  "notice.status.reply_incomplete": "उत्तर अपूर्ण",
  "notice.status.complete": "पूर्ण",
  "notice.status.cancelled": "रद्द",
- "notice.toLine": "{addressee} यांना: {status}",
+ "notice.toLine": "{addressee} यांना",
  "notice.issuedLine": "{date} रोजी जारी",
  "notice.issuedBy": "{date} रोजी {name} यांनी जारी",
  "notice.dueLine": "उत्तर {date} पर्यंत",

@@ -19,6 +19,8 @@ const KINDS = ['BNSS_94', 'BNSS_35_3', 'BNSS_179', 'follow_up']
 const CHANNELS = ['email', 'portal', 'post', 'by_hand']
 /** The check stored for a notice that asked for no list of items. It is stored in English, whatever the screen language. */
 const FULL_REPLY = 'Reply answers the notice fully'
+/** Chip colour per notice status (the word is always shown too). */
+const STATUS_CHIP: Record<string, string> = { draft: 'c-ai', sent: 'c-info', reply_incomplete: 'c-warn', complete: 'c-ok', cancelled: 'c-neu' }
 const lines = (s: string) => [...new Set(s.split('\n').map((l) => l.trim()).filter(Boolean))]
 
 /** Sends a draft: the signed-in officer signs it (the server records who). */
@@ -154,9 +156,10 @@ export default function Notices({ firId, fir }: { firId: string; fir?: NoticeFac
     <section aria-labelledby="notices">
       <h2 id="notices">{t('notice.heading')}</h2>
       {error ? <p role="alert">{error}</p> : !data ? <p>{t('common.loading')}</p> : !data.length ? <p>{t('common.noneYet')}</p> : (
-        <ul>{data.map((n) => (
-          <li key={n.id}>
-            <strong>{t.code('notice.kind', n.kind)}</strong> {t('notice.toLine', { addressee: n.addressee, status: t.code('notice.status', n.status) })}
+        <ul className="plain">{data.map((n) => (
+          <li key={n.id} className="card">
+            <strong>{t.code('notice.kind', n.kind)}</strong> {t('notice.toLine', { addressee: n.addressee })}{' '}
+            <span className={`chip ${STATUS_CHIP[n.status] ?? 'c-neu'}`}>{t.code('notice.status', n.status)}</span>
             {n.issued_at && <> · {n.signed_by_name ? t('notice.issuedBy', { date: fmt(n.issued_at), name: n.signed_by_name }) : t('notice.issuedLine', { date: fmt(n.issued_at) })}</>}
             {n.reply_due_on && <> · {t('notice.dueLine', { date: n.reply_due_on })}</>}
             {n.ai_drafted && <> · {t('notice.aiDrafted')}</>}

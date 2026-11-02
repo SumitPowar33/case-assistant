@@ -347,7 +347,7 @@
  "notice.status.reply_incomplete": "பதில் முழுமையில்லை",
  "notice.status.complete": "முழுமை",
  "notice.status.cancelled": "ரத்து",
- "notice.toLine": "{addressee} அவர்களுக்கு: {status}",
+ "notice.toLine": "{addressee} அவர்களுக்கு",
  "notice.issuedLine": "{date} அன்று வழங்கப்பட்டது",
  "notice.issuedBy": "{date} அன்று {name} வழங்கினார்",
  "notice.dueLine": "பதில் {date} க்குள்",

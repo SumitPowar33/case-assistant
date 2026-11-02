@@ -347,7 +347,7 @@
  "notice.status.reply_incomplete": "മറുപടി അപൂർണം",
  "notice.status.complete": "പൂർണം",
  "notice.status.cancelled": "റദ്ദാക്കി",
- "notice.toLine": "{addressee}-ന്: {status}",
+ "notice.toLine": "{addressee}-ന്",
  "notice.issuedLine": "{date}-ന് നൽകി",
  "notice.issuedBy": "{date}-ന് {name} നൽകി",
  "notice.dueLine": "മറുപടി {date}-നകം",

@@ -347,7 +347,7 @@
  "notice.status.reply_incomplete": "reply incomplete",
  "notice.status.complete": "complete",
  "notice.status.cancelled": "cancelled",
- "notice.toLine": "to {addressee}: {status}",
+ "notice.toLine": "to {addressee}",
  "notice.issuedLine": "issued {date}",
  "notice.issuedBy": "issued {date} by {name}",
  "notice.dueLine": "reply due by {date}",

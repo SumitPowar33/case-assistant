@@ -347,7 +347,7 @@
  "notice.status.reply_incomplete": "ଉତ୍ତର ଅସମ୍ପୂର୍ଣ୍ଣ",
  "notice.status.complete": "ସମ୍ପୂର୍ଣ୍ଣ",
  "notice.status.cancelled": "ବାତିଲ",
- "notice.toLine": "{addressee}ଙ୍କୁ: {status}",
+ "notice.toLine": "{addressee}ଙ୍କୁ",
  "notice.issuedLine": "{date}ରେ ଜାରି",
  "notice.issuedBy": "{date}ରେ {name} ଦ୍ୱାରା ଜାରି",
  "notice.dueLine": "ଉତ୍ତର {date} ମଧ୍ୟରେ",

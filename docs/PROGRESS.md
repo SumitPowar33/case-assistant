@@ -55,7 +55,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 3. Evidence and notices import files: **build both**, same pattern as FIRs, arrests and chargesheets (insert-only, approved by a person, undoable until work is recorded).
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
-In progress: item 13 Notices restyle (board 4) (session 62, started 23:40 IST)
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
@@ -102,7 +101,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
    a. DONE (session 59): frame, look, Dashboard (board 1), FIR parts as pages, readiness chips (board 9).
    b. DONE (session 59): Case diary, BNSS 192 (board 14, V39).
-   Front desk complaint page done (session 61). Still to restyle closer to their boards (look already applied): Notices (board 4); Evidence (board 5); Type (board 17).
+   Front desk complaint page done (session 61). Notices list restyled (session 62: one card per notice with a status chip). Still to restyle closer to their boards (look already applied): Notices reply checklist with Yes/No chips (board 4), Evidence (board 5); Type (board 17).
    c. Statements and witnesses (board 6): BNSS 180 statements, typed or spoken, read-back, kept as written.
    d. Draft chargesheet and sign (board 10): BNSS 193 report drafted from the file (AI drafts through the gateway, officer confirms each part), SHO approval.
    e. Supervisor review (board 11): SHO/SP queue of cases near a deadline or waiting approval; approve or return with a reason.
@@ -121,6 +120,15 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 2 Nov 2026, session 62 (scheduled run, Sumit away)
+- Baseline: fresh container needed PostgreSQL started, a `caseapp` role and `npm ci`; then all 8 suites PASS (6.5 min).
+- Item 13, Notices (board 4): each notice is a card with a coloured status chip (draft, sent, reply incomplete, complete, cancelled; the word is always shown). The text `notice.toLine` lost its ": {status}" in all 11 languages because the status is now the chip. Tests updated (Marathi list test, e2e load-data text). Screenshots at 1280 and 390 px compared with the board.
+- Differences from the board, on purpose: no table columns (TO / ASKED FOR / SENT / STATUS), no reply-detail card with Yes/No chips, no "New notices in bulk" button (no such feature yet). The follow-up letter AI card belongs with item 14.
+- `scripts/test-all.sh` at the end: all 8 PASS.
+- Next: Evidence and Type restyle, then 13c Statements and witnesses.
+- Skipped: coverage numbers not re-read per file (markup change, tests kept).
+Questions for Sumit: none new.
 
 ## 2 Nov 2026, session 61 (scheduled run, Sumit away)
 - Baseline: the fresh container lacked the gateway's runtime packages (httpx, fastapi); installed them, then all 8 suites PASS. Not a code fault.

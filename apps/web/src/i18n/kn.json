@@ -347,7 +347,7 @@
  "notice.status.reply_incomplete": "ಉತ್ತರ ಅಪೂರ್ಣ",
  "notice.status.complete": "ಪೂರ್ಣ",
  "notice.status.cancelled": "ರದ್ದು",
- "notice.toLine": "{addressee} ಅವರಿಗೆ: {status}",
+ "notice.toLine": "{addressee} ಅವರಿಗೆ",
  "notice.issuedLine": "{date} ರಂದು ಜಾರಿ",
  "notice.issuedBy": "{date} ರಂದು {name} ಜಾರಿ ಮಾಡಿದರು",
  "notice.dueLine": "ಉತ್ತರ {date} ರೊಳಗೆ",

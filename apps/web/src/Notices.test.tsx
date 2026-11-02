@@ -225,12 +225,12 @@ test('in Marathi the notice list, the reply and send forms and the new-notice fo
   render(<ScreenLangContext.Provider value="mr"><Notices firId="f1" fir={fir} /></ScreenLangContext.Provider>)
   expect(await screen.findByRole('heading', { name: 'नोटिसा' })).toBeTruthy()
   const [one, two, three] = screen.getAllByRole('listitem').filter((li) => li.parentElement?.parentElement?.tagName === 'SECTION')
-  expect(one.textContent).toContain('BNSS 94: कागदपत्रे किंवा डेटा सादर करा Nodal Officer, Fictional Bank यांना: उत्तर अपूर्ण')
+  expect(one.textContent).toContain('BNSS 94: कागदपत्रे किंवा डेटा सादर करा Nodal Officer, Fictional Bank यांना उत्तर अपूर्ण')
   expect(one.textContent).toMatch(/रोजी SI Fictional यांनी जारी · उत्तर 2026-10-12 पर्यंत · मजकूर AI ने मसुदा केला, अधिकाऱ्याने तपासला · 2 उत्तरे/)
   expect(within(one).getByText('Account statement: मिळाले')).toBeTruthy()
   expect(within(one).getByText('KYC documents: अजून मिळाले नाही')).toBeTruthy()
-  expect(two.textContent).toMatch(/BNSS 179: साक्षीदार म्हणून हजर राहा .* यांना: पाठवली, उत्तराची वाट · .* रोजी जारी · 1 उत्तर/)
-  expect(three.textContent).toContain('a_new_kind Nodal Officer, Fictional Bank यांना: मसुदा (स्वाक्षरी नाही)')   // an unknown kind shows its code
+  expect(two.textContent).toMatch(/BNSS 179: साक्षीदार म्हणून हजर राहा .* यांना पाठवली, उत्तराची वाट · .* रोजी जारी · 1 उत्तर/)
+  expect(three.textContent).toContain('a_new_kind Nodal Officer, Fictional Bank यांना मसुदा (स्वाक्षरी नाही)')   // an unknown kind shows its code
   expect(within(three).getByText('या नोटिसीवर स्वाक्षरी करून पाठवा')).toBeTruthy()
   const reply = within(two).getByText('उत्तर नोंदवा').closest('details')!
   expect(within(reply).getByRole('option', { name: 'हस्ते' })).toBeTruthy()
