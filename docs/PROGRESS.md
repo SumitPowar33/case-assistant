@@ -42,12 +42,34 @@ Done in session 49 (1 Nov, on-demand run from 16:13 IST): AI feature names in th
 Done in session 50 (1 Nov, Sunday 21:05 scheduled run): mutation testing of the database's keep-as-written and masking rules, with the database tests it showed were missing.
 Done in session 51 (2 Nov, 02:05 IST scheduled run): audit of reads of protected victim details (ARCHITECTURE-TENANCY section 5, item 4), with its screen.
 Done in session 52 (1 Nov 23:35 IST scheduled run, overlapped sessions 50 and 51): a cross-check of session 50's mutation test found 15 untested columns of a signed complaint; tests and the missing kind of change added.
+Done in session 53 (2 Nov, 04:55 UTC scheduled run): the FIR screen reads the people once (was four times).
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: offline use when the network drops (waits for question 1 of session 47: what may be kept on a phone); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
+
+## 2 Nov 2026, session 53 (scheduled run from about 10:25 IST, Sumit away)
+Started from `setup/seed` at 276c4d6 (nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the gateway's `requirements*.txt` and `npm ci`. Item 9 (offline) and items 3 and 6 wait for answers, so I took the first item that does not: load the people once on the FIR screen.
+
+Done
+- **FIR screen reads the people once.** `FirDetail` now loads `/firs/{id}/people` one time and passes the list to `Arrests`, `Chargesheets` and `Readiness` (they each read it again before; the people part read it a fifth way through its own section). The people part is drawn from the same list. If the read fails, the error shows in the people part and the arrest form stays away (as before it simply did not appear). No server change.
+- Tests: the three components' tests now hand the list in (their fetch stubs no longer serve `/people`); new `FirDetail` test: one read of `/people` for the whole page, and a failed read shows the error and no arrest form. Web 185 tests.
+
+`scripts/test-all.sh`: PASS repo rules, packs, xlit, web, database rules, core, e2e browser; the ai-gateway line first failed only because its Python packages were missing in this sandbox (installed, then 32 passed, coverage 96%). Coverage gates unchanged, none raised.
+
+Deliberately skipped / not checked
+- The core's people answer is still read once per version bump plus once per opening of the readiness part (not changed; the protected-read log's one-minute rule stays as built in session 51).
+- Readiness is keyed by `version`, so after a save in another part the people list reloads in `FirDetail` and the readiness part remounts; I did not test the race where the list arrives after the readiness report.
+
+Next: item 9 (offline, waits for the answer), then items 3 and 6. Without answers: Stryker for the web app's date and form logic (TESTING.md item 6); account lifecycle (ARCHITECTURE-TENANCY section 5, item 5).
+
+Questions for Sumit
+1. Same as session 52: should a session push a short "in progress: item X" line to PROGRESS.md at its start so overlapping runs pick different items?
+2. Still open from session 51: read log lines (one a minute or one per answer), how long to keep the log, and whether the SHO may see it.
+3. Still open: may a phone keep case data (encrypted, for a limited time) for offline work, or online only? Should the FIR screen on a phone open on Deadlines?
+4. Still open: reviewers for the glossary and screen texts (Marathi first?), the heavier state punishment class (session 43), the start of the 14 days of a preliminary enquiry (session 42).
 
 ## 2 Nov 2026, session 52 (1 Nov 23:35 IST scheduled run, Sumit away; ran alongside sessions 50 and 51)
 Started from `setup/seed` at 4e7c369: session 50 (21:05) was still running and had not pushed yet, so this session took the same item (mutation testing of the database trigger rules) and wrote its own version. At push time sessions 50 and 51 were already on the branch, so I dropped my duplicate script and tests (kept locally only) and used my version as an **independent cross-check** of session 50's: I ran my 243 changes against session 50's tests.
