@@ -8,8 +8,10 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * Errors no controller answers itself. The answer never carries the SQL, the database's own message or a Java
@@ -25,6 +27,16 @@ class ApiErrors {
         log.info("database refused an entry: {}", e.getMostSpecificCause().getMessage());
         return ResponseEntity.badRequest().body(Map.of("error",
                 "The database refused this entry (a rule, a duplicate, or a character it cannot store)."));
+    }
+
+    /**
+     * A query parameter of the wrong kind (e.g. limit=abc) is the caller's mistake, not a server fault: a plain 400,
+     * not a 500. Without this it would fall to {@link #unexpected} by its NumberFormatException cause (an
+     * IllegalArgumentException). The bad value is not echoed, so nothing a caller sent comes back.
+     */
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})
+    ResponseEntity<Map<String, String>> badRequestParam(Exception e) {
+        return ResponseEntity.badRequest().body(Map.of("error", "A request parameter is missing or of the wrong kind."));
     }
 
     @ExceptionHandler({DataAccessException.class, IllegalArgumentException.class, IllegalStateException.class,

@@ -194,4 +194,15 @@ class HardeningApiTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].reason").value("Fictional order of my station"));
     }
+
+    @Test
+    void aBadQueryParameterIsAPlain400NotA500() throws Exception {
+        // limit=abc cannot become an int; it used to reach the unexpected-error handler (500) by its NumberFormatException cause
+        String body = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/firs?limit=abc").header("Authorization", sho))
+                .andExpect(status().isBadRequest()).andReturn().getResponse().getContentAsString();
+        assertThat(body).doesNotContain("abc").doesNotContainIgnoringCase("exception").contains("parameter");
+        // the real range check still answers 400 too, and a good value still works
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/firs?limit=0").header("Authorization", sho)).andExpect(status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/firs?limit=50").header("Authorization", sho)).andExpect(status().isOk());
+    }
 }
