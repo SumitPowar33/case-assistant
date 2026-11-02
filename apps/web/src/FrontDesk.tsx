@@ -88,6 +88,7 @@ export function ComplaintPage({ id }: { id: string }) {
       <p><a href="#/front-desk">{t('nav.frontDesk')}</a></p>
       <h2 id="complaint-h">{t('complaint.title', { name: c.withheld ? t('complaint.withheldName') : c.informant_name ?? '' })}</h2>
       <p>{t('complaint.meta', { kind: c.kind_label, mode: t.code('mode', c.mode), date: fmt(c.received_at), officer: c.recorded_by_name })}</p>
+      <div className="card">
       {c.withheld ? <p>{t('fir.withheld')}</p> : <blockquote lang={c.text_language} className="read-back">{c.text_original}</blockquote>}
       {!!c.versions?.length && <details><summary>{t('versions.title', { n: c.versions.length })}</summary>
         <ul>{c.versions.map((v, i) => <li key={i}>{t('versions.item', { date: fmt(v.replaced_at), officer: v.replaced_by_name })} <q lang={c.text_language}>{v.text_original}</q></li>)}</ul>
@@ -102,16 +103,18 @@ export function ComplaintPage({ id }: { id: string }) {
         <p>{t('copy.signature', { officer: c.signed_by_name ?? '', date: fmt(c.signed_at) })}</p>
         <button type="button" className="no-print" onClick={() => window.print()}>{t('copy.print')}</button>
       </section>}
-      {c.steps.length > 0 && <>
+      </div>
+      {c.steps.length > 0 && <div className="card">
         <h3>{t('steps.title')}</h3>
-        <ul>{c.steps.map((s) => (
+        <ol>{c.steps.map((s) => (
           <li key={s.id}>{s.text}{s.basis && <small> ({s.basis})</small>}
-            {s.done_at ? <> · <strong>{t('steps.done')}</strong> {t('steps.doneBy', { date: fmt(s.done_at), officer: s.done_by_name ?? '' })}{s.note && `: ${s.note}`}</>
-              : <> · {s.due_at && <>{s.overdue ? <strong>{t('steps.overdue', { date: fmt(s.due_at) })}</strong> : <>{t('steps.dueBy', { date: fmt(s.due_at) })}</>}</>}
+            {s.done_at ? <> <span className="chip c-ok">{t('steps.done')}</span> {t('steps.doneBy', { date: fmt(s.done_at), officer: s.done_by_name ?? '' })}{s.note && `: ${s.note}`}</>
+              : <> {s.due_at && (s.overdue ? <span className="chip c-crit">{t('steps.overdue', { date: fmt(s.due_at) })}</span> : <span className="chip c-info">{t('steps.dueBy', { date: fmt(s.due_at) })}</span>)}
                 {open && <StepForm complaintId={c.id} step={s} onSaved={saved} />}</>}
           </li>
-        ))}</ul>
-      </>}
+        ))}</ol>
+      </div>}
+      <div className="card">
       <h3>{t('outcome.title')}</h3>
       {c.enquiry_at && <p>{t('enquiry.state', { who: c.enquiry_permitted_by ?? '', date: fmt(c.enquiry_at), reason: c.enquiry_reason ?? '' })}
         {c.enquiry_due && !c.outcome && <> {c.enquiry_overdue ? <strong>{t('enquiry.overdue', { date: fmt(c.enquiry_due) })}</strong> : t('outcome.enquiryDue', { date: fmt(c.enquiry_due) })}</>}</p>}
@@ -121,6 +124,7 @@ export function ComplaintPage({ id }: { id: string }) {
           : <>{c.mode === 'electronic' && c.sign_by && <p>{t('outcome.signBy', { date: fmt(c.sign_by) })}</p>}
             {c.mode === 'electronic' && <OutcomeForm c={c} onSaved={saved} lapsedOnly />}
             <p>{t('outcome.firAfterSign')}</p></>}
+      </div>
     </section>
   )
 }

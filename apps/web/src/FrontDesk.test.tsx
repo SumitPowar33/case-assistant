@@ -78,7 +78,7 @@ test('spoken information is read over in a language, signed, and its steps are m
   render(<ComplaintPage id="c1" />)
   expect((await screen.findByText('Fictional caller took money.')).getAttribute('lang')).toBe('mr')
   expect(screen.getByText(/overdue, was due/)).toBeTruthy()
-  expect(screen.getByText(/done/, { selector: 'strong' }).closest('li')!.textContent).toContain('UTR noted')
+  expect(screen.getByText(/^done$/i, { selector: 'span.chip' }).closest('li')!.textContent).toContain('UTR noted')
   expect(screen.getByText('An FIR can be registered once the informant has signed.')).toBeTruthy()
   const sign = screen.getByText('Read over to the informant and signed').closest('details')!
   expect((within(sign).getByLabelText('Read over in') as HTMLSelectElement).value).toBe('mr')

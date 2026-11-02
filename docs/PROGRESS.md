@@ -89,7 +89,6 @@ Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks lef
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
 Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens plan (docs/AI-AND-SCREENS-PLAN.md, items 14 to 18), centred sign-in, the court print format with the informant's copy.
-In progress: item 13, front desk page split into transcript card and golden-hour card, board 13 (session 61, started 21:20 IST)
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
@@ -102,7 +101,7 @@ In progress: item 13, front desk page split into transcript card and golden-hour
 13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
    a. DONE (session 59): frame, look, Dashboard (board 1), FIR parts as pages, readiness chips (board 9).
    b. DONE (session 59): Case diary, BNSS 192 (board 14, V39).
-   Still to restyle closer to their boards (look already applied): Front desk page split into transcript card and golden-hour card (board 13); Notices (board 4); Evidence (board 5); Type (board 17).
+   Front desk complaint page done (session 61). Still to restyle closer to their boards (look already applied): Notices (board 4); Evidence (board 5); Type (board 17).
    c. Statements and witnesses (board 6): BNSS 180 statements, typed or spoken, read-back, kept as written.
    d. Draft chargesheet and sign (board 10): BNSS 193 report drafted from the file (AI drafts through the gateway, officer confirms each part), SHO approval.
    e. Supervisor review (board 11): SHO/SP queue of cases near a deadline or waiting approval; approve or return with a reason.
@@ -121,6 +120,14 @@ In progress: item 13, front desk page split into transcript card and golden-hour
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 2 Nov 2026, session 61 (scheduled run, Sumit away)
+- Baseline: the fresh container lacked the gateway's runtime packages (httpx, fastapi); installed them, then all 8 suites PASS. Not a code fault.
+- Item 13, front desk complaint page (board 13): the page is now three cards (what the informant said with read-back/signature and informant's copy; the first steps as a numbered list with Done / Overdue / Due chips; the outcome). No new texts, so the 11 languages are unchanged. Screenshots at 1280 and 390 px compared with the board. Differences on purpose: no live transcript, AI "details picked out" or Where-to-register panel (the app has no data for them yet; not faked).
+- `scripts/test-all.sh` at the end: all 8 PASS (core, web and gateway gates unchanged).
+- Next: item 13 Notices, Evidence and Type restyle, then 13c Statements and witnesses.
+- Skipped: coverage numbers not re-read per file (change is markup only, test updated).
+Questions for Sumit: none new.
 
 ## 2 Nov 2026, session 60 (Sumit present from 17:32 IST: AI role, screen structure, duty roster, sign-in, POCSO and 112, RAG chatbot, chargesheet AI, real print format, more real-time screens)
 - `docs/AI-AND-SCREENS-PLAN.md`: what the AI does today (one feature on a screen, notice drafting; six more declared in
