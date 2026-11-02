@@ -96,6 +96,30 @@ Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks lef
 11. Acid-attack survivors (BNS 124) masked like sexual-offence victims (decision 4 of 2 Nov).
 12. Security: done in code (sessions 55 and 56). Left for people: an outside penetration test (CERT-In empanelled auditor) before real case data; the installation itself (deploy/nginx.conf, a real certificate).
 
+## 2 Nov 2026, session 57 (Sumit present from 13:53 IST: "act like that and do the testing")
+Ran a structured penetration test of the whole installation (OWASP WSTG + API Top 10) and wrote it up in
+`docs/PENTEST-2026-11-02.md`. Stood the system up as a state would: nginx with TLS in front of the core and the AI
+gateway (both bound to localhost), the demo case, and a second MH station/district as the outsider attacker.
+
+Result: no High or Medium. One Low, fixed; four informational.
+- LOW-1 (fixed, test first): a malformed query parameter (e.g. `?limit=abc`) returned 500, not 400 — the review's
+  `ApiErrors` caught the NumberFormatException cause of a type-mismatch. `ApiErrors` now answers
+  `MethodArgumentTypeMismatchException`/`MissingServletRequestParameterException` as 400 without echoing the value
+  (`HardeningApiTest.aBadQueryParameterIsAPlain400NotA500`). No data had leaked (generic reference message).
+- INFO: body-validation before authz (400 with DTO name on a write an outsider can't do; no existence oracle, valid
+  body is 403); dynamic SQL from regex-validated role codes and fixed identifiers only (no injection found);
+  HTTP->HTTPS redirect reflects Host (pin server_name in production); dev-only pytest advisory.
+- Held under attack: BOLA/BFLA on every FIR sub-resource and complaints (404/403); JWT attacks (alg none/None, empty
+  sig, tampered claims, weak-secret forge, exp tamper) all 401; server-side logout and per-address lockout; no SQLi;
+  TLS 1.0/1.1 off and 1.2/1.3 on; all security headers; AI gateway injection boundary (extra fields/model path 422,
+  admin-only audit/settings); no committed secrets; shipped deps clean (npm + pip-audit).
+- Limits (why an accredited test is still needed): done by the builders; the real servers/network/TLS were not tested;
+  the semgrep rule registry and hosted DAST were blocked from the sandbox, so only local SAST rules and registry audits
+  ran; no large-scale fuzzing, social engineering or device testing. Recommendation in the report: a CERT-In empanelled
+  auditor on the installed system before real case data.
+
+`scripts/test-all.sh`: all 8 PASS.
+
 ## 2 Nov 2026, session 56 (Sumit present from 13:29 IST: "fix all the security issues")
 Started from `setup/seed` at ddea2ad (session 55, nothing newer). Took item 12, the risks session 55 left open.
 
