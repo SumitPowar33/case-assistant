@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Front desk complaint</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Devanagari:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#16202A;background:#F4F6F8}
+a{color:#1F4E8C}a:hover{color:#163B6B}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:40px;border-radius:8px;color:#3B4754;text-decoration:none;font-size:14px}
+.nav a:hover{background:#E9EEF4;color:#16202A}
+.nav a.on{background:#DCE7F5;color:#163B6B;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn-p{background:#1F4E8C;color:#FFFFFF;border:1px solid #1F4E8C}
+.btn-p:hover{background:#163B6B;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#16202A;border:1px solid #C3CCD6}
+.btn-s:hover{background:#F0F3F6;color:#16202A}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.mono{font-family:'IBM Plex Mono',monospace}
+.card{background:#FFFFFF;border:1px solid #DDE3EA;border-radius:12px}
+.c-crit{background:#FBE7E5;color:#9B1C13}.c-warn{background:#FDF0DC;color:#8A4B06}.c-ok{background:#E6F4EC;color:#155D35}
+.c-info{background:#E3ECF7;color:#163B6B}.c-neu{background:#EEF1F4;color:#3B4754}.c-ai{background:#EEE9FA;color:#4B2E91}
+.ln{display:flex;gap:12px;padding:12px 0;border-top:1px solid #EEF1F4}
+.who{flex:none;width:96px;font-size:12px;font-weight:600;color:#5B6775;padding-top:3px}
+.mr{font-family:'IBM Plex Sans Devanagari','IBM Plex Sans',sans-serif;font-size:16px;line-height:1.7}
+.en{font-size:13px;color:#3B4754;margin-top:2px}
+.st{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-top:1px solid #EEF1F4;font-size:14px}
+.num{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<nav aria-label="Main" style="flex: 1 1 220px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #DDE3EA; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 36px; height: 36px; border-radius: 9px; background: #1F4E8C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px">CA</div>
+<div><div style="font-weight: 700; font-size: 15px">Case Assistant</div><div style="font-size: 12px; color: #5B6775">Demo City Cyber PS</div></div>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 1px">
+<a href="Main.dc.html">Dashboard</a>
+<a class="on" href="FrontDesk.dc.html">Front desk complaint</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">CASE FIR 214/2026</div>
+<a href="Intake.dc.html">FIR and facts</a>
+<a href="Playbook.dc.html">Plan and deadlines</a>
+<a href="Notices.dc.html">Notices</a>
+<a href="Evidence.dc.html">Evidence</a>
+<a href="Statements.dc.html">Statements</a>
+<a href="MoneyTrail.dc.html">Money trail</a>
+<a href="Readiness.dc.html">Readiness check</a>
+<a href="Chargesheet.dc.html">Chargesheet</a>
+<a href="CaseDiary.dc.html">Case diary</a>
+<a href="Ask.dc.html">Ask the case file</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">STATION</div>
+<a href="Malkhana.dc.html">Case property</a>
+<a href="Labs.dc.html">Forensic and medical</a>
+<a href="Field.dc.html">Field capture (tablet)</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">AFTER FILING</div>
+<a href="Supervisor.dc.html">Supervisor review</a>
+<a href="Court.dc.html">Court and trial</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">TOOLS</div>
+<a href="Language.dc.html">Type in any language</a>
+<a href="LawFinder.dc.html">Old to new law</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">ADMIN</div>
+<a href="Audit.dc.html">Audit log</a>
+<a href="StatePack.dc.html">State setup</a>
+</div>
+<div style="margin-top: auto; border-top: 1px solid #DDE3EA; padding: 14px 6px 0; font-size: 13px">
+<div style="font-weight: 600">SI A. Deshmukh</div>
+<div style="color: #5B6775">Investigating officer</div>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 6px; color: #155D35"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #1E7A46"></span>Synced 2 min ago</div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; padding: 0 0 48px; box-sizing: border-box">
+<div style="background: #FFFFFF; border-bottom: 1px solid #DDE3EA; padding: 4px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px">
+<span class="chip" style="background: #FDF0DC; color: #6E3B05">Demo case: all names, numbers and accounts are fictional</span>
+<div style="display: flex; flex-wrap: wrap; gap: 4px">
+<a href="Ask.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Ask the case file</a>
+<a href="Language.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><span aria-hidden="true" lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif; font-size: 16px">अ</span>Type in <span lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif">मराठी</span></a>
+<a href="LawFinder.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600">IPC to BNS</a>
+</div>
+</div>
+<div style="max-width: 1180px; margin: 0 auto; padding: 24px 32px 0; display: flex; flex-direction: column; gap: 20px">
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px">
+<div>
+<div style="font-size: 13px; color: #5B6775">Front desk · 22 Oct 2026, 10:42 · HC S. More</div>
+<h1 style="margin: 4px 0 0; font-size: 26px">New complaint: online fraud</h1>
+<p style="margin: 6px 0 0; color: #3B4754; font-size: 15px; max-width: 720px">The complainant speaks in their own language. Words appear as they speak, marked with who said them. Nothing is filed until it is read back and the complainant agrees.</p>
+</div>
+<span class="chip c-crit">Money left the account 47 min ago</span>
+</header>
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section class="card" aria-labelledby="rec" style="flex: 999 1 560px; min-width: 0; padding: 16px 18px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap">
+<h2 id="rec" style="margin: 0; font-size: 16px">What the complainant said</h2>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<sc-if value="{{ recording }}" hint-placeholder-val="{{ true }}"><span class="chip c-crit">&#9679; Recording 03:12</span></sc-if>
+<span class="chip c-neu">Speaks: <span lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif">मराठी</span></span>
+</div>
+</div>
+<div style="margin-top: 8px">
+<div class="ln"><div class="who">OFFICER<br><span class="mono" style="font-weight: 400">10:42:05</span></div><div><div class="mr" lang="mr">काय झालं ते सविस्तर सांगा.</div><div class="en">Tell me in detail what happened.</div></div></div>
+<div class="ln"><div class="who">COMPLAINANT<br><span class="mono" style="font-weight: 400">10:42:11</span></div><div><div class="mr" lang="mr">सकाळी पावणेदहा वाजता एका नंबरवरून कॉल आला. ते म्हणाले तुमचं वीज बिल थकलं आहे, आज रात्री वीज कापली जाईल.</div><div class="en">At about 9:45 this morning a number called. They said my electricity bill was unpaid and power would be cut tonight.</div></div></div>
+<div class="ln"><div class="who">COMPLAINANT<br><span class="mono" style="font-weight: 400">10:43:02</span></div><div><div class="mr" lang="mr">त्यांनी एक ॲप डाउनलोड करायला सांगितलं. नंतर माझ्या खात्यातून <mark style="background: #FFF1C7">१ लाख ८५ हजार</mark> रुपये गेले.</div><div class="en">They asked me to download an app. Then Rs 1,85,000 went out of my account.</div></div></div>
+</div>
+<div style="margin-top: 6px; font-size: 13px; color: #3B4754">English lines are machine translation, kept only as a help. The FIR is written from the original words.</div>
+<sc-if value="{{ recording }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap"><button type="button" class="btn btn-p" onClick="{{ stop }}">Stop and read back</button><button type="button" class="btn btn-s">Pause</button></div>
+</sc-if>
+<sc-if value="{{ reading }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top: 14px; background: #F7F9FB; border: 1px solid #E6EAEF; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-weight: 600; font-size: 14px">Read this back to the complainant (BNSS 173)</div>
+<div class="mr" lang="mr">आज २२ ऑक्टोबर रोजी सकाळी सुमारे ९.४५ वाजता वीज बिलाच्या नावाने कॉल आला. सांगितलेले ॲप डाउनलोड केल्यानंतर तुमच्या खात्यातून १,८५,००० रुपये गेले. हे बरोबर आहे का?</div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap"><button type="button" class="btn btn-p" onClick="{{ agree }}">Complainant agrees</button><button type="button" class="btn btn-s" onClick="{{ resume }}">Complainant wants a change</button></div>
+</div>
+</sc-if>
+<sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="margin-top: 14px; background: #E6F4EC; color: #155D35; border-radius: 10px; padding: 12px 14px; font-size: 14px; font-weight: 600">Complainant agreed at 10:51. Draft FIR is ready for the duty officer, with audio kept alongside. A free copy of the FIR goes to the complainant once it is registered.</div>
+<a class="btn btn-p" href="Intake.dc.html" style="margin-top: 12px">Open the FIR draft</a>
+</sc-if>
+<div style="margin-top: 18px; border-top: 1px solid #E6EAEF; padding-top: 14px">
+<div style="font-weight: 600; font-size: 14px">Details picked out <span class="chip c-ai" style="margin-left: 6px">AI · check each one</span></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; font-size: 14px">
+<div style="border: 1px solid #E6EAEF; border-radius: 8px; padding: 10px"><div style="font-size: 12px; color: #5B6775">AMOUNT</div><div style="font-weight: 600">Rs 1,85,000</div><div style="font-size: 12px; color: #3B4754">said at 10:43:02</div></div>
+<div style="border: 1px solid #E6EAEF; border-radius: 8px; padding: 10px"><div style="font-size: 12px; color: #5B6775">TIME OF CALL</div><div style="font-weight: 600">About 09:45 today</div><div style="font-size: 12px; color: #3B4754">said at 10:42:11</div></div>
+<div style="border: 1px solid #E6EAEF; border-radius: 8px; padding: 10px"><div style="font-size: 12px; color: #5B6775">CALLER NUMBER</div><div class="mono" style="font-weight: 600">+91 9XXXX X1234</div><div style="font-size: 12px; color: #3B4754">from call log screenshot</div></div>
+<div style="border: 1px solid #F1D9AE; background: #FFFBF3; border-radius: 8px; padding: 10px"><div style="font-size: 12px; color: #5B6775">APP NAME</div><div style="font-weight: 600">Not said yet</div><div style="font-size: 12px; color: #8A4B06">Ask: which app, and who sent the link?</div></div>
+</div>
+</div>
+</section>
+<aside style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+<section class="card" aria-labelledby="gh" style="padding: 16px 18px">
+<h2 id="gh" style="margin: 0; font-size: 16px">Golden hour: stop the money</h2>
+<p style="margin: 6px 0 4px; font-size: 13px; color: #3B4754">The sooner banks are told, the more money can be held. Do these before the FIR is typed.</p>
+<div class="st"><span class="num" style="background: #E6F4EC; color: #155D35">1</span><div><strong>Report on the national portal (1930)</strong><br><span style="color: #3B4754; font-size: 13px">Done 10:46 · acknowledgement 31XXXXXXXX</span></div></div>
+<div class="st"><span class="num" style="background: #E6F4EC; color: #155D35">2</span><div><strong>Hold request to receiving banks</strong><br><span style="color: #3B4754; font-size: 13px">Sent through the portal 10:47</span>
+<div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px; font-size: 13px"><span>Demo Payments Bank · <span class="chip c-ok">Rs 1,20,000 on hold</span></span><span>Example Bank · <span class="chip c-warn">No reply yet</span></span></div></div></div>
+<div class="st"><span class="num" style="background: #FDF0DC; color: #8A4B06">3</span><div><strong>Block the caller number and app link</strong><br><span style="color: #3B4754; font-size: 13px">Request drafted, needs your signature</span></div></div>
+<div class="st"><span class="num" style="background: #EEF1F4; color: #3B4754">4</span><div><strong>Give the complainant</strong><br><span style="color: #3B4754; font-size: 13px">Acknowledgement number, what happens next, and a note in Marathi to not share OTPs</span></div></div>
+</section>
+<section class="card" aria-labelledby="zf" style="padding: 16px 18px">
+<h2 id="zf" style="margin: 0; font-size: 16px">Where to register</h2>
+<p style="margin: 6px 0 0; font-size: 14px; line-height: 1.6">The complainant lives here but the money went to another state. Register here anyway: an FIR can be taken at any station and sent on as a Zero FIR (BNSS 173).</p>
+</section>
+</aside>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1250}}'>
+
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { phase: 'rec' }; }
+renderVals() {
+var p = this.state.phase, self = this;
+return {
+  recording: p === 'rec', reading: p === 'read', done: p === 'done',
+  stop: function () { self.setState({ phase: 'read' }); },
+  agree: function () { self.setState({ phase: 'done' }); },
+  resume: function () { self.setState({ phase: 'rec' }); }
+};
+}
+
+}
+</script>
+</body>
+</html>

@@ -56,6 +56,7 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
+In progress: item 13 (session 59, started 15:55 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -96,6 +97,21 @@ Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round
 10. Account lifecycle (decision 2 of 2 Nov): acting SHO with an end date given by the SP, "IO has left the station" list.
 11. Acid-attack survivors (BNS 124) masked like sexual-offence victims (decision 4 of 2 Nov).
 12. Security: done in code (sessions 55 and 56). Left for people: an outside penetration test (CERT-In empanelled auditor) before real case data; the installation itself (deploy/nginx.conf, a real certificate).
+13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
+   a. Frame, look and dashboard: sidebar, top strip, cards, chips, buttons; Dashboard (board 1); FIR parts as pages; readiness chips (board 9). (session 59)
+   b. Case diary, BNSS 192 (board 14): entries by the officer plus automatic entries from the app, day pages closed and kept as written.
+   c. Statements and witnesses (board 6): BNSS 180 statements, typed or spoken, read-back, kept as written.
+   d. Draft chargesheet and sign (board 10): BNSS 193 report drafted from the file (AI drafts through the gateway, officer confirms each part), SHO approval.
+   e. Supervisor review (board 11): SHO/SP queue of cases near a deadline or waiting approval; approve or return with a reason.
+   f. Money trail and accused links (board 8): accounts, transfers and holds from notices and evidence; the readiness rule of two links.
+   g. Case property with QR custody (board 15): malkhana register as its own screen, QR label per item.
+   h. Forensic and medical requests (board 16): requests, sample custody, report received.
+   i. Court and trial tracker (board 12): hearings, witnesses summoned, victim updates after filing.
+   j. Old law to new law finder (board 18): IPC/CrPC/IEA to BNS/BNSS/BSA table, data in the national pack.
+   k. Ask the case file (board 19): through the AI gateway, answers only from the file with sources; refuses guilt questions.
+   l. Audit log (board 20): one screen joining protected reads, AI decisions, admin actions and overrides.
+   m. Field capture on a tablet (board 7) and State setup and approvals (board 21).
+   Each screen: backend with tests, the screen built to its board, screenshot compared, 11 languages.
 
 ## 2 Nov 2026, session 58 (Sumit present from 15:16 IST: "act like that and do the testing")
 Session 57 had already run an internal penetration test (round 1). This session ran **round 2** on the gaps round 1

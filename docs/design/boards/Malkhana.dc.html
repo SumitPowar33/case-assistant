@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Case property</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Devanagari:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#16202A;background:#F4F6F8}
+a{color:#1F4E8C}a:hover{color:#163B6B}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:40px;border-radius:8px;color:#3B4754;text-decoration:none;font-size:14px}
+.nav a:hover{background:#E9EEF4;color:#16202A}
+.nav a.on{background:#DCE7F5;color:#163B6B;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn-p{background:#1F4E8C;color:#FFFFFF;border:1px solid #1F4E8C}
+.btn-p:hover{background:#163B6B;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#16202A;border:1px solid #C3CCD6}
+.btn-s:hover{background:#F0F3F6;color:#16202A}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.mono{font-family:'IBM Plex Mono',monospace}
+.card{background:#FFFFFF;border:1px solid #DDE3EA;border-radius:12px}
+.c-crit{background:#FBE7E5;color:#9B1C13}.c-warn{background:#FDF0DC;color:#8A4B06}.c-ok{background:#E6F4EC;color:#155D35}
+.c-info{background:#E3ECF7;color:#163B6B}.c-neu{background:#EEF1F4;color:#3B4754}.c-ai{background:#EEE9FA;color:#4B2E91}
+.item{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;padding:12px 16px;border:0;border-top:1px solid #EEF1F4;font:inherit;font-size:14px;cursor:pointer;min-height:60px}
+.mv{display:flex;gap:12px;padding:10px 0;border-top:1px solid #EEF1F4;font-size:14px}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<nav aria-label="Main" style="flex: 1 1 220px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #DDE3EA; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 36px; height: 36px; border-radius: 9px; background: #1F4E8C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px">CA</div>
+<div><div style="font-weight: 700; font-size: 15px">Case Assistant</div><div style="font-size: 12px; color: #5B6775">Demo City Cyber PS</div></div>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 1px">
+<a href="Main.dc.html">Dashboard</a>
+<a href="FrontDesk.dc.html">Front desk complaint</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">CASE FIR 214/2026</div>
+<a href="Intake.dc.html">FIR and facts</a>
+<a href="Playbook.dc.html">Plan and deadlines</a>
+<a href="Notices.dc.html">Notices</a>
+<a href="Evidence.dc.html">Evidence</a>
+<a href="Statements.dc.html">Statements</a>
+<a href="MoneyTrail.dc.html">Money trail</a>
+<a href="Readiness.dc.html">Readiness check</a>
+<a href="Chargesheet.dc.html">Chargesheet</a>
+<a href="CaseDiary.dc.html">Case diary</a>
+<a href="Ask.dc.html">Ask the case file</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">STATION</div>
+<a class="on" href="Malkhana.dc.html">Case property</a>
+<a href="Labs.dc.html">Forensic and medical</a>
+<a href="Field.dc.html">Field capture (tablet)</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">AFTER FILING</div>
+<a href="Supervisor.dc.html">Supervisor review</a>
+<a href="Court.dc.html">Court and trial</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">TOOLS</div>
+<a href="Language.dc.html">Type in any language</a>
+<a href="LawFinder.dc.html">Old to new law</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">ADMIN</div>
+<a href="Audit.dc.html">Audit log</a>
+<a href="StatePack.dc.html">State setup</a>
+</div>
+<div style="margin-top: auto; border-top: 1px solid #DDE3EA; padding: 14px 6px 0; font-size: 13px">
+<div style="font-weight: 600">SI A. Deshmukh</div>
+<div style="color: #5B6775">Investigating officer</div>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 6px; color: #155D35"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #1E7A46"></span>Synced 2 min ago</div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; padding: 0 0 48px; box-sizing: border-box">
+<div style="background: #FFFFFF; border-bottom: 1px solid #DDE3EA; padding: 4px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px">
+<span class="chip" style="background: #FDF0DC; color: #6E3B05">Demo case: all names, numbers and accounts are fictional</span>
+<div style="display: flex; flex-wrap: wrap; gap: 4px">
+<a href="Ask.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Ask the case file</a>
+<a href="Language.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><span aria-hidden="true" lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif; font-size: 16px">अ</span>Type in <span lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif">मराठी</span></a>
+<a href="LawFinder.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600">IPC to BNS</a>
+</div>
+</div>
+<div style="max-width: 1180px; margin: 0 auto; padding: 24px 32px 0; display: flex; flex-direction: column; gap: 20px">
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px">
+<div>
+<div style="font-size: 13px; color: #5B6775">Station · Demo City Cyber PS</div>
+<h1 style="margin: 4px 0 0; font-size: 26px">Case property (malkhana)</h1>
+<p style="margin: 6px 0 0; color: #3B4754; font-size: 15px; max-width: 760px">Every seized item has a QR label. Each time it moves, to the lab, to court or back, the person handing over and the person receiving scan it, so the chain of custody writes itself.</p>
+</div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap"><button type="button" class="btn btn-s">Print QR labels</button><button type="button" class="btn btn-p">Scan item</button></div>
+</header>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+<div class="card" style="padding: 14px"><div style="font-size: 12px; color: #5B6775">IN MALKHANA</div><div style="font-size: 24px; font-weight: 700">184</div></div>
+<div class="card" style="padding: 14px"><div style="font-size: 12px; color: #5B6775">OUT AT LAB OR COURT</div><div style="font-size: 24px; font-weight: 700">9</div></div>
+<div class="card" style="padding: 14px"><div style="font-size: 12px; color: #5B6775">DUE IN COURT THIS WEEK</div><div style="font-size: 24px; font-weight: 700">3</div></div>
+<div class="card" style="padding: 14px; border-color: #F1D9AE"><div style="font-size: 12px; color: #8A4B06">CAN BE RELEASED OR DISPOSED</div><div style="font-size: 24px; font-weight: 700">27</div></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section class="card" aria-labelledby="it" style="flex: 1 1 380px; min-width: 0; overflow: hidden">
+<h2 id="it" style="margin: 0; padding: 16px; font-size: 16px">Items</h2>
+<sc-for list="{{ items }}" as="i" hint-placeholder-count="5">
+<button type="button" class="item" onClick="{{ i.pick }}" aria-pressed="{{ i.pressed }}" style="background: {{ i.bg }}">
+<span><span class="mono" style="font-weight: 600">{{ i.id }}</span> · {{ i.name }}<br><span style="font-size: 13px; color: #3B4754">{{ i.where }}</span></span>
+<span class="chip" style="background: {{ i.cbg }}; color: {{ i.cfg }}">{{ i.status }}</span>
+</button>
+</sc-for>
+</section>
+<section class="card" aria-labelledby="dt" style="flex: 999 1 520px; min-width: 0; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap">
+<svg width="84" height="84" viewBox="0 0 21 21" role="img" aria-label="QR label for {{ sel.id }}" style="flex: none; border: 1px solid #DDE3EA; border-radius: 8px; padding: 6px; background: #FFFFFF"><path fill="#16202A" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM9 0h2v2H9zM9 3h1v3H9zM11 4h2v2h-2zM8 8h3v1H8zM12 8h2v2h-2zM15 8h2v1h-2zM18 9h3v2h-3zM9 10h2v2H9zM13 11h3v1h-3zM8 13h1v3H8zM10 14h3v2h-3zM14 13h2v3h-2zM17 13h4v1h-4zM18 15h2v3h-2zM10 17h2v4h-2zM13 18h3v2h-3zM16 19h5v2h-5z"/></svg>
+<div style="flex: 1; min-width: 0">
+<h2 id="dt" style="margin: 0; font-size: 18px"><span class="mono">{{ sel.id }}</span> · {{ sel.name }}</h2>
+<div style="margin-top: 4px; font-size: 14px; color: #3B4754">{{ sel.caseRef }}</div>
+<div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap"><span class="chip" style="background: {{ sel.cbg }}; color: {{ sel.cfg }}">{{ sel.status }}</span><span class="chip c-neu">{{ sel.where }}</span></div>
+</div>
+</div>
+<sc-if value="{{ sel.hasAlert }}" hint-placeholder-val="{{ false }}">
+<div style="border: 1px solid #F1D9AE; background: #FFFBF3; border-radius: 10px; padding: 12px 14px; font-size: 14px">{{ sel.alert }}</div>
+</sc-if>
+<div>
+<div style="font-size: 12px; font-weight: 600; color: #5B6775">MOVEMENTS</div>
+<sc-for list="{{ sel.moves }}" as="m" hint-placeholder-count="3">
+<div class="mv"><span class="mono" style="flex: none; width: 112px; color: #3B4754; font-size: 13px">{{ m.when }}</span><span>{{ m.what }}</span></div>
+</sc-for>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1250}}'>
+
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { pick: 0 }; }
+renderVals() {
+var self = this;
+var S = { lab: ['At FSL', '#E3ECF7', '#163B6B'], in: ['In malkhana', '#E6F4EC', '#155D35'], rel: ['Release possible', '#FDF0DC', '#8A4B06'], court: ['Court on 18 Dec', '#EEE9FA', '#4B2E91'] };
+var I = [
+  { id: '214/E-03', name: 'Phone, black', caseRef: 'FIR 214/2026 · seized from A2, 21 Oct', s: 'lab', where: 'FSL Demo City, cyber unit',
+    alert: '', moves: [['21 Oct 09:58', 'Sealed at seizure, in Faraday bag. Hash of screen video recorded.'], ['21 Oct 17:20', 'Deposited by SI Deshmukh, received by malkhana HC Pawar. Rack B-3.'], ['22 Oct 14:05', 'Taken out for FSL by HC More. Seal checked intact on scan.'], ['22 Oct 16:40', 'Received at FSL, request FSL/CY/2026/1187.']] },
+  { id: '214/E-04', name: 'SIM cards, 6', caseRef: 'FIR 214/2026 · seized from A2, 21 Oct', s: 'in', where: 'Rack B-3, box 12', alert: '',
+    moves: [['21 Oct 09:58', 'Sealed at seizure.'], ['21 Oct 17:20', 'Deposited by SI Deshmukh, received by HC Pawar.']] },
+  { id: '214/E-05', name: 'Debit cards, 4', caseRef: 'FIR 214/2026 · seized from A2, 21 Oct', s: 'in', where: 'Rack B-3, box 12', alert: '',
+    moves: [['21 Oct 09:58', 'Sealed at seizure.'], ['21 Oct 17:20', 'Deposited by SI Deshmukh, received by HC Pawar.']] },
+  { id: '198/P-11', name: 'Motorcycle, grey', caseRef: 'FIR 198/2026 · recovered 2 Sep', s: 'rel', where: 'Station yard, bay 4',
+    alert: 'Owner has applied for it. The magistrate can order interim custody once it is photographed and recorded (BNSS 497). Photos and video are done; the application is ready to file.',
+    moves: [['2 Sep 18:30', 'Recovered and parked in yard, photos taken.'], ['20 Oct 11:00', 'Owner applied for interim custody.']] },
+  { id: '233/P-02', name: 'Clothes, sealed packet', caseRef: 'FIR 233/2026 · from hospital, 20 Oct', s: 'court', where: 'Rack A-1, box 3',
+    alert: 'To be produced in court on 18 Dec. The app reminds the carrying officer two days before.',
+    moves: [['20 Oct 22:10', 'Received sealed from District Hospital with medical report.'], ['20 Oct 23:00', 'Deposited, received by HC Pawar.']] }
+];
+var p = this.state.pick, sel = I[p], ss = S[sel.s];
+return {
+  items: I.map(function (x, i) { var s = S[x.s]; return { id: x.id, name: x.name, where: x.where, status: s[0], cbg: s[1], cfg: s[2], pressed: i === p ? 'true' : 'false', bg: i === p ? '#F3F7FC' : '#FFFFFF', pick: function () { self.setState({ pick: i }); } }; }),
+  sel: { id: sel.id, name: sel.name, caseRef: sel.caseRef, where: sel.where, status: ss[0], cbg: ss[1], cfg: ss[2], alert: sel.alert, hasAlert: !!sel.alert,
+    moves: sel.moves.map(function (m) { return { when: m[0], what: m[1] }; }) }
+};
+}
+
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Type in any language</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Devanagari:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#16202A;background:#F4F6F8}
+a{color:#1F4E8C}a:hover{color:#163B6B}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:40px;border-radius:8px;color:#3B4754;text-decoration:none;font-size:14px}
+.nav a:hover{background:#E9EEF4;color:#16202A}
+.nav a.on{background:#DCE7F5;color:#163B6B;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn-p{background:#1F4E8C;color:#FFFFFF;border:1px solid #1F4E8C}
+.btn-p:hover{background:#163B6B;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#16202A;border:1px solid #C3CCD6}
+.btn-s:hover{background:#F0F3F6;color:#16202A}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.mono{font-family:'IBM Plex Mono',monospace}
+.card{background:#FFFFFF;border:1px solid #DDE3EA;border-radius:12px}
+.c-crit{background:#FBE7E5;color:#9B1C13}.c-warn{background:#FDF0DC;color:#8A4B06}.c-ok{background:#E6F4EC;color:#155D35}
+.c-info{background:#E3ECF7;color:#163B6B}.c-neu{background:#EEF1F4;color:#3B4754}.c-ai{background:#EEE9FA;color:#4B2E91}
+.lchip{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid #C3CCD6;font:inherit;font-size:15px;cursor:pointer}
+.key{min-width:44px;min-height:44px;border:1px solid #C3CCD6;background:#FFFFFF;border-radius:8px;font-size:18px;cursor:pointer;font-family:'IBM Plex Sans Devanagari','IBM Plex Sans',sans-serif;color:#16202A}
+.key:hover{background:#F0F3F6}
+.sug{min-height:44px;padding:0 14px;border-radius:8px;border:1px solid #C3CCD6;background:#FFFFFF;font-size:17px;cursor:pointer;font-family:'IBM Plex Sans Devanagari','IBM Plex Sans',sans-serif;color:#16202A}
+.sug.first{background:#1F4E8C;color:#FFFFFF;border-color:#1F4E8C}
+textarea{font-family:'IBM Plex Sans Devanagari','IBM Plex Sans',sans-serif;font-size:19px;line-height:1.7;border:1px solid #C3CCD6;border-radius:10px;padding:14px;width:100%;box-sizing:border-box;min-height:150px;color:#16202A;resize:vertical}
+textarea:focus,input:focus{outline:3px solid #9DB3CF;outline-offset:1px}
+input.q{font:inherit;font-size:16px;min-height:44px;border:1px solid #C3CCD6;border-radius:8px;padding:0 12px;box-sizing:border-box;width:100%}
+.gl td{padding:9px 8px;border-top:1px solid #EEF1F4;font-size:14px}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<nav aria-label="Main" style="flex: 1 1 220px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #DDE3EA; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 36px; height: 36px; border-radius: 9px; background: #1F4E8C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px">CA</div>
+<div><div style="font-weight: 700; font-size: 15px">Case Assistant</div><div style="font-size: 12px; color: #5B6775">Demo City Cyber PS</div></div>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 1px">
+<a href="Main.dc.html">Dashboard</a>
+<a href="FrontDesk.dc.html">Front desk complaint</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">CASE FIR 214/2026</div>
+<a href="Intake.dc.html">FIR and facts</a>
+<a href="Playbook.dc.html">Plan and deadlines</a>
+<a href="Notices.dc.html">Notices</a>
+<a href="Evidence.dc.html">Evidence</a>
+<a href="Statements.dc.html">Statements</a>
+<a href="MoneyTrail.dc.html">Money trail</a>
+<a href="Readiness.dc.html">Readiness check</a>
+<a href="Chargesheet.dc.html">Chargesheet</a>
+<a href="CaseDiary.dc.html">Case diary</a>
+<a href="Ask.dc.html">Ask the case file</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">STATION</div>
+<a href="Malkhana.dc.html">Case property</a>
+<a href="Labs.dc.html">Forensic and medical</a>
+<a href="Field.dc.html">Field capture (tablet)</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">AFTER FILING</div>
+<a href="Supervisor.dc.html">Supervisor review</a>
+<a href="Court.dc.html">Court and trial</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">TOOLS</div>
+<a class="on" href="Language.dc.html">Type in any language</a>
+<a href="LawFinder.dc.html">Old to new law</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">ADMIN</div>
+<a href="Audit.dc.html">Audit log</a>
+<a href="StatePack.dc.html">State setup</a>
+</div>
+<div style="margin-top: auto; border-top: 1px solid #DDE3EA; padding: 14px 6px 0; font-size: 13px">
+<div style="font-weight: 600">SI A. Deshmukh</div>
+<div style="color: #5B6775">Investigating officer</div>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 6px; color: #155D35"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #1E7A46"></span>Synced 2 min ago</div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; padding: 0 0 48px; box-sizing: border-box">
+<div style="background: #FFFFFF; border-bottom: 1px solid #DDE3EA; padding: 4px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px">
+<span class="chip" style="background: #FDF0DC; color: #6E3B05">Demo case: all names, numbers and accounts are fictional</span>
+<div style="display: flex; flex-wrap: wrap; gap: 4px">
+<a href="Ask.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Ask the case file</a>
+<a href="Language.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><span aria-hidden="true" lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif; font-size: 16px">अ</span>Type in <span lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif">मराठी</span></a>
+<a href="LawFinder.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600">IPC to BNS</a>
+</div>
+</div>
+<div style="max-width: 1180px; margin: 0 auto; padding: 24px 32px 0; display: flex; flex-direction: column; gap: 20px">
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px">
+<div>
+<div style="font-size: 13px; color: #5B6775">Tools</div>
+<h1 style="margin: 4px 0 0; font-size: 26px">Type in any language</h1>
+<p style="margin: 6px 0 0; color: #3B4754; font-size: 15px; max-width: 720px">Type the sound in English letters and it turns into the chosen script when you press space, like Google Input Tools. The same typing box opens from the अ button in every text field of the app.</p>
+</div>
+<span class="chip c-info">Works offline · nothing typed leaves the state server</span>
+</header>
+<section class="card" aria-labelledby="pick" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="pick" style="margin: 0; font-size: 16px">Language</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ langs }}" as="l" hint-placeholder-count="10">
+<button type="button" class="lchip" onClick="{{ l.pick }}" aria-pressed="{{ l.pressed }}" style="background: {{ l.bg }}; color: {{ l.fg }}; border-color: {{ l.bd }}"><span lang="{{ l.k }}">{{ l.label }}</span><span style="margin-left: 8px; font-size: 13px; opacity: .85">{{ l.name }}</span></button>
+</sc-for>
+</div>
+</section>
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section class="card" aria-labelledby="ty" style="flex: 999 1 560px; min-width: 0; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap">
+<h2 id="ty" style="margin: 0; font-size: 16px">Write in {{ langName }}</h2>
+<div role="group" aria-label="Input method" style="display: flex; border: 1px solid #C3CCD6; border-radius: 8px; overflow: hidden">
+<button type="button" onClick="{{ usePhonetic }}" aria-pressed="{{ phonetic }}" style="min-height: 44px; padding: 0 14px; border: 0; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; background: {{ phBg }}; color: {{ phFg }}">Type English letters</button>
+<button type="button" onClick="{{ useKeys }}" aria-pressed="{{ keyboard }}" style="min-height: 44px; padding: 0 14px; border: 0; border-left: 1px solid #C3CCD6; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; background: {{ kbBg }}; color: {{ kbFg }}">Tap letters</button>
+</div>
+</div>
+<label for="box" style="font-size: 14px; color: #3B4754">Try: <span class="mono">{{ tryText }}</span></label>
+<textarea id="box" lang="{{ lang }}" value="{{ text }}" onChange="{{ onType }}" placeholder="{{ placeholder }}" spellcheck="false" autocomplete="off"></textarea>
+<div aria-live="polite" style="min-height: 52px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<sc-if value="{{ hasSugg }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 13px; color: #5B6775">Pick a spelling for <strong class="mono">{{ word }}</strong>:</span>
+<sc-for list="{{ sugg }}" as="s" hint-placeholder-count="4">
+<button type="button" class="{{ s.cls }}" lang="{{ lang }}" onClick="{{ s.pick }}">{{ s.c }}</button>
+</sc-for>
+</sc-if>
+<sc-if value="{{ noSugg }}" hint-placeholder-val="{{ true }}">
+<span style="font-size: 13px; color: #5B6775">Spelling choices appear here while you type a word. Space accepts the first one.</span>
+</sc-if>
+</div>
+<sc-if value="{{ keyboard }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px; background: #F7F9FB; border: 1px solid #E6EAEF; border-radius: 10px; padding: 12px">
+<div style="font-size: 12px; font-weight: 600; color: #5B6775">VOWELS</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{ vowels }}" as="k" hint-placeholder-count="10"><button type="button" class="key" lang="{{ lang }}" onClick="{{ k.tap }}" aria-label="{{ k.aria }}">{{ k.c }}</button></sc-for></div>
+<div style="font-size: 12px; font-weight: 600; color: #5B6775">VOWEL SIGNS</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{ signs }}" as="k" hint-placeholder-count="11"><button type="button" class="key" lang="{{ lang }}" onClick="{{ k.tap }}" aria-label="{{ k.aria }}">{{ k.c }}</button></sc-for></div>
+<div style="font-size: 12px; font-weight: 600; color: #5B6775">CONSONANTS</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{ cons }}" as="k" hint-placeholder-count="36"><button type="button" class="key" lang="{{ lang }}" onClick="{{ k.tap }}" aria-label="{{ k.aria }}">{{ k.c }}</button></sc-for></div>
+<div style="display: flex; gap: 6px"><button type="button" class="key" onClick="{{ space }}" style="flex: 1; font-size: 14px">Space</button><button type="button" class="key" onClick="{{ back }}" aria-label="Delete last letter" style="min-width: 88px; font-size: 14px">Delete</button></div>
+</div>
+</sc-if>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<button type="button" class="btn btn-s" onClick="{{ convertAll }}">Convert pasted English text</button>
+<button type="button" class="btn btn-s" onClick="{{ speak }}">Speak instead (demo)</button>
+<button type="button" class="btn btn-s" onClick="{{ clear }}">Clear</button>
+<a class="btn btn-p" href="Statements.dc.html">Use in statement</a>
+</div>
+<sc-if value="{{ spoke }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="background: #EEE9FA; color: #4B2E91; border-radius: 8px; padding: 10px 12px; font-size: 14px">Demo voice note added. In the real app, speech is turned into text on state servers and the audio is kept with the statement.</div>
+</sc-if>
+</section>
+<aside style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+<section class="card" aria-labelledby="nm" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 10px">
+<h2 id="nm" style="margin: 0; font-size: 16px">A name in every script</h2>
+<p style="margin: 0; font-size: 13px; color: #3B4754">For lookout notices and messages to other states. Check spellings with the person.</p>
+<label for="nmq" style="font-size: 14px; font-weight: 600">Name in English letters</label>
+<input id="nmq" class="q" value="{{ nameQ }}" onChange="{{ onName }}" autocomplete="off">
+<div>
+<sc-for list="{{ names }}" as="n" hint-placeholder-count="10">
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid #EEF1F4; font-size: 14px"><span style="color: #3B4754">{{ n.name }}</span><span lang="{{ n.k }}" style="font-size: 17px; font-weight: 600">{{ n.v }}</span></div>
+</sc-for>
+</div>
+</section>
+<section class="card" aria-labelledby="gl" style="padding: 16px 18px">
+<h2 id="gl" style="margin: 0 0 4px; font-size: 16px">Police words</h2>
+<p style="margin: 0 0 6px; font-size: 13px; color: #3B4754">Approved terms from the state pack. Tap to insert.</p>
+<div>
+<sc-for list="{{ terms }}" as="t" hint-placeholder-count="10">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid #EEF1F4; font-size: 14px"><span style="color: #3B4754">{{ t.en }}</span><button type="button" class="sug" onClick="{{ t.ins }}" lang="{{ lang }}" style="font-size: 15px">{{ t.show }}</button></div>
+</sc-for>
+</div>
+</section>
+</aside>
+</div>
+<section class="card" aria-labelledby="how" style="padding: 16px 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px">
+<h2 id="how" style="grid-column: 1 / -1; margin: 0; font-size: 16px">How it works in the real app</h2>
+<div style="font-size: 14px; line-height: 1.6"><strong>Typing</strong><br>Suggestions come from an Indian-language transliteration model (AI4Bharat IndicXlit) running on the state's own servers, plus the state's list of names, places and legal words.</div>
+<div style="font-size: 14px; line-height: 1.6"><strong>Speaking</strong><br>Speech becomes text in the speaker's language. The audio is stored with the text, and the officer reads it back before anyone signs.</div>
+<div style="font-size: 14px; line-height: 1.6"><strong>Translating</strong><br>Translations are always marked as machine-made and never replace the original words in a statement or FIR.</div>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+// Phonetic English-letters -> Indian script engine (rule based, with a police-word dictionary).
+// The production app would put AI4Bharat IndicXlit behind the same interface; this keeps the demo offline.
+var XLIT = (function () {
+  var V = [ // roman, independent, matra
+    ['aa', 'आ', 'ा'], ['A', 'आ', 'ा'], ['ai', 'ऐ', 'ै'], ['au', 'औ', 'ौ'], ['ou', 'औ', 'ौ'],
+    ['ee', 'ई', 'ी'], ['ii', 'ई', 'ी'], ['I', 'ई', 'ी'], ['oo', 'ऊ', 'ू'], ['uu', 'ऊ', 'ू'], ['U', 'ऊ', 'ू'],
+    ['Ru', 'ऋ', 'ृ'], ['e_', 'ऎ', 'ॆ'], ['o_', 'ऒ', 'ॊ'], ['a', 'अ', ''], ['i', 'इ', 'ि'], ['u', 'उ', 'ु'], ['e', 'ए', 'े'], ['E', 'ऍ', 'ॅ'],
+    ['o', 'ओ', 'ो'], ['O', 'ऑ', 'ॉ']
+  ];
+  var C = [ // longest first
+    ['ksh', 'क्ष'], ['dny', 'ज्ञ'], ['chh', 'छ'], ['shh', 'ष'],
+    ['kh', 'ख'], ['gh', 'घ'], ['ch', 'च'], ['jh', 'झ'], ['zh', 'झ'], ['Th', 'ठ'], ['Dh', 'ढ'], ['th', 'थ'],
+    ['dh', 'ध'], ['ph', 'फ'], ['bh', 'भ'], ['sh', 'श'], ['Sh', 'ष'], ['gy', 'ज्ञ'], ['tr', 'त्र'],
+    ['k', 'क'], ['g', 'ग'], ['c', 'क'], ['j', 'ज'], ['T', 'ट'], ['D', 'ड'], ['N', 'ण'], ['t', 'त'],
+    ['d', 'द'], ['n', 'न'], ['p', 'प'], ['f', 'फ'], ['b', 'ब'], ['m', 'म'], ['y', 'य'], ['r', 'र'],
+    ['l', 'ल'], ['L', 'ळ'], ['v', 'व'], ['w', 'व'], ['s', 'स'], ['h', 'ह'], ['x', 'क्स'], ['q', 'क'],
+    ['z', 'ज'], ['R', 'र'], ['K', 'क'], ['G', 'ग'], ['J', 'ज'], ['P', 'प'], ['B', 'ब'], ['M', 'म'],
+    ['Y', 'य'], ['H', 'ह'], ['V', 'व'], ['W', 'व'], ['S', 'स'], ['F', 'फ'], ['C', 'क'], ['Z', 'ज'], ['X', 'क्स'], ['Q', 'क']
+  ];
+  var DIGITS = { mr: 0x966, hi: 0x966 };
+  var LANGS = {
+    mr: { name: 'Marathi', label: 'मराठी', off: 0, tag: 'mr', finalVirama: false },
+    hi: { name: 'Hindi', label: 'हिन्दी', off: 0, tag: 'hi', finalVirama: false },
+    gu: { name: 'Gujarati', label: 'ગુજરાતી', off: 0x180, tag: 'gu', finalVirama: false },
+    bn: { name: 'Bengali', label: 'বাংলা', off: 0x80, tag: 'bn', finalVirama: false },
+    pa: { name: 'Punjabi', label: 'ਪੰਜਾਬੀ', off: 0x100, tag: 'pa', finalVirama: false },
+    or: { name: 'Odia', label: 'ଓଡ଼ିଆ', off: 0x200, tag: 'or', finalVirama: false },
+    ta: { name: 'Tamil', label: 'தமிழ்', off: 0x280, tag: 'ta', finalVirama: true },
+    te: { name: 'Telugu', label: 'తెలుగు', off: 0x300, tag: 'te', finalVirama: true },
+    kn: { name: 'Kannada', label: 'ಕನ್ನಡ', off: 0x380, tag: 'kn', finalVirama: true },
+    ml: { name: 'Malayalam', label: 'മലയാളം', off: 0x400, tag: 'ml', finalVirama: true }
+  };
+  // Words police type every day. First item is the top suggestion.
+  var DICT = {
+    mr: { police: 'पोलीस', fir: 'एफआयआर', panchnama: 'पंचनामा', aaropi: 'आरोपी', aropi: 'आरोपी',
+      firyadi: 'फिर्यादी', sakshidar: 'साक्षीदार', gunha: 'गुन्हा', thane: 'ठाणे',
+      mobile: 'मोबाईल', bank: 'बँक', jabab: 'जबाब', japti: 'जप्ती', nyayalay: 'न्यायालय', court: 'कोर्ट',
+      maze: 'माझे', mazhe: 'माझे', majhe: 'माझे', naav: 'नाव', nav: 'नाव', aahe: 'आहे', ahe: 'आहे', aani: 'आणि', ani: 'आणि',
+      patil: 'पाटील', pawar: 'पवार', deshmukh: 'देशमुख', kulkarni: 'कुलकर्णी', joshi: 'जोशी', shinde: 'शिंदे',
+      jadhav: 'जाधव', more: 'मोरे', kale: 'काळे', gaikwad: 'गायकवाड', chavan: 'चव्हाण', shaikh: 'शेख', kalyan: 'कल्याण',
+      ganesh: 'गणेश', sunil: 'सुनील', anil: 'अनिल', rahul: 'राहुल', pooja: 'पूजा', mahesh: 'महेश', suresh: 'सुरेश',
+      dnyaneshwar: 'ज्ञानेश्वर', shreekant: 'श्रीकांत', vishwas: 'विश्वास', station: 'स्टेशन', august: 'ऑगस्ट',
+      madhe: 'मध्ये', madhye: 'मध्ये', la: 'ला', gelo: 'गेलो', ghari: 'घरी', vel: 'वेळ', vaajata: 'वाजता', vajta: 'वाजता',
+      sangli: 'सांगली', satara: 'सातारा', kolhapur: 'कोल्हापूर', nashik: 'नाशिक', solapur: 'सोलापूर', santosh: 'संतोष',
+      rupaye: 'रुपये', lakh: 'लाख', pune: 'पुणे', mumbai: 'मुंबई', nagpur: 'नागपूर', maharashtra: 'महाराष्ट्र',
+      cyber: 'सायबर', online: 'ऑनलाइन', whatsapp: 'व्हॉट्सॲप', upi: 'यूपीआय', ota: 'ओटीपी', otp: 'ओटीपी', call: 'कॉल',
+      mi: 'मी', tumhi: 'तुम्ही', tyanni: 'त्यांनी', tyani: 'त्यांनी', mala: 'मला', video: 'व्हिडिओ', paise: 'पैसे', divashi: 'दिवशी' },
+    hi: { police: 'पुलिस', fir: 'एफआईआर', panchnama: 'पंचनामा', aaropi: 'आरोपी', aropi: 'आरोपी',
+      shikayat: 'शिकायत', gawah: 'गवाह', gavah: 'गवाह', thana: 'थाना', mobile: 'मोबाइल', bank: 'बैंक', bayan: 'बयान',
+      zabti: 'ज़ब्ती', jabti: 'जब्ती', adalat: 'अदालत', court: 'कोर्ट', mera: 'मेरा', naam: 'नाम', hai: 'है', aur: 'और',
+      sharma: 'शर्मा', verma: 'वर्मा', singh: 'सिंह', kumar: 'कुमार', yadav: 'यादव', gupta: 'गुप्ता', mishra: 'मिश्रा',
+      khan: 'ख़ान', delhi: 'दिल्ली', station: 'स्टेशन', august: 'अगस्त', thane: 'थाने', ko: 'को', mein: 'में', di: 'दी',
+      rupaye: 'रुपये', lakh: 'लाख', cyber: 'साइबर', online: 'ऑनलाइन', whatsapp: 'व्हाट्सऐप', otp: 'ओटीपी', call: 'कॉल',
+      main: 'मैं', maine: 'मैंने', unhone: 'उन्होंने', mujhe: 'मुझे', video: 'वीडियो', paise: 'पैसे', din: 'दिन' }
+  };
+  var ANUSVARA_BEFORE = /^(k|g|c|j|t|d|p|b|T|D|s|sh|z)/;
+
+  function startsAt(s, i, list) {
+    for (var k = 0; k < list.length; k++) if (s.substr(i, list[k][0].length) === list[k][0]) return list[k];
+    return null;
+  }
+  // Roman word -> Devanagari (Marathi/Hindi spelling conventions).
+  function prep(w, lang) {
+    w = w.replace(/tion$/, 'shan').replace(/tion(?=[a-z])/, 'shan');
+    w = w.replace(/c(?=[eiy])/g, 's');
+    if (LANGS[lang] && LANGS[lang].finalVirama) return w.replace(/i_$/, 'i'); // Dravidian: keep what was typed
+    // Indian typing habit: a word ending in a, i (and u in Marathi) after a consonant is the long vowel
+    w = w.replace(/([^aeiouAEIOU])a$/, '$1aa').replace(/([^aeiouAEIOU])i$/, '$1ee').replace(/i_$/, 'i');
+    return w;
+  }
+  function toDeva(w, lang) {
+    w = prep(w, lang);
+    if (lang === 'mr') w = w.replace(/([^aeiouAEIOU])u$/, '$1oo');
+    var out = '', i = 0, pending = false; // pending = last char is a bare consonant
+    while (i < w.length) {
+      var ch = w[i];
+      // n / m before a stop consonant at syllable end -> anusvara
+      if ((ch === 'n' || ch === 'm') && pending === false && out && i + 1 < w.length && ANUSVARA_BEFORE.test(w.substr(i + 1)) &&
+          !startsAt(w, i + 1, V)) { out += 'ं'; i++; continue; }
+      var c = startsAt(w, i, C);
+      if (c) {
+        // Hindi keeps nukta sounds for z and f
+        var g = c[1];
+        if (lang === 'hi' && c[0] === 'z') g = 'ज़';
+        if (lang === 'hi' && c[0] === 'f') g = 'फ़';
+        if (pending) out += '्';
+        out += g; pending = true; i += c[0].length; continue;
+      }
+      var v = startsAt(w, i, V);
+      if (v) {
+        if (pending) out += v[2]; else out += v[1];
+        pending = false; i += v[0].length; continue;
+      }
+      if (ch === '.' && w[i + 1] === 'n') { out += 'ं'; i += 2; continue; }
+      if (ch === '~') { out += 'ँ'; i++; continue; }
+      if (/[0-9]/.test(ch)) { out += String.fromCharCode(0x966 + (+ch)); pending = false; i++; continue; }
+      out += ch; pending = false; i++;
+    }
+    return { text: out, endsBare: pending };
+  }
+  var TAMIL_FOLD = { 'ख': 'क', 'ग': 'क', 'घ': 'क', 'छ': 'च', 'झ': 'ज', 'ठ': 'ट', 'ड': 'ट', 'ढ': 'ट', 'थ': 'त', 'द': 'त', 'ध': 'त',
+    'फ': 'प', 'ब': 'प', 'भ': 'प', 'ऋ': 'रु', 'ृ': 'ु', 'ऍ': 'ए', 'ॅ': 'े', 'ऑ': 'ओ', 'ॉ': 'ो', 'ं': 'म्', 'ँ': 'म्', 'ञ': 'ञ' };
+  var FOLD = {
+    bn: { 'व': 'ब', 'ळ': 'ल', 'ऍ': 'ए', 'ॅ': 'े', 'ऑ': 'ओ', 'ॉ': 'ो' },
+    pa: { 'ष': 'श', 'ऋ': 'रि', 'ृ': 'ि', 'ऍ': 'ए', 'ॅ': 'े', 'ऑ': 'ओ', 'ॉ': 'ो', 'ञ': 'ञ', 'ँ': 'ं' },
+    or: { 'व': 'ब', 'ऍ': 'ए', 'ॅ': 'े', 'ऑ': 'ओ', 'ॉ': 'ो' },
+    te: { 'ऍ': 'ए', 'ॅ': 'े', 'ऑ': 'ओ', 'ॉ': 'ो' },
+    kn: { 'ऍ': 'ए', 'ॅ': 'े', 'ऑ': 'ओ', 'ॉ': 'ो' },
+    ml: { 'ऍ': 'ए', 'ॅ': 'े', 'ऑ': 'ओ', 'ॉ': 'ो', 'ँ': 'ं' },
+    gu: { 'ॅ': 'ॅ' }
+  };
+  function toScript(deva, lang) {
+    var L = LANGS[lang];
+    if (!L || L.off === 0) return deva;
+    var s = deva.replace(/़/g, '');
+    if (lang === 'pa') s = s.replace(/श/g, 'स़').replace(/ळ/g, 'ल़');
+    if (lang === 'ta') s = s.charAt(0) + s.slice(1).replace(/न/g, 'ऩ');
+    var fold = lang === 'ta' ? TAMIL_FOLD : (FOLD[lang] || {});
+    var t = '';
+    for (var i = 0; i < s.length; i++) t += (fold[s[i]] !== undefined ? fold[s[i]] : s[i]);
+    var r = '';
+    for (var j = 0; j < t.length; j++) {
+      var code = t.charCodeAt(j);
+      if (code >= 0x900 && code <= 0x97F) r += String.fromCharCode(code + L.off); else r += t[j];
+    }
+    if (lang === 'pa') r = r.replace(/ਸ਼਼/g, 'ਸ਼').replace(/ਲ਼/g, 'ਲ਼');
+    return r;
+  }
+  function word(w, lang) {
+    var d = toDeva(w, lang), s = d.text;
+    var native = toScript(s, lang);
+    if (LANGS[lang] && LANGS[lang].finalVirama && d.endsBare) native += String.fromCharCode(0x94D + LANGS[lang].off);
+    return native;
+  }
+  // Up to 4 suggestions for one roman word.
+  function suggest(w, lang) {
+    if (!w) return [];
+    var list = [], lower = w.toLowerCase();
+    var dict = DICT[lang];
+    if (dict && dict[lower]) list.push(dict[lower]);
+    if (!/^[a-zA-Z.~]+$/.test(w)) return list.length ? list : [w];
+    var base = word(w, lang);
+    if (list.indexOf(base) < 0) list.push(base);
+    var vars = [];
+    var aPos = [];
+    for (var q = 1; q < w.length - 1; q++) if (w[q] === 'a' && w[q - 1] !== 'a' && 'aeiou'.indexOf(w[q + 1]) < 0) aPos.push(q);
+    aPos.slice(0, 2).forEach(function (q) { vars.push(w.slice(0, q) + 'aa' + w.slice(q + 1)); });
+    if (LANGS[lang] && LANGS[lang].finalVirama) {
+      if (/(^|[^e])e(?!e)/.test(w)) vars.unshift(w.replace(/(^|[^e])e(?!e)/g, '$1e_'));
+      if (/(^|[^o])o(?!o)/.test(w)) vars.unshift(w.replace(/(^|[^o])o(?!o)/g, '$1o_'));
+    }
+    if (/sh/.test(w)) vars.push(w.replace(/sh/, 'Sh'));
+    // schwa the typist left out: kamla -> kamala, faisla -> faisala
+    var m = /^(.*?[aeiou]+)([bcdfgjklmnpqrstvwxz])(?!h)([bcdfgjklmpqrstvwxz])(.*)$/.exec(w);
+    if (m) vars.push(m[1] + m[2] + 'a' + m[3] + m[4]);
+    if (/i$/.test(w)) vars.push(w.replace(/i$/, 'i_'));
+    if (/n[aeiou]/.test(w)) vars.push(w.replace(/n(?=[aeiou])/, 'N'));
+    if (/t(?!h)/.test(w)) vars.push(w.replace(/t(?!h)/, 'T'));
+    if (/d(?!h)/.test(w)) vars.push(w.replace(/d(?!h)/, 'D'));
+    if (/l/.test(w) && lang === 'mr') vars.push(w.replace(/l/, 'L'));
+    for (var k = 0; k < vars.length && list.length < 5; k++) {
+      var c = word(vars[k], lang);
+      if (list.indexOf(c) < 0) list.push(c);
+    }
+    list.push(w); // keep the English spelling as the last choice
+    return list.slice(0, 6);
+  }
+  // Convert every roman word in a sentence (top suggestion each).
+  function sentence(text, lang) {
+    return text.replace(/[A-Za-z][A-Za-z~]*/g, function (m) { return suggest(m, lang)[0]; });
+  }
+  return { LANGS: LANGS, word: word, suggest: suggest, sentence: sentence, toScript: toScript };
+})();
+
+
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { lang: 'mr', text: '', mode: 'phonetic', spoke: false, nameQ: 'Ramesh Patil' }; }
+renderVals() {
+var self = this, st = this.state, lang = st.lang, X = XLIT;
+var tryText = { mr: 'maze naav ramesh patil aahe', hi: 'mera naam ramesh hai', ta: 'en peyar raman', te: 'naa peru ramesh', kn: 'nanna hesaru ramesh', ml: 'ente peru ramesh', gu: 'maru naam ramesh chhe', bn: 'amar naam ramesh', pa: 'mera naam ramesh hai', or: 'mo naa ramesh' }[lang];
+var langs = Object.keys(X.LANGS).map(function (k) {
+  var on = k === lang;
+  return { k: k, label: X.LANGS[k].label, name: X.LANGS[k].name, pressed: on ? 'true' : 'false',
+    bg: on ? '#1F4E8C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#16202A', bd: on ? '#1F4E8C' : '#C3CCD6',
+    pick: function () { self.setState({ lang: k }); } };
+});
+var text = st.text, m = /([A-Za-z~]+)$/.exec(text), word = m ? m[1] : '';
+var sugg = (st.mode === 'phonetic' && word) ? X.suggest(word, lang).map(function (c, i) {
+  return { c: c, cls: i === 0 ? 'sug first' : 'sug', pick: function () { self.setState({ text: text.slice(0, text.length - word.length) + c + ' ' }); } };
+}) : [];
+function keyList(chars, names) {
+  var seen = {};
+  return chars.map(function (c, i) { return { c: X.toScript(c, lang), aria: names ? names[i] : c }; })
+    .filter(function (k) { if (seen[k.c]) return false; seen[k.c] = 1; return true; })
+    .map(function (k) { return { c: k.c, aria: k.aria, tap: function () { self.setState({ text: self.state.text + k.c }); } }; });
+}
+var vowels = keyList(['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ए', 'ऐ', 'ओ', 'औ']);
+var signs = keyList(['ा', 'ि', 'ी', 'ु', 'ू', 'े', 'ै', 'ो', 'ौ', 'ं', '्'], ['sign aa', 'sign i', 'sign ii', 'sign u', 'sign uu', 'sign e', 'sign ai', 'sign o', 'sign au', 'anusvara', 'virama']);
+var cons = keyList(['क', 'ख', 'ग', 'घ', 'च', 'छ', 'ज', 'झ', 'ट', 'ठ', 'ड', 'ढ', 'ण', 'त', 'थ', 'द', 'ध', 'न', 'प', 'फ', 'ब', 'भ', 'म', 'य', 'र', 'ल', 'व', 'श', 'ष', 'स', 'ह', 'ळ']);
+var T = [['Complainant', 'फिर्यादी', 'शिकायतकर्ता'], ['Accused', 'आरोपी', 'अभियुक्त'], ['Witness', 'साक्षीदार', 'गवाह'], ['Statement', 'जबाब', 'बयान'],
+  ['Seizure memo', 'जप्ती पंचनामा', 'जब्ती मेमो'], ['Chargesheet', 'दोषारोपपत्र', 'आरोप पत्र'], ['Police station', 'पोलीस ठाणे', 'पुलिस थाना'],
+  ['Arrest', 'अटक', 'गिरफ्तारी'], ['Bail', 'जामीन', 'जमानत'], ['Case diary', 'केस डायरी', 'केस डायरी']];
+var terms = T.map(function (t) {
+  var show = lang === 'mr' ? t[1] : (lang === 'hi' ? t[2] : t[0]);
+  return { en: t[0], show: show, ins: function () { var cur = self.state.text; self.setState({ text: cur + (cur && !/\s$/.test(cur) ? ' ' : '') + show + ' ' }); } };
+});
+// names: spell once with the Marathi name list, then write that spelling in each script
+var deva = X.sentence(st.nameQ, 'mr');
+var names = Object.keys(X.LANGS).map(function (k) {
+  var d = X.LANGS[k].finalVirama ? deva.replace(/([\u0915-\u0939\u0933])(?=\s|$|[.,])/g, '$1\u094D') : deva;
+  return { k: k, name: X.LANGS[k].name, v: X.toScript(d, k) };
+});
+var sample = lang === 'hi' ? 'मेरे पिताजी को 21 अगस्त को वीडियो कॉल आया। ' : 'माझ्या वडिलांना 21 ऑगस्टला व्हिडिओ कॉल आला. ';
+var phonetic = st.mode === 'phonetic';
+return {
+  lang: lang, langs: langs, langName: X.LANGS[lang].name, tryText: tryText, text: text, word: word,
+  sugg: sugg, hasSugg: sugg.length > 0, noSugg: sugg.length === 0,
+  placeholder: phonetic ? 'Type here in English letters, then press space' : 'Tap the letters below',
+  phonetic: phonetic ? 'true' : 'false', keyboard: !phonetic,
+  phBg: phonetic ? '#DCE7F5' : '#FFFFFF', phFg: phonetic ? '#163B6B' : '#16202A',
+  kbBg: phonetic ? '#FFFFFF' : '#DCE7F5', kbFg: phonetic ? '#16202A' : '#163B6B',
+  vowels: vowels, signs: signs, cons: cons, terms: terms, names: names, nameQ: st.nameQ, spoke: st.spoke,
+  onType: function (e) {
+    var v = e.target.value, prev = self.state.text;
+    if (self.state.mode === 'phonetic' && v.length > prev.length) {
+      var mm = /([A-Za-z~]+)([\s.,?!;:])$/.exec(v);
+      if (mm) v = v.slice(0, v.length - mm[0].length) + X.suggest(mm[1], self.state.lang)[0] + mm[2];
+    }
+    self.setState({ text: v });
+  },
+  onName: function (e) { self.setState({ nameQ: e.target.value }); },
+  usePhonetic: function () { self.setState({ mode: 'phonetic' }); },
+  useKeys: function () { self.setState({ mode: 'keys' }); },
+  space: function () { self.setState({ text: self.state.text + ' ' }); },
+  back: function () { self.setState({ text: Array.from(self.state.text).slice(0, -1).join('') }); },
+  convertAll: function () { self.setState({ text: X.sentence(self.state.text, self.state.lang) }); },
+  clear: function () { self.setState({ text: '', spoke: false }); },
+  speak: function () { self.setState({ text: self.state.text + sample, spoke: true }); }
+};
+}
+
+}
+</script>
+</body>
+</html>

@@ -44,6 +44,11 @@ At the end of each session, note in PROGRESS.md anything you deliberately skippe
 ## Testing rule (Sumit, 28 Oct 2026)
 Every piece of code gets tests (unit, functional, database, security as `docs/TESTING.md` lists), and **the whole suite runs every day**: `scripts/test-all.sh` (add `--no-db` only when PostgreSQL cannot start; say so in PROGRESS.md). Run it before you start (baseline) and before every commit. Coverage gates (core 96/90, web 97/89, gateway 94) may only go up. A bug gets a regression test first. A new route is covered by `SecurityMatrixTest`; list it there if it is public or admin-only.
 
+## Screens (Sumit, 2 Nov 2026)
+Every screen follows its board in `docs/design/boards/` (map and tokens in `docs/DESIGN.md`). Before committing a screen,
+take a screenshot of it (desktop and 390 px) and compare it with its board; note any difference in PROGRESS.md. Use the
+shared classes in `index.css` (`.card`, `.chip`, `.btn`), never new colours.
+
 ## Who may see and do what
 Case access comes from the role's data in `packs/*/roles.json` (case team = the named IO plus roles scoped to the station or district). A state admin works only inside their own state; an admin without a station is the platform admin. A state, district or station may only tighten a policy (`policies.json`), never loosen what is above it. Do not hard-code role names in new code: use a permission from `roles.json`.
 

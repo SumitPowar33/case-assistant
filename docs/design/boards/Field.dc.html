@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Field seizure capture</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#16202A;background:#F4F6F8}
+a{color:#1F4E8C}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 20px;border-radius:10px;font:inherit;font-size:16px;font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn-p{background:#1F4E8C;color:#FFFFFF;border:1px solid #1F4E8C}
+.btn-s{background:#FFFFFF;color:#16202A;border:1px solid #C3CCD6}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
+.mono{font-family:'IBM Plex Mono',monospace}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #EEF1F4;font-size:15px}
+.card{background:#FFFFFF;border:1px solid #DDE3EA;border-radius:14px;padding:16px}
+.step{display:flex;gap:10px;align-items:center;min-height:44px;font-size:14px}
+.n{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 834px; display: flex; flex-direction: column">
+<header style="background: #16202A; color: #FFFFFF; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px">
+<div style="display: flex; align-items: center; gap: 14px">
+<a href="Evidence.dc.html" aria-label="Back to evidence" style="color: #FFFFFF; font-size: 22px; text-decoration: none; min-width: 44px; min-height: 44px; display: flex; align-items: center">&#8592;</a>
+<div><div style="font-weight: 700; font-size: 18px">Search and seizure · BNSS 105</div><div style="font-size: 13px; color: #B9C3CE">FIR 214/2026 · A2's residence · demo, fictional data</div></div>
+</div>
+<div style="display: flex; gap: 10px; align-items: center">
+<span class="chip" style="background: {{ syncBg }}; color: {{ syncFg }}">{{ syncText }}</span>
+</div>
+</header>
+<div style="flex: 1; padding: 18px 24px; display: grid; grid-template-columns: 230px minmax(0, 1fr) minmax(0, 1fr); gap: 18px">
+<nav aria-label="Recording steps" class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 12px; font-weight: 600; color: #5B6775; padding: 4px 0 6px">ESAKSHYA STEPS</div>
+<div class="step"><span class="n" style="background: #E6F4EC; color: #155D35">1</span>Purpose: BNSS 105</div>
+<div class="step"><span class="n" style="background: #E6F4EC; color: #155D35">2</span>FIR number linked</div>
+<div class="step"><span class="n" style="background: #E6F4EC; color: #155D35">3</span>Video, 2 clips</div>
+<div class="step"><span class="n" style="background: #E6F4EC; color: #155D35">4</span>Photos of items</div>
+<div class="step"><span class="n" style="background: #E6F4EC; color: #155D35">5</span>Witnesses with photo</div>
+<div class="step"><span class="n" style="background: {{ s6bg }}; color: {{ s6fg }}">6</span>Your selfie</div>
+<div class="step"><span class="n" style="background: {{ s7bg }}; color: {{ s7fg }}">7</span>Sync and certificate</div>
+<div style="margin-top: auto; font-size: 12px; color: #3B4754; line-height: 1.5; padding-top: 10px">Each clip is up to 4 minutes. Recording works without network and syncs later.</div>
+</nav>
+<div style="display: flex; flex-direction: column; gap: 16px; min-width: 0">
+<div class="card" style="padding: 0; overflow: hidden">
+<div style="height: 190px; background: #2A3540; position: relative; display: flex; align-items: center; justify-content: center">
+<svg width="120" height="80" viewBox="0 0 120 80" aria-hidden="true"><rect x="20" y="10" width="40" height="64" rx="6" fill="none" stroke="#7C8896" stroke-width="2"/><rect x="70" y="30" width="34" height="44" rx="4" fill="none" stroke="#7C8896" stroke-width="2"/></svg>
+<span class="mono" style="position: absolute; left: 10px; bottom: 10px; background: rgba(0,0,0,.6); color: #FFFFFF; padding: 4px 8px; border-radius: 6px; font-size: 12px">Clip 2 of 2 · 03:41 · 18.5204N 73.8567E · 21 Oct 2026 07:14</span>
+</div>
+<div style="padding: 12px 16px; font-size: 14px; color: #3B4754">Clip 1 shows the room and the search. Clip 2 shows the items being sealed with the witnesses present.</div>
+</div>
+<div class="card">
+<div style="font-weight: 700; font-size: 16px">Witnesses</div>
+<div class="row"><span>Witness 1 · neighbour</span><span class="chip" style="background: #E6F4EC; color: #155D35">Photo and signature</span></div>
+<div class="row"><span>Witness 2 · shopkeeper</span><span class="chip" style="background: #E6F4EC; color: #155D35">Photo and signature</span></div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 16px; min-width: 0">
+<div class="card">
+<div style="font-weight: 700; font-size: 16px">Items sealed (3)</div>
+<div class="row"><div><div style="font-weight: 600">Phone, black</div><div class="mono" style="font-size: 13px; color: #3B4754">IMEI 35xxxxxxxx1204 · seal 214/E-03</div></div><span class="chip" style="background: #E6F4EC; color: #155D35">QR label</span></div>
+<div class="row"><div><div style="font-weight: 600">SIM cards, 6</div><div class="mono" style="font-size: 13px; color: #3B4754">seal 214/E-04</div></div><span class="chip" style="background: #E6F4EC; color: #155D35">QR label</span></div>
+<div class="row"><div><div style="font-weight: 600">Debit cards, 4</div><div class="mono" style="font-size: 13px; color: #3B4754">seal 214/E-05</div></div><span class="chip" style="background: #E6F4EC; color: #155D35">QR label</span></div>
+</div>
+<sc-if value="{{ needSelfie }}" hint-placeholder-val="{{ true }}">
+<div class="card" style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 15px">Take a selfie so the recording shows who made it. Then the memo is frozen and can't be edited.</div>
+<button type="button" class="btn btn-p" onClick="{{ selfie }}">Take selfie and freeze</button>
+</div>
+</sc-if>
+<sc-if value="{{ frozen }}" hint-placeholder-val="{{ false }}">
+<div class="card" style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 15px">Frozen at 07:31. Saved on this tablet as unsynced. It syncs as soon as there is network.</div>
+<button type="button" class="btn btn-p" onClick="{{ sync }}">Sync now</button>
+</div>
+</sc-if>
+<sc-if value="{{ synced }}" hint-placeholder-val="{{ false }}">
+<div class="card" role="status" style="display: flex; flex-direction: column; gap: 10px; border-color: #B7DCC6">
+<div style="font-size: 15px; color: #155D35; font-weight: 600">Synced as ES-7731. The 63(4) Part A certificate with the file hash is ready, and the items are in the evidence register.</div>
+<div class="mono" style="font-size: 12px; color: #3B4754; word-break: break-all">SHA-256 9f2c…a41e</div>
+<a class="btn btn-s" href="Evidence.dc.html">Open in evidence register</a>
+</div>
+</sc-if>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1194,"height":834}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { step: 'selfie' }; }
+renderVals() {
+var s = this.state.step, self = this;
+var ok = ['#E6F4EC', '#155D35'], todo = ['#FDF0DC', '#8A4B06'], wait = ['#EEF1F4', '#3B4754'];
+var s6 = s === 'selfie' ? todo : ok, s7 = s === 'synced' ? ok : (s === 'frozen' ? todo : wait);
+return {
+  needSelfie: s === 'selfie', frozen: s === 'frozen', synced: s === 'synced',
+  s6bg: s6[0], s6fg: s6[1], s7bg: s7[0], s7fg: s7[1],
+  syncText: s === 'synced' ? 'Synced' : 'Offline · will sync later',
+  syncBg: s === 'synced' ? '#E6F4EC' : '#FDF0DC', syncFg: s === 'synced' ? '#155D35' : '#8A4B06',
+  selfie: function () { self.setState({ step: 'frozen' }); },
+  sync: function () { self.setState({ step: 'synced' }); }
+};
+}
+}
+</script>
+</body>
+</html>

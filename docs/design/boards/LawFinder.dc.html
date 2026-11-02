@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Old to new law</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Devanagari:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#16202A;background:#F4F6F8}
+a{color:#1F4E8C}a:hover{color:#163B6B}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:40px;border-radius:8px;color:#3B4754;text-decoration:none;font-size:14px}
+.nav a:hover{background:#E9EEF4;color:#16202A}
+.nav a.on{background:#DCE7F5;color:#163B6B;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn-p{background:#1F4E8C;color:#FFFFFF;border:1px solid #1F4E8C}
+.btn-p:hover{background:#163B6B;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#16202A;border:1px solid #C3CCD6}
+.btn-s:hover{background:#F0F3F6;color:#16202A}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.mono{font-family:'IBM Plex Mono',monospace}
+.card{background:#FFFFFF;border:1px solid #DDE3EA;border-radius:12px}
+.c-crit{background:#FBE7E5;color:#9B1C13}.c-warn{background:#FDF0DC;color:#8A4B06}.c-ok{background:#E6F4EC;color:#155D35}
+.c-info{background:#E3ECF7;color:#163B6B}.c-neu{background:#EEF1F4;color:#3B4754}.c-ai{background:#EEE9FA;color:#4B2E91}
+input.q{font:inherit;font-size:16px;min-height:48px;border:1px solid #C3CCD6;border-radius:10px;padding:0 14px;box-sizing:border-box;width:100%}
+input.q:focus{outline:3px solid #9DB3CF;outline-offset:1px}
+.fchip{min-height:44px;padding:0 14px;border-radius:999px;border:1px solid #C3CCD6;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,2.2fr);gap:12px;padding:11px 18px;border-top:1px solid #EEF1F4;font-size:14px;align-items:baseline}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<nav aria-label="Main" style="flex: 1 1 220px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #DDE3EA; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 36px; height: 36px; border-radius: 9px; background: #1F4E8C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px">CA</div>
+<div><div style="font-weight: 700; font-size: 15px">Case Assistant</div><div style="font-size: 12px; color: #5B6775">Demo City Cyber PS</div></div>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 1px">
+<a href="Main.dc.html">Dashboard</a>
+<a href="FrontDesk.dc.html">Front desk complaint</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">CASE FIR 214/2026</div>
+<a href="Intake.dc.html">FIR and facts</a>
+<a href="Playbook.dc.html">Plan and deadlines</a>
+<a href="Notices.dc.html">Notices</a>
+<a href="Evidence.dc.html">Evidence</a>
+<a href="Statements.dc.html">Statements</a>
+<a href="MoneyTrail.dc.html">Money trail</a>
+<a href="Readiness.dc.html">Readiness check</a>
+<a href="Chargesheet.dc.html">Chargesheet</a>
+<a href="CaseDiary.dc.html">Case diary</a>
+<a href="Ask.dc.html">Ask the case file</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">STATION</div>
+<a href="Malkhana.dc.html">Case property</a>
+<a href="Labs.dc.html">Forensic and medical</a>
+<a href="Field.dc.html">Field capture (tablet)</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">AFTER FILING</div>
+<a href="Supervisor.dc.html">Supervisor review</a>
+<a href="Court.dc.html">Court and trial</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">TOOLS</div>
+<a href="Language.dc.html">Type in any language</a>
+<a class="on" href="LawFinder.dc.html">Old to new law</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">ADMIN</div>
+<a href="Audit.dc.html">Audit log</a>
+<a href="StatePack.dc.html">State setup</a>
+</div>
+<div style="margin-top: auto; border-top: 1px solid #DDE3EA; padding: 14px 6px 0; font-size: 13px">
+<div style="font-weight: 600">SI A. Deshmukh</div>
+<div style="color: #5B6775">Investigating officer</div>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 6px; color: #155D35"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #1E7A46"></span>Synced 2 min ago</div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; padding: 0 0 48px; box-sizing: border-box">
+<div style="background: #FFFFFF; border-bottom: 1px solid #DDE3EA; padding: 4px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px">
+<span class="chip" style="background: #FDF0DC; color: #6E3B05">Demo case: all names, numbers and accounts are fictional</span>
+<div style="display: flex; flex-wrap: wrap; gap: 4px">
+<a href="Ask.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Ask the case file</a>
+<a href="Language.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><span aria-hidden="true" lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif; font-size: 16px">अ</span>Type in <span lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif">मराठी</span></a>
+<a href="LawFinder.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600">IPC to BNS</a>
+</div>
+</div>
+<div style="max-width: 1180px; margin: 0 auto; padding: 24px 32px 0; display: flex; flex-direction: column; gap: 20px">
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px">
+<div>
+<div style="font-size: 13px; color: #5B6775">Tools</div>
+<h1 style="margin: 4px 0 0; font-size: 26px">Old law to new law</h1>
+<p style="margin: 6px 0 0; color: #3B4754; font-size: 15px; max-width: 760px">Officers told reporters they still keep printed charts and WhatsApp forwards to match IPC sections to BNS. This keeps one checked list in the app, from the state's approved pack.</p>
+</div>
+<span class="chip c-neu">Pack v3.2 · checked 1 Oct 2026</span>
+</header>
+<section class="card" aria-label="Search" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 12px">
+<label for="lq" style="font-weight: 600; font-size: 14px">Section number or offence</label>
+<input id="lq" class="q" value="{{ q }}" onChange="{{ onQ }}" placeholder="e.g. 420, cheating, 161, 65B" autocomplete="off">
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+<button type="button" class="fchip" onClick="{{ f.pick }}" aria-pressed="{{ f.pressed }}" style="background: {{ f.bg }}; color: {{ f.fg }}; border-color: {{ f.bd }}">{{ f.label }}</button>
+</sc-for>
+</div>
+</section>
+<section class="card" aria-labelledby="res" style="padding: 0 0 8px">
+<div style="padding: 14px 18px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap"><h2 id="res" style="margin: 0; font-size: 16px">{{ countText }}</h2><span style="font-size: 13px; color: #5B6775">Some sections only partly match. Read the bare act before charging.</span></div>
+<div class="row" style="font-size: 12px; font-weight: 600; color: #5B6775; padding-top: 8px; padding-bottom: 8px"><span>OLD</span><span>NEW</span><span>WHAT IT COVERS</span></div>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="10">
+<div class="row"><span class="mono" style="font-weight: 500">{{ r.old }}</span><span class="mono" style="font-weight: 600; color: #163B6B">{{ r.nu }}</span><span>{{ r.what }}</span></div>
+</sc-for>
+<sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 18px; font-size: 14px; color: #3B4754">Nothing matches. Try the section number alone, or a plain word such as theft.</div>
+</sc-if>
+</section>
+<section class="card" aria-labelledby="wh" style="padding: 16px 18px">
+<h2 id="wh" style="margin: 0; font-size: 16px">Which law applies?</h2>
+<ul style="margin: 8px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.8">
+<li>Offence committed before 1 July 2024: charge under the IPC.</li>
+<li>Offence on or after 1 July 2024: charge under the BNS.</li>
+<li>Procedure and evidence: the new codes (BNSS, BSA) for cases registered from 1 July 2024. If unsure for an older case, ask the prosecutor.</li>
+</ul>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { q: '', f: 'all' }; }
+renderVals() {
+var self = this, st = this.state;
+var R = [
+  ['ipc', 'IPC 34', 'BNS 3(5)', 'Acts done by several persons with common intention'],
+  ['ipc', 'IPC 120B', 'BNS 61(2)', 'Criminal conspiracy'],
+  ['ipc', 'IPC 302', 'BNS 103(1)', 'Murder, punishment'],
+  ['ipc', 'IPC 304A', 'BNS 106(1)', 'Death by negligence'],
+  ['ipc', 'IPC 304B', 'BNS 80', 'Dowry death'],
+  ['ipc', 'IPC 307', 'BNS 109', 'Attempt to murder'],
+  ['ipc', 'IPC 323', 'BNS 115(2)', 'Voluntarily causing hurt'],
+  ['ipc', 'IPC 354', 'BNS 74', 'Assault on a woman to outrage her modesty'],
+  ['ipc', 'IPC 363', 'BNS 137(2)', 'Kidnapping'],
+  ['ipc', 'IPC 376', 'BNS 64', 'Rape, punishment'],
+  ['ipc', 'IPC 379', 'BNS 303(2)', 'Theft'],
+  ['ipc', 'IPC 380', 'BNS 305', 'Theft in a dwelling house'],
+  ['ipc', 'IPC 384', 'BNS 308(2)', 'Extortion'],
+  ['ipc', 'IPC 392', 'BNS 309(4)', 'Robbery'],
+  ['ipc', 'IPC 406', 'BNS 316(2)', 'Criminal breach of trust'],
+  ['ipc', 'IPC 420', 'BNS 318(4)', 'Cheating and dishonestly inducing delivery of property'],
+  ['ipc', 'IPC 467', 'BNS 338', 'Forgery of a valuable security or will'],
+  ['ipc', 'IPC 498A', 'BNS 85', 'Cruelty by husband or his relatives'],
+  ['ipc', 'IPC 506', 'BNS 351(2)', 'Criminal intimidation'],
+  ['ipc', 'IPC 509', 'BNS 79', 'Word, gesture or act to insult the modesty of a woman'],
+  ['crpc', 'CrPC 41', 'BNSS 35', 'Arrest without warrant; notice of appearance'],
+  ['crpc', 'CrPC 91', 'BNSS 94', 'Summons to produce a document or thing'],
+  ['crpc', 'CrPC 100', 'BNSS 103', 'Search of a closed place'],
+  ['crpc', 'CrPC 102', 'BNSS 106', 'Police power to seize property'],
+  ['crpc', 'CrPC 154', 'BNSS 173', 'Information in cognizable cases (FIR)'],
+  ['crpc', 'CrPC 157', 'BNSS 176', 'Procedure for investigation'],
+  ['crpc', 'CrPC 161', 'BNSS 180', 'Examination of witnesses by police'],
+  ['crpc', 'CrPC 164', 'BNSS 183', 'Recording of confessions and statements by a magistrate'],
+  ['crpc', 'CrPC 165', 'BNSS 185', 'Search by police officer'],
+  ['crpc', 'CrPC 167', 'BNSS 187', 'Custody when investigation cannot finish in 24 hours'],
+  ['crpc', 'CrPC 173', 'BNSS 193', 'Report of police officer on completion of investigation'],
+  ['crpc', 'CrPC 438', 'BNSS 482', 'Anticipatory bail'],
+  ['crpc', 'CrPC 439', 'BNSS 483', 'Bail powers of High Court and Sessions Court'],
+  ['iea', 'Evidence Act 27', 'BSA 23(2), proviso', 'Discovery of a fact from information given by an accused in custody'],
+  ['iea', 'Evidence Act 45', 'BSA 39', 'Opinions of experts'],
+  ['iea', 'Evidence Act 65B', 'BSA 63', 'Admissibility of electronic records; certificate'],
+  ['it', 'IT Act 66C', 'IT Act 66C (unchanged)', 'Identity theft'],
+  ['it', 'IT Act 66D', 'IT Act 66D (unchanged)', 'Cheating by personation using a computer resource']
+];
+var q = st.q.trim().toLowerCase();
+var rows = R.filter(function (r) {
+  if (st.f !== 'all' && r[0] !== st.f) return false;
+  if (!q) return true;
+  return (r[1] + ' ' + r[2] + ' ' + r[3]).toLowerCase().indexOf(q) >= 0;
+}).map(function (r) { return { old: r[1], nu: r[2], what: r[3] }; });
+var F = [['all', 'All'], ['ipc', 'IPC to BNS'], ['crpc', 'CrPC to BNSS'], ['iea', 'Evidence Act to BSA'], ['it', 'IT Act']];
+return {
+  q: st.q, rows: rows, empty: rows.length === 0,
+  countText: rows.length === 1 ? '1 match' : rows.length + ' matches',
+  filters: F.map(function (f) { var on = st.f === f[0]; return { label: f[1], pressed: on ? 'true' : 'false', bg: on ? '#1F4E8C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#16202A', bd: on ? '#1F4E8C' : '#C3CCD6', pick: function () { self.setState({ f: f[0] }); } }; }),
+  onQ: function (e) { self.setState({ q: e.target.value }); }
+};
+}
+
+}
+</script>
+</body>
+</html>

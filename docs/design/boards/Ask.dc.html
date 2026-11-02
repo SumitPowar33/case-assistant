@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ask the case file</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Devanagari:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#16202A;background:#F4F6F8}
+a{color:#1F4E8C}a:hover{color:#163B6B}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:40px;border-radius:8px;color:#3B4754;text-decoration:none;font-size:14px}
+.nav a:hover{background:#E9EEF4;color:#16202A}
+.nav a.on{background:#DCE7F5;color:#163B6B;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn-p{background:#1F4E8C;color:#FFFFFF;border:1px solid #1F4E8C}
+.btn-p:hover{background:#163B6B;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#16202A;border:1px solid #C3CCD6}
+.btn-s:hover{background:#F0F3F6;color:#16202A}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.mono{font-family:'IBM Plex Mono',monospace}
+.card{background:#FFFFFF;border:1px solid #DDE3EA;border-radius:12px}
+.c-crit{background:#FBE7E5;color:#9B1C13}.c-warn{background:#FDF0DC;color:#8A4B06}.c-ok{background:#E6F4EC;color:#155D35}
+.c-info{background:#E3ECF7;color:#163B6B}.c-neu{background:#EEF1F4;color:#3B4754}.c-ai{background:#EEE9FA;color:#4B2E91}
+.qchip{min-height:44px;padding:0 14px;border-radius:999px;border:1px solid #C3CCD6;font:inherit;font-size:14px;cursor:pointer;text-align:left}
+input.q{font:inherit;font-size:16px;min-height:48px;border:1px solid #C3CCD6;border-radius:10px;padding:0 14px;box-sizing:border-box;flex:1;min-width:0}
+input.q:focus{outline:3px solid #9DB3CF;outline-offset:1px}
+.src{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid #EEF1F4;font-size:14px}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<nav aria-label="Main" style="flex: 1 1 220px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #DDE3EA; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 36px; height: 36px; border-radius: 9px; background: #1F4E8C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px">CA</div>
+<div><div style="font-weight: 700; font-size: 15px">Case Assistant</div><div style="font-size: 12px; color: #5B6775">Demo City Cyber PS</div></div>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 1px">
+<a href="Main.dc.html">Dashboard</a>
+<a href="FrontDesk.dc.html">Front desk complaint</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">CASE FIR 214/2026</div>
+<a href="Intake.dc.html">FIR and facts</a>
+<a href="Playbook.dc.html">Plan and deadlines</a>
+<a href="Notices.dc.html">Notices</a>
+<a href="Evidence.dc.html">Evidence</a>
+<a href="Statements.dc.html">Statements</a>
+<a href="MoneyTrail.dc.html">Money trail</a>
+<a href="Readiness.dc.html">Readiness check</a>
+<a href="Chargesheet.dc.html">Chargesheet</a>
+<a href="CaseDiary.dc.html">Case diary</a>
+<a class="on" href="Ask.dc.html">Ask the case file</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">STATION</div>
+<a href="Malkhana.dc.html">Case property</a>
+<a href="Labs.dc.html">Forensic and medical</a>
+<a href="Field.dc.html">Field capture (tablet)</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">AFTER FILING</div>
+<a href="Supervisor.dc.html">Supervisor review</a>
+<a href="Court.dc.html">Court and trial</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">TOOLS</div>
+<a href="Language.dc.html">Type in any language</a>
+<a href="LawFinder.dc.html">Old to new law</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">ADMIN</div>
+<a href="Audit.dc.html">Audit log</a>
+<a href="StatePack.dc.html">State setup</a>
+</div>
+<div style="margin-top: auto; border-top: 1px solid #DDE3EA; padding: 14px 6px 0; font-size: 13px">
+<div style="font-weight: 600">SI A. Deshmukh</div>
+<div style="color: #5B6775">Investigating officer</div>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 6px; color: #155D35"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #1E7A46"></span>Synced 2 min ago</div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; padding: 0 0 48px; box-sizing: border-box">
+<div style="background: #FFFFFF; border-bottom: 1px solid #DDE3EA; padding: 4px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px">
+<span class="chip" style="background: #FDF0DC; color: #6E3B05">Demo case: all names, numbers and accounts are fictional</span>
+<div style="display: flex; flex-wrap: wrap; gap: 4px">
+<a href="Ask.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Ask the case file</a>
+<a href="Language.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><span aria-hidden="true" lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif; font-size: 16px">अ</span>Type in <span lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif">मराठी</span></a>
+<a href="LawFinder.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600">IPC to BNS</a>
+</div>
+</div>
+<div style="max-width: 1180px; margin: 0 auto; padding: 24px 32px 0; display: flex; flex-direction: column; gap: 20px">
+<header>
+<div style="font-size: 13px; color: #5B6775"><a href="Playbook.dc.html">FIR 214/2026</a> / Ask</div>
+<h1 style="margin: 4px 0 0; font-size: 26px">Ask the case file</h1>
+<p style="margin: 6px 0 0; color: #3B4754; font-size: 15px; max-width: 760px">Answers come only from documents in this case, and every answer shows where it came from. If the file does not say, the answer says so. It will not judge guilt or how truthful anyone is.</p>
+</header>
+<section class="card" aria-label="Question" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 12px">
+<form onSubmit="{{ submit }}" style="display: flex; gap: 10px; flex-wrap: wrap">
+<label for="q" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Your question</label>
+<input id="q" class="q" value="{{ query }}" onChange="{{ onQuery }}" placeholder="Ask in English, मराठी or हिन्दी" autocomplete="off">
+<button type="submit" class="btn btn-p">Ask</button>
+</form>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ chips }}" as="c" hint-placeholder-count="4">
+<button type="button" class="qchip" onClick="{{ c.pick }}" style="background: {{ c.bg }}; color: {{ c.fg }}; border-color: {{ c.bd }}">{{ c.q }}</button>
+</sc-for>
+</div>
+</section>
+<section class="card" aria-labelledby="ans" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; border-color: {{ a.border }}">
+<div style="display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center">
+<h2 id="ans" style="margin: 0; font-size: 16px">{{ a.q }}</h2>
+<span class="chip" style="background: {{ a.chipBg }}; color: {{ a.chipFg }}">{{ a.kind }}</span>
+</div>
+<p style="margin: 0; font-size: 16px; line-height: 1.65">{{ a.text }}</p>
+<sc-if value="{{ a.hasSources }}" hint-placeholder-val="{{ true }}">
+<div>
+<div style="font-size: 12px; font-weight: 600; color: #5B6775; margin-top: 6px">WHERE THIS COMES FROM</div>
+<sc-for list="{{ a.sources }}" as="s" hint-placeholder-count="2">
+<div class="src"><span class="chip c-info">{{ s.tag }}</span><div><a href="{{ s.href }}" style="font-weight: 600">{{ s.title }}</a><div style="color: #3B4754; font-size: 13px; margin-top: 2px">{{ s.quote }}</div></div></div>
+</sc-for>
+</div>
+</sc-if>
+<div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px"><a class="btn btn-s" href="CaseDiary.dc.html">Note in case diary</a><button type="button" class="btn btn-s">Report a wrong answer</button></div>
+</section>
+<p style="margin: 0; font-size: 13px; color: #3B4754">Every question and answer is saved in the <a href="Audit.dc.html">audit log</a>.</p>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { pick: 0, query: '' }; }
+renderVals() {
+var self = this, st = this.state;
+var A = [
+  { q: 'When was the largest transfer?', kind: 'Found in file', text: 'On 21 August 2026: Rs 9,80,000 to account XXXX4471 at Bank of Demo. The son’s statement says 22 August; the bank statement shows 21 August.',
+    sources: [{ tag: 'E-11', title: 'Bank of Demo statement, page 3, row 14', quote: '21/08/2026  IMPS  9,80,000.00  to XXXX4471', href: 'Notices.dc.html' },
+      { tag: 'S-04', title: 'Statement of complainant’s son, 20 Oct', quote: '“on 22 August he went to the bank and sent a large amount”', href: 'Statements.dc.html' }] },
+  { q: 'Which records still lack a 63(4) certificate?', kind: 'Found in file', text: 'One: the Bank of Demo statements have Part A but not Part B, the expert certificate. A follow-up letter is drafted. The other 10 electronic records have complete certificates with matching hashes.',
+    sources: [{ tag: 'N-01', title: 'Reply check, Bank of Demo, 19 Sep', quote: 'Part B expert certificate: not received', href: 'Notices.dc.html' },
+      { tag: 'E-REG', title: 'Evidence register', quote: '11 electronic exhibits, 10 complete', href: 'Evidence.dc.html' }] },
+  { q: 'Who is A1, the caller?', kind: 'Not in the file', text: 'The file does not identify A1. It holds a foreign WhatsApp number and IP logs pointing abroad, but no name or address.',
+    sources: [{ tag: 'E-09', title: 'WhatsApp reply, 24 Aug', quote: 'Login IPs resolve outside India; no subscriber name given', href: 'Notices.dc.html' }] },
+  { q: 'Is A3 guilty?', kind: 'Cannot answer', text: 'Only a court can decide guilt. What the file shows is that A3’s account received Rs 16.0 lakh, and no second link (phone, device, CCTV, own statement) has been found yet.',
+    sources: [{ tag: 'MT', title: 'Money trail, link check', quote: 'A3: money only', href: 'MoneyTrail.dc.html' }] }
+];
+var cur = st.pick >= 0 ? A[st.pick] : { q: st.query, kind: 'Demo', text: 'This demo answers the four questions above. In the real app, any question about the file is answered from its documents, with sources.', sources: [] };
+var colors = { 'Found in file': ['#E6F4EC', '#155D35', '#DDE3EA'], 'Not in the file': ['#FDF0DC', '#8A4B06', '#F1D9AE'], 'Cannot answer': ['#FBE7E5', '#9B1C13', '#F3C9C4'], 'Demo': ['#EEF1F4', '#3B4754', '#DDE3EA'] }[cur.kind];
+function match(t) {
+  t = t.toLowerCase();
+  if (/guilt|guilty|दोषी/.test(t)) return 3;
+  if (/a1|caller|who called|कॉल/.test(t)) return 2;
+  if (/certificate|63|part b/.test(t)) return 1;
+  if (/transfer|largest|biggest|amount|रक्कम/.test(t)) return 0;
+  return -1;
+}
+return {
+  query: st.query,
+  chips: A.map(function (x, i) { var on = i === st.pick; return { q: x.q, bg: on ? '#DCE7F5' : '#FFFFFF', fg: on ? '#163B6B' : '#16202A', bd: on ? '#9DB3CF' : '#C3CCD6', pick: function () { self.setState({ pick: i, query: '' }); } }; }),
+  a: { q: cur.q, kind: cur.kind, text: cur.text, sources: cur.sources, hasSources: cur.sources.length > 0, chipBg: colors[0], chipFg: colors[1], border: colors[2] },
+  onQuery: function (e) { self.setState({ query: e.target.value }); },
+  submit: function (e) { if (e && e.preventDefault) e.preventDefault(); if (!self.state.query.trim()) return; self.setState({ pick: match(self.state.query) }); }
+};
+}
+
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Forensic and medical requests</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Devanagari:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#16202A;background:#F4F6F8}
+a{color:#1F4E8C}a:hover{color:#163B6B}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:40px;border-radius:8px;color:#3B4754;text-decoration:none;font-size:14px}
+.nav a:hover{background:#E9EEF4;color:#16202A}
+.nav a.on{background:#DCE7F5;color:#163B6B;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn-p{background:#1F4E8C;color:#FFFFFF;border:1px solid #1F4E8C}
+.btn-p:hover{background:#163B6B;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#16202A;border:1px solid #C3CCD6}
+.btn-s:hover{background:#F0F3F6;color:#16202A}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.mono{font-family:'IBM Plex Mono',monospace}
+.card{background:#FFFFFF;border:1px solid #DDE3EA;border-radius:12px}
+.c-crit{background:#FBE7E5;color:#9B1C13}.c-warn{background:#FDF0DC;color:#8A4B06}.c-ok{background:#E6F4EC;color:#155D35}
+.c-info{background:#E3ECF7;color:#163B6B}.c-neu{background:#EEF1F4;color:#3B4754}.c-ai{background:#EEE9FA;color:#4B2E91}
+.rq{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.4fr) auto;gap:12px;align-items:center;padding:14px 18px;border-top:1px solid #EEF1F4;font-size:14px}
+.stp{display:flex;gap:10px;align-items:flex-start;font-size:14px;padding:8px 0}
+.dot{width:12px;height:12px;border-radius:50%;margin-top:4px;flex:none}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<nav aria-label="Main" style="flex: 1 1 220px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #DDE3EA; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 36px; height: 36px; border-radius: 9px; background: #1F4E8C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px">CA</div>
+<div><div style="font-weight: 700; font-size: 15px">Case Assistant</div><div style="font-size: 12px; color: #5B6775">Demo City Cyber PS</div></div>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 1px">
+<a href="Main.dc.html">Dashboard</a>
+<a href="FrontDesk.dc.html">Front desk complaint</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">CASE FIR 214/2026</div>
+<a href="Intake.dc.html">FIR and facts</a>
+<a href="Playbook.dc.html">Plan and deadlines</a>
+<a href="Notices.dc.html">Notices</a>
+<a href="Evidence.dc.html">Evidence</a>
+<a href="Statements.dc.html">Statements</a>
+<a href="MoneyTrail.dc.html">Money trail</a>
+<a href="Readiness.dc.html">Readiness check</a>
+<a href="Chargesheet.dc.html">Chargesheet</a>
+<a href="CaseDiary.dc.html">Case diary</a>
+<a href="Ask.dc.html">Ask the case file</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">STATION</div>
+<a href="Malkhana.dc.html">Case property</a>
+<a class="on" href="Labs.dc.html">Forensic and medical</a>
+<a href="Field.dc.html">Field capture (tablet)</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">AFTER FILING</div>
+<a href="Supervisor.dc.html">Supervisor review</a>
+<a href="Court.dc.html">Court and trial</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">TOOLS</div>
+<a href="Language.dc.html">Type in any language</a>
+<a href="LawFinder.dc.html">Old to new law</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">ADMIN</div>
+<a href="Audit.dc.html">Audit log</a>
+<a href="StatePack.dc.html">State setup</a>
+</div>
+<div style="margin-top: auto; border-top: 1px solid #DDE3EA; padding: 14px 6px 0; font-size: 13px">
+<div style="font-weight: 600">SI A. Deshmukh</div>
+<div style="color: #5B6775">Investigating officer</div>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 6px; color: #155D35"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #1E7A46"></span>Synced 2 min ago</div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; padding: 0 0 48px; box-sizing: border-box">
+<div style="background: #FFFFFF; border-bottom: 1px solid #DDE3EA; padding: 4px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px">
+<span class="chip" style="background: #FDF0DC; color: #6E3B05">Demo case: all names, numbers and accounts are fictional</span>
+<div style="display: flex; flex-wrap: wrap; gap: 4px">
+<a href="Ask.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Ask the case file</a>
+<a href="Language.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><span aria-hidden="true" lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif; font-size: 16px">अ</span>Type in <span lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif">मराठी</span></a>
+<a href="LawFinder.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600">IPC to BNS</a>
+</div>
+</div>
+<div style="max-width: 1180px; margin: 0 auto; padding: 24px 32px 0; display: flex; flex-direction: column; gap: 20px">
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px">
+<div>
+<div style="font-size: 13px; color: #5B6775">Station · all cases</div>
+<h1 style="margin: 4px 0 0; font-size: 26px">Forensic and medical requests</h1>
+<p style="margin: 6px 0 0; color: #3B4754; font-size: 15px; max-width: 760px">Lab reports and medical reports are often what holds a chargesheet back. Requests go out from here, replies come back into the case, and you are reminded before a report becomes a gap.</p>
+</div>
+<button type="button" class="btn btn-p">New request</button>
+</header>
+<section class="card" aria-labelledby="ol" style="overflow-x: auto">
+<h2 id="ol" style="margin: 0; padding: 16px 18px; font-size: 16px">Open requests</h2>
+<div style="min-width: 760px">
+<div class="rq" style="font-size: 12px; font-weight: 600; color: #5B6775; padding-top: 8px; padding-bottom: 8px"><span>REQUEST</span><span>SENT TO</span><span>STATUS</span><span></span></div>
+<div class="rq"><span><strong>Phone extraction, 214/E-03</strong><br><span style="color: #3B4754">FIR 214/2026 · also asks for the expert certificate for the extracted data</span></span><span>FSL Demo City, cyber unit</span><span><span class="chip c-info">Received at lab</span><br><span style="font-size: 13px; color: #3B4754">Queue 14 · usual time 5–7 weeks</span></span><span></span></div>
+<div class="rq"><span><strong>Injury report (MLC)</strong><br><span style="color: #3B4754">FIR 233/2026 · assault · through MedLEaPR</span></span><span>District Hospital, Demo City</span><span><span class="chip c-ok">Report e-signed 21 Oct</span><br><span style="font-size: 13px; color: #3B4754">Added to case file</span></span><span></span></div>
+<div class="rq" style="background: #FFFBF3"><span><strong>Handwriting comparison</strong><br><span style="color: #3B4754">FIR 187/2026 · cheque forgery</span></span><span>Examiner of Questioned Documents</span><span><span class="chip c-warn">No reply in 61 days</span><br><span style="font-size: 13px; color: #3B4754">Chargesheet due 2 Dec</span></span><span>
+<sc-if value="{{ notSent }}" hint-placeholder-val="{{ true }}"><button type="button" class="btn btn-s" onClick="{{ remind }}">Send reminder</button></sc-if>
+<sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}"><span role="status" class="chip c-ok">Reminder sent</span></sc-if>
+</span></div>
+<div class="rq"><span><strong>Blood alcohol test</strong><br><span style="color: #3B4754">FIR 241/2026 · road accident</span></span><span>FSL Demo City, toxicology</span><span><span class="chip c-neu">Sample sent 18 Oct</span></span><span></span></div>
+</div>
+</section>
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section class="card" aria-labelledby="ml" style="flex: 1 1 420px; min-width: 0; padding: 16px 18px">
+<h2 id="ml" style="margin: 0 0 6px; font-size: 16px">How the medical report came back (FIR 233/2026)</h2>
+<div class="stp"><span class="dot" style="background: #1E7A46"></span><span><strong>20 Oct 21:15</strong> · Request raised from the case, sent to the hospital through MedLEaPR</span></div>
+<div class="stp"><span class="dot" style="background: #1E7A46"></span><span><strong>20 Oct 22:40</strong> · Doctor examined the injured person; sealed clothes handed to police</span></div>
+<div class="stp"><span class="dot" style="background: #1E7A46"></span><span><strong>21 Oct 10:05</strong> · Report filled on the standard form and e-signed by the doctor</span></div>
+<div class="stp"><span class="dot" style="background: #1E7A46"></span><span><strong>21 Oct 10:06</strong> · Report joined to the case; injured person's name stays masked outside the case team</span></div>
+</section>
+<section class="card" aria-labelledby="rl" style="flex: 1 1 360px; min-width: 0; padding: 16px 18px">
+<h2 id="rl" style="margin: 0 0 6px; font-size: 16px">Reminder rules</h2>
+<ul style="margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.8">
+<li>No reply in 30 days: reminder drafted for you</li>
+<li>Report still missing 15 days before the chargesheet date: your SHO is told</li>
+<li>Report arrives: it appears in the readiness check the same day</li>
+</ul>
+<p style="margin: 10px 0 0; font-size: 13px; color: #3B4754">Timings come from the state pack and can be changed there.</p>
+</section>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { sent: false }; }
+renderVals() {
+var self = this;
+return { sent: this.state.sent, notSent: !this.state.sent, remind: function () { self.setState({ sent: true }); } };
+}
+
+}
+</script>
+</body>
+</html>

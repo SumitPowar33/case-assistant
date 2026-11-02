@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Officer dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Devanagari:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#16202A;background:#F4F6F8}
+a{color:#1F4E8C}a:hover{color:#163B6B}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:40px;border-radius:8px;color:#3B4754;text-decoration:none;font-size:14px}
+.nav a:hover{background:#E9EEF4;color:#16202A}
+.nav a.on{background:#DCE7F5;color:#163B6B;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn-p{background:#1F4E8C;color:#FFFFFF;border:1px solid #1F4E8C}
+.btn-p:hover{background:#163B6B;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#16202A;border:1px solid #C3CCD6}
+.btn-s:hover{background:#F0F3F6;color:#16202A}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.mono{font-family:'IBM Plex Mono',monospace}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<nav aria-label="Main" style="flex: 1 1 220px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #DDE3EA; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 36px; height: 36px; border-radius: 9px; background: #1F4E8C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px">CA</div>
+<div><div style="font-weight: 700; font-size: 15px">Case Assistant</div><div style="font-size: 12px; color: #5B6775">Demo City Cyber PS</div></div>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 1px">
+<a class="on" href="Main.dc.html">Dashboard</a>
+<a href="FrontDesk.dc.html">Front desk complaint</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">CASE FIR 214/2026</div>
+<a href="Intake.dc.html">FIR and facts</a>
+<a href="Playbook.dc.html">Plan and deadlines</a>
+<a href="Notices.dc.html">Notices</a>
+<a href="Evidence.dc.html">Evidence</a>
+<a href="Statements.dc.html">Statements</a>
+<a href="MoneyTrail.dc.html">Money trail</a>
+<a href="Readiness.dc.html">Readiness check</a>
+<a href="Chargesheet.dc.html">Chargesheet</a>
+<a href="CaseDiary.dc.html">Case diary</a>
+<a href="Ask.dc.html">Ask the case file</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">STATION</div>
+<a href="Malkhana.dc.html">Case property</a>
+<a href="Labs.dc.html">Forensic and medical</a>
+<a href="Field.dc.html">Field capture (tablet)</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">AFTER FILING</div>
+<a href="Supervisor.dc.html">Supervisor review</a>
+<a href="Court.dc.html">Court and trial</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">TOOLS</div>
+<a href="Language.dc.html">Type in any language</a>
+<a href="LawFinder.dc.html">Old to new law</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">ADMIN</div>
+<a href="Audit.dc.html">Audit log</a>
+<a href="StatePack.dc.html">State setup</a>
+</div>
+<div style="margin-top: auto; border-top: 1px solid #DDE3EA; padding: 14px 6px 0; font-size: 13px">
+<div style="font-weight: 600">SI A. Deshmukh</div>
+<div style="color: #5B6775">Investigating officer</div>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 6px; color: #155D35"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #1E7A46"></span>Synced 2 min ago</div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; padding: 0 0 48px; box-sizing: border-box">
+<div style="background: #FFFFFF; border-bottom: 1px solid #DDE3EA; padding: 4px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px">
+<span class="chip" style="background: #FDF0DC; color: #6E3B05">Demo case: all names, numbers and accounts are fictional</span>
+<div style="display: flex; flex-wrap: wrap; gap: 4px">
+<a href="Ask.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Ask the case file</a>
+<a href="Language.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><span aria-hidden="true" lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif; font-size: 16px">अ</span>Type in <span lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif">मराठी</span></a>
+<a href="LawFinder.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600">IPC to BNS</a>
+</div>
+</div>
+<div style="max-width: 1180px; margin: 0 auto; padding: 28px 32px 0; display: flex; flex-direction: column; gap: 24px">
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div>
+<div style="font-size: 13px; color: #5B6775">Thursday, 22 October 2026</div>
+<h1 style="margin: 4px 0 0; font-size: 28px; font-weight: 700">Good morning, SI Deshmukh</h1>
+<p style="margin: 6px 0 0; color: #3B4754; font-size: 15px">5 things need you today. The most urgent is the chargesheet for FIR 214/2026.</p>
+</div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<a class="btn btn-s" href="Field.dc.html">Field capture</a>
+<a class="btn btn-p" href="Intake.dc.html">New case from FIR</a>
+</div>
+</header>
+<section aria-label="Workload" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+<div style="background: #FFFFFF; border: 1px solid #DDE3EA; border-radius: 12px; padding: 16px 18px"><div style="font-size: 13px; color: #5B6775">My open cases</div><div style="font-size: 30px; font-weight: 700; margin-top: 4px">14</div></div>
+<div style="background: #FFFFFF; border: 1px solid #DDE3EA; border-radius: 12px; padding: 16px 18px"><div style="font-size: 13px; color: #5B6775">Deadlines in 7 days</div><div style="font-size: 30px; font-weight: 700; margin-top: 4px; color: #8A4B06">3</div></div>
+<div style="background: #FFFFFF; border: 1px solid #DDE3EA; border-radius: 12px; padding: 16px 18px"><div style="font-size: 13px; color: #5B6775">Critical gaps open</div><div style="font-size: 30px; font-weight: 700; margin-top: 4px; color: #9B1C13">5</div></div>
+<div style="background: #FFFFFF; border: 1px solid #DDE3EA; border-radius: 12px; padding: 16px 18px"><div style="font-size: 13px; color: #5B6775">Notices awaiting reply</div><div style="font-size: 30px; font-weight: 700; margin-top: 4px">11</div></div>
+</section>
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+<section aria-labelledby="att" style="flex: 999 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #DDE3EA; border-radius: 12px">
+<h2 id="att" style="margin: 0; padding: 18px 20px; font-size: 17px; border-bottom: 1px solid #E6EAEF">Needs your attention</h2>
+<div style="display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 16px 20px; border-bottom: 1px solid #EEF1F4">
+<span class="chip" style="background: #FBE7E5; color: #9B1C13">Critical</span>
+<div style="flex: 1 1 300px; min-width: 0"><div style="font-weight: 600">FIR 214/2026 · Chargesheet due 11 Nov, 20 days left</div><div style="font-size: 14px; color: #3B4754; margin-top: 2px">Accused A2 arrested 12 Sep. Readiness check shows 3 critical gaps. Missing this date means default bail.</div></div>
+<a class="btn btn-p" href="Readiness.dc.html">Open readiness</a>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 16px 20px; border-bottom: 1px solid #EEF1F4">
+<span class="chip" style="background: #FDF0DC; color: #8A4B06">Action</span>
+<div style="flex: 1 1 300px; min-width: 0"><div style="font-weight: 600">FIR 214/2026 · Bank reply missing certificate Part B</div><div style="font-size: 14px; color: #3B4754; margin-top: 2px">Statement arrived from Bank of Demo, but the BSA 63(4) expert certificate is missing. Follow-up letter is ready.</div></div>
+<a class="btn btn-s" href="Notices.dc.html">Review notice</a>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 16px 20px; border-bottom: 1px solid #EEF1F4">
+<span class="chip" style="background: #FDF0DC; color: #8A4B06">Action</span>
+<div style="flex: 1 1 300px; min-width: 0"><div style="font-weight: 600">FIR 214/2026 · Victim progress update due 16 Nov</div><div style="font-size: 14px; color: #3B4754; margin-top: 2px">BNSS requires informing the victim within 90 days. Draft in Marathi is prepared for your review.</div></div>
+<a class="btn btn-s" href="Court.dc.html">Review update</a>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 16px 20px; border-bottom: 1px solid #EEF1F4">
+<span class="chip" style="background: #E3ECF7; color: #163B6B">New</span>
+<div style="flex: 1 1 300px; min-width: 0"><div style="font-weight: 600">FIR 231/2026 · NCRP complaint imported</div><div style="font-size: 14px; color: #3B4754; margin-top: 2px">UPI fraud, Rs 1.2 lakh. 9 facts extracted; 2 need your check before the plan is made.</div></div>
+<a class="btn btn-s" href="Intake.dc.html">Check facts</a>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 16px 20px">
+<span class="chip" style="background: #E6F4EC; color: #155D35">Ready</span>
+<div style="flex: 1 1 300px; min-width: 0"><div style="font-weight: 600">FIR 214/2026 · Witness statement transcribed</div><div style="font-size: 14px; color: #3B4754; margin-top: 2px">Complainant's son, recorded in Marathi. Transcript and English translation ready to compare.</div></div>
+<a class="btn btn-s" href="Statements.dc.html">Review</a>
+</div>
+</div>
+</section>
+<aside aria-labelledby="dl" style="flex: 1 1 300px; min-width: 0; background: #FFFFFF; border: 1px solid #DDE3EA; border-radius: 12px">
+<h2 id="dl" style="margin: 0; padding: 18px 20px; font-size: 17px; border-bottom: 1px solid #E6EAEF">Coming deadlines</h2>
+<ol style="list-style: none; margin: 0; padding: 8px 20px 16px; display: flex; flex-direction: column">
+<li style="display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid #EEF1F4"><div style="width: 52px; flex: none; text-align: center"><div style="font-size: 12px; color: #5B6775">OCT</div><div style="font-size: 20px; font-weight: 700">28</div></div><div><div style="font-weight: 600; font-size: 14px">FIR 176/2026 hearing</div><div style="font-size: 13px; color: #3B4754">JMFC court 3 · prosecution witness 2</div></div></li>
+<li style="display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid #EEF1F4"><div style="width: 52px; flex: none; text-align: center"><div style="font-size: 12px; color: #5B6775">NOV</div><div style="font-size: 20px; font-weight: 700">4</div></div><div><div style="font-weight: 600; font-size: 14px">Notice reply due</div><div style="font-size: 13px; color: #3B4754">Telecom Demo · CDR and CAF for 3 numbers</div></div></li>
+<li style="display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid #EEF1F4"><div style="width: 52px; flex: none; text-align: center"><div style="font-size: 12px; color: #9B1C13">NOV</div><div style="font-size: 20px; font-weight: 700; color: #9B1C13">11</div></div><div><div style="font-weight: 600; font-size: 14px">Chargesheet, FIR 214/2026</div><div style="font-size: 13px; color: #9B1C13">60-day limit · default bail risk</div></div></li>
+<li style="display: flex; gap: 14px; padding: 12px 0"><div style="width: 52px; flex: none; text-align: center"><div style="font-size: 12px; color: #5B6775">NOV</div><div style="font-size: 20px; font-weight: 700">16</div></div><div><div style="font-weight: 600; font-size: 14px">Victim update, FIR 214/2026</div><div style="font-size: 13px; color: #3B4754">90-day progress letter</div></div></li>
+</ol>
+</aside>
+</div>
+<section aria-labelledby="mc" style="background: #FFFFFF; border: 1px solid #DDE3EA; border-radius: 12px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #E6EAEF">
+<h2 id="mc" style="margin: 0; font-size: 17px">My cases</h2>
+<label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #3B4754">Search <input type="search" placeholder="FIR number, name, phone, account" style="min-height: 40px; width: 280px; max-width: 60vw; border: 1px solid #C3CCD6; border-radius: 8px; padding: 0 12px; font: inherit"></label>
+</div>
+<div style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 760px">
+<thead><tr style="text-align: left; color: #5B6775; font-size: 12px; letter-spacing: .04em"><th style="padding: 12px 20px; font-weight: 600">FIR</th><th style="padding: 12px 8px; font-weight: 600">TYPE</th><th style="padding: 12px 8px; font-weight: 600">STAGE</th><th style="padding: 12px 8px; font-weight: 600">NEXT DEADLINE</th><th style="padding: 12px 8px; font-weight: 600">READINESS</th><th style="padding: 12px 20px; font-weight: 600"></th></tr></thead>
+<tbody>
+<tr style="border-top: 1px solid #EEF1F4"><td class="mono" style="padding: 14px 20px; font-weight: 500">214/2026</td><td style="padding: 14px 8px">Digital arrest fraud</td><td style="padding: 14px 8px">Investigation</td><td style="padding: 14px 8px; color: #9B1C13; font-weight: 600">Chargesheet, 11 Nov</td><td style="padding: 14px 8px"><span class="chip" style="background: #FBE7E5; color: #9B1C13">3 critical gaps</span></td><td style="padding: 14px 20px; text-align: right"><a href="Playbook.dc.html">Open</a></td></tr>
+<tr style="border-top: 1px solid #EEF1F4"><td class="mono" style="padding: 14px 20px; font-weight: 500">198/2026</td><td style="padding: 14px 8px">Investment app fraud</td><td style="padding: 14px 8px">Notices pending</td><td style="padding: 14px 8px">Reply, 4 Nov</td><td style="padding: 14px 8px"><span class="chip" style="background: #FDF0DC; color: #8A4B06">1 gap</span></td><td style="padding: 14px 20px; text-align: right"><a href="Playbook.dc.html">Open</a></td></tr>
+<tr style="border-top: 1px solid #EEF1F4"><td class="mono" style="padding: 14px 20px; font-weight: 500">231/2026</td><td style="padding: 14px 8px">UPI fraud</td><td style="padding: 14px 8px">Intake review</td><td style="padding: 14px 8px">None yet</td><td style="padding: 14px 8px"><span class="chip" style="background: #EEF1F4; color: #3B4754">Not checked</span></td><td style="padding: 14px 20px; text-align: right"><a href="Intake.dc.html">Open</a></td></tr>
+<tr style="border-top: 1px solid #EEF1F4"><td class="mono" style="padding: 14px 20px; font-weight: 500">176/2026</td><td style="padding: 14px 8px">NDPS, ganja 2.1 kg</td><td style="padding: 14px 8px">Trial</td><td style="padding: 14px 8px">Hearing, 28 Oct</td><td style="padding: 14px 8px"><span class="chip" style="background: #E6F4EC; color: #155D35">Filed complete</span></td><td style="padding: 14px 20px; text-align: right"><a href="Court.dc.html">Open</a></td></tr>
+<tr style="border-top: 1px solid #EEF1F4"><td class="mono" style="padding: 14px 20px; font-weight: 500">162/2026</td><td style="padding: 14px 8px">Loan app extortion</td><td style="padding: 14px 8px">Chargesheet filed</td><td style="padding: 14px 8px">Charge framing, 9 Dec</td><td style="padding: 14px 8px"><span class="chip" style="background: #E6F4EC; color: #155D35">Filed complete</span></td><td style="padding: 14px 20px; text-align: right"><a href="Court.dc.html">Open</a></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<p style="margin: 0; font-size: 13px; color: #5B6775">Suggestions from the assistant are drafts. Every action is yours to decide and is recorded in the audit log.</p>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

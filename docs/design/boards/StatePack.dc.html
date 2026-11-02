@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>State setup</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Devanagari:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#16202A;background:#F4F6F8}
+a{color:#1F4E8C}a:hover{color:#163B6B}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:40px;border-radius:8px;color:#3B4754;text-decoration:none;font-size:14px}
+.nav a:hover{background:#E9EEF4;color:#16202A}
+.nav a.on{background:#DCE7F5;color:#163B6B;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn-p{background:#1F4E8C;color:#FFFFFF;border:1px solid #1F4E8C}
+.btn-p:hover{background:#163B6B;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#16202A;border:1px solid #C3CCD6}
+.btn-s:hover{background:#F0F3F6;color:#16202A}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.mono{font-family:'IBM Plex Mono',monospace}
+.card{background:#FFFFFF;border:1px solid #DDE3EA;border-radius:12px}
+.c-crit{background:#FBE7E5;color:#9B1C13}.c-warn{background:#FDF0DC;color:#8A4B06}.c-ok{background:#E6F4EC;color:#155D35}
+.c-info{background:#E3ECF7;color:#163B6B}.c-neu{background:#EEF1F4;color:#3B4754}.c-ai{background:#EEE9FA;color:#4B2E91}
+.pk{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid #EEF1F4;font-size:14px}
+.stp{display:flex;gap:10px;align-items:flex-start;font-size:14px;padding:8px 0}
+.dot{width:12px;height:12px;border-radius:50%;margin-top:4px;flex:none}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<nav aria-label="Main" style="flex: 1 1 220px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #DDE3EA; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 36px; height: 36px; border-radius: 9px; background: #1F4E8C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px">CA</div>
+<div><div style="font-weight: 700; font-size: 15px">Case Assistant</div><div style="font-size: 12px; color: #5B6775">Demo City Cyber PS</div></div>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 1px">
+<a href="Main.dc.html">Dashboard</a>
+<a href="FrontDesk.dc.html">Front desk complaint</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">CASE FIR 214/2026</div>
+<a href="Intake.dc.html">FIR and facts</a>
+<a href="Playbook.dc.html">Plan and deadlines</a>
+<a href="Notices.dc.html">Notices</a>
+<a href="Evidence.dc.html">Evidence</a>
+<a href="Statements.dc.html">Statements</a>
+<a href="MoneyTrail.dc.html">Money trail</a>
+<a href="Readiness.dc.html">Readiness check</a>
+<a href="Chargesheet.dc.html">Chargesheet</a>
+<a href="CaseDiary.dc.html">Case diary</a>
+<a href="Ask.dc.html">Ask the case file</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">STATION</div>
+<a href="Malkhana.dc.html">Case property</a>
+<a href="Labs.dc.html">Forensic and medical</a>
+<a href="Field.dc.html">Field capture (tablet)</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">AFTER FILING</div>
+<a href="Supervisor.dc.html">Supervisor review</a>
+<a href="Court.dc.html">Court and trial</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">TOOLS</div>
+<a href="Language.dc.html">Type in any language</a>
+<a href="LawFinder.dc.html">Old to new law</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">ADMIN</div>
+<a href="Audit.dc.html">Audit log</a>
+<a class="on" href="StatePack.dc.html">State setup</a>
+</div>
+<div style="margin-top: auto; border-top: 1px solid #DDE3EA; padding: 14px 6px 0; font-size: 13px">
+<div style="font-weight: 600">SI A. Deshmukh</div>
+<div style="color: #5B6775">Investigating officer</div>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 6px; color: #155D35"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #1E7A46"></span>Synced 2 min ago</div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; padding: 0 0 48px; box-sizing: border-box">
+<div style="background: #FFFFFF; border-bottom: 1px solid #DDE3EA; padding: 4px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px">
+<span class="chip" style="background: #FDF0DC; color: #6E3B05">Demo case: all names, numbers and accounts are fictional</span>
+<div style="display: flex; flex-wrap: wrap; gap: 4px">
+<a href="Ask.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Ask the case file</a>
+<a href="Language.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><span aria-hidden="true" lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif; font-size: 16px">अ</span>Type in <span lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif">मराठी</span></a>
+<a href="LawFinder.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600">IPC to BNS</a>
+</div>
+</div>
+<div style="max-width: 1180px; margin: 0 auto; padding: 24px 32px 0; display: flex; flex-direction: column; gap: 20px">
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px">
+<div>
+<div style="font-size: 13px; color: #5B6775">Admin · state nodal officer</div>
+<h1 style="margin: 4px 0 0; font-size: 26px">State setup</h1>
+<p style="margin: 6px 0 0; color: #3B4754; font-size: 15px; max-width: 760px">One app for every state. What changes from state to state, the language, forms, playbooks and deadlines, lives in a state pack. A change goes live only after the prosecution side approves it.</p>
+</div>
+<button type="button" class="btn btn-s">Start a pack for a new state</button>
+</header>
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section class="card" aria-labelledby="mh" style="flex: 999 1 520px; min-width: 0; padding: 16px 18px">
+<div style="display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center"><h2 id="mh" style="margin: 0; font-size: 16px">Maharashtra pack · v3.2</h2><span class="chip c-ok">Live since 1 Oct 2026</span></div>
+<div class="pk"><span><strong>Languages</strong><br><span style="color: #3B4754">Marathi, Hindi, English · police word list of 2,140 terms</span></span><button type="button" class="btn btn-s" style="min-height: 40px">Edit</button></div>
+<div class="pk"><span><strong>Forms</strong><br><span style="color: #3B4754">FIR, seizure memo, BNSS 94 notice, chargesheet, case diary</span></span><button type="button" class="btn btn-s" style="min-height: 40px">Edit</button></div>
+<div class="pk"><span><strong>Playbooks</strong><br><span style="color: #3B4754">Cyber fraud v1.4 · NDPS v1.1 · Sexual offences v1.0 · Murder v1.2</span></span><button type="button" class="btn btn-s" style="min-height: 40px">Edit</button></div>
+<div class="pk"><span><strong>Deadlines and reminders</strong><br><span style="color: #3B4754">60/90-day limits, 2 months for specified sexual offences, 90-day victim update, lab reminders</span></span><button type="button" class="btn btn-s" style="min-height: 40px">Edit</button></div>
+<div class="pk"><span><strong>Old to new law table</strong><br><span style="color: #3B4754">Checked by Directorate of Prosecution, 1 Oct 2026</span></span><button type="button" class="btn btn-s" style="min-height: 40px">Edit</button></div>
+<div class="pk"><span><strong>Connections</strong><br><span style="color: #3B4754">CCTNS, ICJS, eSakshya, e-Prosecution, MedLEaPR, national cyber portal</span></span><span class="chip c-ok">All up</span></div>
+</section>
+<section class="card" aria-labelledby="ch" style="flex: 1 1 360px; min-width: 0; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px">
+<h2 id="ch" style="margin: 0; font-size: 16px">Change waiting: Cyber fraud playbook v1.5</h2>
+<p style="margin: 0; font-size: 14px; line-height: 1.6">Adds a front-desk step: send hold requests to banks through the national portal before typing the FIR. Adds a rule: an account holder needs a second link besides money received.</p>
+<div class="stp"><span class="dot" style="background: #1E7A46"></span><span>Drafted by SP Cyber, 14 Oct</span></div>
+<div class="stp"><span class="dot" style="background: #1E7A46"></span><span>Tested on 40 closed cases, 15 Oct</span></div>
+<div class="stp"><span class="dot" style="background: {{ dot }}"></span><span>{{ stepText }}</span></div>
+<sc-if value="{{ pending }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; gap: 10px; flex-wrap: wrap"><button type="button" class="btn btn-p" onClick="{{ approve }}">Approve as Directorate of Prosecution</button><button type="button" class="btn btn-s">Send back</button></div>
+</sc-if>
+<sc-if value="{{ approved }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="background: #E6F4EC; color: #155D35; border-radius: 8px; padding: 10px 12px; font-size: 14px; font-weight: 600">Approved. v1.5 applies to new cases from tomorrow; open cases keep v1.4 unless the IO switches.</div>
+</sc-if>
+</section>
+</div>
+<section class="card" aria-labelledby="st" style="padding: 16px 18px">
+<h2 id="st" style="margin: 0 0 6px; font-size: 16px">Other states</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px">
+<div style="border: 1px solid #E6EAEF; border-radius: 10px; padding: 12px"><strong>Karnataka</strong><div style="font-size: 13px; color: #3B4754; margin-top: 4px">Kannada, English · v0.9</div><span class="chip c-warn" style="margin-top: 8px">Pilot in 3 stations</span></div>
+<div style="border: 1px solid #E6EAEF; border-radius: 10px; padding: 12px"><strong>Uttar Pradesh</strong><div style="font-size: 13px; color: #3B4754; margin-top: 4px">Hindi, English · v0.4</div><span class="chip c-neu" style="margin-top: 8px">Forms being mapped</span></div>
+<div style="border: 1px solid #E6EAEF; border-radius: 10px; padding: 12px"><strong>Tamil Nadu</strong><div style="font-size: 13px; color: #3B4754; margin-top: 4px">Tamil, English · not started</div><span class="chip c-neu" style="margin-top: 8px">Waiting for nodal officer</span></div>
+</div>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { ok: false }; }
+renderVals() {
+var self = this, ok = this.state.ok;
+return { pending: !ok, approved: ok, dot: ok ? '#1E7A46' : '#C3CCD6', stepText: ok ? 'Approved by Directorate of Prosecution, 22 Oct' : 'Waiting for Directorate of Prosecution',
+  approve: function () { self.setState({ ok: true }); } };
+}
+
+}
+</script>
+</body>
+</html>

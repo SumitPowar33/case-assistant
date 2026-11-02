@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Plan, sections and deadlines</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Devanagari:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#16202A;background:#F4F6F8}
+a{color:#1F4E8C}a:hover{color:#163B6B}
+.nav a{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:40px;border-radius:8px;color:#3B4754;text-decoration:none;font-size:14px}
+.nav a:hover{background:#E9EEF4;color:#16202A}
+.nav a.on{background:#DCE7F5;color:#163B6B;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn-p{background:#1F4E8C;color:#FFFFFF;border:1px solid #1F4E8C}
+.btn-p:hover{background:#163B6B;color:#FFFFFF}
+.btn-s{background:#FFFFFF;color:#16202A;border:1px solid #C3CCD6}
+.btn-s:hover{background:#F0F3F6;color:#16202A}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.mono{font-family:'IBM Plex Mono',monospace}
+.task{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid #EEF1F4;font-size:14px}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+<nav aria-label="Main" style="flex: 1 1 220px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #DDE3EA; padding: 20px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<div style="width: 36px; height: 36px; border-radius: 9px; background: #1F4E8C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px">CA</div>
+<div><div style="font-weight: 700; font-size: 15px">Case Assistant</div><div style="font-size: 12px; color: #5B6775">Demo City Cyber PS</div></div>
+</div>
+<div class="nav" style="display: flex; flex-direction: column; gap: 1px">
+<a href="Main.dc.html">Dashboard</a>
+<a href="FrontDesk.dc.html">Front desk complaint</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">CASE FIR 214/2026</div>
+<a href="Intake.dc.html">FIR and facts</a>
+<a class="on" href="Playbook.dc.html">Plan and deadlines</a>
+<a href="Notices.dc.html">Notices</a>
+<a href="Evidence.dc.html">Evidence</a>
+<a href="Statements.dc.html">Statements</a>
+<a href="MoneyTrail.dc.html">Money trail</a>
+<a href="Readiness.dc.html">Readiness check</a>
+<a href="Chargesheet.dc.html">Chargesheet</a>
+<a href="CaseDiary.dc.html">Case diary</a>
+<a href="Ask.dc.html">Ask the case file</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">STATION</div>
+<a href="Malkhana.dc.html">Case property</a>
+<a href="Labs.dc.html">Forensic and medical</a>
+<a href="Field.dc.html">Field capture (tablet)</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">AFTER FILING</div>
+<a href="Supervisor.dc.html">Supervisor review</a>
+<a href="Court.dc.html">Court and trial</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">TOOLS</div>
+<a href="Language.dc.html">Type in any language</a>
+<a href="LawFinder.dc.html">Old to new law</a>
+<div style="font-size: 11px; font-weight: 600; color: #5B6775; letter-spacing: .06em; padding: 12px 12px 4px">ADMIN</div>
+<a href="Audit.dc.html">Audit log</a>
+<a href="StatePack.dc.html">State setup</a>
+</div>
+<div style="margin-top: auto; border-top: 1px solid #DDE3EA; padding: 14px 6px 0; font-size: 13px">
+<div style="font-weight: 600">SI A. Deshmukh</div>
+<div style="color: #5B6775">Investigating officer</div>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 6px; color: #155D35"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #1E7A46"></span>Synced 2 min ago</div>
+</div>
+</nav>
+<main style="flex: 999 1 560px; min-width: 0; padding: 0 0 48px; box-sizing: border-box">
+<div style="background: #FFFFFF; border-bottom: 1px solid #DDE3EA; padding: 4px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px">
+<span class="chip" style="background: #FDF0DC; color: #6E3B05">Demo case: all names, numbers and accounts are fictional</span>
+<div style="display: flex; flex-wrap: wrap; gap: 4px">
+<a href="Ask.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Ask the case file</a>
+<a href="Language.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600"><span aria-hidden="true" lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif; font-size: 16px">अ</span>Type in <span lang="mr" style="font-family: 'IBM Plex Sans Devanagari', sans-serif">मराठी</span></a>
+<a href="LawFinder.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600">IPC to BNS</a>
+</div>
+</div>
+<div style="max-width: 1180px; margin: 0 auto; padding: 24px 32px 0; display: flex; flex-direction: column; gap: 20px">
+<header style="background: #FFFFFF; border: 1px solid #DDE3EA; border-radius: 12px; padding: 18px 20px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: center">
+<div>
+<div style="font-size: 13px; color: #5B6775" class="mono">FIR 214/2026 · Demo City Cyber PS</div>
+<h1 style="margin: 4px 0 0; font-size: 24px">Digital arrest fraud · Rs 48.6 lakh</h1>
+<div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px"><span class="chip" style="background: #EEF1F4; color: #3B4754">Day 65 of investigation</span><span class="chip" style="background: #EEF1F4; color: #3B4754">A2 in judicial custody</span><span class="chip" style="background: #FBE7E5; color: #9B1C13">Chargesheet due 11 Nov · 20 days</span></div>
+</div>
+<a class="btn btn-p" href="Readiness.dc.html">Run readiness check</a>
+</header>
+<section aria-labelledby="tl" style="background: #FFFFFF; border: 1px solid #DDE3EA; border-radius: 12px; padding: 18px 20px">
+<h2 id="tl" style="margin: 0 0 14px; font-size: 16px">Statutory timeline</h2>
+<ol style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px">
+<li style="border-top: 4px solid #1E7A46; padding-top: 10px"><div style="font-size: 12px; color: #5B6775">18 AUG</div><div style="font-weight: 600; font-size: 14px">FIR registered</div><div style="font-size: 13px; color: #155D35">Done</div></li>
+<li style="border-top: 4px solid #1E7A46; padding-top: 10px"><div style="font-size: 12px; color: #5B6775">12 SEP</div><div style="font-weight: 600; font-size: 14px">A2 arrested</div><div style="font-size: 13px; color: #155D35">60-day clock started</div></li>
+<li style="border-top: 4px solid #1F4E8C; padding-top: 10px"><div style="font-size: 12px; color: #5B6775">22 OCT · TODAY</div><div style="font-weight: 600; font-size: 14px">Investigation</div><div style="font-size: 13px; color: #163B6B">14 of 21 tasks done</div></li>
+<li style="border-top: 4px solid #B42318; padding-top: 10px"><div style="font-size: 12px; color: #9B1C13">11 NOV</div><div style="font-weight: 600; font-size: 14px">Chargesheet limit</div><div style="font-size: 13px; color: #9B1C13">Default bail after this</div></li>
+<li style="border-top: 4px solid #C3CCD6; padding-top: 10px"><div style="font-size: 12px; color: #5B6775">16 NOV</div><div style="font-weight: 600; font-size: 14px">Victim update</div><div style="font-size: 13px; color: #3B4754">90 days from FIR</div></li>
+</ol>
+</section>
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section aria-labelledby="sec" style="flex: 1 1 340px; min-width: 0; background: #FFFFFF; border: 1px solid #DDE3EA; border-radius: 12px">
+<div style="padding: 16px 18px; border-bottom: 1px solid #E6EAEF">
+<h2 id="sec" style="margin: 0; font-size: 16px">Sections suggested</h2>
+<p style="margin: 6px 0 0; font-size: 13px; color: #3B4754">For your decision. Offence after 1 July 2024, so BNS applies.</p>
+</div>
+<fieldset style="border: 0; margin: 0; padding: 8px 18px 16px; display: flex; flex-direction: column; gap: 4px">
+<legend style="position: absolute; width: 1px; height: 1px; overflow: hidden">Sections to apply</legend>
+<label style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 14px"><input type="checkbox" checked style="width: 18px; height: 18px; margin-top: 2px"><span><strong>BNS 318(4)</strong> cheating, delivery of property<br><span style="font-size: 13px; color: #3B4754">Transfers under deception · FIR p.2</span></span></label>
+<label style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 14px"><input type="checkbox" checked style="width: 18px; height: 18px; margin-top: 2px"><span><strong>BNS 319(2)</strong> cheating by personation<br><span style="font-size: 13px; color: #3B4754">Posed as CBI officer</span></span></label>
+<label style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 14px"><input type="checkbox" checked style="width: 18px; height: 18px; margin-top: 2px"><span><strong>BNS 336(3), 340(2)</strong> forgery, using forged record<br><span style="font-size: 13px; color: #3B4754">Fake "arrest warrant" sent on WhatsApp</span></span></label>
+<label style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 14px"><input type="checkbox" checked style="width: 18px; height: 18px; margin-top: 2px"><span><strong>BNS 351(2)</strong> criminal intimidation</span></label>
+<label style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 14px"><input type="checkbox" checked style="width: 18px; height: 18px; margin-top: 2px"><span><strong>BNS 61(2), 3(5)</strong> conspiracy, common intention<br><span style="font-size: 13px; color: #3B4754">Needs a link for each accused</span></span></label>
+<label style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 14px"><input type="checkbox" checked style="width: 18px; height: 18px; margin-top: 2px"><span><strong>IT Act 66C, 66D</strong> identity theft, personation by computer</span></label>
+<label style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 14px"><input type="checkbox" style="width: 18px; height: 18px; margin-top: 2px"><span><strong>BNS 317(2)</strong> receiving stolen property<br><span style="font-size: 13px; color: #3B4754">Fallback for an account holder if conspiracy is not proved</span></span></label>
+</fieldset>
+</section>
+<section aria-labelledby="tasks" style="flex: 999 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #DDE3EA; border-radius: 12px">
+<div style="padding: 16px 18px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center">
+<div><h2 id="tasks" style="margin: 0; font-size: 16px">Investigation plan</h2><div style="font-size: 13px; color: #3B4754; margin-top: 4px">Playbook: Cyber fraud, digital arrest · v1.3, approved by Directorate of Prosecution</div></div>
+<span class="chip" style="background: #E3ECF7; color: #163B6B">14 of 21 done</span>
+</div>
+<div style="background: #F7F9FB; padding: 8px 18px; font-size: 12px; font-weight: 600; color: #5B6775; letter-spacing: .05em; border-top: 1px solid #EEF1F4">STOP THE MONEY</div>
+<div class="task"><span class="chip" style="background: #E6F4EC; color: #155D35">Done</span><span style="flex: 1 1 260px">Freeze requests to 4 layer-1 accounts via CFCFRMS</span><span style="color: #5B6775; font-size: 13px">Rs 6.2 lakh held</span></div>
+<div class="task"><span class="chip" style="background: #E6F4EC; color: #155D35">Done</span><span style="flex: 1 1 260px">Block 3 numbers and the video link</span><span style="color: #5B6775; font-size: 13px">Confirmed 23 Aug</span></div>
+<div style="background: #F7F9FB; padding: 8px 18px; font-size: 12px; font-weight: 600; color: #5B6775; letter-spacing: .05em; border-top: 1px solid #EEF1F4">NOTICES AND RECORDS</div>
+<div class="task"><span class="chip" style="background: #FDF0DC; color: #8A4B06">Waiting</span><span style="flex: 1 1 260px">Bank of Demo: statements, KYC, certificate</span><a href="Notices.dc.html">Part B missing</a></div>
+<div class="task"><span class="chip" style="background: #FDF0DC; color: #8A4B06">Waiting</span><span style="flex: 1 1 260px">Telecom Demo: CDR, CAF for 3 numbers</span><span style="color: #5B6775; font-size: 13px">Due 4 Nov</span></div>
+<div class="task"><span class="chip" style="background: #E6F4EC; color: #155D35">Done</span><span style="flex: 1 1 260px">WhatsApp: account and IP details</span><span style="color: #5B6775; font-size: 13px">Received 30 Sep</span></div>
+<div style="background: #F7F9FB; padding: 8px 18px; font-size: 12px; font-weight: 600; color: #5B6775; letter-spacing: .05em; border-top: 1px solid #EEF1F4">ACCUSED AND SEIZURE</div>
+<div class="task"><span class="chip" style="background: #E6F4EC; color: #155D35">Done</span><span style="flex: 1 1 260px">Arrest A2, seize phone and cards (video recorded)</span><a href="Field.dc.html">eSakshya ES-7731</a></div>
+<div class="task"><span class="chip" style="background: #FBE7E5; color: #9B1C13">Gap</span><span style="flex: 1 1 260px">A3: find a link beyond the bank credit</span><a href="MoneyTrail.dc.html">Open money trail</a></div>
+<div class="task"><span class="chip" style="background: #EEF1F4; color: #3B4754">To do</span><span style="flex: 1 1 260px">Send A2's phone to forensic lab</span><button type="button" class="btn btn-s" style="min-height: 36px">Create request</button></div>
+<div style="background: #F7F9FB; padding: 8px 18px; font-size: 12px; font-weight: 600; color: #5B6775; letter-spacing: .05em; border-top: 1px solid #EEF1F4">STATEMENTS AND VERIFICATION</div>
+<div class="task"><span class="chip" style="background: #FBE7E5; color: #9B1C13">Gap</span><span style="flex: 1 1 260px">Statement of Bank of Demo nodal officer</span><a href="Statements.dc.html">Not recorded</a></div>
+<div class="task"><span class="chip" style="background: #EEF1F4; color: #3B4754">To do</span><span style="flex: 1 1 260px">Letter to CBI confirming no "Inspector Rathod"</span><button type="button" class="btn btn-s" style="min-height: 36px">Draft letter</button></div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
