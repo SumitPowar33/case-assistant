@@ -86,6 +86,7 @@ Done in session 53 (2 Nov, 04:55 UTC scheduled run): the FIR screen reads the pe
 Done in session 54 (2 Nov, on-demand run from 10:27 IST): Stryker for the web app's date and form logic (TESTING.md item 6 finished).
 Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question decided (section above); security review with fixes (session 55 entry).
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
+Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
@@ -95,6 +96,20 @@ Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks lef
 10. Account lifecycle (decision 2 of 2 Nov): acting SHO with an end date given by the SP, "IO has left the station" list.
 11. Acid-attack survivors (BNS 124) masked like sexual-offence victims (decision 4 of 2 Nov).
 12. Security: done in code (sessions 55 and 56). Left for people: an outside penetration test (CERT-In empanelled auditor) before real case data; the installation itself (deploy/nginx.conf, a real certificate).
+
+## 2 Nov 2026, session 58 (Sumit present from 15:16 IST: "act like that and do the testing")
+Session 57 had already run an internal penetration test (round 1). This session ran **round 2** on the gaps round 1
+listed: a second (fictional, not committed) state pack, a protected sexual-offence case, 17 accounts; testssl.sh,
+Nikto, sqlmap, Schemathesis and a scripted read matrix across both states. Report: `docs/PENTEST-2026-11-02.md`, "Round 2".
+
+Fixed, each with a test first: TLS 1.2 ciphers without forward secrecy or with CBC (medium; forward-secret AEAD only
+now); the gateway's API description open to anyone (low; turned off); a spoofed Host redirected to (low; default
+server closes it, redirect uses `server_name`); every unknown path answered 200 (info; now 404).
+**Installation note:** `deploy/nginx.conf` now names the host (`case.example.gov.in`): set the real name in both places.
+Final `scripts/test-all.sh`: all 8 PASS (gates unchanged).
+
+Not done (round 2 was stopped before them; for the accredited test): cross-state admin actions, privilege escalation
+through account changes, race conditions, stored-script checks in a real browser, request smuggling.
 
 ## 2 Nov 2026, session 57 (Sumit present from 13:53 IST: "act like that and do the testing")
 Ran a structured penetration test of the whole installation (OWASP WSTG + API Top 10) and wrote it up in
