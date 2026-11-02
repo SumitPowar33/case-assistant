@@ -52,6 +52,8 @@ export default function FirDetail({ id }: { id: string }) {
   const [part, setPart] = useState<Part>('case')
   const shown = (p: Part) => (p === part ? 'fir-part shown' : 'fir-part')
   const { data: fir, error } = useLoad<Fir>(`/firs/${id}`, version)
+  // the people are read once here and handed to the arrest, chargesheet and readiness parts (each used to read them again)
+  const { data: people, error: peopleError } = useLoad<Person[]>(`/firs/${id}/people`, version)
   const saved = () => setVersion((v) => v + 1)
   if (error) return <p role="alert">{error}</p>
   if (!fir) return <p>{t('common.loading')}</p>
@@ -73,14 +75,16 @@ export default function FirDetail({ id }: { id: string }) {
           : <blockquote>{fir.contents_original}</blockquote>}
       </div>
       <div className={shown('people')}>
-        <Section<Person> title={t('fir.people')} path={`/firs/${id}/people`} version={version} form={<AddPersonForm firId={id} onSaved={saved} />}>
-          {(rows) => <ul>{rows.map((p) => (
+        <section>
+          <h2>{t('fir.people')}</h2>
+          {peopleError ? <p role="alert">{peopleError}</p> : !people ? <p>{t('common.loading')}</p> : people.length ? <ul>{people.map((p) => (
             <li key={p.id}>{p.label} ({t.code('person', p.role)}){p.age_years ? `, ${p.age_years}` : ''}: {p.display_name}{p.identity_masked ? ` (${t('fir.identityProtected')})` : ''}</li>
-          ))}</ul>}
-        </Section>
+          ))}</ul> : <p>{t('common.noneYet')}</p>}
+          <AddPersonForm firId={id} onSaved={saved} />
+        </section>
       </div>
-      <div className={shown('arrests')}><Arrests firId={id} version={version} onSaved={saved} /></div>
-      <div className={shown('chargesheets')}><Chargesheets firId={id} version={version} onSaved={saved} /></div>
+      <div className={shown('arrests')}><Arrests firId={id} people={people} version={version} onSaved={saved} /></div>
+      <div className={shown('chargesheets')}><Chargesheets firId={id} people={people} version={version} onSaved={saved} /></div>
       <div className={shown('closure')}><ClosureReport firId={id} version={version} onSaved={saved} /></div>
       <div className={shown('deadlines')}>
         <Section<Deadline> title={t('fir.deadlines')} path={`/firs/${id}/deadlines`} version={version}>
@@ -97,7 +101,7 @@ export default function FirDetail({ id }: { id: string }) {
         </Section>
       </div>
       <div className={shown('notices')}><Notices firId={id} fir={fir} /></div>
-      <div className={shown('readiness')}><Readiness key={version} firId={id} /></div>
+      <div className={shown('readiness')}><Readiness key={version} firId={id} people={people ?? []} /></div>
     </>
   )
 }

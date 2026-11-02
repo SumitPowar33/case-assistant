@@ -177,9 +177,8 @@ function ArrestForm({ firId, accused, hint, onSaved }: { firId: string; accused:
   )
 }
 
-export default function Arrests({ firId, version, onSaved }: { firId: string; version: number; onSaved: () => void }) {
+export default function Arrests({ firId, people, version, onSaved }: { firId: string; people: Person[] | undefined; version: number; onSaved: () => void }) {
   const { data, error } = useLoad<Arrest[]>(`/firs/${firId}/arrests`, version)
-  const { data: people } = useLoad<Person[]>(`/firs/${firId}/people`, version)
   const { data: memoFixes } = useLoad<MemoFix[]>(`/firs/${firId}/arrests/memo-corrections`, version)
   const { data: timeFixes } = useLoad<TimeFix[]>(`/firs/${firId}/arrests/time-corrections`, version)
   const { data: fixes } = useLoad<Correction[]>(`/firs/${firId}/arrests/corrections`, version)

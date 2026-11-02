@@ -26,20 +26,18 @@ const shown = (t: T, e: Linked) => `${e.label}${e.kind === 'electronic' ? ` (${t
  * Charge ingredients -> linked evidence -> gaps. Lists facts about the file only; it never scores the case or anyone in it.
  * Writes (choose playbook, link, accept a gap) are allowed for the case team only; the server says so otherwise.
  */
-export default function Readiness({ firId }: { firId: string }) {
+export default function Readiness({ firId, people }: { firId: string; people: Person[] }) {
   const t = useT()
   const [report, setReport] = useState<Report>()
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
   const [evidence, setEvidence] = useState<Evidence[]>([])
-  const [people, setPeople] = useState<Person[]>([])
   const [error, setError] = useState('')
   const [version, setVersion] = useState(0)
 
   useEffect(() => {
     let live = true
-    Promise.all([get<Report>(`/firs/${firId}/readiness`), get<Playbook[]>('/playbooks'), get<Evidence[]>(`/firs/${firId}/evidence`),
-      get<Person[]>(`/firs/${firId}/people`)])
-      .then(([r, p, e, pp]) => { if (live) { setReport(r); setPlaybooks(p); setEvidence(e); setPeople(pp) } }, (e: Error) => live && setError(e.message))
+    Promise.all([get<Report>(`/firs/${firId}/readiness`), get<Playbook[]>('/playbooks'), get<Evidence[]>(`/firs/${firId}/evidence`)])
+      .then(([r, p, e]) => { if (live) { setReport(r); setPlaybooks(p); setEvidence(e) } }, (e: Error) => live && setError(e.message))
     return () => { live = false }
   }, [firId, version])
 

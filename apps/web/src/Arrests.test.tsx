@@ -35,12 +35,12 @@ const base = {
 }
 
 test('an arrest shows its own chargesheet last day; one without a remand asks for it', async () => {
-  const writes = stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+  const writes = stub({ '/firs/f1/arrests': [
     { ...base, id: 'a1', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-10', earlier_custody_days: 5, remand_recorded_by_name: 'SI Fictional' },
     { ...base, id: 'a2', max_punishment: 'life', first_remand_on: null, chargesheet_last_day: null },
   ] }, { status: 204, body: null })
   const saved = vi.fn()
-  render(<Arrests firId="f1" version={0} onSaved={saved} />)
+  render(<Arrests firId="f1" people={people} version={0} onSaved={saved} />)
   expect(await screen.findByText('2026-11-10')).toBeTruthy()
   expect(screen.getByText(/chargesheet within 60 days/)).toBeTruthy()
   expect(screen.getByText(/5 days already spent in custody before an earlier release are counted/)).toBeTruthy()
@@ -54,8 +54,8 @@ test('an arrest shows its own chargesheet last day; one without a remand asks fo
 })
 
 test('the arrest form offers only accused, needs grounds and sends India time', async () => {
-  const writes = stub({ '/firs/f1/people': people })
-  render(<Arrests firId="f1" version={0} onSaved={() => {}} />)
+  const writes = stub({})
+  render(<Arrests firId="f1" people={people} version={0} onSaved={() => {}} />)
   const form = (await screen.findByText('Record an arrest (BNSS 35 memo)')).closest('details')!
   const options = within(form).getAllByRole('option').map((o) => o.textContent)
   expect(options).toContain('A1: Fictional Accused')
@@ -74,8 +74,8 @@ test('the arrest form offers only accused, needs grounds and sends India time', 
 })
 
 test('the form suggests the punishment class from the sections and warns when the choice differs', async () => {
-  stub({ '/firs/f1/people': people, '/firs/f1/punishment-hint': { suggested: 'death', sections: [{ section: 'BNS 103(1)', class: 'death' }], unknown: [] } })
-  render(<Arrests firId="f1" version={0} onSaved={() => {}} />)
+  stub({ '/firs/f1/punishment-hint': { suggested: 'death', sections: [{ section: 'BNS 103(1)', class: 'death' }], unknown: [] } })
+  render(<Arrests firId="f1" people={people} version={0} onSaved={() => {}} />)
   const form = (await screen.findByText('Record an arrest (BNSS 35 memo)')).closest('details')!
   expect((await within(form).findByRole('note')).textContent).toMatch(/BNS 103\(1\).*suggests death \(90 days\)/)
   expect(within(form).getByRole('alert').textContent).toMatch(/differs/)
@@ -84,24 +84,24 @@ test('the form suggests the punishment class from the sections and warns when th
 })
 
 test('with an unknown section there is no suggestion, only a note', async () => {
-  stub({ '/firs/f1/people': people, '/firs/f1/punishment-hint': { suggested: null, sections: [], unknown: ['BNS 999(9)'] } })
-  render(<Arrests firId="f1" version={0} onSaved={() => {}} />)
+  stub({ '/firs/f1/punishment-hint': { suggested: null, sections: [], unknown: ['BNS 999(9)'] } })
+  render(<Arrests firId="f1" people={people} version={0} onSaved={() => {}} />)
   const form = (await screen.findByText('Record an arrest (BNSS 35 memo)')).closest('details')!
   expect((await within(form).findByRole('note')).textContent).toMatch(/No suggestion: BNS 999\(9\)/)
 })
 
 test('with no accused yet, the form is not shown', async () => {
-  stub({ '/firs/f1/people': [people[1]] })
-  render(<Arrests firId="f1" version={0} onSaved={() => {}} />)
+  stub({})
+  render(<Arrests firId="f1" people={[people[1]]} version={0} onSaved={() => {}} />)
   expect(await screen.findByText(/only an accused can be arrested/)).toBeTruthy()
 })
 
 test('a release is recorded once; released and chargesheeted arrests say the limit has stopped', async () => {
-  const writes = stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+  const writes = stub({ '/firs/f1/arrests': [
     { ...base, id: 'a1', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-10', released_on: '2026-09-20', release_basis: 'bail', chargesheet_filed_on: null },
     { ...base, id: 'a2', person_label: 'A2', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-10', released_on: null, release_basis: null, chargesheet_filed_on: '2026-11-12' },
   ] }, { status: 204, body: null })
-  render(<Arrests firId="f1" version={0} onSaved={() => {}} />)
+  render(<Arrests firId="f1" people={people} version={0} onSaved={() => {}} />)
   expect(await screen.findByText(/Released on bail on 2026-09-20: the custody limit no longer runs/)).toBeTruthy()
   expect(screen.getByText(/Chargesheet naming A2 filed on 2026-11-12, after the last day/)).toBeTruthy()
   const forms = screen.getAllByText('Record release from custody')
@@ -115,14 +115,14 @@ test('a release is recorded once; released and chargesheeted arrests say the lim
 })
 
 test('a correction sends all four facts with a reason; it can say the person was not released', async () => {
-  const writes = stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+  const writes = stub({ '/firs/f1/arrests': [
     { ...base, id: 'a1', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-10', released_on: '2026-09-20', release_basis: 'bail', chargesheet_filed_on: null, corrected: false },
   ], '/firs/f1/arrests/corrections': [
     { id: 'c1', arrest_id: 'a1', first_remand_on: '2026-09-12', max_punishment: 'less_than_10_years', released_on: null, release_basis: null,
       reason: 'release was on the wrong arrest', recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' },
   ] }, { status: 201, body: { id: 'c2' } })
   const saved = vi.fn()
-  render(<Arrests firId="f1" version={0} onSaved={saved} />)
+  render(<Arrests firId="f1" people={people} version={0} onSaved={saved} />)
   expect(await screen.findByText(/Reason: release was on the wrong arrest/)).toBeTruthy()
   const form = screen.getByText('Correct the remand, punishment or release').closest('details')!
   expect((within(form).getByLabelText(/Date of first remand/) as HTMLInputElement).value).toBe('2026-09-12')   // starts from what is recorded
@@ -137,14 +137,14 @@ test('a correction sends all four facts with a reason; it can say the person was
 })
 
 test('a memo correction starts from the memo, sends place, grounds and informed person with a reason, and shows the history', async () => {
-  const writes = stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+  const writes = stub({ '/firs/f1/arrests': [
     { ...base, id: 'a1', first_remand_on: null, chargesheet_last_day: null, released_on: null, release_basis: null, chargesheet_filed_on: null, corrected: false, memo_corrected: true },
   ], '/firs/f1/arrests/memo-corrections': [
     { id: 'm1', arrest_id: 'a1', place: 'Testpur Market', grounds: ['proper investigation'], informed_name: 'Fictional Friend', informed_contact: null,
       reason: 'place was the market', recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' },
   ] })
   const saved = vi.fn()
-  render(<Arrests firId="f1" version={0} onSaved={saved} />)
+  render(<Arrests firId="f1" people={people} version={0} onSaved={saved} />)
   expect(await screen.findByText(/Reason: place was the market/)).toBeTruthy()
   const form = screen.getByText('Correct the place, grounds or informed person').closest('details')!
   expect((within(form).getByLabelText(/Place of arrest/) as HTMLInputElement).value).toBe('Testpur')   // starts from the memo
@@ -158,14 +158,14 @@ test('a memo correction starts from the memo, sends place, grounds and informed 
 })
 
 test('a time correction sends the new time in IST with a reason and shows the history', async () => {
-  const writes = stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+  const writes = stub({ '/firs/f1/arrests': [
     { ...base, id: 'a1', first_remand_on: null, chargesheet_last_day: null, released_on: null, release_basis: null, chargesheet_filed_on: null, corrected: false, time_corrected: true },
   ], '/firs/f1/arrests/time-corrections': [
     { id: 't1', arrest_id: 'a1', arrested_at: '2026-09-11T16:30:00Z', reason: 'memo typed a day late', recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' },
     { id: 't2', arrest_id: 'other', arrested_at: '2026-09-10T16:30:00Z', reason: 'belongs to another arrest', recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' },
   ] }, { status: 201, body: { id: 't3' } })
   const saved = vi.fn()
-  render(<Arrests firId="f1" version={0} onSaved={saved} />)
+  render(<Arrests firId="f1" people={people} version={0} onSaved={saved} />)
   expect(await screen.findByText(/Reason: memo typed a day late/)).toBeTruthy()
   expect(screen.queryByText(/belongs to another arrest/)).toBeNull()
   const form = screen.getByText('Correct the time of arrest').closest('details')!
@@ -177,15 +177,15 @@ test('a time correction sends the new time in IST with a reason and shows the hi
 })
 
 test('an imported arrest without an arresting officer says so', async () => {
-  stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+  stub({ '/firs/f1/arrests': [
     { ...base, id: 'a3', place: 'Oldpur', arresting_officer_name: null, first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-12' },
   ] }, { status: 204, body: null })
-  render(<Arrests firId="f1" version={0} onSaved={vi.fn()} />)
+  render(<Arrests firId="f1" people={people} version={0} onSaved={vi.fn()} />)
   expect(await screen.findByText(/at Oldpur, officer not in the old record/)).toBeTruthy()
 })
 
 test('in Marathi the arrests, their limits, corrections and the arrest form are in Marathi; names, places and reasons stay as written', async () => {
-  stub({ '/firs/f1/people': people, '/firs/f1/punishment-hint': { suggested: 'death', sections: [{ section: 'BNS 103(1)', class: 'death' }], unknown: [] },
+  stub({ '/firs/f1/punishment-hint': { suggested: 'death', sections: [{ section: 'BNS 103(1)', class: 'death' }], unknown: [] },
     '/firs/f1/arrests': [
       { ...base, id: 'a1', informed_contact: 'Testpur 1', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-11-10', earlier_custody_days: 5,
         remand_recorded_by_name: 'SI Fictional', released_on: '2026-09-20', release_basis: 'default_bail', chargesheet_filed_on: null, corrected: false },
@@ -199,7 +199,7 @@ test('in Marathi the arrests, their limits, corrections and the arrest form are 
     '/firs/f1/arrests/time-corrections': [{ id: 't1', arrest_id: 'a2', arrested_at: '2026-09-11T16:30:00Z', reason: 'memo typed a day late',
       recorded_at: '2026-10-01T05:00:00Z', recorded_by_name: 'SI Fictional' }],
   }, { status: 201, body: { id: 'a9' } })
-  render(<ScreenLangContext.Provider value="mr"><Arrests firId="f1" version={0} onSaved={() => {}} /></ScreenLangContext.Provider>)
+  render(<ScreenLangContext.Provider value="mr"><Arrests firId="f1" people={people} version={0} onSaved={() => {}} /></ScreenLangContext.Provider>)
   expect(await screen.findByRole('heading', { name: 'अटक' })).toBeTruthy()
   const [one, two] = screen.getAllByRole('listitem')
   expect(one.textContent).toMatch(/^A1: .+ रोजी Testpur येथे SI Fictional यांनी अटक केली/)
@@ -233,19 +233,19 @@ test('in Marathi the arrests, their limits, corrections and the arrest form are 
 })
 
 test('in Hindi an unknown section gives the no-suggestion note and an empty list says so', async () => {
-  stub({ '/firs/f1/people': [people[1]], '/firs/f1/punishment-hint': { suggested: null, sections: [], unknown: ['BNS 999(9)'] } })
-  render(<ScreenLangContext.Provider value="hi"><Arrests firId="f1" version={0} onSaved={() => {}} /></ScreenLangContext.Provider>)
+  stub({ '/firs/f1/punishment-hint': { suggested: null, sections: [], unknown: ['BNS 999(9)'] } })
+  render(<ScreenLangContext.Provider value="hi"><Arrests firId="f1" people={[people[1]]} version={0} onSaved={() => {}} /></ScreenLangContext.Provider>)
   expect(await screen.findByText('अभी कुछ नहीं।')).toBeTruthy()
   expect(screen.getByText('पहले व्यक्ति को आरोपी के रूप में जोड़ें; केवल आरोपी को गिरफ़्तार किया जा सकता है।')).toBeTruthy()
 })
 
 test('BNSS 58: an arrest without a remand shows when to produce the person; a remand after the 24 hours is flagged', async () => {
-  stub({ '/firs/f1/people': people, '/firs/f1/arrests': [
+  stub({ '/firs/f1/arrests': [
     { ...base, id: 'a1', first_remand_on: null, chargesheet_last_day: null, earlier_custody_days: 0, released_on: null, produce_by: '2026-09-13T02:30:00Z', remand_after_24_hours: false },
     { ...base, id: 'a2', person_label: 'A2', first_remand_on: '2026-09-15', chargesheet_last_day: '2026-11-13', earlier_custody_days: 0, released_on: null, produce_by: '2026-09-13T02:30:00Z', remand_after_24_hours: true },
     { ...base, id: 'a3', person_label: 'A3', first_remand_on: null, chargesheet_last_day: null, earlier_custody_days: 0, released_on: '2026-09-12', release_basis: 'bail', produce_by: '2026-09-13T02:30:00Z', remand_after_24_hours: false },
   ] })
-  render(<Arrests firId="f1" version={0} onSaved={vi.fn()} />)
+  render(<Arrests firId="f1" people={people} version={0} onSaved={vi.fn()} />)
   expect(await screen.findAllByText(/Produce before the Magistrate by 13 Sept 2026, 8:00 am IST/)).toHaveLength(1)   // not for the one released
   expect(screen.getAllByRole('note').map((n) => n.textContent)).toEqual([expect.stringContaining('after the day the 24 hours ended (BNSS 58)')])
 })

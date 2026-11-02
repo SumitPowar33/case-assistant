@@ -35,9 +35,8 @@ function CorrectionForm({ firId, cs, accused, onSaved }: { firId: string; cs: Ch
  * Chargesheets (police reports, BNSS 193(3)) filed in court, each naming the accused it covers. Kept as written;
  * a supplementary chargesheet is a new entry. Filing ends the custody limit for the accused named.
  */
-export default function Chargesheets({ firId, version, onSaved }: { firId: string; version: number; onSaved: () => void }) {
+export default function Chargesheets({ firId, people, version, onSaved }: { firId: string; people: Person[] | undefined; version: number; onSaved: () => void }) {
   const { data, error } = useLoad<Chargesheet[]>(`/firs/${firId}/chargesheets`, version)
-  const { data: people } = useLoad<Person[]>(`/firs/${firId}/people`, version)
   const accused = (people ?? []).filter((p) => p.role === 'accused')
   const t = useT()
   return (

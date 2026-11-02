@@ -104,3 +104,17 @@ test('the part picker is in the screen language', async () => {
   const picker = await screen.findByRole('combobox', { name: 'दाखवा' })
   expect((picker as HTMLSelectElement).options[0].text).toBe('प्रकरणाचा तपशील')
 })
+
+test('the people are read once for the whole page, and a failed read shows in the people part and keeps the arrest form away', async () => {
+  stub({ '/firs/f1/people': [{ id: 'p1', role: 'accused', label: 'A1', display_name: 'Fictional Accused', age_years: null, identity_masked: false }] })
+  render(<FirDetail id="f1" />)
+  expect(await screen.findByText(/A1 \(accused\): Fictional Accused/)).toBeTruthy()
+  expect(await screen.findByText(/Add an arrest|Record an arrest/)).toBeTruthy()
+  const reads = (fetch as unknown as { mock: { calls: string[][] } }).mock.calls.filter((c) => c[0] === '/api/firs/f1/people')
+  expect(reads).toHaveLength(1)
+  cleanup()
+  stub({}, ['/firs/f1/people'])
+  render(<FirDetail id="f1" />)
+  expect((await screen.findAllByRole('alert'))[0].textContent).toMatch(/500/)
+  expect(screen.queryByText(/Record an arrest/)).toBeNull()
+})

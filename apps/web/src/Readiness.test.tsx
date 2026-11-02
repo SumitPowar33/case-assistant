@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import Readiness from './Readiness'
 import { ScreenLangContext } from './i18n'
 
+const people = [{ id: 'p1', role: 'accused', label: 'A1', display_name: 'Fictional One' }, { id: 'p2', role: 'accused', label: 'A2', display_name: 'Fictional Two' },
+  { id: 'p3', role: 'victim', label: 'V1', display_name: 'Victim V1' }]
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 const report = {
@@ -24,8 +26,7 @@ function mock(answer: (url: string, init?: RequestInit) => { status: number; bod
     const special = answer(url, init)
     if (special) return { ok: special.status < 300, status: special.status, json: async () => special.body }
     const body = url.endsWith('/readiness') ? report : url === '/api/playbooks' ? [] : url.endsWith('/evidence') ? [{ id: 'e1', label: 'S-01', kind: 'document' }]
-      : url.endsWith('/people') ? [{ id: 'p1', role: 'accused', label: 'A1', display_name: 'Fictional One' }, { id: 'p2', role: 'accused', label: 'A2', display_name: 'Fictional Two' },
-        { id: 'p3', role: 'victim', label: 'V1', display_name: 'Victim V1' }] : undefined
+      : undefined
     return { ok: !!body, status: body ? 200 : 404, json: async () => body }
   }))
   return calls
@@ -33,7 +34,7 @@ function mock(answer: (url: string, init?: RequestInit) => { status: number; bod
 
 test('shows ingredients, linked evidence, open and accepted gaps, and no score', async () => {
   mock(() => undefined)
-  render(<Readiness firId="f1" />)
+  render(<Readiness firId="f1" people={people} />)
   expect(await screen.findByText(/1 open gap\./)).toBeTruthy()
   expect(screen.getByText('draft')).toBeTruthy()
   expect(screen.getByText(/nothing linked \(for example: bank statement certified\)/)).toBeTruthy()
@@ -46,7 +47,7 @@ test('shows ingredients, linked evidence, open and accepted gaps, and no score',
 test('accepting a gap sends the reason; a refusal from the server is shown', async () => {
   const calls = mock((url, init) => url.endsWith('/overrides') && init?.method === 'POST'
     ? { status: 403, body: { message: 'Only the case team can do this.' } } : undefined)
-  render(<Readiness firId="f1" />)
+  render(<Readiness firId="f1" people={people} />)
   const reason = await screen.findByLabelText('Reason to accept this gap')
   expect(reason.closest('details')!.open).toBe(false)   // folded until the officer chooses to accept, so the gap list stays short
   fireEvent.click(screen.getByText('Accept this gap'))
@@ -59,7 +60,7 @@ test('accepting a gap sends the reason; a refusal from the server is shown', asy
 
 test('linking evidence posts the chosen item and reloads the report', async () => {
   const calls = mock((url) => url.endsWith('/links') ? { status: 201, body: { id: 'l1' } } : undefined)
-  render(<Readiness firId="f1" />)
+  render(<Readiness firId="f1" people={people} />)
   fireEvent.click((await screen.findAllByRole('button', { name: 'Link' }))[1])
   await screen.findByText(/1 open gap\./)
   expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ chargeId: 'cheating', ingredientId: 'delivery', evidenceItemId: 'e1' })
@@ -72,7 +73,7 @@ test('account holders: shows each holder and their independent links; marks a ho
     accountHolders: [{ personId: 'p1', name: 'A1 Fictional One', basis: 'Bank reply N-3', links: [] }] }
   const calls = mock((url, init) => url.endsWith('/readiness') ? { status: 200, body: withHolders }
     : init?.method && init.method !== 'GET' ? { status: url.endsWith('/account-holder') ? 204 : 201, body: {} } : undefined)
-  render(<Readiness firId="f1" />)
+  render(<Readiness firId="f1" people={people} />)
   expect(await screen.findByText('no independent link yet')).toBeTruthy()
   expect(screen.getByText('Money received in an account is not enough.')).toBeTruthy()
   // only accused not yet marked are offered; never the victim
@@ -94,7 +95,7 @@ test('a link or an accepted gap is withdrawn with a reason; withdrawn records st
   const withHistory = { ...report, withdrawn: [{ what: 'evidence link', detail: 'S-02 for cheating/delivery', reason: 'Wrong item linked', withdrawn_by: 'SI Fictional', withdrawn_at: '' }] }
   const calls = mock((url, init) => url.endsWith('/readiness') ? { status: 200, body: withHistory }
     : init?.method === 'POST' ? { status: 204, body: null } : undefined)
-  render(<Readiness firId="f1" />)
+  render(<Readiness firId="f1" people={people} />)
   expect(await screen.findByText(/evidence link: S-02 for cheating\/delivery\. Withdrawn by SI Fictional: “Wrong item linked”/)).toBeTruthy()
   fireEvent.change(screen.getByLabelText('Reason to withdraw link of S-01'), { target: { value: 'Linked to the wrong ingredient' } })
   fireEvent.click(screen.getByRole('button', { name: 'Withdraw link of S-01' }))
@@ -110,7 +111,7 @@ test('in Marathi the check, its gaps, the withdrawn list and the no-judging line
   mock((url) => url.endsWith('/readiness') ? { status: 200, body: { ...report, openGaps: 2,
     charges: [{ ...report.charges[0], ingredients: [{ ...report.charges[0].ingredients[0], evidence: [{ id: 'e2', linkId: 'l2', label: 'E-02', kind: 'electronic', courtReady: false }] }] }],
     withdrawn: [{ what: 'evidence link', detail: 'S-01 for cheating/deception', reason: 'Linked to the wrong item', withdrawn_by: 'SI Fictional', withdrawn_at: '' }] } } : undefined)
-  render(<ScreenLangContext.Provider value="mr"><Readiness firId="f1" /></ScreenLangContext.Provider>)
+  render(<ScreenLangContext.Provider value="mr"><Readiness firId="f1" people={people} /></ScreenLangContext.Provider>)
   expect(await screen.findByRole('heading', { name: 'तयारी तपासणी' })).toBeTruthy()
   expect(screen.getByText('2 त्रुटी उघड्या.')).toBeTruthy()
   expect(screen.getByText(/हे कोणाचेही मूल्यमापन करत नाही/)).toBeTruthy()

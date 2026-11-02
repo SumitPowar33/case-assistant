@@ -7,13 +7,13 @@ import { ScreenLangContext } from './i18n'
 
 // Fictional data only.
 beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional', rank: 'SI', role: 'io', station_id: 's1' } }))
+const one = { id: 'p1', role: 'accused', label: 'A1', display_name: 'Fictional One' }
+const two = [one, { id: 'p2', role: 'accused', label: 'A2', display_name: 'Fictional Two' }]
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); setSession(null) })
 
 test('a chargesheet names the ticked accused; none ticked is refused before sending', async () => {
   const writes: { url: string; body: unknown }[] = []
   const lists: Record<string, unknown> = {
-    '/firs/f1/people': [{ id: 'p1', role: 'accused', label: 'A1', display_name: 'Fictional One' }, { id: 'p2', role: 'accused', label: 'A2', display_name: 'Fictional Two' },
-      { id: 'p3', role: 'witness', label: 'W1', display_name: 'Fictional Witness' }],
     '/firs/f1/chargesheets': [{ id: 'c1', filed_on: '2026-10-20', court: 'Fictional JMFC Court', report_no: 'CS-1', recorded_by_name: 'SI Fictional', accused: 'A1' }],
   }
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
@@ -24,7 +24,7 @@ test('a chargesheet names the ticked accused; none ticked is refused before send
     return { ok: true, status: 200, json: async () => lists[url.replace('/api', '')] ?? [] }
   }))
   const saved = vi.fn()
-  render(<Chargesheets firId="f1" version={0} onSaved={saved} />)
+  render(<Chargesheets firId="f1" people={[...two, { id: 'p3', role: 'witness', label: 'W1', display_name: 'Fictional Witness' }]} version={0} onSaved={saved} />)
   expect(await screen.findByText(/CS-1: filed on 2026-10-20 in Fictional JMFC Court, naming A1/)).toBeTruthy()
   expect(screen.queryByLabelText(/W1/)).toBeNull()
   const form = screen.getByText('Record a chargesheet filed in court').closest('details')!
@@ -42,7 +42,6 @@ test('a chargesheet names the ticked accused; none ticked is refused before send
 test('a correction starts from the recorded entry, keeps the named accused ticked and needs a reason', async () => {
   const writes: { url: string; body: unknown }[] = []
   const lists: Record<string, unknown> = {
-    '/firs/f1/people': [{ id: 'p1', role: 'accused', label: 'A1', display_name: 'Fictional One' }, { id: 'p2', role: 'accused', label: 'A2', display_name: 'Fictional Two' }],
     '/firs/f1/chargesheets': [
       { id: 'c0', filed_on: '2026-10-19', court: 'Fictional JMFC Court', report_no: 'CS-1', recorded_by_name: 'SI Fictional', accused: 'A1', correction_reason: null, replaced: true },
       { id: 'c1', filed_on: '2026-10-20', court: 'Fictional JMFC Court', report_no: 'CS-1', recorded_by_name: 'SI Fictional', accused: 'A1, A2', correction_reason: 'court name was typed wrongly', replaced: false },
@@ -56,7 +55,7 @@ test('a correction starts from the recorded entry, keeps the named accused ticke
     return { ok: true, status: 200, json: async () => lists[url.replace('/api', '')] ?? [] }
   }))
   const saved = vi.fn()
-  render(<Chargesheets firId="f1" version={0} onSaved={saved} />)
+  render(<Chargesheets firId="f1" people={two} version={0} onSaved={saved} />)
   expect(await screen.findByText(/replaced by a later entry/)).toBeTruthy()
   expect(screen.getAllByText('Correct this chargesheet entry')).toHaveLength(1)   // only the current entry can be corrected
   const form = screen.getByText('Correct this chargesheet entry').closest('details')!
@@ -73,14 +72,13 @@ test('a correction starts from the recorded entry, keeps the named accused ticke
 
 test('in Hindi the list, the replaced entry, the correction and both forms are in Hindi; numbers, courts and reasons stay', async () => {
   const lists: Record<string, unknown> = {
-    '/firs/f1/people': [{ id: 'p1', role: 'accused', label: 'A1', display_name: 'Fictional One' }],
     '/firs/f1/chargesheets': [
       { id: 'c0', filed_on: '2026-10-19', court: 'Fictional JMFC Court', report_no: 'CS-1', recorded_by_name: 'SI Fictional', accused: 'A1', correction_reason: null, replaced: true },
       { id: 'c1', filed_on: '2026-10-20', court: 'Fictional JMFC Court', report_no: 'CS-1', recorded_by_name: 'SI Fictional', accused: 'A1', correction_reason: 'court name was typed wrongly', replaced: false },
     ],
   }
   vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => lists[url.replace('/api', '')] ?? [] })))
-  render(<ScreenLangContext.Provider value="hi"><Chargesheets firId="f1" version={0} onSaved={vi.fn()} /></ScreenLangContext.Provider>)
+  render(<ScreenLangContext.Provider value="hi"><Chargesheets firId="f1" people={[one]} version={0} onSaved={vi.fn()} /></ScreenLangContext.Provider>)
   expect(await screen.findByRole('heading', { name: 'आरोप-पत्र' })).toBeTruthy()
   expect(screen.getByText('CS-1: 2026-10-19 को Fictional JMFC Court में दाखिल, नामित A1').tagName).toBe('DEL')
   const [old, current] = screen.getAllByRole('listitem')
@@ -99,6 +97,6 @@ test('in Hindi the list, the replaced entry, the correction and both forms are i
 
 test('with no chargesheet yet the list says so', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => [] })))
-  render(<ScreenLangContext.Provider value="ta"><Chargesheets firId="f1" version={0} onSaved={vi.fn()} /></ScreenLangContext.Provider>)
+  render(<ScreenLangContext.Provider value="ta"><Chargesheets firId="f1" people={[]} version={0} onSaved={vi.fn()} /></ScreenLangContext.Provider>)
   expect(await screen.findByText('இன்னும் எதுவும் தாக்கல் செய்யப்படவில்லை.')).toBeTruthy()
 })
