@@ -78,8 +78,8 @@ class AuthController implements ApplicationRunner {
         String username = l.username.trim().toLowerCase();
         oneAtATime(username);
         var row = db.sql("""
-                select id, username, full_name, rank, role, station_id, ui_language, password_hash, password_changed_at
-                from app_user where username = ? and active""").param(username)
+                select u.id, u.username, u.full_name, u.rank, u.role, u.station_id, s.name as station_name, u.ui_language, u.password_hash, u.password_changed_at
+                from app_user u left join police_station s on s.id = u.station_id where u.username = ? and u.active""").param(username)
                 .query().listOfRows().stream().findFirst();
         UUID userId = row.map(r -> (UUID) r.get("id")).orElse(null);
         var locked = lockedUntil(username);
@@ -109,7 +109,7 @@ class AuthController implements ApplicationRunner {
     Map<String, Object> me(@AuthenticationPrincipal Jwt jwt) {
         // state_code: the state of the user's station (none for the platform admin); the AI gateway keeps settings and audit per state
         var me = new LinkedHashMap<>(db.sql("""
-                select u.id, u.username, u.full_name, u.rank, u.role, u.station_id, u.ui_language, s.state_code
+                select u.id, u.username, u.full_name, u.rank, u.role, u.station_id, s.name as station_name, u.ui_language, s.state_code
                 from app_user u left join police_station s on s.id = u.station_id where u.id = ?""")
                 .param(CaseTeam.user(jwt)).query().singleRow());
         rights(me);

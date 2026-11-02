@@ -19,6 +19,10 @@ type Evidence = { id: string; label: string; kind: string }
 type Person = { id: string; role: string; label: string | null; display_name: string | null }
 
 const words = (id: string) => id.replace(/_/g, ' ')
+/** What the file holds for one ingredient: linked, linked but an electronic record lacks its 63(4) certificate, or nothing.
+ *  Facts about the file only (design board 9 says "Proved"; the app never says that, docs/DESIGN.md). */
+const status = (i: Ingredient) => !i.evidence.length ? 'missing' : i.evidence.some((e) => e.kind === 'electronic' && !e.courtReady) ? 'weak' : 'ok'
+const STATUS = { ok: { chip: 'c-ok', key: 'chip.linked' }, weak: { chip: 'c-warn', key: 'chip.weak' }, missing: { chip: 'c-crit', key: 'chip.missing' } } as const
 type T = ReturnType<typeof useT>
 const shown = (t: T, e: Linked) => `${e.label}${e.kind === 'electronic' ? ` (${t(e.courtReady ? 'readiness.complete' : 'readiness.missing')})` : ''}`
 
@@ -64,12 +68,17 @@ export default function Readiness({ firId, people }: { firId: string; people: Pe
         <>
           <p>{t('readiness.playbook', { id: report.playbook.id, version: report.playbook.version })}
             {report.playbook.status === 'draft' && <> · <strong>{t('readiness.draft')}</strong>: {report.playbook.reviewNote}</>}</p>
-          <p><strong>{report.openGaps === 1 ? t('readiness.openGapsOne') : t('readiness.openGapsMany', { n: report.openGaps })}</strong> {t('readiness.notJudging')}</p>
+          <div className="chips">
+            <span className={`chip ${report.openGaps ? 'c-crit' : 'c-ok'}`}>{report.openGaps === 1 ? t('readiness.openGapsOne') : t('readiness.openGapsMany', { n: report.openGaps })}</span>
+            <span className="chip c-ok">{t('chip.linked')}: {report.charges.flatMap((c) => c.ingredients).filter((i) => status(i) === 'ok').length}</span>
+            <span className="chip c-crit">{t('chip.missing')}: {report.charges.flatMap((c) => c.ingredients).filter((i) => status(i) === 'missing').length}</span>
+          </div>
+          <p>{t('readiness.notJudging')}</p>
           {report.charges.map((c) => (
             <div key={c.id}>
               <h3>{c.law}: {c.label}</h3>
-              <ul>{c.ingredients.map((i) => (
-                <li key={i.id}>{i.text}:{' '}
+              <ul className="ingredients">{c.ingredients.map((i) => (
+                <li key={i.id}><span className={`chip ${STATUS[status(i)].chip}`}>{t(STATUS[status(i)].key)}</span><div>{i.text}:{' '}
                   {i.evidence.length
                     ? i.evidence.map((e, n) => <span key={e.linkId}>{n > 0 && ', '}{shown(t, e)}{' '}
                       <Withdraw firId={firId} kind="links" id={e.linkId} what={t('readiness.linkOf', { label: e.label })} act={act} /></span>)
@@ -82,7 +91,7 @@ export default function Readiness({ firId, people }: { firId: string; people: Pe
                       </label>{' '}<button type="submit">{t('readiness.link')}</button>
                     </form>
                   )}
-                </li>
+                </div></li>
               ))}</ul>
             </div>
           ))}
@@ -90,7 +99,7 @@ export default function Readiness({ firId, people }: { firId: string; people: Pe
             accused={people.filter((p) => p.role === 'accused')} evidence={evidence} act={act} />}
           {!!report.sectionsNotInPlaybook?.length && <p>{t('readiness.notChecked', { list: report.sectionsNotInPlaybook.join(', ') })}</p>}
           <h3>{t('readiness.gaps')}</h3>
-          {report.gaps.length === 0 ? <p>{t('readiness.noGaps')}</p> : <ul>{report.gaps.map((g) => (
+          {report.gaps.length === 0 ? <p>{t('readiness.noGaps')}</p> : <ul className="gaps">{report.gaps.map((g) => (
             <li key={g.key}>{g.text}{' '}
               {g.override ? <><small>{t('readiness.acceptedBy', { name: g.override.decidedBy, reason: g.override.reason })}</small>{' '}
                 <Withdraw firId={firId} kind="overrides" id={g.override.id} what={t('readiness.acceptance')} act={act} /></> : (

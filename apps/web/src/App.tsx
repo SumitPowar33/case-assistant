@@ -1,5 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import FirList from './FirList'
+import Dashboard from './Dashboard'
+import { PARTS, PART_LABEL, isPart } from './firParts'
 import FirDetail from './FirDetail'
 import TypePage from './TypePage'
 import SettingsPage from './SettingsPage'
@@ -24,7 +26,9 @@ export default function App() {
     return () => window.removeEventListener('hashchange', on)
   }, [])
   const session = useSyncExternalStore(onSessionChange, currentSession)
-  const firId = /^#\/firs\/([\w-]+)$/.exec(hash)?.[1]
+  const firMatch = /^#\/firs\/([\w-]+)(?:\/([\w-]+))?$/.exec(hash)
+  const firId = firMatch?.[1]
+  const firPart = isPart(firMatch?.[2]) ? firMatch?.[2] : undefined
   const complaintId = /^#\/complaints\/([\w-]+)$/.exec(hash)?.[1]
   const admin = session?.user.permissions?.includes('admin.manage') ?? false
   const auditor = session?.user.permissions?.includes('audit.read_protected') ?? false
@@ -35,6 +39,8 @@ export default function App() {
   setMessageLanguage(screen)   // during render, so the first loads of the screens below already use it
   useEffect(() => { document.documentElement.lang = screen }, [screen])
   const t = (key: Key) => translate(screen, key)
+  const here = hash || '#/'
+  const link = (href: string, label: string) => <a href={href} aria-current={here === href ? 'page' : undefined}>{label}</a>
   async function chooseScreen(code: string) {
     setLangError('')
     setChosen(code)
@@ -44,11 +50,33 @@ export default function App() {
     <ScreenLangContext.Provider value={screen}>
     <TypingContext.Provider value={{ lang, setLang }}>
       <header>
-        <strong>Case Assistant</strong> <small>{t('app.tagline')}</small>
+        <a className="brand" href="#/"><span className="brand-tile" aria-hidden="true">CA</span>
+          <span><strong>Case Assistant</strong>{session && <small>{session.user.station_name ?? session.user.rank}</small>}</span></a>
         <button type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="header-menu" onClick={() => setMenuOpen(!menuOpen)}>{t('header.menu')}</button>
         <div id="header-menu" className={menuOpen ? 'header-menu open' : 'header-menu'}>
-        {session && <nav aria-label={t('nav.main')} onClick={() => setMenuOpen(false)}><a href="#/">{t('nav.firs')}</a>{session.user.station_id && <> <a href="#/front-desk">{t('nav.frontDesk')}</a></>} <a href="#/type">{t('nav.type')}</a> <a href="#/policies">{t('nav.policies')}</a> <a href="#/password">{t('nav.password')}</a>{session.user.can_import && <> <a href="#/import">{t('nav.import')}</a></>}{auditor && <> <a href="#/reads">{t('nav.reads')}</a></>}{admin && <> <a href="#/admin">{t('nav.admin')}</a> <a href="#/settings">{t('nav.settings')}</a></>}</nav>}
-        <label>{t('header.screenLanguage')}{' '}
+        {session && <nav aria-label={t('nav.main')} onClick={() => setMenuOpen(false)}>
+          {link('#/', t('nav.dashboard'))}
+          {link('#/firs', t('nav.firs'))}
+          {session.user.station_id && link('#/front-desk', t('nav.frontDesk'))}
+          {firId && <>
+            <div className="nav-group">{t('nav.groupCase')}</div>
+            {link(`#/firs/${firId}`, t('nav.wholeCase'))}
+            {PARTS.map((p) => <span key={p}>{link(`#/firs/${firId}/${p}`, t(PART_LABEL[p]))}</span>)}
+          </>}
+          <div className="nav-group">{t('nav.groupStation')}</div>
+          {link('#/policies', t('nav.policies'))}
+          {session.user.can_import && link('#/import', t('nav.import'))}
+          {auditor && link('#/reads', t('nav.reads'))}
+          <div className="nav-group">{t('nav.groupTools')}</div>
+          {link('#/type', t('nav.type'))}
+          {link('#/password', t('nav.password'))}
+          {admin && <>
+            <div className="nav-group">{t('nav.admin')}</div>
+            {link('#/admin', t('nav.admin'))}
+            {link('#/settings', t('nav.settings'))}
+          </>}
+        </nav>}
+        <label>{t('header.screenLanguage')}
           <select value={screen} onChange={(e) => void chooseScreen(e.target.value)}>
             {SCREEN_LANGS.map((code) => <option key={code} value={code} lang={code}>
               {code === 'en' ? 'English' : `${LANGS[code as keyof typeof LANGS]?.label ?? code} (${LANGS[code as keyof typeof LANGS]?.name ?? code})`}
@@ -56,17 +84,20 @@ export default function App() {
           </select>
         </label>
         {langError && <span role="alert">{langError}</span>}
-        <label>{t('header.typingLanguage')}{' '}
+        <label>{t('header.typingLanguage')}
           <select value={lang} onChange={(e) => setLang(e.target.value as TypingLang)}>
             <option value="en">{t('header.noConversion')}</option>
             {Object.entries(LANGS).map(([code, l]) => <option key={code} value={code} lang={l.tag}>{l.label} ({l.name})</option>)}
           </select>
         </label>
-        {session && <span className="who">{session.user.full_name} ({session.user.rank})
-          <button type="button" onClick={() => void signOut()}>{t('header.signOut')}</button></span>}
+        {session && <div className="who"><strong>{session.user.full_name}</strong><span>{session.user.rank}</span>
+          <button type="button" onClick={() => void signOut()}>{t('header.signOut')}</button></div>}
         </div>
       </header>
-      <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : <FirList />}</main>
+      <div className="topstrip">
+        <span className="chip demo-chip">{t('app.tagline')}</span>
+      </div>
+      <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} only={firPart} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : hash === '#/firs' ? <FirList /> : <Dashboard />}</main>
     </TypingContext.Provider>
     </ScreenLangContext.Provider>
   )

@@ -14,6 +14,7 @@ const routes: Record<string, unknown> = {
   '/api/firs/f1/deadlines': [{ kind: 'chargesheet_60', due_on: '2026-11-10', basis: 'BNSS 187(3)' }],
   '/api/firs/f1/readiness': { playbook: null, charges: [], gaps: [], openGaps: 0 },
   '/api/playbooks': [],
+  '/api/dashboard': { cases: 1, due_in_7_days: 1, notices_waiting: 0, deadlines: [{ fir_id: 'f1', fir_no: 7, fir_year: 2026, kind: 'chargesheet_custody', due_on: '2026-11-04', basis: 'BNSS 187(3)', days_left: 2 }] },
   '/api/firs/f1/evidence': [{ id: 'e1', label: 'Bank statement', kind: 'electronic', sha256: null, court_ready: false }],
 }
 function mockApi() {
@@ -71,7 +72,7 @@ test('language tool page converts a whole pasted text', async () => {
 test('shows an error when the server fails', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })))
   render(<App />)
-  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('500'))
+  await waitFor(() => expect(screen.getAllByRole('alert')[0].textContent).toContain('500'))
 })
 
 test('without a session only the sign-in form shows; a wrong password says so; a good one opens the FIR list', async () => {
@@ -86,7 +87,7 @@ test('without a session only the sign-in form shows; a wrong password says so; a
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'fictional-pass-1' } })
   fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
   expect(await screen.findByRole('link', { name: '7/2026' })).toBeTruthy()
-  expect(screen.getByText(/SI New Login/)).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Welcome, SI New Login' })).toBeTruthy()   // the dashboard opens first
   const firCall = fetch.mock.calls.find(([url]) => url === '/api/firs?limit=51&offset=0')!
   expect((firCall[1] as RequestInit).headers).toEqual({ authorization: 'Bearer tok-new' })
   expect(screen.queryByRole('link', { name: 'AI settings' })).toBeNull() // only the state admin sees it
@@ -216,4 +217,27 @@ test('on a phone the menu folds behind one button, which says whether it is open
   fireEvent.click(toggle)
   fireEvent.click(screen.getByRole('link', { name: 'Type' }))   // the screen already shown: no hash change, the menu still folds
   expect(toggle.getAttribute('aria-expanded')).toBe('false')
+})
+
+test('the dashboard opens first: the deadlines of the officer\'s cases, most urgent first, each a link to its part of the case', async () => {
+  mockApi()
+  await new Promise((r) => setTimeout(r, 50))   // a link clicked in the test before may still be navigating
+  window.location.hash = '#/'
+  render(<App />)
+  expect(await screen.findByRole('heading', { name: 'Welcome, SI Fictional Rao' })).toBeTruthy()
+  const attention = within(await screen.findByRole('region', { name: 'Needs your attention' }))
+  expect(attention.getByText('Critical')).toBeTruthy()                     // 2 days left: a word, not only a colour
+  expect(attention.getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('#/firs/f1/deadlines')
+  expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('aria-current')).toBe('page')
+})
+
+test('a part of the case opens as its own page from the sidebar; the whole case file is one link away', async () => {
+  mockApi()
+  window.location.hash = '#/firs/f1/evidence'
+  render(<App />)
+  expect(await screen.findByText(/not court-ready yet/)).toBeTruthy()
+  const nav = within(screen.getByRole('navigation', { name: 'Main' }))
+  expect(nav.getByRole('link', { name: 'Evidence' }).getAttribute('aria-current')).toBe('page')
+  expect(nav.getByRole('link', { name: 'Whole case file' }).getAttribute('href')).toBe('#/firs/f1')
+  expect(document.querySelector('.fir-body')!.className).toBe('fir-body one-part')
 })

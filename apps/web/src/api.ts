@@ -2,7 +2,7 @@ import { translateServer } from './i18n'
 
 // Every call carries the login token from the core app (POST /api/login). The AI gateway checks the same token.
 // The session lives in sessionStorage, so it ends when the browser tab closes; a 401 from either server ends it too.
-export type User = { id: string; username: string; full_name: string; rank: string; role: string; station_id: string | null; can_import?: boolean; can_set_policy?: boolean
+export type User = { id: string; username: string; full_name: string; rank: string; role: string; station_id: string | null; station_name?: string | null; can_import?: boolean; can_set_policy?: boolean
   /** From the role's data in the packs (GET /api/me, POST /api/login): what the screens may offer. The server checks every call again. */
   permissions?: string[]; case_scope?: 'none' | 'station' | 'district'
   /** Screen language (GET /api/me), one of the installed modules' languages. */
