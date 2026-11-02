@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 13 (session 59, started 15:55 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -88,6 +87,7 @@ Done in session 54 (2 Nov, on-demand run from 10:27 IST): Stryker for the web ap
 Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question decided (section above); security review with fixes (session 55 entry).
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
+Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
@@ -98,8 +98,9 @@ Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round
 11. Acid-attack survivors (BNS 124) masked like sexual-offence victims (decision 4 of 2 Nov).
 12. Security: done in code (sessions 55 and 56). Left for people: an outside penetration test (CERT-In empanelled auditor) before real case data; the installation itself (deploy/nginx.conf, a real certificate).
 13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
-   a. Frame, look and dashboard: sidebar, top strip, cards, chips, buttons; Dashboard (board 1); FIR parts as pages; readiness chips (board 9). (session 59)
-   b. Case diary, BNSS 192 (board 14): entries by the officer plus automatic entries from the app, day pages closed and kept as written.
+   a. DONE (session 59): frame, look, Dashboard (board 1), FIR parts as pages, readiness chips (board 9).
+   b. DONE (session 59): Case diary, BNSS 192 (board 14, V39).
+   Still to restyle closer to their boards (look already applied): Front desk page split into transcript card and golden-hour card (board 13); Notices (board 4); Evidence (board 5); Type (board 17).
    c. Statements and witnesses (board 6): BNSS 180 statements, typed or spoken, read-back, kept as written.
    d. Draft chargesheet and sign (board 10): BNSS 193 report drafted from the file (AI drafts through the gateway, officer confirms each part), SHO approval.
    e. Supervisor review (board 11): SHO/SP queue of cases near a deadline or waiting approval; approve or return with a reason.
@@ -112,6 +113,40 @@ Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round
    l. Audit log (board 20): one screen joining protected reads, AI decisions, admin actions and overrides.
    m. Field capture on a tablet (board 7) and State setup and approvals (board 21).
    Each screen: backend with tests, the screen built to its board, screenshot compared, 11 languages.
+
+## 2 Nov 2026, session 59 (Sumit present from 15:51 IST: "the exact screens of the Figma, or better, and all missing screens")
+Sumit found that the built screens did not follow his design (canvas of 22 Oct). Cause: the design was never part of the
+build plan, so no session compared screens with it. Fixed at the root and started on the screens.
+
+Done (all tests first where there is logic)
+- **The design is the reference**: its 21 boards copied to `docs/design/boards/`; `docs/DESIGN.md` (tokens, frame, the
+  board-to-screen map, differences on purpose); a "Screens" rule in CLAUDE.md (compare a screenshot with the board before
+  committing); Next item 13 lists every missing screen in order, ahead of other work.
+- **The look on every screen** (`index.css`): the board's colours as tokens, cards, status chips, buttons, fields,
+  tables. **The frame**: a white sidebar with the "CA" tile, the station's name, the menu in groups (This case, Station,
+  Tools, Admin), the officer and Sign out; the demo strip on top. Phones keep the folded menu (all phone and 10-language
+  tests pass at 390 px).
+- **Dashboard** (board 1) as the first screen: `GET /api/dashboard` gives the deadlines of the cases the user is on the team
+  of (never others', `DashboardApiTest`), soonest first, with counts; urgency shown as a word and a colour.
+- **The parts of a FIR as pages** (`#/firs/{id}/{part}`, boards 2-10), named in the sidebar; "Whole case file" keeps the
+  one-page view.
+- **Readiness check** (board 9): Linked / Certificate missing / Missing chips per ingredient, gaps as cards. The board's
+  "Proved" is not used: the check says what the file holds, never that something is proved.
+- **Case diary, BNSS 192** (board 14, V39 `case_diary_entry`, `case_diary_page`): today's page takes entries (typed or
+  spoken, any script); the app's own steps that day (notices sent, seizures, arrests, IO assigned, victim updates,
+  chargesheets) appear on the page from their records; a page is closed and numbered; nothing is changed or deleted (the
+  database refuses it) and a closed page takes no more entries; reading the diary of a protected case is logged.
+- The station name comes with sign-in (`station_name`). 52 new texts in the 11 catalogs (draft translations).
+
+`scripts/test-all.sh`: all 8 PASS. Coverage: web 99.7% statements / 93.6% branches.
+
+Compared with the boards: Dashboard and Readiness and Case diary match their boards' layout; the board's demo numbers
+(13 open cases, money held) are not faked, only what the files hold is shown. The top strip's quick links (Ask the case
+file, Old to new law) come when those screens exist.
+
+Deliberately skipped / not checked
+- The diary's day list shows days with an entry or a closed page, not days that only have app events.
+- The boards for the missing screens (item 13 c to m) are not built yet; each needs its own records and rules.
 
 ## 2 Nov 2026, session 58 (Sumit present from 15:16 IST: "act like that and do the testing")
 Session 57 had already run an internal penetration test (round 1). This session ran **round 2** on the gaps round 1

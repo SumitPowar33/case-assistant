@@ -35,12 +35,12 @@ committed** (CLAUDE.md, "Screens"). Where the app differs on purpose, the differ
 | 6 | Statements and witnesses | — | to build |
 | 7 | Field seizure on tablet | — | to build |
 | 8 | Money trail and accused links | — | to build |
-| 9 | Readiness check | FIR part "Readiness check" | restyled with status chips |
+| 9 | Readiness check | FIR part "Readiness check" | restyled with status chips (session 59) |
 | 10 | Draft chargesheet and sign | FIR part "Chargesheets" records filing only | draft and sign to build |
 | 11 | Supervisor review | — | to build |
 | 12 | Court and trial tracker | — | to build |
 | 13 | Front desk: voice complaint, golden hour | `#/front-desk`, `#/complaints/{id}` | restyled |
-| 14 | Case diary (BNSS 192) | — | to build |
+| 14 | Case diary (BNSS 192) | FIR part "Case diary" (`#/firs/{id}/diary`, V39) | built 2 Nov (session 59) |
 | 15 | Case property with QR custody | custody inside Evidence | own screen to build |
 | 16 | Forensic and medical requests | — | to build |
 | 17 | Type in any language | `#/type` | restyled |
