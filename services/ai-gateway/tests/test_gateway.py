@@ -598,3 +598,18 @@ def test_the_draft_limit_window_moves_on():
     assert limiter.wait("a") > 0
     clock[0] += 601
     assert limiter.wait("a") == 0
+
+
+def test_the_draft_limit_holds_across_a_restart():
+    """Counted from the audit log too, so restarting the gateway (or a second copy on the same file) gives no fresh 20."""
+    store = Store(":memory:")
+    providers = {"claude": ClaudeProvider("test-claude", mock_client(claude_ok)), "gemini": GeminiProvider("k"), "fake": FakeProvider()}
+    body = {"feature": "notice_draft", "prompt": "x", "prompt_version": "t@1"}
+    first = TestClient(create_app(store, providers, SECRET, core_says_active), headers={"Authorization": "Bearer " + token("user-io", "io")})
+    for _ in range(gateway_main.DRAFTS_PER_WINDOW - 1):
+        assert first.post("/v1/generate", json=body).status_code == 200
+    restarted = TestClient(create_app(store, providers, SECRET, core_says_active), headers={"Authorization": "Bearer " + token("user-io", "io")})
+    assert restarted.post("/v1/generate", json=body).status_code == 200
+    assert restarted.post("/v1/generate", json=body).status_code == 429
+    assert store.drafts_since("user-io", 600) == gateway_main.DRAFTS_PER_WINDOW
+    assert store.drafts_since("someone-else", 600) == 0

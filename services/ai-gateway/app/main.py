@@ -177,7 +177,8 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             log(u, "ai_refused", body.feature, body.case_ref, {"request_id": request_id, "status": status, "reason": message, **detail})
             raise HTTPException(status, message, headers=headers)
 
-        wait = drafts.wait(str(u["sub"]))
+        # the log counts across restarts and copies on the same file; the memory count also stops a burst sent at once
+        wait = 60 if store.drafts_since(str(u["sub"]), DRAFT_WINDOW_SECONDS) >= DRAFTS_PER_WINDOW else drafts.wait(str(u["sub"]))
         if wait:
             refuse(429, f"Too many AI drafts in a short time ({DRAFTS_PER_WINDOW} in {DRAFT_WINDOW_SECONDS // 60} minutes). "
                         f"Try again in {wait} seconds.", headers={"Retry-After": str(wait)})

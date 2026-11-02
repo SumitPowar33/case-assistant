@@ -15,7 +15,7 @@ import hmac
 import json
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 FEATURES = {
     # feature id: human label. Every AI call must name one of these.
@@ -55,6 +55,7 @@ class Store:
               seq INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, actor TEXT NOT NULL,
               action TEXT NOT NULL, feature TEXT, case_ref TEXT, detail TEXT NOT NULL,
               prev_hash TEXT NOT NULL, hash TEXT NOT NULL);
+            CREATE INDEX IF NOT EXISTS audit_by_actor ON audit (actor, at);
             CREATE TABLE IF NOT EXISTS chain_head (id INTEGER PRIMARY KEY CHECK (id = 1), seq INTEGER NOT NULL, hash TEXT NOT NULL, mac TEXT NOT NULL);
             """)
             cols = {r[1] for r in self.db.execute("PRAGMA table_info(audit)")}
@@ -143,6 +144,12 @@ class Store:
     def decided(self, request_id: str) -> bool:
         return self.db.execute("SELECT 1 FROM audit WHERE action IN ('accepted','edited','rejected') "
                                "AND json_extract(detail, '$.request_id') = ?", (request_id,)).fetchone() is not None
+
+    def drafts_since(self, actor: str, seconds: int) -> int:
+        """How many drafts this officer asked of a provider in the last `seconds` (answered or failed), from the log."""
+        since = (datetime.now(timezone.utc) - timedelta(seconds=seconds)).isoformat(timespec="seconds")
+        return self.db.execute("SELECT count(*) FROM audit WHERE actor = ? AND action IN ('ai_request','ai_error') AND at > ?",
+                               (actor, since)).fetchone()[0]
 
     def audit_rows(self, limit: int = 100, state: str | None = None) -> list[dict]:
         """Newest first; a state admin passes their state and sees only its rows (the platform admin passes None)."""
