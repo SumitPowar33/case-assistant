@@ -613,3 +613,10 @@ def test_the_draft_limit_holds_across_a_restart():
     assert restarted.post("/v1/generate", json=body).status_code == 429
     assert store.drafts_since("user-io", 600) == gateway_main.DRAFTS_PER_WINDOW
     assert store.drafts_since("someone-else", 600) == 0
+
+
+def test_the_api_description_is_not_published():
+    """Pentest round 2: /docs, /redoc and /openapi.json answered anyone without sign-in."""
+    c = TestClient(create_app(Store(":memory:"), {"fake": FakeProvider()}, SECRET, core_says_active))
+    for path in ("/docs", "/redoc", "/openapi.json"):
+        assert c.get(path).status_code == 404

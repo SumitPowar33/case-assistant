@@ -106,7 +106,8 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
     anchor = anchor or ChainAnchor(os.environ.get("CORE_URL", "http://localhost:8080"), secret)
     store = store or Store(os.environ.get("AI_GATEWAY_DB", "ai-gateway.sqlite3"), os.environ.get("AI_AUDIT_KEY") or None)
     providers = providers or {"claude": ClaudeProvider(), "gemini": GeminiProvider(), "fake": FakeProvider()}
-    app = FastAPI(title="Case Assistant AI gateway", version="0.1.0")
+    # no published API description: it answered anyone without sign-in (pentest round 2)
+    app = FastAPI(title="Case Assistant AI gateway", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None)
     drafts = DraftLimit(DRAFTS_PER_WINDOW, DRAFT_WINDOW_SECONDS)
 
     def user(authorization: str = Header(default="")) -> dict:
