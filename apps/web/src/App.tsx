@@ -38,6 +38,8 @@ export default function App() {
   const screen = session?.user.ui_language && SCREEN_LANGS.includes(session.user.ui_language) ? session.user.ui_language : chosen
   setMessageLanguage(screen)   // during render, so the first loads of the screens below already use it
   useEffect(() => { document.documentElement.lang = screen }, [screen])
+  // signed out: the sign-in card stands alone in the middle of the screen (index.css, .signed-out)
+  useEffect(() => { document.body.classList.toggle('signed-out', !session) }, [session])
   const t = (key: Key) => translate(screen, key)
   const here = hash || '#/'
   const link = (href: string, label: string) => <a href={href} aria-current={here === href ? 'page' : undefined}>{label}</a>

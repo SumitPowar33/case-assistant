@@ -149,8 +149,37 @@ form.inline { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: cent
 /* the complaint as it is read over to the informant: large, plain, easy to follow line by line */
 .read-back { font-size: 1.25rem; line-height: 1.6; white-space: pre-wrap; border-left: 4px solid currentColor; padding-left: 1rem; }
 
+/* ---- signed out: brand, the sign-in card, then the language choices, centred on desktop and tablet; full width on a phone ---- */
+.signed-out #root { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 32px 16px; box-sizing: border-box; background: var(--ground); }
+.signed-out header { display: contents; }
+.signed-out .brand { order: 0; flex-direction: column; text-align: center; gap: 8px; }
+.signed-out .brand-tile { width: 56px; height: 56px; border-radius: 14px; font-size: 22px; }
+.signed-out .brand strong { font-size: 22px; }
+.signed-out main { order: 1; width: 100%; max-width: 420px; padding: 0; margin: 0; }
+.signed-out .login { max-width: none; padding: 32px; box-shadow: 0 8px 24px rgba(22, 32, 42, .08); }
+.signed-out .login h1 { font-size: 22px; margin: 0 0 4px; }
+.signed-out .login button { min-height: 44px; width: 100%; }
+.signed-out .header-menu { order: 2; flex: none; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 12px; width: 100%; max-width: 420px; }
+.signed-out .header-menu label { flex: 1 1 180px; }
+.signed-out .topstrip { order: 3; background: none; border: 0; justify-content: center; }
+.signed-out .menu-toggle { display: none; }
+
 /* The informant's copy (BNSS 173(2)) is the only thing printed from a complaint. */
+/* Printed papers follow the courts' format (Supreme Court circular of 12 Mar 2020, followed by the High Courts): A4,
+   Times New Roman 14 pt at 1.5 line spacing, quotations 12 pt single-spaced, margins 2 cm top and bottom, 4 cm left and right.
+   Indian scripts print in the app's own Noto fonts. Black on white, no colour, no screen chrome. (docs/DESIGN.md, "Printed papers") */
+@page { size: A4; margin: 2cm 4cm; }
 @media print {
+  .print-copy { font-family: 'Times New Roman', Times, 'Noto Sans Devanagari Variable', 'Noto Sans Bengali Variable', 'Noto Sans Gurmukhi Variable',
+    'Noto Sans Gujarati Variable', 'Noto Sans Oriya Variable', 'Noto Sans Tamil Variable', 'Noto Sans Telugu Variable',
+    'Noto Sans Kannada Variable', 'Noto Sans Malayalam Variable', serif; font-size: 14pt; line-height: 1.5; color: #000; }
+  .print-copy h2, .print-copy h3 { font-size: 14pt; font-weight: bold; text-align: center; text-transform: uppercase; margin: 0 0 12pt; }
+  .print-copy blockquote { font-size: 12pt; line-height: 1.15; background: none; border: 0; padding: 0 0 0 1cm; white-space: pre-wrap; }
+  .print-copy, .print-copy section { border: 0; background: none; box-shadow: none; padding: 0; }
+  /* only the paper: everything else takes no space, so no blank pages follow it */
+  header, .topstrip, .no-print, main > :not(.print-copy):not(:has(.print-copy)), :has(~ .print-copy), .print-copy ~ * { display: none !important; }
+  #root, main, main section:has(.print-copy) { display: block; padding: 0; margin: 0; border: 0; background: none; max-width: none; }
+  body { background: #fff; }
   body * { visibility: hidden; }
   .print-copy, .print-copy * { visibility: visible; }
   .print-copy { position: absolute; left: 0; top: 0; width: 100%; }

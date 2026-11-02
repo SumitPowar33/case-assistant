@@ -58,3 +58,10 @@ Change password.
   app does not have yet is left out rather than faked.
 - Words that judge are not used: the board's "Proved" in the readiness check is shown as **"Linked"** (the check says what
   the file contains, never that something is proved; CLAUDE.md hard rules).
+
+## Printed papers
+Every paper the app prints follows the courts' format (Supreme Court circular of 12 Mar 2020): A4, Times New Roman 14 pt,
+1.5 line spacing, quotations 12 pt single-spaced, margins 4 cm left and right and 2 cm top and bottom, black on white,
+heading centred in bold capitals, numbered paragraphs in the order of the state's form, the officer's name, rank and
+signature block at the end. `index.css` (`@page`, `.print-copy`) holds it; a new paper reuses `.print-copy`.
+Plan and list of papers: `docs/AI-AND-SCREENS-PLAN.md` section 8.

@@ -88,6 +88,7 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
+Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens plan (docs/AI-AND-SCREENS-PLAN.md, items 14 to 18), centred sign-in, the court print format with the informant's copy.
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
@@ -113,6 +114,31 @@ Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the d
    l. Audit log (board 20): one screen joining protected reads, AI decisions, admin actions and overrides.
    m. Field capture on a tablet (board 7) and State setup and approvals (board 21).
    Each screen: backend with tests, the screen built to its board, screenshot compared, 11 languages.
+14. **AI features (Sumit, 2 Nov 2026: "we are selling as AI-driven")**, plan in `docs/AI-AND-SCREENS-PLAN.md` section 3, order A1 to A9; each keeps the five rules of section 2. Build each with its screen of item 13 where they meet (A6 with 13d, A5 with 13k).
+15. **POCSO case mode, 112 events, high-alert kinds** (plan section 6).
+16. **Station duty roster** (plan section 5).
+17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
+18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
+Real-time screens (plan section 10) after these, in that order.
+
+## 2 Nov 2026, session 60 (Sumit present from 17:32 IST: AI role, screen structure, duty roster, sign-in, POCSO and 112, RAG chatbot, chargesheet AI, real print format, more real-time screens)
+- `docs/AI-AND-SCREENS-PLAN.md`: what the AI does today (one feature on a screen, notice drafting; six more declared in
+  the gateway), the five rules every AI feature keeps, nine AI features in order, the five-part structure of every screen,
+  a station duty roster, POCSO case mode and 112/ERSS events and other high-alert kinds, how the AI helps the chargesheet,
+  the court print format, eight flaws of the RAG board and their fixes, seven real-time screens. Next items 14 to 18.
+- **Sign-in centred** on desktop and tablet (brand, card, languages below), full width on a phone (`.signed-out`).
+- **Printed papers in the court format** (Supreme Court circular, 12 Mar 2020): `@page` A4 with 2 cm / 4 cm margins,
+  Times New Roman 14 pt at 1.5 spacing, quotations 12 pt; only the paper prints (no blank pages after it). The informant's
+  copy (BNSS 173(2)) checked as a PDF: one A4 page, serif embedded.
+- Sources: [SC circular on A4 filings](https://www.scconline.com/blog/post/2020/03/12/sc-a4-size-paper-shall-be-used-in-pleadings-petitions-affidavits-or-other-documents-to-be-filed-in-supreme-court/),
+  [chargesheet particulars under BNSS 193](https://lawsikho.com/blog/charge-sheet-under-bnss-format-procedure-guide/),
+  [POCSO child-friendly procedure](https://lawfoyer.in/child-friendly-approach-and-procedure-under-pocso-act-2012/),
+  [Maharashtra Dial 112 / ERSS](https://www.theprotector.in/?p=3553).
+`scripts/test-all.sh`: all 8 PASS.
+
+Questions for Sumit
+1. Can you get one real blank form from a station (FIR, BNSS 94 notice, final report)? The print layouts copy the state's form; without one they follow the court format and the BNSS order of particulars.
+2. Does the pilot district have an ERSS/112 interface the station may receive events from, or should 112 events be entered by hand at first?
 
 ## 2 Nov 2026, session 59 (Sumit present from 15:51 IST: "the exact screens of the Figma, or better, and all missing screens")
 Sumit found that the built screens did not follow his design (canvas of 22 Oct). Cause: the design was never part of the
