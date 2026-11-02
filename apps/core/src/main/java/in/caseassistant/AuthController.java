@@ -136,7 +136,6 @@ class AuthController implements ApplicationRunner {
         return ResponseEntity.noContent().build();
     }
 
-    /** Changes the signed-in user's own password. Every older token stops working; a fresh one is returned. */
     /**
      * Attempts on one username wait for each other until the transaction ends, so the lock check and the recorded
      * attempt cannot be raced by sending many guesses at once (known and unknown usernames alike).
@@ -145,6 +144,18 @@ class AuthController implements ApplicationRunner {
         db.sql("select pg_advisory_xact_lock(hashtext('sign-in:' || ?))").param(username).query().listOfRows();
     }
 
+    /**
+     * bcrypt reads only the first 72 bytes of a password and the encoder refuses a longer one (it was a 500): 25 letters of
+     * an Indian script are already 75 bytes. So a longer password is refused plainly instead of being cut short in silence.
+     */
+    static final int MAX_PASSWORD_BYTES = 72;
+
+    static void requireStorable(String password) {
+        if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A password can be at most 72 bytes: about 24 letters of an Indian script, or 72 English letters and digits.");
+    }
+
+    /** Changes the signed-in user's own password. Every older token stops working; a fresh one is returned. */
     @PostMapping("/me/password")
     @org.springframework.transaction.annotation.Transactional
     ResponseEntity<Map<String, Object>> changePassword(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PasswordChange c,
@@ -164,6 +175,7 @@ class AuthController implements ApplicationRunner {
         }
         if (c.newPassword.equals(c.currentPassword))
             return ResponseEntity.badRequest().body(Map.of("error", "The new password must be different."));
+        requireStorable(c.newPassword);
         var changedAt = db.sql("update app_user set password_hash = ?, password_changed_at = clock_timestamp() where id = ? returning password_changed_at")
                 .params(passwords.encode(c.newPassword), id).query(java.sql.Timestamp.class).single();
         record(username, id, "password_changed", req);
@@ -227,6 +239,8 @@ class AuthController implements ApplicationRunner {
     void ensureAdmin(String username, String password) {
         if (username.isBlank() || password.isBlank()) return;
         if (password.length() < 12) throw new IllegalStateException("BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters");
+        if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES)
+            throw new IllegalStateException("BOOTSTRAP_ADMIN_PASSWORD must be at most 72 bytes");
         // the first role of the packs that manages accounts (never a role name in code)
         String role = roles.with("admin.manage").stream().findFirst()
                 .orElseThrow(() -> new IllegalStateException("No role in the packs holds admin.manage"));

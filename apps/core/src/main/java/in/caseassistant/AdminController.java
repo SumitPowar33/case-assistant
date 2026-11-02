@@ -142,6 +142,7 @@ class AdminController {
     @Transactional
     ResponseEntity<Map<String, UUID>> createUser(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody NewUser u) {
         UUID me = requireAdmin(jwt);
+        AuthController.requireStorable(u.password);
         requireKnownRole(u.role);
         requireStation(u.role, u.stationId);
         requireStationInScope(scope(me), u.stationId);
