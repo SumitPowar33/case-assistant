@@ -43,12 +43,31 @@ Done in session 50 (1 Nov, Sunday 21:05 scheduled run): mutation testing of the 
 Done in session 51 (2 Nov, 02:05 IST scheduled run): audit of reads of protected victim details (ARCHITECTURE-TENANCY section 5, item 4), with its screen.
 Done in session 52 (1 Nov 23:35 IST scheduled run, overlapped sessions 50 and 51): a cross-check of session 50's mutation test found 15 untested columns of a signed complaint; tests and the missing kind of change added.
 Done in session 53 (2 Nov, 04:55 UTC scheduled run): the FIR screen reads the people once (was four times).
+Done in session 54 (2 Nov, on-demand run from 10:27 IST): Stryker for the web app's date and form logic (TESTING.md item 6 finished).
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, punishments only where the state differs, playbooks, Marathi labels, demo stations in MH (waits for questions 1 to 3 of session 26).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: offline use when the network drops (waits for question 1 of session 47: what may be kept on a phone); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
+
+## 2 Nov 2026, session 54 (on-demand run started by Sumit at 10:27 IST)
+Started from `setup/seed` at 39aee22 (session 53, nothing newer, no new answers). Item 9 and items 3 and 6 still wait for answers; took the next item without one: Stryker for the web app's logic.
+
+Done
+- **Stryker set up** (`npm run mutation` in `apps/web`, `stryker.config.json`, about 7 minutes, not part of `test-all.sh`). New dev dependencies, testing only: `@stryker-mutator/core` and `@stryker-mutator/vitest-runner` 9.2.0 (the usual tool for this in a Vite/Vitest app; nothing in the build or at run time).
+- First run found real gaps: `parseSections` (typed sections like "BNS 318(4)") and `istIso` (typed time read as India time) had no unit test of their own, nor had the request-building in `api.ts` (token header, JSON type only with a body, password change swapping the token, gateway error text). Added `formats.test.ts` (6 tests), 5 tests in `api.test.ts`, 1 in `noticePrompt.test.ts`. Scores now: formats 94%, noticePrompt 100%, api 95% (survivors are equivalent or start-up code, listed in TESTING.md).
+- `typing.ts` shows 0% in the tool: its tests are in `packages/xlit` and the component tests, which this setup does not map; not chased.
+
+`scripts/test-all.sh`: all 8 PASS (web gates unchanged; none raised).
+
+Deliberately skipped / not checked: the Stryker run is not in nightly CI (slow); other web files (components) not mutated, only the plain logic files; `npm audit` reports advisories in Stryker's dev dependency tree, not in anything shipped.
+
+Next: item 9 (offline, waits for the answer), then items 3 and 6. Without answers: account lifecycle (ARCHITECTURE-TENANCY section 5, item 5: acting charge during leave, open cases on an SHO's transfer; needs design answers, see question 1).
+
+Questions for Sumit
+1. Account lifecycle: when an SHO is transferred or on leave, should open cases (a) stay with the named IO, (b) move to an acting SHO chosen by the SP with an end date, or something else? I will not build this without your rule.
+2. The earlier open questions of session 53 (numbers 1 to 4) still stand.
 
 ## 2 Nov 2026, session 53 (scheduled run from about 10:25 IST, Sumit away)
 Started from `setup/seed` at 276c4d6 (nothing newer, no new answers). Fresh sandbox: started PostgreSQL, created role `caseapp` and both databases, installed the gateway's `requirements*.txt` and `npm ci`. Item 9 (offline) and items 3 and 6 wait for answers, so I took the first item that does not: load the people once on the FIR screen.

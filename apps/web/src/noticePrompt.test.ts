@@ -20,3 +20,15 @@ test('a notice to a person never sends their name to the AI', () => {
   expect(p).toContain('[ADDRESSEE NAME AND ADDRESS]')
   expect(p).toContain('number to be filled in by the officer')
 })
+
+test('the prompt is the six parts in order, with the instruction lines and the FIR line without sections', () => {
+  const p = noticePrompt({ kind: 'BNSS_94', kindLabel: 'Label X', addressee: 'Fictional Bank', items: [], fir: { fir_no: 1, fir_year: 2026, sections: [] } })
+  expect(p.split('\n\n')).toEqual([
+    'Write the text of a police notice: Label X.',
+    'It is issued in FIR No. 1/2026.',
+    'Addressed to: Fictional Bank.',
+    'No list of items.',
+    'Write formal, short English. Name the legal provision. Leave these blanks for the officer exactly as written: [REPLY DUE DATE], [OFFICER NAME AND RANK], [POLICE STATION], [DATE].',
+    'Do not add any fact about the complaint, the offence or any person beyond what is written above.',
+  ])
+})

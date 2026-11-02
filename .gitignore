@@ -6,3 +6,5 @@ __pycache__/
 .pytest_cache/
 apps/web/coverage/
 services/ai-gateway/.coverage
+apps/web/reports/
+apps/web/.stryker-tmp/
