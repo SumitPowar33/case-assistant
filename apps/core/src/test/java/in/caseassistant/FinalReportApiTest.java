@@ -168,4 +168,20 @@ class FinalReportApiTest {
         call(post(url("/submit")), io, null).andExpect(status().isConflict());
         assertThat(db.sql("select status from final_report_draft").query(String.class).single()).isEqualTo("draft");
     }
+
+    @Test
+    void stepsOutOfOrderAreRefusedAndMissingPartsAreSavedEmpty() throws Exception {
+        call(post(url("/sign")), io, null).andExpect(status().isConflict());                                  // no draft at all
+        call(put(url("")), io, "{\"language\":\"mr\"}").andExpect(status().isOk());                       // both parts missing: saved empty
+        call(get(url("")), io, null).andExpect(jsonPath("$.draft.facts_text").value("")).andExpect(jsonPath("$.draft.language").value("mr"));
+        call(post(url("/decision")), sho, "{\"decision\":\"approve\"}").andExpect(status().isConflict());   // a draft is not submitted
+        call(put(url("")), io, "{\"language\":\"en\",\"facts\":\"  " + FACTS + "  \",\"evidence\":\"" + EVIDENCE + "\"}").andExpect(status().isOk());
+        call(get(url("")), io, null).andExpect(jsonPath("$.draft.facts_text").value(FACTS)).andExpect(jsonPath("$.draft.language").value("en"));
+        playbook();
+        call(post(url("/submit")), io, null).andExpect(status().isOk());
+        call(post(url("/decision")), sho, "{\"decision\":\"return\",\"note\":\"         \"}").andExpect(status().isBadRequest());
+        call(post(url("/decision")), sho, "{\"decision\":\"approve\",\"note\":\"Looks complete to me.\"}").andExpect(status().isOk());
+        call(post(url("/decision")), sho, "{\"decision\":\"approve\"}").andExpect(status().isConflict());   // already decided
+        call(get(url("")), sho, null).andExpect(jsonPath("$.events[?(@.action=='approved')].note").value("Looks complete to me."));
+    }
 }
