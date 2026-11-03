@@ -160,6 +160,11 @@ class ReadinessController {
         return db.sql("select act || ' ' || section from fir_section where fir_id = ? order by 1").param(firId).query(String.class).list();
     }
 
+    /** Gaps of the readiness check that are still open (not accepted in writing); a final report is not submitted while any is. */
+    long openGaps(UUID firId) {
+        return ((Number) report(firId).get("openGaps")).longValue();
+    }
+
     private Map<String, Object> report(UUID firId) {
         var out = new LinkedHashMap<String, Object>();
         var pbOpt = playbookOf(firId);

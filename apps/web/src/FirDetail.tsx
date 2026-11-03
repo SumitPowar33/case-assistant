@@ -3,6 +3,7 @@ import { fmt } from './formats'
 import Readiness from './Readiness'
 import CaseDiary from './CaseDiary'
 import Statements from './Statements'
+import FinalReport from './FinalReport'
 import Notices from './Notices'
 import Certificates from './Certificates'
 import Arrests from './Arrests'
@@ -13,6 +14,7 @@ import VictimUpdates from './VictimUpdates'
 import { AddEvidenceForm, AddPersonForm } from './Forms'
 import { useEffect, useState } from 'react'
 import { useT } from './i18n'
+import { currentSession } from './api'
 import { PARTS, PART_LABEL, type Part } from './firParts'
 
 type Fir = { id: string; fir_year: number; fir_no: number; registered_at: string; is_zero_fir: boolean; contents_original: string | null; contents_withheld: boolean; action_taken: string; io_name: string | null; sections: { act: string; section: string }[] }
@@ -107,6 +109,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
       <div className={shown('notices')}><Notices firId={id} fir={fir} /></div>
       <div className={shown('readiness')}><Readiness key={version} firId={id} people={people ?? []} /></div>
       <div className={shown('statements')}><Statements key={version} firId={id} /></div>
+      <div className={shown('finalReport')}><FinalReport key={version} firId={id} me={currentSession()?.user.id ?? ''} /></div>
       <div className={shown('diary')}><CaseDiary firId={id} /></div>
       </div>
     </>

@@ -15,7 +15,7 @@ function stub(over: Record<string, unknown>, failing: string[] = []) {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const path = url.replace('/api', '')
     if (failing.includes(path)) return { ok: false, status: 500, json: async () => null }
-    return { ok: true, status: 200, json: async () => (path in over ? over[path] : path === '/firs/f1' ? fir : path === '/firs/f1/readiness' ? { gaps: [], issues: [] } : path === '/firs/f1/punishment-hint' ? { suggested: null, unknown: [], sections: [] } : path === '/firs/f1/statements' ? { witnesses: [], statements: [] } : path === '/firs/f1/diary' ? { date: '2026-11-02', today: true, page: null, entries: [], events: [], days: [] } : []) }
+    return { ok: true, status: 200, json: async () => (path in over ? over[path] : path === '/firs/f1' ? fir : path === '/firs/f1/readiness' ? { gaps: [], issues: [] } : path === '/firs/f1/punishment-hint' ? { suggested: null, unknown: [], sections: [] } : path === '/firs/f1/statements' ? { witnesses: [], statements: [] } : path === '/firs/f1/final-report' ? { draft: null, events: [], readinessChecked: false, openGaps: 0, canApprove: false, particulars: { sections: '', accused: 0, witnesses: 0, statements_from: 0, evidence_items: 0 } } : path === '/firs/f1/diary' ? { date: '2026-11-02', today: true, page: null, entries: [], events: [], days: [] } : []) }
   }))
 }
 
@@ -89,7 +89,7 @@ test('on a phone one part of the FIR shows at a time: the picker lists every par
   render(<FirDetail id="f1" />)
   const picker = await screen.findByRole('combobox', { name: 'Show' })
   expect([...(picker as HTMLSelectElement).options].map((o) => o.text)).toEqual(
-    ['Case details', 'People', 'Arrests', 'Chargesheets', 'Closure report', 'Deadlines', 'Evidence', 'Notices', 'Readiness check', 'Statements', 'Case diary'])
+    ['Case details', 'People', 'Arrests', 'Chargesheets', 'Closure report', 'Deadlines', 'Evidence', 'Notices', 'Readiness check', 'Statements', 'Final report', 'Case diary'])
   const partOf = (el: HTMLElement) => el.closest('.fir-part')!
   const people = await screen.findByText(/A1 \(accused\): Fictional Accused/)
   expect(partOf(screen.getByText('Fictional complaint words')).classList.contains('shown')).toBe(true)
@@ -98,7 +98,7 @@ test('on a phone one part of the FIR shows at a time: the picker lists every par
   expect(partOf(people).classList.contains('shown')).toBe(true)
   expect(partOf(screen.getByText('Fictional complaint words')).classList.contains('shown')).toBe(false)
   expect(document.querySelectorAll('.fir-part.shown')).toHaveLength(1)
-  expect(document.querySelectorAll('.fir-part')).toHaveLength(11)
+  expect(document.querySelectorAll('.fir-part')).toHaveLength(12)
 })
 
 test('the part picker is in the screen language', async () => {

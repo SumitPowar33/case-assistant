@@ -71,6 +71,15 @@ def test_an_io_registers_an_fir_adds_the_accused_records_the_arrest_and_sees_the
     expect(statements).to_contain_text("I saw a fictional man take the phone at the bus stop.")
     expect(page.locator("section", has=page.get_by_role("heading", name="Witness tracker"))).to_contain_text("Recorded")
 
+    # the final report (BNSS 193) is drafted: both parts are kept as a draft; it is not submitted without the readiness check
+    report = page.locator("section", has=page.get_by_role("heading", name="Final report under BNSS 193"))
+    report.get_by_label("Facts in brief").fill("A fictional phone was taken at a fictional bus stop.")
+    report.get_by_label("Evidence for the charges").fill("The fictional witness saw the accused take the phone.")
+    report.get_by_role("button", name="Save draft").click()
+    expect(report).to_contain_text("Draft")
+    report.get_by_role("button", name="Submit for approval").click()
+    expect(report.get_by_role("alert")).to_contain_text("readiness check")
+
     # the FIR is on the list of the IO
     page.get_by_role("link", name="← All FIRs").click()
     expect(page.get_by_role("link", name=f"501/{registered.year}", exact=True)).to_be_visible()

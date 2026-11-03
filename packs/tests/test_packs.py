@@ -265,3 +265,13 @@ def test_screen_labels_use_the_glossary_word():
                     assert catalogs[lang][key] == word, (e["id"], key, lang, catalogs[lang][key], word)
                     checked += 1
     assert checked >= 50
+
+
+def test_only_station_and_district_heads_approve_a_final_report():
+    """The SHO and the SP approve a chargesheet draft; the role needs a reach over cases (a case scope), so the
+    approval is limited to the station or district it belongs to. An IO, the front desk, the malkhana and the state
+    admin never approve."""
+    roles = json.loads((ROOT / "IN/roles.json").read_text(encoding="utf-8"))["roles"]
+    approvers = {c for c, r in roles.items() if "chargesheet.approve" in r["permissions"]}
+    assert approvers == {"sho", "sp"}
+    assert all(roles[c]["case_scope"] in {"station", "district"} for c in approvers)

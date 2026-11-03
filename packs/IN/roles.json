@@ -8,6 +8,7 @@
     "admin.manage": "Manage accounts and stations (inside the admin's own state)",
     "policy.set": "Tighten the policies of the user's own unit (station or district, by the role's case_scope)",
     "import.run": "Load existing records from a file for a police station in the user's reach (station, district or state, by the role)",
+    "chargesheet.approve": "Approve or return a final report (chargesheet, BNSS 193) drafted by an officer of a station in the user's reach (never one's own)",
     "audit.read_protected": "See who read protected victim details (BNS 72) at a police station in the user's reach (station, district or state, by the role)"
   },
   "roles": {
@@ -38,6 +39,7 @@
         "case.lead",
         "policy.set",
         "import.run",
+        "chargesheet.approve",
         "audit.read_protected"
       ]
     },
@@ -48,6 +50,7 @@
       "permissions": [
         "policy.set",
         "import.run",
+        "chargesheet.approve",
         "audit.read_protected"
       ]
     },
