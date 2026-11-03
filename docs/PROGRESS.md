@@ -101,7 +101,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
    a. DONE (session 59): frame, look, Dashboard (board 1), FIR parts as pages, readiness chips (board 9).
    b. DONE (session 59): Case diary, BNSS 192 (board 14, V39).
-   Front desk complaint page done (session 61). Notices list restyled (session 62: one card per notice with a status chip). Evidence list restyled (session 63). Still to restyle closer to their boards (look already applied): Notices reply checklist with Yes/No chips (board 4), Evidence custody chain and 63(4) card (board 5, needs data the app lacks); Type (board 17).
+   Front desk complaint page done (session 61). Notices list restyled (session 62: one card per notice with a status chip). Evidence list restyled (session 63). Type page restyled (session 64: typing box and notes in one card; the board's keyboard, speech demo and names-in-every-script panels are demo-only and left out). Still to restyle closer to their boards (look already applied): Notices reply checklist with Yes/No chips (board 4), Evidence custody chain and 63(4) card (board 5, needs data the app lacks).
    c. Statements and witnesses (board 6): BNSS 180 statements, typed or spoken, read-back, kept as written.
    d. Draft chargesheet and sign (board 10): BNSS 193 report drafted from the file (AI drafts through the gateway, officer confirms each part), SHO approval.
    e. Supervisor review (board 11): SHO/SP queue of cases near a deadline or waiting approval; approve or return with a reason.
@@ -120,6 +120,16 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 3 Nov 2026, session 64 (scheduled run, Sumit away)
+### Tonight in short
+- Item 13, Type page (board 17): the typing box, its how-to line and the spelling note now sit in one card above the legal glossary card. Web test extended. No board panel faked: the on-screen keyboard, the demo speech button and "a name in every script" are demo-only on the board and left out.
+- Baseline: fresh container; PostgreSQL started, `caseapp` role and databases created, `npm ci`, gateway requirements installed (the first pip install had failed, so gateway and 3 e2e tests were red until fastapi/httpx were in; not a code fault). `test_phone.py` failed once while the machine was loaded (a Playwright connection error) and passed alone and in the final run; watch it, not chased.
+- `scripts/test-all.sh` at the end: all 8 PASS (repo rules, packs, xlit, gateway, web, database rules, core, e2e). Coverage: core 98% lines / 92% branches (gate 96/90), web 99.7% statements / 93.5% branches / 97.4% functions (gate 97/89/95), gateway 96% (gate 94). No gate raised (none rose 2 points). TypePage 100%.
+- Skipped: screenshot comparison with board 17; no time for extra tests of older code (a small item, but the baseline took most of the session).
+- Next: 13c Statements and witnesses (board 6), then 13d.
+Questions for Sumit:
+1. Board 17 shows "Type" as a tools page with a keyboard and a name-in-every-script panel. Should the name panel (for lookout notices) be built for real, or stay out until a notice needs it?
 
 ## 2 Nov 2026, session 63 (scheduled run, last of the night, Sumit away)
 ### Tonight in short

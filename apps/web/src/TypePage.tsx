@@ -13,6 +13,7 @@ export default function TypePage() {
   return (
     <>
       <h1>{t('type.title')}</h1>
+      <div className="card">
       <p>
         {lang === 'en'
           ? t('type.chooseFirst')
@@ -23,6 +24,7 @@ export default function TypePage() {
         {t('type.convertAll')}
       </button>
       <p><small>{t('type.spellingsOnly')}</small></p>
+      </div>
       <Glossary onUse={(word) => setText((s) => (s ? `${s} ${word}` : word))} />
     </>
   )

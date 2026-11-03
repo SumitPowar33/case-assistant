@@ -67,6 +67,8 @@ test('language tool page converts a whole pasted text', async () => {
   fireEvent.change(screen.getByLabelText('Text'), { target: { value: 'police station, Pune.' } })
   fireEvent.click(screen.getByRole('button', { name: 'Convert all English-letter words' }))
   expect((screen.getByLabelText('Text') as HTMLTextAreaElement).value).toBe('पोलीस स्टेशन, पुणे.')
+  // the typing box and its notes sit together in one card (board 17)
+  expect(screen.getByLabelText('Text').closest('.card')?.textContent).toContain('Suggestions are spellings only')
 })
 
 test('shows an error when the server fails', async () => {
