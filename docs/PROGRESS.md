@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 13c Statements and witnesses (session 65, started 23:36 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -103,7 +102,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    a. DONE (session 59): frame, look, Dashboard (board 1), FIR parts as pages, readiness chips (board 9).
    b. DONE (session 59): Case diary, BNSS 192 (board 14, V39).
    Front desk complaint page done (session 61). Notices list restyled (session 62: one card per notice with a status chip). Evidence list restyled (session 63). Type page restyled (session 64: typing box and notes in one card; the board's keyboard, speech demo and names-in-every-script panels are demo-only and left out). Still to restyle closer to their boards (look already applied): Notices reply checklist with Yes/No chips (board 4), Evidence custody chain and 63(4) card (board 5, needs data the app lacks).
-   c. Statements and witnesses (board 6): BNSS 180 statements, typed or spoken, read-back, kept as written.
+   c. DONE (session 65): Statements and witnesses (board 6): BNSS 180 statements, typed or spoken, kept as said (V40), witness tracker. Still to build for it: English translation beside the original (AI A3, through the gateway), "differences to clarify", the video player.
    d. Draft chargesheet and sign (board 10): BNSS 193 report drafted from the file (AI drafts through the gateway, officer confirms each part), SHO approval.
    e. Supervisor review (board 11): SHO/SP queue of cases near a deadline or waiting approval; approve or return with a reason.
    f. Money trail and accused links (board 8): accounts, transfers and holds from notices and evidence; the readiness rule of two links.
@@ -121,6 +120,19 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 3 Nov 2026, session 65 (scheduled run, Sumit away)
+### Tonight in short
+- Item 13c, Statements and witnesses (board 6). Backend: V40 `witness_statement` (language spoken, medium written/audio/video, the words as said; the database refuses any change or delete, and a statement only for a complainant, victim or witness of the same case), `StatementController` (`GET`/`POST /api/firs/{id}/statements`, case team only, covered by `SecurityMatrixTest` automatically), reads of a protected case's statements are logged (`statements` in `protected_read`). Screen: FIR part "Statements" (witness tracker with Recorded / Not recorded chips, statement cards, form; the language of a new statement is the typing language chosen at the top). 18 new texts in 11 languages (drafts). Tests: 4 API tests, 4 web tests, the browser case-flow test records a statement.
+- Fixed on the way: the Statements part reloads when a person is added on the same page.
+- Baseline fresh container: PostgreSQL started, `caseapp` role and databases, `npm ci`, gateway requirements installed. `scripts/test-all.sh` at the end: all 8 PASS. Coverage numbers not re-read; no gate changed.
+- Deliberately left out (not faked): English translation beside the original (belongs with AI A3 through the gateway), the "differences to clarify" panel, the video player, a seizure-witness/telecom-officer "needed" note. No statement from an accused (BNSS 180 witnesses only; confession rules need a lawyer's view).
+- Skipped: screenshot comparison with board 6 at 1280 and 390 px not taken this session; do it next time. The mutation test script for trigger rules does not yet cover `witness_statement`.
+- Risk: statement text can name a protected victim; it is shown to the case team only and the read is logged, but it is not masked inside free text (same as the FIR text).
+- Next: 13d Draft chargesheet and sign (board 10), or 13e Supervisor review (board 11).
+Questions for Sumit:
+1. Should an accused or suspect's own statement ever be recorded in this screen (BNSS 180 covers any person acquainted with the facts, but an accused's words to the police have special rules)? I kept it witnesses, victims and complainants only.
+2. For statements in a language the court does not use, should the English/Marathi translation be required before a chargesheet can be marked ready?
 
 ## 3 Nov 2026, session 64 (scheduled run, Sumit away)
 ### Tonight in short
