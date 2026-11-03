@@ -59,6 +59,18 @@ def test_an_io_registers_an_fir_adds_the_accused_records_the_arrest_and_sees_the
     expect(deadlines).to_contain_text(f"Chargesheet for an accused in custody: by {last_day} (BNSS 187(3)")
     expect(deadlines).to_contain_text(f"Progress update to the victim: by {registered + dt.timedelta(days=90)} (BNSS 193(3)(ii), 90 days)")
 
+    # a witness is added and her statement is kept as said; the tracker then shows her as recorded (BNSS 180)
+    person.get_by_label("Role").select_option("witness")
+    person.get_by_label("Label").fill("W1")
+    person.get_by_label("Full name (leave empty if not known)").fill("Fictional Witness One")
+    person.get_by_role("button", name="Save").click()
+    expect(main).to_contain_text("W1 (witness): Fictional Witness One")
+    statements = page.locator("section", has=page.get_by_role("heading", name="Statements and witnesses (BNSS 180)"))
+    statements.get_by_label("The statement, in the words and language spoken").fill("I saw a fictional man take the phone at the bus stop.")
+    statements.get_by_role("button", name="Save statement").click()
+    expect(statements).to_contain_text("I saw a fictional man take the phone at the bus stop.")
+    expect(page.locator("section", has=page.get_by_role("heading", name="Witness tracker"))).to_contain_text("Recorded")
+
     # the FIR is on the list of the IO
     page.get_by_role("link", name="← All FIRs").click()
     expect(page.get_by_role("link", name=f"501/{registered.year}", exact=True)).to_be_visible()

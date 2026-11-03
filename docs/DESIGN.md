@@ -32,7 +32,7 @@ committed** (CLAUDE.md, "Screens"). Where the app differs on purpose, the differ
 | 3 | Playbook · plan, sections, deadlines | FIR part "Deadlines" | restyled; plan of tasks still to build |
 | 4 | Notices | FIR part "Notices" | restyled |
 | 5 | Evidence, custody, 63(4) | FIR part "Evidence" | restyled |
-| 6 | Statements and witnesses | — | to build |
+| 6 | Statements and witnesses | FIR part "Statements" | built 3 Nov (session 65): witness tracker and statements kept as said (V40); translation, differences to clarify and the video player still to build |
 | 7 | Field seizure on tablet | — | to build |
 | 8 | Money trail and accused links | — | to build |
 | 9 | Readiness check | FIR part "Readiness check" | restyled with status chips (session 59) |
