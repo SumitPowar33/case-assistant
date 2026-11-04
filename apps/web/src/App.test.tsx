@@ -243,3 +243,20 @@ test('a part of the case opens as its own page from the sidebar; the whole case 
   expect(nav.getByRole('link', { name: 'Whole case file' }).getAttribute('href')).toBe('#/firs/f1')
   expect(document.querySelector('.fir-body')!.className).toBe('fir-body one-part')
 })
+
+test('the Case property link is for accounts of a station and opens the register at #/property', async () => {
+  mockApi()
+  Object.assign(routes, { '/api/property': { items: [], counts: {}, truncated: false } })
+  const nav = () => within(screen.getByRole('navigation', { name: 'Main' }))
+  const { unmount } = render(<App />)
+  expect(nav().getByRole('link', { name: 'Case property' }).getAttribute('href')).toBe('#/property')
+  unmount()
+  setSession({ ...io, user: { ...io.user, station_id: null } })
+  const second = render(<App />)
+  expect(nav().queryByRole('link', { name: 'Case property' })).toBeNull()
+  second.unmount()
+  setSession(io)
+  window.location.hash = '#/property'
+  render(<App />)
+  expect(await screen.findByRole('heading', { name: 'Case property (malkhana)' })).toBeTruthy()
+})

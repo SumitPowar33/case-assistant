@@ -2,7 +2,7 @@
 // Accessibility check of the main screens with axe-core (test-only dependency, decided 31 Oct 2026). jsdom draws no
 // pixels, so colour contrast is not checked here; everything axe can judge from the markup is (labels, roles, names).
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import axe from 'axe-core'
 import LoginPage from './LoginPage'
 import FirList from './FirList'
@@ -12,6 +12,7 @@ import TypePage from './TypePage'
 import ReadsPage from './ReadsPage'
 import Supervisor from './Supervisor'
 import MoneyTrail from './MoneyTrail'
+import Property from './Property'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -20,6 +21,8 @@ const data: Record<string, unknown> = {
   '/firs/f1': { id: 'f1', fir_year: 2026, fir_no: 9, registered_at: '2026-10-01T04:30:00Z', is_zero_fir: false, contents_original: 'Fictional words', contents_withheld: false, action_taken: 'investigate', io_name: 'SI Fictional', sections: [{ act: 'BNS', section: '318(4)' }] },
   '/firs/f1/money-trail': { evidence: [{ id: 'e1', label: '214/E-01' }], transfers: [{ id: 't1', from_account: 'Fictional A/c XXXX1', to_account: 'Fictional A/c XXXX2', amount_paise: 100000, transferred_on: '2026-08-19', evidence_label: null, to_person: 'A1' }], holds: [], accused: [{ person_id: 'a1', label: 'A1', name: 'Fictional Caller', received_paise: 100000, account_holder: true, second_links: 0, status: 'money_only' }], transferred_paise: 100000, held_paise: 0 },
   '/firs/f1/deadlines': [{ kind: 'victim_progress_update', due_on: '2026-12-30', basis: 'BNSS 193(3)(ii), 90 days' }],
+  '/property': { items: [{ id: 'i1', fir_id: 'f1', fir_no: 9, fir_year: 2026, label: '9/P-01', description: 'Fictional knife', station: 'Fictional PS', moved_at: '2026-10-03T11:00:00Z', location: 'Fictional malkhana', place: 'malkhana', seal_intact: true, status: 'in_malkhana' }], counts: { in_malkhana: 1, out: 0, released: 0 }, truncated: false },
+  '/firs/f1/evidence/i1/custody': [{ at: '2026-10-03T11:00:00Z', handed_by: 'SI Fictional', received_by: 'HC Fictional', location: 'Fictional malkhana', purpose: 'deposit', seal_intact: true, place: 'malkhana' }],
   '/supervisor': { waiting_approval: 1, due_in_21_days: 1, cases: [{ id: 'f1', fir_no: 9, fir_year: 2026, sections: 'BNS 318(4)', io_name: 'SI Fictional', io_rank: 'SI', deadline_kind: 'chargesheet_custody', due_on: '2026-11-11', days_left: 7, open_gaps: 2, report_status: 'submitted', can_decide: true }] },
   '/complaint-kinds': [{ id: 'other', label: 'Other information', steps: [] }],
   '/complaints/c1': { id: 'c1', received_at: '2026-10-30T04:30:00Z', mode: 'written', informant_name: 'Fictional Informant', informant_contact: null, kind: 'other', kind_label: 'Other information',
@@ -50,8 +53,16 @@ test.each([
   ['protected reads', () => <ReadsPage />, 'People of the case'],
   ['supervisor review', () => <Supervisor />, 'Open cases by nearest deadline'],
   ['money trail', () => <MoneyTrail firId="f1" />, 'Record a transfer'],
+  ['case property', () => <Property />, '9/P-01'],
 ])('the %s screen has no accessibility faults axe can see', async (_name, screenOf, ready) => {
   render(screenOf())
   await screen.findAllByText(new RegExp(ready.replace(/[()/.]/g, '\\$&')))
+  expect(await violations()).toEqual([])
+})
+
+test('the case property screen with an item picked (its hand-over log and form) has no accessibility faults either', async () => {
+  render(<Property />)
+  fireEvent.click(await screen.findByRole('button', { name: '9/P-01' }))
+  await screen.findByRole('heading', { name: 'Record a hand-over' })
   expect(await violations()).toEqual([])
 })
