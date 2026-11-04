@@ -105,7 +105,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    Front desk complaint page done (session 61). Notices list restyled (session 62: one card per notice with a status chip). Evidence list restyled (session 63). Type page restyled (session 64: typing box and notes in one card; the board's keyboard, speech demo and names-in-every-script panels are demo-only and left out). Still to restyle closer to their boards (look already applied): Notices reply checklist with Yes/No chips (board 4), Evidence custody chain and 63(4) card (board 5, needs data the app lacks).
    c. DONE (session 65): Statements and witnesses (board 6): BNSS 180 statements, typed or spoken, kept as said (V40), witness tracker. Still to build for it: English translation beside the original (AI A3, through the gateway), "differences to clarify", the video player.
    d. DONE (session 66, without the AI part): Draft and sign the final report (board 10): FIR part "Final report", V41. Still to build for it: the AI drafting of the two parts through the gateway (A6, each sentence linked to its source), the particulars table of the board (accused with arrest and bail status, seized property, enclosure lists), the printed paper in the court format (item 18).
-   e. Supervisor review (board 11): SHO/SP queue of cases near a deadline or waiting approval; approve or return with a reason.
+   e. DONE (session 67, without the AI briefing A9): Supervisor review (board 11), `#/supervisor`, `GET /api/supervisor`. The approve or return step stays on the Final report part (one click from the row).
    f. Money trail and accused links (board 8): accounts, transfers and holds from notices and evidence; the readiness rule of two links.
    g. Case property with QR custody (board 15): malkhana register as its own screen, QR label per item.
    h. Forensic and medical requests (board 16): requests, sample custody, report received.
@@ -121,6 +121,16 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 4 Nov 2026, session 67 (scheduled run, Sumit away)
+- Item 13e, **Supervisor review** (board 11). `GET /api/supervisor` (`SupervisorController`): needs the pack permission `chargesheet.approve` (403 otherwise, never a role name), lists the open cases the caller is on the case team of (SHO: the station; SP: the district; never another district), by nearest deadline, with the IO, the sections, the nearest deadline, the gaps still open in the readiness check, the state of the final report and `can_decide` (a submitted report, not the caller's own, in the caller's reach). Signed reports leave the queue. Counts: reports waiting, cases due within 21 days. No score of any officer or case; the screen says open gaps are not a mark on the officer. Screen `Supervisor.tsx` (menu link for holders of the permission, row link to the Final report part where the decision is made), 18 new texts in 11 languages (drafts).
+- Tests: `SupervisorApiTest` (4: who sees it and of what reach, order and counts, submitted/approved/signed life, no deciding of one's own submission), `Supervisor.test.tsx` (3, 100%), axe check of the screen, browser test `tests/e2e/test_supervisor.py` (SHO sees and opens the report, IO has no link and gets 403).
+- Baseline: fresh container; PostgreSQL started, role and databases created, `npm ci`, gateway requirements (`httpx`, `fastapi` were missing at first, which made the gateway and three e2e tests fail until installed) and psycopg/playwright installed; then all 8 PASS.
+- `scripts/test-all.sh` at the end: all 8 PASS (repo rules, packs, xlit, gateway, web, database rules, core, e2e). Coverage: core 97.9% lines / 92.5% branches (gate 96/90), web 99.7% statements / 93.9% branches / 97.6% functions (gate 97/89/95), gateway 96.0% (gate 94). No gate raised (none rose 2 points). `Supervisor.tsx` 100%; `SupervisorController` 0 lines missed, 2 of 16 branches (the no-deadline case cannot be made, every FIR has deadlines from the view).
+- Skipped: AI briefing of each case (A9, needs the gateway); screenshot comparison with board 11; the board's "Approve and send to prosecutor" panel on this screen (the decision is on the Final report part); no tests added for older code.
+- Next: 13f Money trail and accused links (board 8), then 13g.
+Questions for Sumit:
+1. Should the supervisor queue also show cases with no deadline and no IO ("unassigned")? They are listed last now.
 
 ## 3 Nov 2026, session 66 (scheduled run, last of the night, Sumit away)
 ### Tonight in short (sessions 64 to 66)
