@@ -121,3 +121,32 @@ test('in Marathi the check, its gaps, the withdrawn list and the no-judging line
   expect(screen.getByText('Record the bank nodal officer statement.')).toBeTruthy()   // playbook text is not translated here
   expect(screen.getAllByRole('button', { name: /E-02 चा दुवा मागे घ्या/ })).toHaveLength(1)
 })
+
+test('electronic evidence says whether its certificate is complete; several items are listed together; a clean check says there are no gaps', async () => {
+  const clean = {
+    ...report, openGaps: 0, gaps: [], sectionsNotInPlaybook: [], checksToConfirm: [],
+    charges: [{ id: 'cheating', law: 'BNS 318(4)', label: 'Cheating', ingredients: [
+      { id: 'deception', text: 'The victim was deceived', suggestedProof: [], evidence: [
+        { id: 'e1', linkId: 'l1', label: 'E-01', kind: 'electronic', courtReady: true }, { id: 'e2', linkId: 'l2', label: 'E-02', kind: 'electronic', courtReady: false },
+        { id: 'e3', linkId: 'l3', label: 'S-03', kind: 'document' }] },
+    ] }],
+  }
+  mock((url) => url.endsWith('/readiness') ? { status: 200, body: clean } : undefined)
+  render(<Readiness firId="f1" people={people} />)
+  expect(await screen.findByText('No gaps found.')).toBeTruthy()
+  const line = screen.getByText(/The victim was deceived:/).closest('li')!.textContent!
+  expect(line).toContain('E-01 (')
+  expect(line).toContain('E-02 (')
+  expect(line).toContain('S-03')
+  expect(line).not.toContain('S-03 (')   // only electronic items carry the certificate word
+})
+
+test('several open gaps are counted in the plural; a report that cannot be read shows why, and a slow one shows loading', async () => {
+  mock((url) => url.endsWith('/readiness') ? { status: 200, body: { ...report, openGaps: 2 } } : undefined)
+  render(<Readiness firId="f1" people={people} />)
+  expect(await screen.findByText(/2 open gaps\./)).toBeTruthy()
+  cleanup()
+  mock((url) => url.endsWith('/readiness') ? { status: 500, body: { message: 'broken' } } : undefined)
+  render(<Readiness firId="f1" people={people} />)
+  expect((await screen.findByRole('alert')).textContent).toContain('500')
+})
