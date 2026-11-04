@@ -4,6 +4,7 @@ that the server writes a field name somewhere; a name written in another answer,
 `within_minutes`). Here the browser goes through the demo case's screens as the case team, the front desk and the
 platform admin, every JSON answer of a GET /api route is kept, and every field the screen's type says is always there
 (not `name?:`) must be a key of that answer, also inside the objects and lists it holds. Fictional data only."""
+import datetime as dt
 import re
 import sys
 
@@ -76,8 +77,10 @@ def test_every_field_a_screen_expects_is_in_the_real_answer(core, page):
     case = f"/api/firs/{demo['fir_id']}"
     status, people = api.call("GET", f"{case}/people", token=io)
     accused = [p["id"] for p in people if p["role"] == "accused"]
-    for path, body in ((f"{case}/victim-updates", {"givenOn": "2026-10-31", "toldTo": "informant", "means": "phone"}),
-                       (f"{case}/chargesheets", {"filedOn": "2026-10-31", "court": "Fictional JMFC Court", "reportNo": "CS-1/2026",
+    # the demo FIR is registered a few days before today (India time), so these days follow today, not a fixed date
+    today = dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).date().isoformat()
+    for path, body in ((f"{case}/victim-updates", {"givenOn": today, "toldTo": "informant", "means": "phone"}),
+                       (f"{case}/chargesheets", {"filedOn": today, "court": "Fictional JMFC Court", "reportNo": "CS-1/2026",
                                                  "accusedIds": accused})):
         status, body = api.call("POST", path, body, io)
         assert status == 201, (path, body)
