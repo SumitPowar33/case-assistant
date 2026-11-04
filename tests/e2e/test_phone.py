@@ -62,7 +62,8 @@ def test_an_officer_can_use_the_case_on_a_phone(core, page):
     # the FIR list: one card per FIR, each value with its column name, no sideways scrolling
     card = page.locator("table.cards tbody tr").first
     expect(card).to_contain_text("1/")
-    assert page.evaluate("getComputedStyle(document.querySelector('table.cards tr td'), '::before').content").startswith('"FIR')
+    # the locator waits for the cell: the list can be drawn again just after the card text first shows (it failed once on a null element)
+    assert page.locator("table.cards tr td").first.evaluate("el => getComputedStyle(el, '::before').content").startswith('"FIR')
     assert card.bounding_box()["width"] <= 390 - 16
     check("FIR list")
 
