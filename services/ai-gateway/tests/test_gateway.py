@@ -466,15 +466,16 @@ def test_rows_written_before_the_key_and_the_state_column_still_verify(tmp_path)
 
 
 def test_every_audit_row_moves_the_head_kept_by_the_core_app():
+    tok = token()   # made once: the token carries the clock second, so two calls can differ
     store, anchor = Store(":memory:"), MemoryAnchor()
     c = TestClient(create_app(store, {"fake": FakeProvider()}, SECRET, core_says_active, anchor),
-                   headers={"Authorization": "Bearer " + token()})
+                   headers={"Authorization": "Bearer " + tok})
     c.put("/v1/settings/case_qa", json={"provider": "fake"})
     r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1"}).json()
     c.post("/v1/generate", json={"feature": "nope", "prompt": "x", "prompt_version": "test@1"})   # a refusal is a row too
     c.post("/v1/decisions", json={"request_id": r["request_id"], "decision": "rejected", "feature": "case_qa"})
     assert [seq for _, seq, _ in anchor.reports] == [1, 2, 3, 4]
-    assert anchor.reports[-1] == (token(), *store.head()) and all(t == token() for t, _, _ in anchor.reports)
+    assert anchor.reports[-1] == (tok, *store.head()) and all(t == tok for t, _, _ in anchor.reports)
     audit = c.get("/v1/audit").json()
     assert audit["chain_ok"] is True and audit["anchored_seq"] == 4
 
