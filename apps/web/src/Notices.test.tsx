@@ -273,3 +273,57 @@ test('in Hindi an empty text is refused, and a decision that could not be logged
   fireEvent.click(within(write).getByRole('button', { name: 'सहेजें' }))
   expect(await screen.findByText('नोटिस सहेजा गया, पर AI मसौदे पर निर्णय दर्ज नहीं हो सका: The AI gateway answered 503: gateway down')).toBeTruthy()   // the gateway's own words stay as sent
 })
+
+/** Like stubWithAi, but the gateway can be made to refuse a draft or a decision. */
+function stubFailingAi(fail: { generate?: boolean; decisions?: boolean }) {
+  const writes: { url: string; body: Record<string, unknown> }[] = []
+  let n = 0
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method && init.method !== 'GET') {
+      writes.push({ url, body: JSON.parse(init.body as string) })
+      if (url === '/ai/v1/generate') {
+        if (fail.generate) return { ok: false, status: 503, json: async () => ({ detail: 'The provider is not answering.' }) }
+        n += 1
+        return { ok: true, status: 200, json: async () => ({ request_id: `r${n}`, draft: `${AI_TEXT} v${n}`, provider: 'fake', model: 'fake-1', label: 'AI draft - check before use' }) }
+      }
+      if (url === '/ai/v1/decisions' && fail.decisions) return { ok: false, status: 503, json: async () => ({ detail: 'The audit log is not answering.' }) }
+      return { ok: true, status: 201, json: async () => ({ id: 'n9' }) }
+    }
+    return { ok: true, status: 200, json: async () => [] }
+  }))
+  return writes
+}
+
+test('a gateway that refuses a draft shows why and leaves the form as it was', async () => {
+  stubFailingAi({ generate: true })
+  render(<Notices firId="f1" fir={fir} />)
+  await screen.findByText('None yet.')
+  type('To', 'Nodal Officer, Fictional Telecom')
+  type(/Items to produce/, 'CDR')
+  fireEvent.click(screen.getByRole('button', { name: 'Draft the text with AI' }))
+  expect((await screen.findByText(/not answering/)).textContent).toContain('not answering')
+  expect(screen.queryByRole('region', { name: 'AI draft' })).toBeNull()
+})
+
+test('a draft that cannot be logged as rejected stays on screen with the reason; a new draft replaces an unused one even if that log fails', async () => {
+  const writes = stubFailingAi({ decisions: true })
+  render(<Notices firId="f1" fir={fir} />)
+  await screen.findByText('None yet.')
+  type('To', 'Nodal Officer, Fictional Telecom')
+  type(/Items to produce/, 'CDR')
+  fireEvent.click(screen.getByRole('button', { name: 'Draft the text with AI' }))
+  const box = await screen.findByRole('region', { name: 'AI draft' })
+  fireEvent.click(within(box).getByRole('button', { name: 'Discard' }))
+  expect(await screen.findByText(/audit log is not answering/)).toBeTruthy()
+  expect(screen.getByRole('region', { name: 'AI draft' })).toBeTruthy()   // not dropped: the refusal was not logged
+  fireEvent.click(screen.getByRole('button', { name: 'Draft the text with AI' }))
+  await vi.waitFor(() => expect(writes.filter((w) => w.url === '/ai/v1/generate')).toHaveLength(2))
+  await vi.waitFor(() => expect(within(screen.getByRole('region', { name: 'AI draft' })).getByText(/v2/)).toBeTruthy())
+  expect(writes.some((w) => w.body.note === 'replaced by a new draft')).toBe(true)
+})
+
+test('a notice with a status the screen does not know is still listed, with the status as written', async () => {
+  stub({ '/firs/f1/notices': [{ ...sent, status: 'weird_status' }] })
+  render(<Notices firId="f1" />)
+  expect(await screen.findByText('weird_status')).toBeTruthy()
+})
