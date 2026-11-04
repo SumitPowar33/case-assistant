@@ -99,6 +99,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 10. Account lifecycle (decision 2 of 2 Nov): acting SHO with an end date given by the SP, "IO has left the station" list.
 11. Acid-attack survivors (BNS 124) masked like sexual-offence victims (decision 4 of 2 Nov).
 12. Security: done in code (sessions 55 and 56). Left for people: an outside penetration test (CERT-In empanelled auditor) before real case data; the installation itself (deploy/nginx.conf, a real certificate).
+In progress: item 13f Money trail and accused links (session 68, started 23:40 IST)
 13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
    a. DONE (session 59): frame, look, Dashboard (board 1), FIR parts as pages, readiness chips (board 9).
    b. DONE (session 59): Case diary, BNSS 192 (board 14, V39).
