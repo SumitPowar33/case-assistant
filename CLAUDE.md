@@ -45,7 +45,7 @@ At the end of each session, note in PROGRESS.md anything you deliberately skippe
 - `docs/` – plan, progress, research, `ARCHITECTURE-TENANCY.md` (accounts, roles, policies, modules: read before touching access), `TESTING.md` (what every change must test).
 
 ## Testing rule (Sumit, 28 Oct 2026)
-Every piece of code gets tests (unit, functional, database, security as `docs/TESTING.md` lists), and **the whole suite runs every day**: `scripts/test-all.sh` (add `--no-db` only when PostgreSQL cannot start; say so in PROGRESS.md). Run it before you start (baseline) and before every commit. Coverage gates (core 96/90, web 97/89, gateway 94) may only go up. A bug gets a regression test first. A new route is covered by `SecurityMatrixTest`; list it there if it is public or admin-only.
+Every piece of code gets tests (unit, functional, database, security as `docs/TESTING.md` lists), and **the whole suite runs every day**: `scripts/test-all.sh` (add `--no-db` only when PostgreSQL cannot start; say so in PROGRESS.md). Run it before you start (baseline) and before every commit. Coverage gates (core 96/90, web 97/89, gateway 97) may only go up. A bug gets a regression test first. A new route is covered by `SecurityMatrixTest`; list it there if it is public or admin-only.
 
 ## Screens (Sumit, 2 Nov 2026)
 Every screen follows its board in `docs/design/boards/` (map and tokens in `docs/DESIGN.md`). Before committing a screen,

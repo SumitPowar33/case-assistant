@@ -621,3 +621,71 @@ def test_the_api_description_is_not_published():
     c = TestClient(create_app(Store(":memory:"), {"fake": FakeProvider()}, SECRET, core_says_active))
     for path in ("/docs", "/redoc", "/openapi.json"):
         assert c.get(path).status_code == 404
+
+
+# ---- older code: refusals and failure paths of the store and the sign-in check (session 69) ----
+
+def test_a_core_answer_that_is_not_json_is_the_core_being_unavailable():
+    check = CoreCheck("http://core", mock_client(lambda r: httpx.Response(200, text="<html>proxy error</html>")))
+    with pytest.raises(CoreUnavailable, match="unreadable"):
+        check(token("user-x"), "user-x")
+
+
+def test_the_remembered_yes_list_drops_expired_entries_when_it_grows_large():
+    now = [1000.0]
+    calls, handler = core_app([{"id": "user-x", "role": "io"}])
+    check = CoreCheck("http://core", mock_client(handler), ttl=30, clock=lambda: now[0])
+    check._ok = {str(i): (500.0, {"id": "old"}) for i in range(5001)}   # all expired
+    assert check(token("user-x"), "user-x")["id"] == "user-x"
+    assert len(check._ok) == 1   # only the new answer is kept
+
+
+def test_the_store_refuses_an_unknown_feature_provider_or_action():
+    store = Store(":memory:")
+    with pytest.raises(KeyError):
+        store.set_setting("no_such_feature", "fake", None, False, "user-x")
+    with pytest.raises(ValueError, match="unknown provider"):
+        store.set_setting("case_qa", "no_such_provider", None, False, "user-x")
+    with pytest.raises(ValueError):
+        store.log("user-x", "no_such_action", None, None, {})
+    assert store.head() is None   # nothing was written by the refusals
+
+
+def test_a_failed_audit_write_leaves_no_half_row_and_the_next_write_chains_on():
+    store = Store(":memory:")
+    store.log("user-x", "ai_request", "case_qa", None, {"n": 1})
+    with pytest.raises(TypeError):
+        store.log("user-x", "ai_request", "case_qa", None, {"bad": object()})   # cannot be written as JSON
+    assert store.head()[0] == 1
+    store.log("user-x", "ai_request", "case_qa", None, {"n": 2})
+    assert store.head()[0] == 2 and store.verify_chain() is True
+
+
+def test_a_row_whose_previous_link_was_changed_fails_the_chain_check():
+    store = Store(":memory:")
+    for n in range(3):
+        store.log("user-x", "ai_request", "case_qa", None, {"n": n})
+    assert store.verify_chain() is True
+    store.db.execute("DROP TRIGGER IF EXISTS audit_no_update")
+    store.db.execute("UPDATE audit SET prev_hash = ? WHERE seq = 2", ("f" * 64,))
+    assert store.verify_chain() is False
+
+
+def test_the_draft_limit_forgets_officers_with_nothing_in_the_window_when_the_list_grows_large():
+    now = [1000.0]
+    limit = gateway_main.DraftLimit(limit=2, window=10, clock=lambda: now[0])
+    limit.seen = {f"old-{i}": gateway_main.deque([1.0]) for i in range(10001)}   # all long outside the window
+    assert limit.wait("officer-x") == 0
+    assert list(limit.seen) == ["officer-x"]
+
+
+def test_the_feature_list_the_settings_of_an_unknown_feature_and_a_model_switch_by_an_officer():
+    store, anchor = Store(":memory:"), MemoryAnchor()
+    c = TestClient(create_app(store, {"fake": FakeProvider()}, SECRET, core_says_active, anchor), headers={"Authorization": "Bearer " + token()})
+    listed = c.get("/v1/features").json()
+    assert "case_qa" in listed["features"] and "fake" in listed["providers"] and "fake" in listed["default_models"]
+    assert c.put("/v1/settings/no_such_feature", json={"provider": "fake"}).status_code == 404
+    assert c.put("/v1/settings/case_qa", json={"provider": "no_such_provider"}).status_code == 422
+    c.put("/v1/settings/case_qa", json={"provider": "fake", "officer_may_switch": True})
+    ok = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "model": "fictional-model-2"})
+    assert ok.status_code == 200 and ok.json()["model"] == "fictional-model-2"
