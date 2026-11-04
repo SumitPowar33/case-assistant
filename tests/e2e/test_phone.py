@@ -73,7 +73,7 @@ def test_an_officer_can_use_the_case_on_a_phone(core, page):
     # the FIR screen shows one part at a time, chosen in one list at the top; every part is short and fits
     picker = page.get_by_label("Show")
     parts = picker.locator("option").all_inner_texts()
-    assert parts[0] == "Case details" and len(parts) == 12
+    assert parts[0] == "Case details" and len(parts) == 13
     assert page.locator(".fir-part:visible").count() == 1
     case_height = page.evaluate("document.documentElement.scrollHeight")
     for part in parts:

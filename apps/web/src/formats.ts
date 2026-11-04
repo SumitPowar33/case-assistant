@@ -27,3 +27,6 @@ export const fmt = (iso: string) => new Date(iso).toLocaleString('en-IN', { date
 
 /** A form field's trimmed text, or null when empty. */
 export const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim() || null
+
+/** Money from the server in paise, shown in rupees with Indian digit grouping: 22400050 -> "Rs 2,24,000.50". */
+export const rupees = (paise: number) => 'Rs ' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: paise % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 })

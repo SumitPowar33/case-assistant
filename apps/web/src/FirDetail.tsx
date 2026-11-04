@@ -2,6 +2,7 @@ import { useLoad } from './useLoad'
 import { fmt } from './formats'
 import Readiness from './Readiness'
 import CaseDiary from './CaseDiary'
+import MoneyTrail from './MoneyTrail'
 import Statements from './Statements'
 import FinalReport from './FinalReport'
 import Notices from './Notices'
@@ -109,6 +110,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
       <div className={shown('notices')}><Notices firId={id} fir={fir} /></div>
       <div className={shown('readiness')}><Readiness key={version} firId={id} people={people ?? []} /></div>
       <div className={shown('statements')}><Statements key={version} firId={id} /></div>
+      <div className={shown('money')}><MoneyTrail key={version} firId={id} /></div>
       <div className={shown('finalReport')}><FinalReport key={version} firId={id} me={currentSession()?.user.id ?? ''} /></div>
       <div className={shown('diary')}><CaseDiary firId={id} /></div>
       </div>
