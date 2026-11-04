@@ -21,7 +21,7 @@ from demo_case import load_demo  # noqa: E402
 # the scripts of the 10 languages of the national module (Unicode blocks)
 SCRIPTS = {"hi": "ऀ-ॿ", "mr": "ऀ-ॿ", "bn": "ঀ-৿", "pa": "਀-੿", "gu": "઀-૿",
            "or": "଀-୿", "ta": "஀-௿", "te": "ఀ-౿", "kn": "ಀ-೿", "ml": "ഀ-ൿ"}
-SCREENS = ("#/", "#/front-desk", "#/type", "#/policies", "#/password")
+SCREENS = ("#/", "#/front-desk", "#/type", "#/policies", "#/password", "#/property")
 WIDTHS = (1280, 390)   # a station desktop, a phone
 
 # wraps every drawn text node in the script (not those in a closed <details>) in a span[data-script] (CDP reports fonts only for the text directly inside an
@@ -81,6 +81,13 @@ def read_screen(page, cdp, script):
 def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page, width):
     api, admin, password = core
     demo = load_demo(api.base, admin, password, tag=f"scripts{width}")   # a case with records, so the FIR screen is full
+    # one seized item with a hand-over, so the case property register has a row to draw in every language
+    io = api.token(f"io.scripts{width}", demo["accounts"][f"io.scripts{width}"])
+    item = api.call("POST", f"/api/firs/{demo['fir_id']}/evidence", {"label": "P1", "description": "Fictional iron rod", "kind": "physical",
+                                                                     "seizedAt": "2026-10-30T12:00:00+05:30", "seizureMemo": "Seizure memo SM-9 (fictional)"}, io)[1]
+    assert api.call("POST", f"/api/firs/{demo['fir_id']}/evidence/{item['id']}/custody", {
+        "at": "2026-10-30T13:00:00+05:30", "handedBy": "SI Fictional", "receivedBy": "HC Fictional Store", "location": "Fictional lab",
+        "purpose": "Analysis", "sealIntact": False, "place": "lab"}, io)[0] == 201
     screens = SCREENS + (f"#/firs/{demo['fir_id']}", f"#/complaints/{demo['complaint_id']}")
     fir = f"#/firs/{demo['fir_id']}"
     views = [(sc, None) for sc in screens]
