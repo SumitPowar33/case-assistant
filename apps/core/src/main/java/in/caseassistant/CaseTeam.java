@@ -105,6 +105,12 @@ class CaseTeam {
         if (!isCustodian(userId, firId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the case team can do this.");
     }
 
+    /** SQL test on table "fir" (two ? = user id, user id): {@link #canReadFirSql}, or the "evidence.custody" users of the FIR's station. */
+    String canSeePropertySql() {
+        return "(" + canReadFirSql() + " or exists (select 1 from app_user cu where cu.id = ? and cu.active and cu.role in "
+                + Roles.in(roles.with("evidence.custody")) + " and cu.station_id = fir.station_id))";
+    }
+
     /** SQL test on table "fir" (one ? = user id): the case team, or "fir.read_station" users of the FIR's station. */
     String canReadFirSql() {
         return "exists (select 1 from app_user u join police_station fs on fs.id = fir.station_id"

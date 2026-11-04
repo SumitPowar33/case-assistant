@@ -24,7 +24,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/firs/{firId}")
 class CaseController {
     record Custody(@NotNull OffsetDateTime at, @NotBlank String handedBy, @NotBlank String receivedBy,
-                   @NotBlank String location, @NotBlank String purpose, boolean sealIntact) {}
+                   @NotBlank String location, @NotBlank String purpose, boolean sealIntact,
+                   @Pattern(regexp = "malkhana|lab|court|owner|other") String place) {}
 
     /** BNSS 193(3)(ii): the progress of the investigation told to the informant or victim; no names, only to whom and how. */
     record VictimUpdate(@NotNull LocalDate givenOn, @NotBlank @Pattern(regexp = "informant|victim") String toldTo,
@@ -88,7 +89,7 @@ class CaseController {
     @GetMapping("/evidence/{itemId}/custody")
     List<Map<String, Object>> custody(@PathVariable UUID firId, @PathVariable UUID itemId) {
         return db.sql("""
-                select c.at, c.handed_by, c.received_by, c.location, c.purpose, c.seal_intact
+                select c.at, c.handed_by, c.received_by, c.location, c.purpose, c.seal_intact, c.place
                 from custody_event c join evidence_item e on e.id = c.item_id
                 where e.fir_id = ? and e.id = ? order by c.at, c.id""").params(firId, itemId).query().listOfRows();
     }
@@ -99,9 +100,9 @@ class CaseController {
         boolean exists = db.sql("select exists (select 1 from evidence_item where id = ? and fir_id = ?)")
                 .params(itemId, firId).query(Boolean.class).single();
         if (!exists) return ResponseEntity.notFound().build();
-        db.sql("insert into custody_event (item_id, at, handed_by, received_by, location, purpose, seal_intact) "
-                        + "values (?,?,?,?,?,?,?)")
-                .params(itemId, c.at, c.handedBy, c.receivedBy, c.location, c.purpose, c.sealIntact).update();
+        db.sql("insert into custody_event (item_id, at, handed_by, received_by, location, purpose, seal_intact, place) "
+                        + "values (?,?,?,?,?,?,?,?)")
+                .params(itemId, c.at, c.handedBy, c.receivedBy, c.location, c.purpose, c.sealIntact, c.place).update();
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
