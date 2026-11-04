@@ -229,3 +229,42 @@ test('on a protected case the complaint, its informant and the printable copy ar
   render(<FrontDeskPage />)
   expect(await screen.findByRole('cell', { name: 'Name withheld (BNS 72)' })).toBeTruthy()
 })
+
+test('the list shows a withheld informant as withheld, an unknown kind by its id, signed state, and one overdue step in the singular', async () => {
+  const row = { id: 'c1', received_at: base.received_at, mode: 'oral', informant_name: null, withheld: true, kind: 'new_kind_not_in_pack', signed_at: '2026-10-30T04:50:00Z', outcome: null, steps_overdue: 1 }
+  stub({ '/complaints?open=true': [row, { ...row, id: 'c2', withheld: false, informant_name: 'Fictional Visible', kind: 'other', signed_at: null, steps_overdue: 0 }], '/complaint-kinds': kinds })
+  render(<FrontDeskPage />)
+  const table = await screen.findByRole('table')
+  const rows = within(table).getAllByRole('row')
+  expect(rows[1].textContent).toContain('new_kind_not_in_pack')
+  expect(rows[1].textContent).toContain('1 step overdue')
+  expect(rows[1].textContent).not.toContain('Fictional Visible')
+  expect(rows[2].textContent).toContain('Fictional Visible')
+  expect(rows[2].textContent).toContain('Other information')
+  expect(rows[2].textContent).not.toContain('overdue')
+})
+
+test('each step shows its basis, who did it and the note, or when it is due, or that it is overdue; a step with no time shows no chip', async () => {
+  stub({ '/complaints/c1': { ...base, steps: [
+    { id: 'a', text: 'Step with basis', basis: 'MHA I4C', due_at: '2026-10-30T05:30:00Z', done_at: null, done_by_name: null, note: null, overdue: false },
+    { id: 'b', text: 'Step without time', basis: null, due_at: null, done_at: null, done_by_name: null, note: null, overdue: false },
+    { id: 'c', text: 'Step done without note', basis: null, due_at: null, done_at: '2026-10-30T04:40:00Z', done_by_name: null, note: null, overdue: false },
+    { id: 'd', text: 'Step overdue', basis: null, due_at: '2026-10-30T05:30:00Z', done_at: null, done_by_name: null, note: null, overdue: true },
+  ] } })
+  render(<ComplaintPage id="c1" />)
+  const list = await screen.findByRole('list')
+  const items = within(list).getAllByRole('listitem')
+  expect(items[0].textContent).toContain('(MHA I4C)')
+  expect(items[0].textContent).toMatch(/due by/i)
+  expect(items[1].querySelector('.chip')).toBeNull()
+  expect(items[2].textContent).toMatch(/done/i)
+  expect(items[2].textContent).not.toMatch(/: \S/)
+  expect(items[3].textContent).toMatch(/overdue/i)
+})
+
+test('a complaint in an unknown language and with no spoken read-back shows the language code as it is', async () => {
+  stub({ '/complaints/c1': { ...base, mode: 'oral', text_language: 'zz', steps: [] } })
+  render(<ComplaintPage id="c1" />)
+  expect(await screen.findByText('Fictional caller took money.')).toBeTruthy()
+  expect(document.querySelector('[lang="zz"]') ?? screen.getByText(/zz/, { exact: false })).toBeTruthy()
+})
