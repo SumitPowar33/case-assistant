@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 13i (session 71, started 23:40 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -89,6 +88,7 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
+Done in session 71 (5 Nov, 23:40 IST scheduled run): item 13i, Court and trial tracker (V45).
 Done in session 70 (5 Nov, scheduled run): item 13h, Forensic and medical requests (V44).
 Done in session 69 (5 Nov, 02:10 IST scheduled run): item 13g, Case property register (without QR); two red tests of the baseline fixed; more tests for older code (gateway 96 to 99%, Dashboard, FrontDesk, Notices).
 Done in session 66 (3 Nov, scheduled run): item 13d, the final report (draft, approve, sign; V41), without the AI drafting.
@@ -112,7 +112,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    f. DONE (session 68): Money trail (board 8): transfers and bank holds typed from bank replies, a table of the accused with money link and second link (V42). Still to build for it: the flow-by-layer picture, "not traced yet" (needs the amount lost), release of a hold, same accounts in other cases (a cross-case search, see the question below).
    g. DONE (session 69, without QR): Case property (board 15): register of seized physical items with where each is now, hand-over log and form (`#/property`, V43). Still to build for it: QR label and scanning, "due in court this week", "can be released or disposed" (need court dates and case outcome per item).
    h. DONE (session 70, without MedLEaPR and queue positions): Forensic and medical requests (board 16): requests to a lab or hospital, steps until the report is in, reminder-due mark after 30 days (`#/expert`, V44). Still to build for it: the reminder timings from the state pack (30 days is a constant now), "report missing 15 days before the chargesheet date: SHO is told", the report joining the readiness check, a drafted reminder letter, sample custody tied to the property register.
-   i. Court and trial tracker (board 12): hearings, witnesses summoned, victim updates after filing.
+   i. DONE (session 71, without ICJS feed, AI prosecutor brief and victim-update button): Court and trial tracker (board 12): court dates and witness summons (`#/court`, V45). Still to build for it: the ICJS feed, the prosecutor brief (AI), a victim-update button on this screen (the update is on the FIR's own part), the hearing date joining the deadlines and the Dashboard, a reminder for a summons not served.
    j. Old law to new law finder (board 18): IPC/CrPC/IEA to BNS/BNSS/BSA table, data in the national pack.
    k. Ask the case file (board 19): through the AI gateway, answers only from the file with sources; refuses guilt questions.
    l. Audit log (board 20): one screen joining protected reads, AI decisions, admin actions and overrides.
@@ -124,6 +124,18 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 5 Nov 2026, session 71 (23:40 IST scheduled run, Sumit away)
+- Environment: fresh container; started PostgreSQL, created role `caseapp` and databases `caseapp_test` and `caseapp_dev`, `npm ci`, gateway requirements, psycopg and playwright installed (Maven Central was reachable). The `DATABASE_URL` for Java must be `jdbc:postgresql://localhost/caseapp_test`, for the Python database tests `postgresql://caseapp:caseapp@localhost/caseapp_test`; `scripts/test-all.sh` uses one variable for both, so run `mvn verify` and the Python suites with their own value. Two baseline runs started by mistake at the same time collided on the database (`pgcrypto` already exists); never run two at once.
+- Item 13i, **Court and trial tracker** (board 12). Migration V45: `court_event` (kind chargesheet_filed, cognizance, copies_given, charge_framing, prosecution_evidence, arguments, judgment, other; date past or coming; optional court, court case number, note) and `court_summons` (witness, optional role, status sent/served/not_served/appeared/excused, date, note); both kept as written. `CourtController`: `GET /api/court` (cases the caller may open that have a court date: newest court and case number, next date = earliest date from today (IST), number of events, witnesses whose newest step is sent or not served; counts of coming and no coming date), `GET /api/firs/{id}/court` (timeline and the newest summons step per witness, case team only), `POST .../court-events` (not before the FIR was registered; future dates allowed) and `POST .../court-summons` (not in the future), case team only. A one-letter court or role is a 400. Web: `Court.tsx` at `#/court` (menu link for accounts of a station), list, timeline, summons table, two forms, "start a court record" form; 35 new texts in all 11 languages (drafts, like the others). Nothing here judges a witness, an accused or the case.
+- Tests: `CourtApiTest` (5), `db-tests/test_court_tracker.py` (2), `Court.test.tsx` (6), axe checks (list and with a case picked), App test for the menu link, browser test `tests/e2e/test_court.py`, the Indian-scripts rendering test now draws `#/court` in all 10 languages at both widths, `MigrationTest` 45. `CourtController` 0 lines and 0 of 14 branches missed.
+- Suites at the end: repo rules, packs, xlit, gateway, web (tests, gate, lint, build), database rules (170), core `mvn verify` with its gates and e2e (27 passed, 3 skipped) all green. `tests/e2e/test_phone.py` failed twice when run on its own (also on the untouched code, the `::before` card label read as empty) but passed in the full e2e run; it looks order- or timing-dependent, not caused by this session.
+- Skipped / not checked: screenshot comparison with board 12 (not taken); the ICJS feed and AI prosecutor brief; the next court date joining the Dashboard or the deadlines; a reminder for unserved summons; the exact coverage percentages were not re-read this session (all gates passed).
+- Risk: witness names, roles and notes are typed by the officer and can name a protected victim; they are not masked or logged in the protected-read log (same as the property register and forensic requests). Worth deciding before real data.
+- Next: 13j Old law to new law finder (board 18), then 13k Ask the case file.
+Questions for Sumit:
+1. Should a hearing date appear on the Dashboard and as a deadline of the case (so the SHO sees it with the 24-hour and 60/90-day limits)?
+2. Should witness names on this screen be masked for a protected victim (a witness who is the victim), as the people list does?
 
 ## 5 Nov 2026, session 70 (scheduled run, Sumit away)
 - Baseline (fresh container; PostgreSQL started, role `caseapp` and databases created, `npm ci`, gateway requirements and psycopg/playwright installed): all 8 PASS. The repository was attached already; the checkout was `setup/seed` from origin.
