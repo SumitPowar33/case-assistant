@@ -277,3 +277,20 @@ test('the Forensic and medical link is for accounts of a station and opens the r
   render(<App />)
   expect(await screen.findByRole('heading', { name: 'Forensic and medical requests' })).toBeTruthy()
 })
+
+test('the Court and trial link is for accounts of a station and opens the tracker at #/court', async () => {
+  mockApi()
+  Object.assign(routes, { '/api/court': { cases: [], counts: {} } })
+  const nav = () => within(screen.getByRole('navigation', { name: 'Main' }))
+  const { unmount } = render(<App />)
+  expect(nav().getByRole('link', { name: 'Court and trial' }).getAttribute('href')).toBe('#/court')
+  unmount()
+  setSession({ ...io, user: { ...io.user, station_id: null } })
+  const second = render(<App />)
+  expect(nav().queryByRole('link', { name: 'Court and trial' })).toBeNull()
+  second.unmount()
+  setSession(io)
+  window.location.hash = '#/court'
+  render(<App />)
+  expect(await screen.findByRole('heading', { name: 'Court and trial tracker' })).toBeTruthy()
+})
