@@ -42,7 +42,7 @@ committed** (CLAUDE.md, "Screens"). Where the app differs on purpose, the differ
 | 13 | Front desk: voice complaint, golden hour | `#/front-desk`, `#/complaints/{id}` | restyled |
 | 14 | Case diary (BNSS 192) | FIR part "Case diary" (`#/firs/{id}/diary`, V39) | built 2 Nov (session 59) |
 | 15 | Case property with QR custody | custody inside Evidence | own screen to build |
-| 16 | Forensic and medical requests | — | to build |
+| 16 | Forensic and medical requests | `#/expert` | built (session 70) |
 | 17 | Type in any language | `#/type` | restyled |
 | 18 | Old law to new law finder | — | to build |
 | 19 | Ask the case file | — | to build (through the AI gateway) |

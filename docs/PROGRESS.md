@@ -88,6 +88,7 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
+Done in session 70 (5 Nov, scheduled run): item 13h, Forensic and medical requests (V44).
 Done in session 69 (5 Nov, 02:10 IST scheduled run): item 13g, Case property register (without QR); two red tests of the baseline fixed; more tests for older code (gateway 96 to 99%, Dashboard, FrontDesk, Notices).
 Done in session 66 (3 Nov, scheduled run): item 13d, the final report (draft, approve, sign; V41), without the AI drafting.
 Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens plan (docs/AI-AND-SCREENS-PLAN.md, items 14 to 18), centred sign-in, the court print format with the informant's copy.
@@ -109,7 +110,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    e. DONE (session 67, without the AI briefing A9): Supervisor review (board 11), `#/supervisor`, `GET /api/supervisor`. The approve or return step stays on the Final report part (one click from the row).
    f. DONE (session 68): Money trail (board 8): transfers and bank holds typed from bank replies, a table of the accused with money link and second link (V42). Still to build for it: the flow-by-layer picture, "not traced yet" (needs the amount lost), release of a hold, same accounts in other cases (a cross-case search, see the question below).
    g. DONE (session 69, without QR): Case property (board 15): register of seized physical items with where each is now, hand-over log and form (`#/property`, V43). Still to build for it: QR label and scanning, "due in court this week", "can be released or disposed" (need court dates and case outcome per item).
-   h. Forensic and medical requests (board 16): requests, sample custody, report received.
+   h. DONE (session 70, without MedLEaPR and queue positions): Forensic and medical requests (board 16): requests to a lab or hospital, steps until the report is in, reminder-due mark after 30 days (`#/expert`, V44). Still to build for it: the reminder timings from the state pack (30 days is a constant now), "report missing 15 days before the chargesheet date: SHO is told", the report joining the readiness check, a drafted reminder letter, sample custody tied to the property register.
    i. Court and trial tracker (board 12): hearings, witnesses summoned, victim updates after filing.
    j. Old law to new law finder (board 18): IPC/CrPC/IEA to BNS/BNSS/BSA table, data in the national pack.
    k. Ask the case file (board 19): through the AI gateway, answers only from the file with sources; refuses guilt questions.
@@ -122,6 +123,18 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 5 Nov 2026, session 70 (scheduled run, Sumit away)
+- Baseline (fresh container; PostgreSQL started, role `caseapp` and databases created, `npm ci`, gateway requirements and psycopg/playwright installed): all 8 PASS. The repository was attached already; the checkout was `setup/seed` from origin.
+- Item 13h, **Forensic and medical requests** (board 16). Migration V44: `expert_request` (case, kind forensic/medical, what is asked, sent to, sent on, optional evidence item of the same case) and `expert_request_step` (sent, at_lab, sample_sent, report_received, reminder_sent, with date and note); both kept as written (no change, no delete). `ExpertRequestController`: `GET /api/expert-requests` (the requests of the cases the caller may open, by `canReadFirSql`; newest step as status, days waiting, `reminder_due` after 30 days with no report, counts), `POST /api/firs/{id}/expert-requests` and `POST .../{rid}/steps` (case team only; the date a real date not in the future and not before the request was sent; nothing after the report, 409; an evidence item of another case a 400), `GET .../{rid}/steps`. A reminder step does not change the status. Nothing here judges a report or a person, no score. Screen `#/expert` (`ExpertRequests.tsx`, menu link "Forensic and medical" for accounts of a station): counts, the table, steps and the form of the request picked, the form to raise a request on one of the newest 100 cases. 30 new texts in 11 languages (drafts).
+- Tests: `ExpertRequestApiTest` (6), `db-tests/test_expert_requests.py` (3), `ExpertRequests.test.tsx` (8), axe checks (list and with a request picked), App test for the menu link, browser test `tests/e2e/test_expert_requests.py`, the Indian-scripts rendering test now draws `#/expert` (one request, late) in all 10 languages at both widths, `MigrationTest` 44. `ExpertRequestController` 0 lines and 0 of 30 branches missed.
+- `scripts/test-all.sh` at the end: all 8 PASS. Coverage: core 98.02% lines / 93.20% branches (gate 96/90), web 99.96% statements / 95.69% branches / 97.84% functions (gate 97/89/95), gateway 99% (gate 97). No gate rose 2 points, none changed.
+- Skipped: the board's MedLEaPR link and lab queue positions (no such interface); reminder timings from the state pack and the "SHO is told 15 days before the chargesheet date" rule (30 days is a constant, `REMINDER_DAYS`); the report joining the readiness check; screenshot comparison with board 16; tests for older code (the session went to the item and its gates; lowest spots are still those listed in session 69).
+- Risk: the "what is asked" and "sent to" texts are typed by the officer and can name a protected victim; they are not masked or logged in the protected-read log (same as the property register and evidence list).
+- Next: 13i Court and trial tracker (board 12), then 13j Old law to new law finder (board 18).
+Questions for Sumit:
+1. Should the reminder wait be set per state in the pack (now 30 days for everyone, as on the board)?
+2. Should an SHO be told when a report is still missing 15 days before the chargesheet date (the board's rule)? It needs the chargesheet date of each case, which the app has only as a deadline.
 
 ## 5 Nov 2026, session 69 (scheduled run, last of the night, Sumit away)
 ### Tonight in short (sessions 67 to 69)
