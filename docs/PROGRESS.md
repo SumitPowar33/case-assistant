@@ -88,6 +88,7 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
+Done in session 72 (5 Nov, last scheduled run of the night): item 13j, Old law to new law finder (`#/laws`).
 Done in session 71 (5 Nov, 23:40 IST scheduled run): item 13i, Court and trial tracker (V45).
 Done in session 70 (5 Nov, scheduled run): item 13h, Forensic and medical requests (V44).
 Done in session 69 (5 Nov, 02:10 IST scheduled run): item 13g, Case property register (without QR); two red tests of the baseline fixed; more tests for older code (gateway 96 to 99%, Dashboard, FrontDesk, Notices).
@@ -113,7 +114,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    g. DONE (session 69, without QR): Case property (board 15): register of seized physical items with where each is now, hand-over log and form (`#/property`, V43). Still to build for it: QR label and scanning, "due in court this week", "can be released or disposed" (need court dates and case outcome per item).
    h. DONE (session 70, without MedLEaPR and queue positions): Forensic and medical requests (board 16): requests to a lab or hospital, steps until the report is in, reminder-due mark after 30 days (`#/expert`, V44). Still to build for it: the reminder timings from the state pack (30 days is a constant now), "report missing 15 days before the chargesheet date: SHO is told", the report joining the readiness check, a drafted reminder letter, sample custody tied to the property register.
    i. DONE (session 71, without ICJS feed, AI prosecutor brief and victim-update button): Court and trial tracker (board 12): court dates and witness summons (`#/court`, V45). Still to build for it: the ICJS feed, the prosecutor brief (AI), a victim-update button on this screen (the update is on the FIR's own part), the hearing date joining the deadlines and the Dashboard, a reminder for a summons not served.
-   j. Old law to new law finder (board 18): IPC/CrPC/IEA to BNS/BNSS/BSA table, data in the national pack.
+   j. DONE (session 72, without the AI explanation): Old law to new law finder (board 18), `#/laws`, table in the national pack (57 sections, draft). Still to build for it: the AI explanation through the gateway (A8), a reviewer.
    k. Ask the case file (board 19): through the AI gateway, answers only from the file with sources; refuses guilt questions.
    l. Audit log (board 20): one screen joining protected reads, AI decisions, admin actions and overrides.
    m. Field capture on a tablet (board 7) and State setup and approvals (board 21).
@@ -124,6 +125,25 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 5 Nov 2026, session 72 (scheduled run, last of the night, Sumit away)
+- Baseline (fresh container; PostgreSQL started, role `caseapp` and databases created, `npm ci`, gateway requirements, psycopg and playwright installed): all 8 suites PASS before any change. The checkout was `setup/seed` from origin (the container started on `master`).
+- Item 13j, **Old law to new law finder** (board 18). `packs/IN/law-concordance.json` now has one `sections` list (law IPC, CrPC or IEA; old section; new section or null; what it covers; optional `partial`): 57 sections, still a labelled draft (it replaces the old `IPC` map; `FirImport` reads the IPC rows of `sections`, so the importer's hint is unchanged). `LawFinder` (`GET /api/law-finder`, any signed-in officer; checks the table at start-up: known law, section number form, no duplicate, a description) gives status, note and entries. Screen `#/laws` (`LawFinder.tsx`, menu link under Tools for every account): search by section number or word, one button per law (IPC → BNS, CrPC → BNSS, IEA → BSA), "partly matches" chip, the draft warning, and the "which law applies" text of the board; 15 new screen texts in 11 languages (the 10 Indian ones are drafts like the rest).
+- Tests: `LawFinderTest` (2), `LawFinderApiTest` (1), `packs/tests` law table test widened (form, no duplicates, all three laws, sections the importer relies on), `LawFinder.test.tsx` (5), App test for the menu link, axe check, browser test `tests/e2e/test_law_finder.py`, the Indian-scripts rendering test now draws `#/laws` in all 10 languages at both widths. `LawFinder` 0 lines and 0 of 24 branches missed.
+- `scripts/test-all.sh` at the end (run as its suites, because the core needs a JDBC URL and the Python suites a postgresql URL, see session 71): repo rules PASS, packs PASS, xlit PASS, ai-gateway PASS (99%), web PASS (tests, gate, lint, build), database rules PASS (170), core `mvn verify` PASS with its gates, e2e PASS (28 passed, 3 skipped). Coverage: core 98.07% lines / 93.36% branches (gate 96/90), web 99.96% statements / 95.84% branches / 97.96% functions (gate 97/89/95), gateway 99% (gate 97). No gate rose 2 points since the last entry, none changed.
+- Older code: looked at the lowest-covered files. The core's "missed" lines in `RecordsController` (the `badRequest(...)` refusals) are not real gaps: JaCoCo does not count a line whose call never returns, and the tests for them exist; the other misses are `IOException` catch blocks. Web leftovers are default-value branches (`rows?.length ?? 0` in FirList, ReadsPage, TypingField, typing.ts). No test added for them.
+- Skipped / not checked: the AI explanation of a section (plan A8: the AI only explains, through the gateway); screenshot comparison with board 18; a state module's own rows; the "pack v3.2 · checked" line of the board (there is no pack version of checks yet, the screen says draft instead). The section table was written from knowledge of the Acts, not copied from the gazette: a prosecutor must check every row before the draft label is removed.
+- Risk: a wrong row in the table could point an officer to the wrong new section; it is labelled a draft and a hint, nothing is converted, and the screen tells the officer to read the bare act.
+
+### Tonight in short (sessions 70 to 72)
+- Session 70: Forensic and medical requests (V44, `#/expert`). Session 71: Court and trial tracker (V45, `#/court`). Session 72: Old law to new law finder (`#/laws`, no migration).
+- Last run of the night (session 72, scripts as above): all suites PASS, core 98.07 / 93.36, web 99.96 / 95.84 / 97.96, gateway 99.
+- Next: 13k Ask the case file (board 19, through the AI gateway, sources only, refuses guilt questions); then 13l Audit log, 13m Field capture and State setup; the AI explanation for the law finder (A8) goes with the AI items.
+- Blocked: nothing.
+Questions for Sumit:
+1. Who can check the old-to-new law table (a prosecutor or the legal cell)? Until then it stays a draft.
+2. Should a state module be allowed to add its own rows (for example a state Act), as it can for the glossary?
+3. From session 71, still open: should a hearing date appear on the Dashboard and as a deadline, and should witness names be masked for a protected victim?
 
 ## 5 Nov 2026, session 71 (23:40 IST scheduled run, Sumit away)
 - Environment: fresh container; started PostgreSQL, created role `caseapp` and databases `caseapp_test` and `caseapp_dev`, `npm ci`, gateway requirements, psycopg and playwright installed (Maven Central was reachable). The `DATABASE_URL` for Java must be `jdbc:postgresql://localhost/caseapp_test`, for the Python database tests `postgresql://caseapp:caseapp@localhost/caseapp_test`; `scripts/test-all.sh` uses one variable for both, so run `mvn verify` and the Python suites with their own value. Two baseline runs started by mistake at the same time collided on the database (`pgcrypto` already exists); never run two at once.
