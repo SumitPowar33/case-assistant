@@ -15,6 +15,7 @@ import MoneyTrail from './MoneyTrail'
 import Property from './Property'
 import ExpertRequests from './ExpertRequests'
 import Court from './Court'
+import LawFinder from './LawFinder'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -36,6 +37,7 @@ const data: Record<string, unknown> = {
     outcome: null, outcome_reason: null, fir_id: null, fir_no: null, fir_year: null, sign_by: null, enquiry_due: null, steps: [] },
   '/stations': [{ id: 's1', district: 'Fictional District', name: 'Fictional PS' }],
   '/protected-reads': [{ id: 'r1', at: '2026-11-01T04:30:00Z', what: 'people', fir_id: 'f1', fir_ref: '2026/9', complaint_id: null, reader_name: 'SI Fictional', reader_rank: 'SI', reader_username: 'si.fictional' }],
+  '/law-finder': { status: 'draft', note: '', entries: [{ law: 'IPC', newLaw: 'BNS', from: '302', to: '103', what: 'Murder: punishment', partial: false }, { law: 'IEA', newLaw: 'BSA', from: '65B', to: '63', what: 'Electronic records', partial: true }] },
   '/glossary': { status: 'draft', entries: [{ id: 'remand', term: 'Remand', law: 'BNSS 187', meaning: 'Custody ordered by a Magistrate.', terms: { hi: 'रिमांड' } }] },
 }
 beforeEach(() => {
@@ -62,6 +64,7 @@ test.each([
   ['case property', () => <Property />, '9/P-01'],
   ['forensic and medical requests', () => <ExpertRequests />, 'Phone extraction 9'],
   ['court and trial tracker', () => <Court />, 'CC 9/2026'],
+  ['old law to new law finder', () => <LawFinder />, 'IPC 302'],
 ])('the %s screen has no accessibility faults axe can see', async (_name, screenOf, ready) => {
   render(screenOf())
   await screen.findAllByText(new RegExp(ready.replace(/[()/.]/g, '\\$&')))

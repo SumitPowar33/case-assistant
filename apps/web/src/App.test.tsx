@@ -294,3 +294,16 @@ test('the Court and trial link is for accounts of a station and opens the tracke
   render(<App />)
   expect(await screen.findByRole('heading', { name: 'Court and trial tracker' })).toBeTruthy()
 })
+
+test('the Old to new law link is for every signed-in account and opens the finder at #/laws', async () => {
+  mockApi()
+  Object.assign(routes, { '/api/law-finder': { status: 'draft', note: '', entries: [] } })
+  setSession({ ...io, user: { ...io.user, station_id: null } })
+  window.location.hash = '#/'
+  const { unmount } = render(<App />)
+  expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: 'Old to new law' }).getAttribute('href')).toBe('#/laws')
+  unmount()
+  window.location.hash = '#/laws'
+  render(<App />)
+  expect(await screen.findByRole('heading', { name: 'Old law to new law' })).toBeTruthy()
+})

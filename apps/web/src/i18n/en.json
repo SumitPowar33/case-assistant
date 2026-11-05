@@ -973,5 +973,20 @@
  "courtSummons.served": "Served",
  "courtSummons.not_served": "Not served (not found or moved)",
  "courtSummons.appeared": "Appeared in court",
- "courtSummons.excused": "Excused by the court"
+ "courtSummons.excused": "Excused by the court",
+ "nav.laws": "Old to new law",
+ "laws.title": "Old law to new law",
+ "laws.intro": "Match an IPC, CrPC or Evidence Act section to the BNS, BNSS or BSA section that took its place. This is a table from the national pack, not a converter: nothing in a case is changed by it.",
+ "laws.draft": "DRAFT: a prosecutor has not checked this table yet. Read the bare act before charging.",
+ "laws.search": "Section number or offence",
+ "laws.all": "All",
+ "laws.count": "{n} sections shown",
+ "laws.partialNote": "Sections marked \"partly matches\" do not match in full. Read the bare act before charging.",
+ "laws.colOld": "Old section",
+ "laws.colNew": "New section",
+ "laws.colWhat": "What it covers",
+ "laws.none": "Nothing matches. Try the section number alone, or a plain word such as theft.",
+ "laws.noNew": "No section takes its place",
+ "laws.partial": "partly matches",
+ "laws.which": "Which law applies? An offence committed before 1 July 2024 is charged under the IPC; on or after 1 July 2024, under the BNS. A case registered from 1 July 2024 follows the BNSS and BSA for procedure and evidence. If unsure for an older case, ask the prosecutor."
 }
