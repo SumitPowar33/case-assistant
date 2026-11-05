@@ -260,3 +260,20 @@ test('the Case property link is for accounts of a station and opens the register
   render(<App />)
   expect(await screen.findByRole('heading', { name: 'Case property (malkhana)' })).toBeTruthy()
 })
+
+test('the Forensic and medical link is for accounts of a station and opens the requests at #/expert', async () => {
+  mockApi()
+  Object.assign(routes, { '/api/expert-requests': { requests: [], counts: {} } })
+  const nav = () => within(screen.getByRole('navigation', { name: 'Main' }))
+  const { unmount } = render(<App />)
+  expect(nav().getByRole('link', { name: 'Forensic and medical' }).getAttribute('href')).toBe('#/expert')
+  unmount()
+  setSession({ ...io, user: { ...io.user, station_id: null } })
+  const second = render(<App />)
+  expect(nav().queryByRole('link', { name: 'Forensic and medical' })).toBeNull()
+  second.unmount()
+  setSession(io)
+  window.location.hash = '#/expert'
+  render(<App />)
+  expect(await screen.findByRole('heading', { name: 'Forensic and medical requests' })).toBeTruthy()
+})
