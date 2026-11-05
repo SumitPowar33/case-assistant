@@ -38,7 +38,7 @@ committed** (CLAUDE.md, "Screens"). Where the app differs on purpose, the differ
 | 9 | Readiness check | FIR part "Readiness check" | restyled with status chips (session 59) |
 | 10 | Draft chargesheet and sign | FIR part "Final report": draft, submit, approve or return, sign (V41); AI drafting and print to build | partly built |
 | 11 | Supervisor review | `#/supervisor` (permission `chargesheet.approve`): open cases by nearest deadline, open gaps, final report waiting; AI briefing (A9) to build | partly built (session 67) |
-| 12 | Court and trial tracker | — | to build |
+| 12 | Court and trial tracker | `#/court` (`Court.tsx`) | built (session 71): dates and witness summons; no ICJS feed, prosecutor brief or victim-update button |
 | 13 | Front desk: voice complaint, golden hour | `#/front-desk`, `#/complaints/{id}` | restyled |
 | 14 | Case diary (BNSS 192) | FIR part "Case diary" (`#/firs/{id}/diary`, V39) | built 2 Nov (session 59) |
 | 15 | Case property with QR custody | custody inside Evidence | own screen to build |
