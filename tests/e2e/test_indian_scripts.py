@@ -21,7 +21,7 @@ from demo_case import load_demo  # noqa: E402
 # the scripts of the 10 languages of the national module (Unicode blocks)
 SCRIPTS = {"hi": "ऀ-ॿ", "mr": "ऀ-ॿ", "bn": "ঀ-৿", "pa": "਀-੿", "gu": "઀-૿",
            "or": "଀-୿", "ta": "஀-௿", "te": "ఀ-౿", "kn": "ಀ-೿", "ml": "ഀ-ൿ"}
-SCREENS = ("#/", "#/front-desk", "#/type", "#/policies", "#/password", "#/property")
+SCREENS = ("#/", "#/front-desk", "#/type", "#/policies", "#/password", "#/property", "#/expert")
 WIDTHS = (1280, 390)   # a station desktop, a phone
 
 # wraps every drawn text node in the script (not those in a closed <details>) in a span[data-script] (CDP reports fonts only for the text directly inside an
@@ -88,6 +88,9 @@ def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page, wi
     assert api.call("POST", f"/api/firs/{demo['fir_id']}/evidence/{item['id']}/custody", {
         "at": "2026-10-30T13:00:00+05:30", "handedBy": "SI Fictional", "receivedBy": "HC Fictional Store", "location": "Fictional lab",
         "purpose": "Analysis", "sealIntact": False, "place": "lab"}, io)[0] == 201
+    # and one lab request with a late reminder mark, so the requests screen has a row too
+    assert api.call("POST", f"/api/firs/{demo['fir_id']}/expert-requests", {
+        "kind": "forensic", "subject": "Fictional handwriting comparison", "sentTo": "Fictional examiner", "date": "2026-08-01"}, io)[0] == 201
     screens = SCREENS + (f"#/firs/{demo['fir_id']}", f"#/complaints/{demo['complaint_id']}")
     fir = f"#/firs/{demo['fir_id']}"
     views = [(sc, None) for sc in screens]
