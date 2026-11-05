@@ -59,7 +59,9 @@ class FirImport {
             }
         for (var res : resolver.getResources("classpath*:packs/*/law-concordance.json"))
             try (InputStream in = res.getInputStream()) {
-                json.readTree(in).path("IPC").fields().forEachRemaining(e -> ipcToBns.put(e.getKey(), e.getValue().asText()));
+                json.readTree(in).path("sections").forEach(e -> {
+                    if (e.path("law").asText().equals("IPC") && !e.path("new").isNull()) ipcToBns.put(e.path("old").asText(), e.path("new").asText());
+                });
             }
     }
 

@@ -1,6 +1,6 @@
 # Loading existing data (integration screen)
 
-Decided 28 Oct 2026 after research. Screen: **Load data** (`#/import`). Code: `ImportController`, `FirImport`, `ArrestImport`, `ChargesheetImport`, `EvidenceImport`, `NoticeImport`, `Csv`, migrations V22, V24, V25, V28, V29, `packs/*/import-profiles`, `packs/*/law-concordance.json`.
+Decided 28 Oct 2026 after research. Screen: **Load data** (`#/import`). Code: `ImportController`, `FirImport`, `ArrestImport`, `ChargesheetImport`, `EvidenceImport`, `NoticeImport`, `Csv`, migrations V22, V24, V25, V28, V29, `packs/*/import-profiles`, `packs/*/law-concordance.json` (also read by the law finder, `LawFinder`, `#/laws`).
 
 ## Why a file first
 CCTNS has no public data API or published schema; each state runs its own system (for example Tamil Nadu's CIPRUS on PostgreSQL), and ICJS links CCTNS with e-Courts and e-Prisons without public details. So the only route that works for every state today is a **CSV export** that the department prepares. A direct connector for one state can be added later as another profile or a small bridge once a data agreement and a real schema exist.

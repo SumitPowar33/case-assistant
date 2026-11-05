@@ -155,10 +155,22 @@ def test_import_profiles_name_known_fields_and_do_not_share_aliases():
 
 
 def test_law_concordance_is_a_labelled_draft_hint():
+    section = r"\d+[A-Z]?(\(\d+\))?"
     for path in ROOT.glob("*/law-concordance.json"):
         t = json.loads(path.read_text(encoding="utf-8"))
-        assert t["status"] == "draft" and "Advisory" in t["note"]
-        assert t["IPC"] and all(re.fullmatch(r"\d+[A-Z]?", k) and re.fullmatch(r"\d+(\(\d+\))?", v) for k, v in t["IPC"].items())
+        assert t["status"] == "draft" and "Advisory" in t["note"] and t["module"] == path.parent.name
+        assert t["sections"]
+        seen = set()
+        for e in t["sections"]:
+            assert e["law"] in {"IPC", "CrPC", "IEA"} and re.fullmatch(section, e["old"]) and e["what"].strip()
+            assert e["new"] is None or re.fullmatch(section, e["new"]), e
+            assert set(e) <= {"law", "old", "new", "what", "partial"} and e.get("partial", True) is True
+            assert (e["law"], e["old"]) not in seen, f"{e['law']} {e['old']} is listed twice"
+            seen.add((e["law"], e["old"]))
+        assert {e["law"] for e in t["sections"]} == {"IPC", "CrPC", "IEA"}, "all three old laws are in the table"
+        # the sections the importer and the first demo case rely on
+        ipc = {e["old"]: e["new"] for e in t["sections"] if e["law"] == "IPC"}
+        assert ipc["302"] == "103" and ipc["420"] == "318" and ipc["498A"] == "85"
 
 
 def test_only_supervising_roles_and_the_state_admin_may_load_records():
