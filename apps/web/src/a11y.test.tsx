@@ -10,6 +10,7 @@ import FirDetail from './FirDetail'
 import { ComplaintPage, FrontDeskPage } from './FrontDesk'
 import TypePage from './TypePage'
 import AuditPage from './AuditPage'
+import StatePage from './StatePage'
 import ReadsPage from './ReadsPage'
 import Supervisor from './Supervisor'
 import MoneyTrail from './MoneyTrail'
@@ -38,6 +39,9 @@ const data: Record<string, unknown> = {
     withheld: false, text_original: 'Fictional words.', text_language: 'en', recorded_by_name: 'HC Fictional', read_back_language: null, signed_at: null, signed_by_name: null,
     outcome: null, outcome_reason: null, fir_id: null, fir_no: null, fir_year: null, sign_by: null, enquiry_due: null, steps: [] },
   '/stations': [{ id: 's1', district: 'Fictional District', name: 'Fictional PS' }],
+  '/pack-changes': { pack: { code: 'IN', name: 'Fictional National', version: '1', languages: ['en', 'hi'], status: 'draft' }, can_propose: true, changes: [
+    { id: 'p1', title: 'Fictional playbook v1.5', body: 'Fictional text of the change.', tested_note: 'Fictional test', drafted_at: '2026-11-01T04:30:00Z', drafted_by_name: 'Fictional Officer', drafted_by_rank: 'SP',
+      decision: null, decision_note: null, decided_at: null, decided_by_name: null, decided_by_rank: null, can_decide: true }] },
   '/audit-log': [{ kind: 'admin_action', at: '2026-11-01T04:30:00Z', who_name: 'Fictional Admin', who_rank: 'SP', what: 'user_disabled', reason: 'Fictional reason given', fir_id: null, fir_ref: null }],
   '/protected-reads': [{ id: 'r1', at: '2026-11-01T04:30:00Z', what: 'people', fir_id: 'f1', fir_ref: '2026/9', complaint_id: null, reader_name: 'SI Fictional', reader_rank: 'SI', reader_username: 'si.fictional' }],
   '/law-finder': { status: 'draft', note: '', entries: [{ law: 'IPC', newLaw: 'BNS', from: '302', to: '103', what: 'Murder: punishment', partial: false }, { law: 'IEA', newLaw: 'BSA', from: '65B', to: '63', what: 'Electronic records', partial: true }] },
@@ -63,6 +67,7 @@ test.each([
   ['language tool and glossary', () => <TypePage />, 'BNSS 187'],
   ['protected reads', () => <ReadsPage />, 'People of the case'],
   ['audit log', () => <AuditPage />, 'Admin change'],
+  ['state setup', () => <StatePage />, 'Fictional playbook v1.5'],
   ['supervisor review', () => <Supervisor />, 'Open cases by nearest deadline'],
   ['money trail', () => <MoneyTrail firId="f1" />, 'Record a transfer'],
   ['case property', () => <Property />, '9/P-01'],

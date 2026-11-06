@@ -10,6 +10,7 @@ import AdminPage from './AdminPage'
 import ImportPage from './ImportPage'
 import PoliciesPage from './PoliciesPage'
 import AuditPage from './AuditPage'
+import StatePage from './StatePage'
 import ReadsPage from './ReadsPage'
 import Supervisor from './Supervisor'
 import Property from './Property'
@@ -39,6 +40,7 @@ export default function App() {
   const admin = session?.user.permissions?.includes('admin.manage') ?? false
   const supervisor = session?.user.permissions?.includes('chargesheet.approve') ?? false
   const auditor = session?.user.permissions?.includes('audit.read_protected') ?? false
+  const packWork = (session?.user.permissions?.includes('pack.propose') || session?.user.permissions?.includes('pack.approve')) ?? false
   // the signed-in user's screen language (kept on the server); before sign-in, the one chosen on this page
   const [chosen, setChosen] = useState('en')
   const [langError, setLangError] = useState('')
@@ -81,6 +83,7 @@ export default function App() {
           {supervisor && link('#/supervisor', t('nav.supervisor'))}
           {auditor && link('#/reads', t('nav.reads'))}
           {auditor && link('#/audit', t('nav.audit'))}
+          {packWork && link('#/state-setup', t('nav.state'))}
           <div className="nav-group">{t('nav.groupTools')}</div>
           {link('#/type', t('nav.type'))}
           {link('#/laws', t('nav.laws'))}
@@ -112,7 +115,7 @@ export default function App() {
       <div className="topstrip">
         <span className="chip demo-chip">{t('app.tagline')}</span>
       </div>
-      <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} only={firPart} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : hash === '#/audit' ? <AuditPage /> : hash === '#/supervisor' ? <Supervisor /> : hash === '#/property' ? <Property /> : hash === '#/expert' ? <ExpertRequests /> : hash === '#/court' ? <Court /> : hash === '#/laws' ? <LawFinder /> : hash === '#/firs' ? <FirList /> : <Dashboard />}</main>
+      <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} only={firPart} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : hash === '#/audit' ? <AuditPage /> : hash === '#/state-setup' ? <StatePage /> : hash === '#/supervisor' ? <Supervisor /> : hash === '#/property' ? <Property /> : hash === '#/expert' ? <ExpertRequests /> : hash === '#/court' ? <Court /> : hash === '#/laws' ? <LawFinder /> : hash === '#/firs' ? <FirList /> : <Dashboard />}</main>
     </TypingContext.Provider>
     </ScreenLangContext.Provider>
   )

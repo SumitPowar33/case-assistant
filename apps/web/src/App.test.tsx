@@ -162,6 +162,23 @@ test('the Protected reads link follows the permission audit.read_protected, not 
   expect(await screen.findByRole('heading', { name: 'Who read protected victim details' })).toBeTruthy()
 })
 
+test('the State setup link follows the permissions pack.propose and pack.approve, not the role name', async () => {
+  mockApi()
+  Object.assign(routes, { '/api/pack-changes': { pack: { code: 'IN', name: 'National', version: '1', languages: ['en'], status: 'draft' }, changes: [], can_propose: false } })
+  const nav = () => within(screen.getByRole('navigation', { name: 'Main' }))
+  const { unmount } = render(<App />)
+  expect(nav().queryByRole('link', { name: 'State setup' })).toBeNull()
+  unmount()
+  for (const permission of ['pack.propose', 'pack.approve']) {
+    setSession({ ...io, user: { ...io.user, role: 'nodal_cell', permissions: [permission] } })
+    window.location.hash = '#/state-setup'
+    const shown = render(<App />)
+    expect(nav().getByRole('link', { name: 'State setup' }).getAttribute('href')).toBe('#/state-setup')
+    expect(await screen.findByRole('heading', { name: 'State setup and approvals' })).toBeTruthy()
+    shown.unmount()
+  }
+})
+
 test.each(['#/front-desk', '#/policies', '#/password', '#/import', '#/admin', '#/settings', '#/complaints/c1'])('the page at %s opens and a sign-out leaves the login screen', async (hash) => {
   mockApi()
   setSession(admin)
