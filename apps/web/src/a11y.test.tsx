@@ -16,6 +16,7 @@ import Property from './Property'
 import ExpertRequests from './ExpertRequests'
 import Court from './Court'
 import LawFinder from './LawFinder'
+import AskCaseFile from './AskCaseFile'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -65,6 +66,7 @@ test.each([
   ['forensic and medical requests', () => <ExpertRequests />, 'Phone extraction 9'],
   ['court and trial tracker', () => <Court />, 'CC 9/2026'],
   ['old law to new law finder', () => <LawFinder />, 'IPC 302'],
+  ['ask the case file', () => <AskCaseFile firId="f1" />, 'Your question'],
 ])('the %s screen has no accessibility faults axe can see', async (_name, screenOf, ready) => {
   render(screenOf())
   await screen.findAllByText(new RegExp(ready.replace(/[()/.]/g, '\\$&')))

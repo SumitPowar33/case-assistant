@@ -89,7 +89,7 @@ test('on a phone one part of the FIR shows at a time: the picker lists every par
   render(<FirDetail id="f1" />)
   const picker = await screen.findByRole('combobox', { name: 'Show' })
   expect([...(picker as HTMLSelectElement).options].map((o) => o.text)).toEqual(
-    ['Case details', 'People', 'Arrests', 'Chargesheets', 'Closure report', 'Deadlines', 'Evidence', 'Notices', 'Readiness check', 'Statements', 'Money trail', 'Final report', 'Case diary'])
+    ['Case details', 'People', 'Arrests', 'Chargesheets', 'Closure report', 'Deadlines', 'Evidence', 'Notices', 'Readiness check', 'Statements', 'Money trail', 'Final report', 'Case diary', 'Ask the case file'])
   const partOf = (el: HTMLElement) => el.closest('.fir-part')!
   const people = await screen.findByText(/A1 \(accused\): Fictional Accused/)
   expect(partOf(screen.getByText('Fictional complaint words')).classList.contains('shown')).toBe(true)
@@ -98,7 +98,7 @@ test('on a phone one part of the FIR shows at a time: the picker lists every par
   expect(partOf(people).classList.contains('shown')).toBe(true)
   expect(partOf(screen.getByText('Fictional complaint words')).classList.contains('shown')).toBe(false)
   expect(document.querySelectorAll('.fir-part.shown')).toHaveLength(1)
-  expect(document.querySelectorAll('.fir-part')).toHaveLength(13)
+  expect(document.querySelectorAll('.fir-part')).toHaveLength(14)
 })
 
 test('the part picker is in the screen language', async () => {
@@ -120,4 +120,16 @@ test('the people are read once for the whole page, and a failed read shows in th
   render(<FirDetail id="f1" />)
   expect((await screen.findAllByRole('alert'))[0].textContent).toMatch(/500/)
   expect(screen.queryByText(/Record an arrest/)).toBeNull()
+})
+
+test('the Ask part loads the case file only when it is chosen (opening a FIR must not read it, a protected case logs each read)', async () => {
+  stub({ '/firs/f1/case-file': { passages: [] } })
+  render(<FirDetail id="f1" />)
+  const picker = await screen.findByRole('combobox', { name: 'Show' })
+  const asked = () => (fetch as unknown as { mock: { calls: string[][] } }).mock.calls.map((c) => c[0])
+  expect(asked()).not.toContain('/api/firs/f1/case-file')
+  expect(screen.queryByLabelText(/Your question/)).toBeNull()
+  fireEvent.change(picker, { target: { value: 'ask' } })
+  expect(await screen.findByLabelText(/Your question/)).toBeTruthy()
+  expect(asked()).toContain('/api/firs/f1/case-file')
 })
