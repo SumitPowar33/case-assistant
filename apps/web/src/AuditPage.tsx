@@ -43,17 +43,17 @@ function Log({ station }: { station: string }) {
   return (
     <>
       {rows.length === 0 ? <p>{t('audit.none')}</p> : (
-        <table>
+        <table className="cards">
           <caption>{t('audit.caption')}</caption>
           <thead><tr><th scope="col">{t('reads.colWhen')}</th><th scope="col">{t('reads.colWho')}</th><th scope="col">{t('audit.colKind')}</th><th scope="col">{t('reads.colWhat')}</th><th scope="col">{t('audit.colReason')}</th><th scope="col">{t('reads.colCase')}</th></tr></thead>
           <tbody>{rows.map((r, i) => (
             <tr key={`${r.kind}-${r.at}-${i}`}>
-              <td>{fmt(r.at)}</td>
-              <td>{r.who_name} ({r.who_rank})</td>
-              <td>{t.code('audit.kind', r.kind)}</td>
-              <td>{r.kind === 'protected_read' ? t.code('reads.what', r.what) : r.what}</td>
-              <td>{r.reason}</td>
-              <td>{r.fir_id && <a href={`#/firs/${r.fir_id}`}>{t('reads.fir', { ref: r.fir_ref ?? '' })}</a>}</td>
+              <td data-label={t('reads.colWhen')}>{fmt(r.at)}</td>
+              <td data-label={t('reads.colWho')}>{r.who_name} ({r.who_rank})</td>
+              <td data-label={t('audit.colKind')}>{t.code('audit.kind', r.kind)}</td>
+              <td data-label={t('reads.colWhat')}>{r.kind === 'protected_read' ? t.code('reads.what', r.what) : r.what}</td>
+              <td data-label={t('audit.colReason')}>{r.reason}</td>
+              <td data-label={t('reads.colCase')}>{r.fir_id && <a href={`#/firs/${r.fir_id}`}>{t('reads.fir', { ref: r.fir_ref ?? '' })}</a>}</td>
             </tr>
           ))}</tbody>
         </table>
