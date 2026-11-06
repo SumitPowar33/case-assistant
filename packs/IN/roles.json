@@ -9,7 +9,9 @@
     "policy.set": "Tighten the policies of the user's own unit (station or district, by the role's case_scope)",
     "import.run": "Load existing records from a file for a police station in the user's reach (station, district or state, by the role)",
     "chargesheet.approve": "Approve or return a final report (chargesheet, BNSS 193) drafted by an officer of a station in the user's reach (never one's own)",
-    "audit.read_protected": "See who read protected victim details (BNS 72) at a police station in the user's reach (station, district or state, by the role)"
+    "audit.read_protected": "See who read protected victim details (BNS 72) at a police station in the user's reach (station, district or state, by the role)",
+    "pack.propose": "Write down a change to the pack of the user's own state (a playbook, form or deadline rule) for approval; the platform admin, who has no state, for any state",
+    "pack.approve": "Approve or send back a pack change proposed for the user's own state (never one's own; the state comes from the user's police station)"
   },
   "roles": {
     "io": {
@@ -66,7 +68,9 @@
       "label": "Prosecutor",
       "station_required": false,
       "case_scope": "none",
-      "permissions": []
+      "permissions": [
+        "pack.approve"
+      ]
     },
     "state_admin": {
       "label": "State admin",
@@ -75,7 +79,8 @@
       "permissions": [
         "admin.manage",
         "import.run",
-        "audit.read_protected"
+        "audit.read_protected",
+        "pack.propose"
       ]
     }
   }
