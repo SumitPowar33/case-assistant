@@ -19,8 +19,8 @@ Rule of this project (Sumit, 28 Oct 2026): **every piece of code gets tests, and
 ## Coverage gates (they only go up)
 | Part | Gate | Today (29 Oct) |
 |---|---|---|
-| Core (JaCoCo, `mvn verify`) | lines 96%, branches 90% | 98.0% / 93.0% (2 Nov, session 51); 97.9% / 92.2% (3 Nov, session 66) |
-| Web (vitest) | statements 97%, branches 89%, functions 95% | 99.8% / 93.6% / 97.3% (2 Nov, session 51) |
+| Core (JaCoCo, `mvn verify`) | lines 96%, branches 90% | 98.09% / 93.33% (6 Nov, session 73); 98.0% / 93.0% (2 Nov, session 51); 97.9% / 92.2% (3 Nov, session 66) |
+| Web (vitest) | statements 99%, branches 94%, functions 96% | 99.96% / 96.0% / 98.0% (6 Nov, session 73) |
 | AI gateway (pytest-cov) | 97% incl. branches | 99% (5 Nov, session 69) |
 The gate fails the build below the number. When coverage rises by 2 points or more, raise the gate in the same commit.
 
