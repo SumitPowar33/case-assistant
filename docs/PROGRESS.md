@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 13l (session 74, started 23:36 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -89,6 +88,7 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
+Done in session 74 (6 Nov, scheduled run): item 13l, Audit log (`#/audit`).
 Done in session 73 (6 Nov, scheduled run): item 13k, Ask the case file (`#/firs/{id}/ask`), first version; a flaky phone browser test fixed.
 Done in session 72 (5 Nov, last scheduled run of the night): item 13j, Old law to new law finder (`#/laws`).
 Done in session 71 (5 Nov, 23:40 IST scheduled run): item 13i, Court and trial tracker (V45).
@@ -118,7 +118,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    i. DONE (session 71, without ICJS feed, AI prosecutor brief and victim-update button): Court and trial tracker (board 12): court dates and witness summons (`#/court`, V45). Still to build for it: the ICJS feed, the prosecutor brief (AI), a victim-update button on this screen (the update is on the FIR's own part), the hearing date joining the deadlines and the Dashboard, a reminder for a summons not served.
    j. DONE (session 72, without the AI explanation): Old law to new law finder (board 18), `#/laws`, table in the national pack (59 sections, draft). Still to build for it: the AI explanation through the gateway (A8), a reviewer.
    k. DONE (session 73, first version): Ask the case file (board 19), FIR part `ask`: only this case, through the gateway (`case_qa`), answers cite their sources, refuses guilt, truth and prediction questions. Still to build for it (plan section 9): real retrieval (embeddings kept on state servers; today it is word matching in the browser), the "note in case diary" button, the monthly evaluation set of fictional questions, the guilt refusal also in the gateway (a refused question is not in the audit log today), a Marathi/Hindi question guard.
-   l. Audit log (board 20): one screen joining protected reads, AI decisions, admin actions and overrides.
+   l. DONE (session 74, without the AI decisions): Audit log (board 20), `#/audit`, `GET /api/audit-log`. Still to build for it: the AI suggestions and decisions (kept by the gateway, not the core; needs a gateway read route), the export for one case, the monthly AI counts and the retention line of the board, readable labels for the admin action codes and the gap keys, a filter by kind.
    m. Field capture on a tablet (board 7) and State setup and approvals (board 21).
    Each screen: backend with tests, the screen built to its board, screenshot compared, 11 languages.
 14. **AI features (Sumit, 2 Nov 2026: "we are selling as AI-driven")**, plan in `docs/AI-AND-SCREENS-PLAN.md` section 3, order A1 to A9; each keeps the five rules of section 2. Build each with its screen of item 13 where they meet (A6 with 13d, A5 with 13k).
@@ -127,6 +127,19 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 6 Nov 2026, session 74 (scheduled run, Sumit away)
+- Baseline (fresh container; PostgreSQL started, role `caseapp` and the two databases created, `npm ci`, gateway requirements, psycopg and playwright): 8 of 8 suites PASS. The checkout was `master`; I switched to `setup/seed` from origin. `add_repo` was not offered in this session; the repo was already cloned and in scope.
+- Item 13l, **Audit log** (board 20). Core: `GET /api/audit-log?stationId=` (`AuditLog`, no migration) joins four append-only sources for one station, newest first, a page at a time: protected reads (`protected_read`), readiness gaps accepted with a reason (`readiness_override`), their withdrawals, and the admin's changes (`admin_action`, by the station or by the station of the account changed). Same permission as the reads log (`audit.read_protected` at the station); it only reads, writes nothing, and shows no victim detail. Web: `AuditPage.tsx` (`#/audit`, nav link under the same permission, 11 languages with 10 drafts, card layout on a phone). The Protected reads screen stays.
+- Tests: `AuditLogApiTest` (2: the join and that another station's rows and a withdrawn row are right, paging; who may and may not read it, bad limits), `AuditPage.test.tsx` (2), nav test in `App.test.tsx`, axe check in `a11y.test.tsx`. The route is checked by `SecurityMatrixTest` as before (it found nothing to list).
+- `scripts/test-all.sh` at the end: all 8 suites PASS (repo rules, packs, xlit, gateway, web, database rules, core, e2e). Gates unchanged.
+- Screenshot compared with board 20 (desktop and 390 px, mocked answers on the built app). Differences: the board's filter chips, the export button and the three tiles (AI suggestions this month, victim details unmasked, logs kept) are not built; the board's own columns (time, who, what, result) became six (when, who, kind, what, reason, case); the table was cut off on a phone until it got the `cards` layout, fixed.
+- Skipped / not done: AI suggestions and decisions are not in the list (the gateway keeps them; there is no read route for the core to join); admin action codes and gap keys are shown as the code; "unmasked with a reason" does not exist in the app yet, so the tile is not built. Risk: a station's admin changes are matched by the station of the account changed, so an account moved to another station takes its history with it.
+- Next: 13m Field capture on a tablet (board 7) and State setup and approvals (board 21); the gateway read route for the audit screen goes with item 14.
+- Blocked: nothing.
+Questions for Sumit:
+1. Should the AI suggestions and decisions (71% kept, 22% edited, 7% rejected on the board) join this screen? It needs the gateway to give a read route to the core, with the same keyed chain; or should they stay in AI settings?
+2. The board shows "victim details unmasked, each with a recorded reason". The app logs reads but has no unmask-with-reason step. Should one be built (a reason asked before real details are shown)?
 
 ## 6 Nov 2026, session 73 (scheduled run, Sumit away)
 - Baseline (fresh container; PostgreSQL started, role `caseapp` and the two databases created, `npm ci`, gateway requirements, psycopg and playwright): 7 of 8 suites PASS; the e2e phone test failed once and passed alone, then failed again: a race (it read the card's `::before` label once, just after the list was drawn again). Fixed by polling for the label (4 runs in a row green). The checkout was `master`; I switched to `setup/seed` from origin.

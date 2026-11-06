@@ -46,7 +46,7 @@ committed** (CLAUDE.md, "Screens"). Where the app differs on purpose, the differ
 | 17 | Type in any language | `#/type` | restyled |
 | 18 | Old law to new law finder | `#/laws` (`LawFinder.tsx`, `GET /api/law-finder`) | built (session 72): IPC, CrPC and Evidence Act sections beside BNS, BNSS and BSA from `packs/IN/law-concordance.json` (draft); no AI explanation yet |
 | 19 | Ask the case file | FIR part "Ask the case file" (`#/firs/{id}/ask`, `GET /api/firs/{id}/case-file`) | built 6 Nov (session 73), first version: keyword retrieval in the browser |
-| 20 | Audit log | Protected reads, AI audit in AI settings | one audit screen to build |
+| 20 | Audit log | `#/audit` (session 74); protected reads, AI audit in AI settings | built without the AI decisions |
 | 21 | State setup and approvals | Policies, Admin | restyled; pack approvals to build |
 
 Screens the board does not have (kept, in the same look): Policies, Load data, Protected reads, Admin, AI settings,
