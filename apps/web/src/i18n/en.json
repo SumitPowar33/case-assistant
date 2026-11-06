@@ -1007,5 +1007,16 @@
  "ask.wrongLogged": "Your verdict (wrong or not supported) is logged.",
  "ask.refusedGuilt": "This question is not answered: the app does not say who is guilty or innocent. That is for the court. Ask what the documents say instead.",
  "ask.refusedTruth": "This question is not answered: the app does not judge whether anyone is telling the truth. Ask what each statement says, and where they differ.",
- "ask.refusedPredict": "This question is not answered: the app does not predict what anyone will do."
+ "ask.refusedPredict": "This question is not answered: the app does not predict what anyone will do.",
+ "nav.audit": "Audit log",
+ "audit.title": "Audit log of the police station",
+ "audit.intro": "Who looked at victim details, which gaps a person accepted and why, and what the admin changed. Nobody can change or remove these lines. The AI's suggestions and the decisions on them are in the AI settings.",
+ "audit.caption": "Audit log of this police station, newest first",
+ "audit.none": "Nothing in the audit log of this police station.",
+ "audit.colKind": "Kind",
+ "audit.colReason": "Reason",
+ "audit.kind.protected_read": "Protected details read",
+ "audit.kind.override": "Gap accepted",
+ "audit.kind.override_withdrawn": "Acceptance withdrawn",
+ "audit.kind.admin_action": "Admin change"
 }

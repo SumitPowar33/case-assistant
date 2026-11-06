@@ -9,6 +9,7 @@ import PasswordPage from './PasswordPage'
 import AdminPage from './AdminPage'
 import ImportPage from './ImportPage'
 import PoliciesPage from './PoliciesPage'
+import AuditPage from './AuditPage'
 import ReadsPage from './ReadsPage'
 import Supervisor from './Supervisor'
 import Property from './Property'
@@ -79,6 +80,7 @@ export default function App() {
           {session.user.station_id && link('#/court', t('nav.court'))}
           {supervisor && link('#/supervisor', t('nav.supervisor'))}
           {auditor && link('#/reads', t('nav.reads'))}
+          {auditor && link('#/audit', t('nav.audit'))}
           <div className="nav-group">{t('nav.groupTools')}</div>
           {link('#/type', t('nav.type'))}
           {link('#/laws', t('nav.laws'))}
@@ -110,7 +112,7 @@ export default function App() {
       <div className="topstrip">
         <span className="chip demo-chip">{t('app.tagline')}</span>
       </div>
-      <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} only={firPart} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : hash === '#/supervisor' ? <Supervisor /> : hash === '#/property' ? <Property /> : hash === '#/expert' ? <ExpertRequests /> : hash === '#/court' ? <Court /> : hash === '#/laws' ? <LawFinder /> : hash === '#/firs' ? <FirList /> : <Dashboard />}</main>
+      <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} only={firPart} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : hash === '#/audit' ? <AuditPage /> : hash === '#/supervisor' ? <Supervisor /> : hash === '#/property' ? <Property /> : hash === '#/expert' ? <ExpertRequests /> : hash === '#/court' ? <Court /> : hash === '#/laws' ? <LawFinder /> : hash === '#/firs' ? <FirList /> : <Dashboard />}</main>
     </TypingContext.Provider>
     </ScreenLangContext.Provider>
   )

@@ -151,12 +151,14 @@ test('the Protected reads link follows the permission audit.read_protected, not 
   const { unmount } = render(<App />)
   const nav = () => within(screen.getByRole('navigation', { name: 'Main' }))
   expect(nav().queryByRole('link', { name: 'Protected reads' })).toBeNull()
+  expect(nav().queryByRole('link', { name: 'Audit log' })).toBeNull()
   unmount()
   Object.assign(routes, { '/api/stations': [] })
   setSession({ ...io, user: { ...io.user, role: 'district_cell', permissions: ['audit.read_protected'] } })
   window.location.hash = '#/reads'
   render(<App />)
   expect(nav().getByRole('link', { name: 'Protected reads' }).getAttribute('href')).toBe('#/reads')
+  expect(nav().getByRole('link', { name: 'Audit log' }).getAttribute('href')).toBe('#/audit')
   expect(await screen.findByRole('heading', { name: 'Who read protected victim details' })).toBeTruthy()
 })
 
