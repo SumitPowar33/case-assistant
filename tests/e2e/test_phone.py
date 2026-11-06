@@ -63,7 +63,12 @@ def test_an_officer_can_use_the_case_on_a_phone(core, page):
     card = page.locator("table.cards tbody tr").first
     expect(card).to_contain_text("1/")
     # the locator waits for the cell: the list can be drawn again just after the card text first shows (it failed once on a null element)
-    assert page.locator("table.cards tr td").first.evaluate("el => getComputedStyle(el, '::before').content").startswith('"FIR')
+    expect_label = lambda: page.locator("table.cards tr td").first.evaluate("el => getComputedStyle(el, '::before').content")
+    for _ in range(40):  # the list can be drawn again after the card shows: poll until the label is there
+        if expect_label().startswith('"FIR'):
+            break
+        page.wait_for_timeout(250)
+    assert expect_label().startswith('"FIR')
     assert card.bounding_box()["width"] <= 390 - 16
     check("FIR list")
 
