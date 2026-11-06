@@ -88,6 +88,7 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
+Done in session 75 (7 Nov, 02:05 IST scheduled run, last of the night): item 13m (second half), State setup and approvals (`#/state-setup`, V46); a date-dependent e2e test fixed.
 Done in session 74 (6 Nov, scheduled run): item 13l, Audit log (`#/audit`).
 Done in session 73 (6 Nov, scheduled run): item 13k, Ask the case file (`#/firs/{id}/ask`), first version; a flaky phone browser test fixed.
 Done in session 72 (5 Nov, last scheduled run of the night): item 13j, Old law to new law finder (`#/laws`).
@@ -119,7 +120,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    j. DONE (session 72, without the AI explanation): Old law to new law finder (board 18), `#/laws`, table in the national pack (59 sections, draft). Still to build for it: the AI explanation through the gateway (A8), a reviewer.
    k. DONE (session 73, first version): Ask the case file (board 19), FIR part `ask`: only this case, through the gateway (`case_qa`), answers cite their sources, refuses guilt, truth and prediction questions. Still to build for it (plan section 9): real retrieval (embeddings kept on state servers; today it is word matching in the browser), the "note in case diary" button, the monthly evaluation set of fictional questions, the guilt refusal also in the gateway (a refused question is not in the audit log today), a Marathi/Hindi question guard.
    l. DONE (session 74, without the AI decisions): Audit log (board 20), `#/audit`, `GET /api/audit-log`. Still to build for it: the AI suggestions and decisions (kept by the gateway, not the core; needs a gateway read route), the export for one case, the monthly AI counts and the retention line of the board, readable labels for the admin action codes and the gap keys, a filter by kind.
-   m. Field capture on a tablet (board 7) and State setup and approvals (board 21).
+   m. State setup and approvals (board 21): DONE (session 75, first version): `#/state-setup`, a change to a state's pack is proposed (`pack.propose`), approved or sent back by another person of the state (`pack.approve`), V46. Still to build for it: the pack's parts as editable cards (forms, playbooks, deadlines, law table) with a diff, the list of other states, the connections panel, the new-state wizard, a change that applies itself once approved (today the approval is a record; pack files change with a release). **Field capture on a tablet (board 7) is still to build.**
    Each screen: backend with tests, the screen built to its board, screenshot compared, 11 languages.
 14. **AI features (Sumit, 2 Nov 2026: "we are selling as AI-driven")**, plan in `docs/AI-AND-SCREENS-PLAN.md` section 3, order A1 to A9; each keeps the five rules of section 2. Build each with its screen of item 13 where they meet (A6 with 13d, A5 with 13k).
 15. **POCSO case mode, 112 events, high-alert kinds** (plan section 6).
@@ -127,6 +128,24 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 7 Nov 2026, session 75 (02:05 IST scheduled run, last of the night, Sumit away)
+- Baseline (fresh container; PostgreSQL started, role and databases created, `npm ci`, gateway requirements, psycopg, playwright): 6 of 8 suites PASS. The gateway suite was red only because `httpx` was not installed (installed from its requirements file); the e2e Indian-scripts test was red for a real reason: it posted a court date of 2 Nov on a demo FIR that the demo loader registers 4 days before today, and the core refuses a court date before the FIR (the test passed on 5 and 6 Nov by luck). Fixed: the dates in that test are now a day before today (India time). Not a core bug.
+- Item 13m, second half, **State setup and approvals** (board 21). V46: `pack_change` (state, title, text, how it was tested, writer) and `pack_change_decision` (approved, or sent back with a reason of 10+ characters; one decision per change), both kept as written, a trigger refuses a decision by the writer. Two permissions in `packs/IN/roles.json`: `pack.propose` (state admin) and `pack.approve` (prosecutor). Core: `PackChangeController`: `GET /api/pack-changes` (the pack line and the changes of the user's own state; the platform admin, who has no station, names the state), `POST /api/pack-changes`, `POST /api/pack-changes/{id}/decision`. A state is taken from the user's police station; another state's change answers 404; an approver without a station decides nothing. Web: `StatePage.tsx` (`#/state-setup`, nav link by permission, 11 languages with 10 drafts). An approval is a record of the decision, nothing is applied: pack files change with a release, so tighten-only stays in force.
+- Tests: `PackChangeApiTest` (6: propose and approve, send back and own change, the database refusals, own state only, platform admin and the refusals for everyone else, input checks), `db-tests/test_pack_changes.py` (4), `StatePage.test.tsx` (6), nav test in `App.test.tsx`, axe check in `a11y.test.tsx`, browser test `tests/e2e/test_state_setup.py` (writer, approver sends back, proposes again, approver approves, IO has no link and is refused). `MigrationTest` now expects V46. `SecurityMatrixTest` covers the new routes.
+- `scripts/test-all.sh` at the end: all 8 suites PASS (repo rules, packs, xlit, ai-gateway 99%, web, database rules, core, e2e). Coverage: core 98.14% lines / 93.29% branches, web 99.96% statements / 95.76% branches / 98.14% functions, gateway 99%. Gates unchanged (no 2-point rise).
+- Skipped / not done: tests for older code (the baseline fixes and the item took the session); screenshot comparison with board 21; the board's other-states list and connections panel; Field capture on a tablet (board 7).
+- Risk: a prosecutor needs a police station in the state (the DB lets a prosecutor have none; such an account decides nothing).
+- Next: Field capture on a tablet (board 7); then items 14 to 18 (AI features, POCSO and 112, duty roster, real retrieval, printed papers).
+- Blocked: nothing.
+Questions for Sumit:
+1. Which account approves a state's pack changes? I used the existing `prosecutor` role (Directorate of Prosecution, as the board says) and it must have a police station in the state. Should the Directorate get its own office as a station, or a different role?
+2. Should an approved change ever apply itself (a stricter policy value, say), or always wait for a release? Today it only records the decision.
+
+## Tonight in short (6 Nov 23:35 IST to 7 Nov 04:00 IST: sessions 74 and 75)
+- Session 74: Audit log screen (`#/audit`, board 20). Session 75: State setup and approvals (`#/state-setup`, V46, board 21) and a date-dependent e2e test fixed.
+- `scripts/test-all.sh` at the end of session 75: repo rules PASS, packs PASS, xlit PASS, ai-gateway PASS (99%), web PASS, database rules PASS, core PASS (98.14% / 93.29%), e2e PASS. Web 99.96% / 95.76% / 98.14%.
+- Next: Field capture on a tablet (board 7), then items 14 to 18. Blocked: nothing.
 
 ## 6 Nov 2026, session 74 (scheduled run, Sumit away)
 - Baseline (fresh container; PostgreSQL started, role `caseapp` and the two databases created, `npm ci`, gateway requirements, psycopg and playwright): 8 of 8 suites PASS. The checkout was `master`; I switched to `setup/seed` from origin. `add_repo` was not offered in this session; the repo was already cloned and in scope.

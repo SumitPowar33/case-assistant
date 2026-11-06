@@ -67,6 +67,7 @@ Next (needs code, order of importance):
 6. **Case transfer between stations** (zero FIR to the real station, or a district transfer): the case team follows the station, so the move needs its own recorded step.
 7. **Per-state keys, backups, retention.** Encryption keys per state, restore drills, no hard deletes, legal hold.
 8. **Law versions.** A BNSS amendment must not change old cases: rules get an effective-from date.
+10. **Pack changes and their approval** (done 7 Nov 2026, V46, board 21). A change to a state's pack is written down (`pack_change`) by the holder of `pack.propose` (national pack: the state admin; the platform admin, who has no state, for any state) and decided once (`pack_change_decision`: approved, or sent back with a reason of 10+ characters) by the holder of `pack.approve` (national pack: the prosecutor) whose police station is in the same state. Nobody decides their own proposal (API and trigger); another state's change answers 404; an account with no station decides nothing. Both tables are kept as written. The decision is a record: pack files change only with a release, so the tighten-only rules stay in force.
 9. **Approval steps as policy.** Today an IO's correction needs no SHO confirmation (Sumit, 28 Oct). If a state wants that, it becomes a policy flag, not a code fork.
 10. **Export / CCTNS exchange**, offline stations (queue and sync), per-state default language and forms, accessibility checks.
 
