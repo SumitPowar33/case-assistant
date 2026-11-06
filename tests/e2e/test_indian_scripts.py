@@ -6,6 +6,8 @@ machine Telugu, Kannada and Gujarati fell back to Unifont, a last-resort bitmap 
 The case screens use the demo case (scripts/demo_case.py). On a phone the header did not wrap
 (845 px wide) and long Tamil or Malayalam form labels and tables pushed the page wider until session 46. Fictional data only."""
 
+import datetime
+
 import pytest
 from playwright.sync_api import expect
 
@@ -14,6 +16,9 @@ import sys
 
 from conftest import ROOT
 from test_load_data import sign_in
+
+# a day after the demo FIR was registered (4 days back) and never in the future, whatever day the test runs
+RECENT = (datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5, minutes=30))).date() - datetime.timedelta(days=1)).isoformat()
 
 sys.path.insert(0, str(ROOT / "scripts"))
 from demo_case import load_demo  # noqa: E402
@@ -93,9 +98,9 @@ def test_every_screen_language_is_drawn_with_real_glyphs_and_fits(core, page, wi
         "kind": "forensic", "subject": "Fictional handwriting comparison", "sentTo": "Fictional examiner", "date": "2026-08-01"}, io)[0] == 201
     # and one court date with an open summons, so the court screen has a row too
     assert api.call("POST", f"/api/firs/{demo['fir_id']}/court-events", {
-        "kind": "chargesheet_filed", "date": "2026-11-02", "court": "Fictional Court 4", "caseNo": "CC 1/2026"}, io)[0] == 201
+        "kind": "chargesheet_filed", "date": RECENT, "court": "Fictional Court 4", "caseNo": "CC 1/2026"}, io)[0] == 201
     assert api.call("POST", f"/api/firs/{demo['fir_id']}/court-summons", {
-        "witness": "Fictional witness", "status": "sent", "date": "2026-11-03"}, io)[0] == 201
+        "witness": "Fictional witness", "status": "sent", "date": RECENT}, io)[0] == 201
     screens = SCREENS + (f"#/firs/{demo['fir_id']}", f"#/complaints/{demo['complaint_id']}")
     fir = f"#/firs/{demo['fir_id']}"
     views = [(sc, None) for sc in screens]
