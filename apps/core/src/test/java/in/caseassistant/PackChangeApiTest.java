@@ -122,8 +122,10 @@ class PackChangeApiTest {
         call(otherProsecutor, "POST", url, yes).andExpect(status().isNotFound());
         call(prosecutor, "POST", "/api/pack-changes/" + UUID.randomUUID() + "/decision", yes).andExpect(status().isNotFound());
         call(strayProsecutor, "POST", url, yes).andExpect(status().isNotFound());
-        call(strayProsecutor, "GET", "/api/pack-changes", null).andExpect(status().isBadRequest());
-        call(strayProsecutor, "GET", "/api/pack-changes?state=IN", null).andExpect(status().isOk()).andExpect(jsonPath("$.changes[0].can_decide").value(false));
+        // weekly review 7 Nov: only an admin without a station is the platform admin; a prosecutor without one reads no state
+        call(strayProsecutor, "GET", "/api/pack-changes", null).andExpect(status().isForbidden());
+        call(strayProsecutor, "GET", "/api/pack-changes?state=IN", null).andExpect(status().isForbidden());
+        call(strayProsecutor, "GET", "/api/pack-changes?state=MH", null).andExpect(status().isForbidden());
     }
 
     @Test

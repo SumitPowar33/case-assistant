@@ -49,12 +49,22 @@ class PackChangeController {
                 .param(user).query(String.class).optional().orElse(null);
     }
 
+    /**
+     * An account without a station reaches every state only if it is the platform admin (it holds "admin.manage");
+     * any other account without a station (a prosecutor not yet posted, say) reaches no state at all.
+     */
+    private void requireStateOrPlatform(UUID me, String own) {
+        if (own == null && !team.can(me, "admin.manage"))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account has no police station, so it belongs to no state yet.");
+    }
+
     @GetMapping("/api/pack-changes")
     Map<String, Object> list(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String state) {
         UUID me = CaseTeam.user(jwt);
         boolean propose = team.can(me, PROPOSE), approve = team.can(me, APPROVE);
         if (!propose && !approve) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only those who propose or approve changes to a state pack see them.");
         String own = stateOf(me);
+        requireStateOrPlatform(me, own);
         String code = own != null ? own : state;
         if (code == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Say which state's pack (state=XX).");
         if (own != null && state != null && !own.equals(state)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You see the changes of your own state only.");
@@ -84,6 +94,7 @@ class PackChangeController {
         UUID me = CaseTeam.user(jwt);
         if (!team.can(me, PROPOSE)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the state's setup officer proposes a change to a pack.");
         String own = stateOf(me);
+        requireStateOrPlatform(me, own);
         if (own != null && !own.equals(c.state)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You propose changes to the pack of your own state only.");
         if (db.sql("select count(*) from state_pack where code = ?").param(c.state).query(Long.class).single() == 0)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No pack for this state.");
