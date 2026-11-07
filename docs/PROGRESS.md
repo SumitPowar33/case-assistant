@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 11 (acid-attack survivors masked like sexual-offence victims, BNS 124) (session 77, started 23:35 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -89,6 +88,7 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
+Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
 Done in session 76 (7 Nov, Saturday 21:05 IST weekly review): weekly review and test audit (5 fixes, see the entry); item 13, Field capture on a tablet (board 7, search and seizure memo, V48).
 Done in session 75 (7 Nov, 02:05 IST scheduled run, last of the night): item 13m (second half), State setup and approvals (`#/state-setup`, V46); a date-dependent e2e test fixed.
 Done in session 74 (6 Nov, scheduled run): item 13l, Audit log (`#/audit`).
@@ -106,7 +106,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: online only (decision 1 of 2 Nov): typed text kept in memory and sent again when the network is back, nothing stored on the phone; the FIR screen opens on Deadlines on a phone (decision 6); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
 10. Account lifecycle (decision 2 of 2 Nov): acting SHO with an end date given by the SP, "IO has left the station" list.
-11. Acid-attack survivors (BNS 124) masked like sexual-offence victims (decision 4 of 2 Nov).
+11. Acid-attack survivors (BNS 124): DONE (session 77, V49). Left for it: the withheld label still says "BNS 72" for an acid case (question 1 of session 77).
 12. Security: done in code (sessions 55 and 56). Left for people: an outside penetration test (CERT-In empanelled auditor) before real case data; the installation itself (deploy/nginx.conf, a real certificate).
 13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
    a. DONE (session 59): frame, look, Dashboard (board 1), FIR parts as pages, readiness chips (board 9).
@@ -130,6 +130,25 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 7 Nov 2026, session 77 (23:35 IST scheduled run, Sumit away)
+Started from `setup/seed` at e486adc (session 76). Fresh container: PostgreSQL started, role `caseapp` and the databases created, gateway requirements, psycopg, playwright, `npm ci`, nginx. Baseline `scripts/test-all.sh` (run on a clean copy of e486adc): all 8 suites PASS.
+
+**Item 11, acid-attack survivors protected like sexual-offence victims** (decision 4 of 2 Nov 2026):
+- V49: `identity_protected_case` (the one function every mask, withheld text and protected-read log uses) now also covers BNS 124 (124(1) and 124(2)) and, for imported old FIRs, IPC 326A and 326B (read as `326A`, `326 B`, `326-a`; plain IPC 326 and BNS 123/125 are not). New `fir.identity_protected` (set when the FIR is registered from a protecting complaint kind; a trigger refuses clearing it), so an acid case is protected before any section is typed. It is apart from `sexual_offence`, which also starts the BNSS 193(2) two-month limit: acid is not on that list, so no limit is added.
+- Front desk: new national kind `acid_attack` (draft golden-hour steps: free treatment at any hospital, BNSS 397; identity kept out of papers; MLC; seize container and clothes; compensation, BNSS 396). `complaint-kinds.json` kinds carry `"protects_identity": true` (sexual offence and acid attack); `ComplaintKinds.protectsIdentity` replaces the `sexual_offence` name check for withholding a complaint from the desk and for who may register its FIR. A state module may add a protecting kind (tightening), never redeclare one.
+- Also fixed (risk noted in session 76): the court tracker and lab request forms took "today" from the UTC date, so between 00:00 and 05:30 IST today's date was above the field's maximum. Now `istToday()` in `formats.ts`.
+- Tests: `db-tests/test_acid_attack.py` (22: the section edges 63/64/71/72, 123/124/125, IPC 326/326A/326AB/3260/375/376/377, BNS "326A"; no 193(2) limit; the flag masks the complainant but not a witness and cannot be cleared; checked failing without V49), `ComplaintApiTest` (acid complaint withheld from a colleague and in the list, SHO reads it, colleague cannot register it, its FIR protected without a section, no two-month deadline), `ComplaintKindsTest` (the protected ids, a bad flag refused, a module adding one), pack test (both kinds protect, each has a `protect_identity` step, `hurt` does not), `formats.test.ts` (IST date at 23:59, 00:00 and 05:29 IST). `MigrationTest` expects V49.
+
+`scripts/test-all.sh` at the end: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway (99%), PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.19% lines / 93.30% branches, web 99.96% statements / 95.72% branches / 98.24% functions, gateway 99%. Gates unchanged (no 2-point rise).
+- Skipped / not checked: no screen changed, so no screenshot; the monthly mutation scripts were not rerun (they will pick V49 up as the newest definition and the new trigger); no web chip shows that a kind protects identity (the desk simply sees "withheld").
+- Risk: a case typed as "hurt" that was really an acid attack is protected only once BNS 124 is added or an officer masks the person by hand.
+- Next: items 14 to 18 (AI features first: A1 fact extraction), item 10 (acting SHO, "IO has left the station" list), then the rest of item 13's lists.
+- Blocked: nothing.
+
+Questions for Sumit:
+1. For an acid case the screens say "Withheld (BNS 72)", but BNS 72 covers only sexual offences (the Maharashtra amendment adding acid attacks still awaits assent). Change the label to "Withheld (victim's identity protected)" for all cases?
+2. Should IPC 326A/326B old FIRs loaded from CCTNS also be masked as built, or only BNS 124 cases?
 
 ## 7 Nov 2026, Weekly review and session 76 (Saturday 21:05 IST scheduled run, Sumit away)
 Started from `setup/seed` at e136d27 (session 75). Fresh container: PostgreSQL started, role `caseapp` (superuser) and both databases created, gateway requirements, psycopg, playwright, `npm ci`; nginx installed so the HTTPS proxy browser tests run (they were skipped without it). Baseline `scripts/test-all.sh`: 7 PASS, e2e FAIL: `test_answer_fields_gateway.py` read an answer while the browser was closing (TargetClosedError); fixed by waiting for the network to go quiet and removing the listener before closing.
