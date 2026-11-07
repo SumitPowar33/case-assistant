@@ -1,3 +1,4 @@
+import { istToday } from './formats'
 import { useState } from 'react'
 import { send } from './api'
 import { useLoad } from './useLoad'
@@ -15,7 +16,7 @@ type One = { events: Event[]; summons: Summons[] }
 const KINDS = ['chargesheet_filed', 'cognizance', 'copies_given', 'charge_framing', 'prosecution_evidence', 'arguments', 'judgment', 'other'] as const
 const SUMMONS = ['sent', 'served', 'not_served', 'appeared', 'excused'] as const
 const SUMMONS_CHIP: Record<string, string> = { sent: 'c-neu', served: 'c-info', not_served: 'c-warn', appeared: 'c-ok', excused: 'c-neu' }
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => istToday()
 
 /** One case in court: the timeline of dates (past and coming), the witnesses' summons, and the two forms (rows are kept, V45). */
 function Case({ row, onSaved }: { row: CaseRow; onSaved: () => void }) {

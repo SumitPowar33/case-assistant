@@ -22,6 +22,9 @@ export function istIso(local: string): string {
   return `${local}:00+05:30`
 }
 
+/** Today's date in India (yyyy-mm-dd), whatever the computer's clock zone is: from 00:00 to 05:30 IST the UTC date is still yesterday. */
+export const istToday = (now: number = Date.now()) => new Date(now + 330 * 60_000).toISOString().slice(0, 10)
+
 /** Dates and times are shown in India time whatever the computer's clock zone is. */
 export const fmt = (iso: string) => new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) + ' IST'
 

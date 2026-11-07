@@ -1,3 +1,4 @@
+import { istToday } from './formats'
 import { useState } from 'react'
 import { send } from './api'
 import { useLoad } from './useLoad'
@@ -13,7 +14,7 @@ type FirRow = { id: string; fir_no: number; fir_year: number }
 
 const STATUS_CHIP: Record<string, string> = { sent: 'c-neu', at_lab: 'c-info', sample_sent: 'c-info', report_received: 'c-ok' }
 const NEXT = ['at_lab', 'sample_sent', 'report_received', 'reminder_sent'] as const
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => istToday()
 
 /** The steps of one request, oldest first, and the form that adds the next one (steps are kept as written, V44). */
 function Steps({ request, onSaved }: { request: Request; onSaved: () => void }) {

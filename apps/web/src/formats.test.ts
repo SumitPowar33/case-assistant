@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { fmt, istIso, lengthSeconds, parseSections, text } from './formats'
+import { fmt, istIso, istToday, lengthSeconds, parseSections, text } from './formats'
 
 // Fictional data only.
 test('sections are read with commas or semicolons, any letter case, a "section" word and the longest act name first', () => {
@@ -46,4 +46,11 @@ test('a recording length is read as minutes:seconds', () => {
   expect(lengthSeconds(' 0:05 ')).toBe(5)
   expect(lengthSeconds('120:00')).toBe(7200)
   for (const bad of ['3:61', '341', '3:4', ':41', 'a:41', '12345:00', '']) expect(lengthSeconds(bad)).toBeNull()
+})
+
+test("today is India's date: from 00:00 to 05:30 IST the UTC date is still yesterday", () => {
+  expect(istToday(Date.parse('2026-11-07T18:29:59Z'))).toBe('2026-11-07')   // 23:59:59 IST
+  expect(istToday(Date.parse('2026-11-07T18:30:00Z'))).toBe('2026-11-08')   // 00:00 IST
+  expect(istToday(Date.parse('2026-11-07T23:59:00Z'))).toBe('2026-11-08')   // 05:29 IST, UTC still says the 7th
+  expect(istToday()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
 })
