@@ -50,6 +50,10 @@ def test_every_field_a_screen_expects_is_in_the_gateways_real_answer(admin_web):
         notices.get_by_label("To", exact=True).fill("Fictional Bank Ltd, nodal officer")
         notices.get_by_role("button", name="Draft the text with AI").click()
         expect(notices.get_by_text("AI draft")).to_be_visible()
+        # an answer still arriving while the browser closes cannot be read (TargetClosedError, seen 7 Nov): let the reads
+        # finish, then stop listening before closing
+        page.wait_for_load_state("networkidle")
+        page.remove_listener("response", keep)
         browser.close()
 
     reads = [(name, url, url_pattern(url).pattern.replace("^/api", "^"), literal, text) for name, url, literal, text in read_types()

@@ -1,6 +1,7 @@
 package in.caseassistant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -99,6 +100,27 @@ class SecurityMatrixTest {
             checked++;
         }
         assertThat(checked).isGreaterThan(15);
+    }
+
+    @Test
+    void noListOutsideTheCaseRoutesShowsAnOutsiderTheCase() throws Exception {
+        // weekly test audit 7 Nov: the lists added this week (property, court, lab requests, supervisor, audit, pack changes)
+        // each had their own tests; this walks every GET route without a path variable, so a new list is checked too
+        UUID io = db.sql("insert into app_user (station_id, full_name, rank, role) select station_id, 'SI Fictional Near', 'SI', 'io' from fir where id = ? returning id")
+                .param(fir).query(UUID.class).single();
+        UUID item = db.sql("insert into evidence_item (fir_id, label, description, kind, seized_at, seizure_memo) values (?, 'E-09', 'Fictional seized item', 'physical', '2026-10-02T10:00Z', 'SM-9') returning id")
+                .param(fir).query(UUID.class).single();
+        db.sql("insert into court_event (fir_id, kind, on_date, recorded_by) values (?, 'cognizance', '2026-10-20', ?)").params(fir, io).update();
+        db.sql("insert into expert_request (fir_id, kind, subject, sent_to, sent_on, evidence_item_id, recorded_by) values (?, 'forensic', 'Fictional test', 'Fictional Lab', '2026-10-03', ?, ?)")
+                .params(fir, item, io).update();
+        int checked = 0;
+        for (Route r : all()) {
+            if (!r.method().equals("GET") || r.path().contains("{")) continue;
+            var res = mvc.perform(get(r.path()).header("Authorization", outsider)).andReturn().getResponse();
+            if (res.getStatus() == 200) checked++;
+            assertThat(res.getContentAsString()).as(r.key()).doesNotContain(fir.toString()).doesNotContain(item.toString()).doesNotContain("Fictional seized item");
+        }
+        assertThat(checked).isGreaterThan(8);
     }
 
     @Test
