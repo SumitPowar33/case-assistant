@@ -5,6 +5,7 @@ import CaseDiary from './CaseDiary'
 import AskCaseFile from './AskCaseFile'
 import MoneyTrail from './MoneyTrail'
 import Statements from './Statements'
+import Search from './Search'
 import FinalReport from './FinalReport'
 import Notices from './Notices'
 import Certificates from './Certificates'
@@ -108,6 +109,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
           ))}</ul>}
         </Section>
       </div>
+      <div className={shown('search')}><Search firId={id} onSaved={saved} /></div>
       <div className={shown('notices')}><Notices firId={id} fir={fir} /></div>
       <div className={shown('readiness')}><Readiness key={version} firId={id} people={people ?? []} /></div>
       <div className={shown('statements')}><Statements key={version} firId={id} /></div>

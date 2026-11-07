@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { fmt, istIso, parseSections, text } from './formats'
+import { fmt, istIso, lengthSeconds, parseSections, text } from './formats'
 
 // Fictional data only.
 test('sections are read with commas or semicolons, any letter case, a "section" word and the longest act name first', () => {
@@ -39,4 +39,11 @@ test('a form field is trimmed, and empty or missing is null', () => {
   expect(text(f, 'a')).toBe('hello')
   expect(text(f, 'b')).toBeNull()
   expect(text(f, 'missing')).toBeNull()
+})
+
+test('a recording length is read as minutes:seconds', () => {
+  expect(lengthSeconds('3:41')).toBe(221)
+  expect(lengthSeconds(' 0:05 ')).toBe(5)
+  expect(lengthSeconds('120:00')).toBe(7200)
+  for (const bad of ['3:61', '341', '3:4', ':41', 'a:41', '12345:00', '']) expect(lengthSeconds(bad)).toBeNull()
 })

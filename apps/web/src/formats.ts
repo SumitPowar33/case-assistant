@@ -30,3 +30,9 @@ export const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim() ||
 
 /** Money from the server in paise, shown in rupees with Indian digit grouping: 22400050 -> "Rs 2,24,000.50". */
 export const rupees = (paise: number) => 'Rs ' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: paise % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 })
+
+/** A recording's length typed as minutes:seconds (3:41) in seconds, or null when it is not written that way. */
+export function lengthSeconds(text: string): number | null {
+  const m = /^(\d{1,4}):([0-5]\d)$/.exec(text.trim())
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null
+}

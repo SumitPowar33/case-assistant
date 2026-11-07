@@ -89,7 +89,7 @@ test('on a phone one part of the FIR shows at a time: the picker lists every par
   render(<FirDetail id="f1" />)
   const picker = await screen.findByRole('combobox', { name: 'Show' })
   expect([...(picker as HTMLSelectElement).options].map((o) => o.text)).toEqual(
-    ['Case details', 'People', 'Arrests', 'Chargesheets', 'Closure report', 'Deadlines', 'Evidence', 'Notices', 'Readiness check', 'Statements', 'Money trail', 'Final report', 'Case diary', 'Ask the case file'])
+    ['Case details', 'People', 'Arrests', 'Chargesheets', 'Closure report', 'Deadlines', 'Evidence', 'Search and seizure', 'Notices', 'Readiness check', 'Statements', 'Money trail', 'Final report', 'Case diary', 'Ask the case file'])
   const partOf = (el: HTMLElement) => el.closest('.fir-part')!
   const people = await screen.findByText(/A1 \(accused\): Fictional Accused/)
   expect(partOf(screen.getByText('Fictional complaint words')).classList.contains('shown')).toBe(true)
@@ -98,7 +98,7 @@ test('on a phone one part of the FIR shows at a time: the picker lists every par
   expect(partOf(people).classList.contains('shown')).toBe(true)
   expect(partOf(screen.getByText('Fictional complaint words')).classList.contains('shown')).toBe(false)
   expect(document.querySelectorAll('.fir-part.shown')).toHaveLength(1)
-  expect(document.querySelectorAll('.fir-part')).toHaveLength(14)
+  expect(document.querySelectorAll('.fir-part')).toHaveLength(15)
 })
 
 test('the part picker is in the screen language', async () => {

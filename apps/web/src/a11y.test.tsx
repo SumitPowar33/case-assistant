@@ -19,6 +19,7 @@ import ExpertRequests from './ExpertRequests'
 import Court from './Court'
 import LawFinder from './LawFinder'
 import AskCaseFile from './AskCaseFile'
+import Search from './Search'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -45,6 +46,10 @@ const data: Record<string, unknown> = {
   '/audit-log': [{ kind: 'admin_action', at: '2026-11-01T04:30:00Z', who_name: 'Fictional Admin', who_rank: 'SP', what: 'user_disabled', reason: 'Fictional reason given', fir_id: null, fir_ref: null }],
   '/protected-reads': [{ id: 'r1', at: '2026-11-01T04:30:00Z', what: 'people', fir_id: 'f1', fir_ref: '2026/9', complaint_id: null, reader_name: 'SI Fictional', reader_rank: 'SI', reader_username: 'si.fictional' }],
   '/law-finder': { status: 'draft', note: '', entries: [{ law: 'IPC', newLaw: 'BNS', from: '302', to: '103', what: 'Murder: punishment', partial: false }, { law: 'IEA', newLaw: 'BSA', from: '65B', to: '63', what: 'Electronic records', partial: true }] },
+  '/firs/f1/searches': [{ id: 'm1', place: 'Fictional house', grounds: 'Fictional grounds of the search', started_at: '2026-10-21T01:30:00Z', ended_at: '2026-10-21T02:10:00Z',
+    no_witness_reason: null, recorded_by_name: 'SI Fictional', forwarded_on: null, forwarded_to: null, days_since: 2,
+    witnesses: [{ name: 'Fictional Neighbour', address: 'Fictional lane' }], recordings: [{ sha256: 'ab'.repeat(32), seconds: 221, esakshya_id: null }],
+    items: [{ id: 'e1', label: '9/E-03', description: 'Fictional phone', kind: 'physical', seal_no: '9/E-03' }] }],
   '/glossary': { status: 'draft', entries: [{ id: 'remand', term: 'Remand', law: 'BNSS 187', meaning: 'Custody ordered by a Magistrate.', terms: { hi: 'रिमांड' } }] },
 }
 beforeEach(() => {
@@ -75,6 +80,7 @@ test.each([
   ['court and trial tracker', () => <Court />, 'CC 9/2026'],
   ['old law to new law finder', () => <LawFinder />, 'IPC 302'],
   ['ask the case file', () => <AskCaseFile firId="f1" />, 'Your question'],
+  ['search and seizure memo', () => <Search firId="f1" onSaved={() => {}} />, 'Fictional house'],
 ])('the %s screen has no accessibility faults axe can see', async (_name, screenOf, ready) => {
   render(screenOf())
   await screen.findAllByText(new RegExp(ready.replace(/[()/.]/g, '\\$&')))
