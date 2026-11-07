@@ -322,3 +322,13 @@ def test_a_preliminary_enquiry_is_recorded_once_field_by_field(db, change):
     db.execute(ENQUIRY, ("2026-08-18 11:00+05:30", io, c))
     with pytest.raises(KEPT):
         db.execute(f"UPDATE complaint SET {change} WHERE id=%s", (c,))
+
+
+def test_a_sign_out_is_kept_as_written(db):
+    # weekly test audit 7 Nov 2026: V38 had no database test
+    st, io, fir = seed_case(db)
+    jti = one(db, "INSERT INTO signed_out_token(jti,user_id,expires_at) VALUES (gen_random_uuid(),%s,now() + interval '8 hours') RETURNING jti", io)[0]
+    with pytest.raises(psycopg.errors.RaiseException):   # a sign-out cannot be taken back, so the old token stays refused
+        db.execute("DELETE FROM signed_out_token WHERE jti=%s", (jti,))
+    with pytest.raises(psycopg.errors.RaiseException):
+        db.execute("UPDATE signed_out_token SET expires_at=now() WHERE jti=%s", (jti,))
