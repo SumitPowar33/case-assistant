@@ -4,7 +4,7 @@ import { useLoad } from './useLoad'
 import { useT } from './i18n'
 
 type Item = {
-  id: string; fir_id: string; fir_no: number; fir_year: number; label: string; description: string; station: string
+  id: string; fir_id: string; fir_no: number; fir_year: number; label: string; description: string | null; withheld: boolean; station: string
   moved_at: string | null; location: string | null; place: string | null; seal_intact: boolean | null; status: string
 }
 type Register = { items: Item[]; counts: Record<string, number>; truncated: boolean }
@@ -100,7 +100,7 @@ export default function Property() {
           <tbody>{items.map((i) => (
             <tr key={i.id}>
               <td><button type="button" className="btn" aria-pressed={i.id === picked} onClick={() => setPicked(i.id)}>{i.label}</button>
-                <div className="sub">{i.description}</div></td>
+                <div className="sub">{i.withheld ? t('common.withheld') : i.description}</div></td>
               <td>{t('fir.title', { no: i.fir_no, year: i.fir_year })}<div className="sub">{i.station}</div></td>
               <td>{i.moved_at ? <>{i.location}<div className="sub">{i.moved_at.slice(0, 10)}</div></> : '—'}
                 {i.seal_intact === false && <div><span className="chip c-crit">{t('prop.sealBroken')}</span></div>}</td>

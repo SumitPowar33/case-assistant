@@ -4,7 +4,7 @@ import { useLoad } from './useLoad'
 import { useT } from './i18n'
 
 type Request = {
-  id: string; fir_id: string; fir_no: number; fir_year: number; kind: string; subject: string; sent_to: string; sent_on: string
+  id: string; fir_id: string; fir_no: number; fir_year: number; kind: string; subject: string | null; withheld: boolean; sent_to: string; sent_on: string
   station: string; status: string; note: string | null; days_waiting: number | null; reminder_due: boolean
 }
 type List = { requests: Request[]; counts: Record<string, number> }
@@ -36,11 +36,11 @@ function Steps({ request, onSaved }: { request: Request; onSaved: () => void }) 
   const steps = Array.isArray(data) ? data : []
   return (
     <section aria-labelledby="exp-steps">
-      <h2 id="exp-steps">{t('exp.steps', { subject: request.subject })}</h2>
+      <h2 id="exp-steps">{t('exp.steps', { subject: request.subject ?? t('common.withheld') })}</h2>
       <p><a href={`#/firs/${request.fir_id}`}>{t('prop.openCase', { no: request.fir_no, year: request.fir_year })}</a></p>
       {loadError ? <p role="alert">{loadError}</p> : (
         <div className="table-scroll"><table>
-          <caption>{t('exp.steps', { subject: request.subject })}</caption>
+          <caption>{t('exp.steps', { subject: request.subject ?? t('common.withheld') })}</caption>
           <thead><tr><th scope="col">{t('prop.colWhen')}</th><th scope="col">{t('prop.colStatus')}</th><th scope="col">{t('exp.colNote')}</th></tr></thead>
           <tbody>{steps.map((s) => (
             <tr key={s.id}><td>{s.on_date}</td><td>{t.code('expStatus', s.status)}</td><td>{s.note ?? ''}</td></tr>
@@ -128,7 +128,7 @@ export default function ExpertRequests() {
           <thead><tr>{(['exp.colRequest', 'exp.colTo', 'prop.colStatus', 'exp.colWaiting'] as const).map((c) => <th key={c} scope="col">{t(c)}</th>)}</tr></thead>
           <tbody>{requests.map((r) => (
             <tr key={r.id}>
-              <td><button type="button" className="btn" aria-pressed={r.id === picked} onClick={() => setPicked(r.id)}>{r.subject}</button>
+              <td><button type="button" className="btn" aria-pressed={r.id === picked} onClick={() => setPicked(r.id)}>{r.withheld ? t('common.withheld') : r.subject}</button>
                 <div className="sub">{t('fir.title', { no: r.fir_no, year: r.fir_year })} · {t.code('expKind', r.kind)}</div></td>
               <td>{r.sent_to}<div className="sub">{r.sent_on}</div></td>
               <td><span className={`chip ${STATUS_CHIP[r.status] ?? 'c-neu'}`}>{t.code('expStatus', r.status)}</span>

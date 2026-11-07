@@ -52,7 +52,9 @@ class ExpertRequestController {
         UUID me = CaseTeam.user(jwt);
         var rows = db.sql("""
                 select r.id, r.fir_id, r.kind, r.subject, r.sent_to, r.sent_on, fir.fir_no, fir.fir_year, s.name as station,
-                       n.status, n.on_date as status_on, n.note, e.label as evidence_label
+                       n.status, n.on_date as status_on, n.note, e.label as evidence_label,
+                       identity_protected_case(fir.id) and not (""" + team.includesSql("fir.id") + """
+                       ) as withheld
                 from expert_request r
                 join fir on fir.id = r.fir_id
                 join police_station s on s.id = fir.station_id
@@ -60,11 +62,16 @@ class ExpertRequestController {
                 left join lateral (select * from expert_request_step where request_id = r.id and status <> 'reminder_sent'
                                    order by recorded_at desc, id desc limit 1) n on true
                 where """ + " " + team.canReadFirSql() + """
-                 order by (n.status = 'report_received') nulls first, r.sent_on, r.id limit 500""").params(me).query().listOfRows();
+                 order by (n.status = 'report_received') nulls first, r.sent_on, r.id limit 500""").params(me, me).query().listOfRows();
         LocalDate today = LocalDate.now(IST);
         var counts = new LinkedHashMap<String, Integer>();
         for (String k : List.of("open", "reminder_due", "report_received")) counts.put(k, 0);
         for (var r : rows) {
+            // the subject and note of a protected case can name the victim (BNS 72): the station's readers outside the case team do not see them
+            if (Boolean.TRUE.equals(r.get("withheld"))) {
+                r.put("subject", null);
+                r.put("note", null);
+            }
             boolean done = "report_received".equals(r.get("status"));
             long days = ChronoUnit.DAYS.between(((java.sql.Date) r.get("sent_on")).toLocalDate(), today);
             r.put("days_waiting", done ? null : days);

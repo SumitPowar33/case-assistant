@@ -107,8 +107,13 @@ class CaseTeam {
 
     /** SQL test on table "fir" (two ? = user id, user id): {@link #canReadFirSql}, or the "evidence.custody" users of the FIR's station. */
     String canSeePropertySql() {
-        return "(" + canReadFirSql() + " or exists (select 1 from app_user cu where cu.id = ? and cu.active and cu.role in "
-                + Roles.in(roles.with("evidence.custody")) + " and cu.station_id = fir.station_id))";
+        return "(" + canReadFirSql() + " or " + custodianSql() + ")";
+    }
+
+    /** SQL test on table "fir" (one ? = user id): the user holds "evidence.custody" at the FIR's station (malkhana). */
+    String custodianSql() {
+        return "exists (select 1 from app_user cu where cu.id = ? and cu.active and cu.role in " + Roles.in(roles.with("evidence.custody"))
+                + " and cu.station_id = fir.station_id)";
     }
 
     /** SQL test on table "fir" (one ? = user id): the case team, or "fir.read_station" users of the FIR's station. */

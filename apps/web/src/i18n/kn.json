@@ -118,6 +118,7 @@
  "outcome.not_signed_in_time": "ಎಲೆಕ್ಟ್ರಾನಿಕ್ ಮಾಹಿತಿಗೆ ಮೂರು ದಿನಗಳಲ್ಲಿ ಸಹಿ ಆಗಿಲ್ಲ",
  "complaint.title": "{name} ಅವರ ದೂರು",
  "complaint.withheldName": "ಹೆಸರು ತಡೆಹಿಡಿಯಲಾಗಿದೆ (BNS 72)",
+ "common.withheld": "ತಡೆಹಿಡಿಯಲಾಗಿದೆ (BNS 72)",
  "complaint.meta": "{kind} · {mode} · ಸ್ವೀಕರಿಸಿದ್ದು {date} · ಬರೆದವರು {officer}",
  "complaint.readBack": "ಮಾಹಿತಿದಾರರಿಗೆ {language}ದಲ್ಲಿ ಓದಿ ಹೇಳಲಾಯಿತು, ಸರಿ ಎಂದು ಒಪ್ಪಿ ಸಹಿ ಮಾಡಿದರು",
  "complaint.signedByInformant": "ಮಾಹಿತಿದಾರರು ಸಹಿ ಮಾಡಿದರು",

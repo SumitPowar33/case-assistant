@@ -143,6 +143,23 @@ class ExpertRequestApiTest {
     }
 
     @Test
+    void theSubjectAndNoteOfAProtectedCaseAreWithheldFromStationReadersOutsideTheTeam() throws Exception {
+        // weekly review 7 Nov: a medical request's subject ("examination of <the victim>") was shown to the front desk on a BNS 64 case
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '64(1)')").param(fir).update();
+        UUID r = send(io, fir, "medical", 2);
+        step(io, fir, r, "at_lab", ago(1), "Fictional note naming someone").andExpect(status().isCreated());
+        mvc.perform(get("/api/expert-requests").header("Authorization", desk)).andExpect(jsonPath("$.requests.length()").value(1))
+                .andExpect(jsonPath("$.requests[0].subject").isEmpty()).andExpect(jsonPath("$.requests[0].note").isEmpty())
+                .andExpect(jsonPath("$.requests[0].withheld").value(true)).andExpect(jsonPath("$.requests[0].status").value("at_lab"));
+        for (String who : new String[] {io, sho})
+            mvc.perform(get("/api/expert-requests").header("Authorization", who)).andExpect(jsonPath("$.requests[0].subject").value("Phone extraction, fictional"))
+                    .andExpect(jsonPath("$.requests[0].note").value("Fictional note naming someone")).andExpect(jsonPath("$.requests[0].withheld").value(false));
+        send(otherIo, otherFir, "medical", 1);
+        mvc.perform(get("/api/expert-requests").header("Authorization", TestAuth.bearer(tokens, user(otherStation, "front_desk"))))
+                .andExpect(jsonPath("$.requests[0].subject").value("Phone extraction, fictional")).andExpect(jsonPath("$.requests[0].withheld").value(false));
+    }
+
+    @Test
     void anEvidenceItemOfTheCaseCanBeNamed() throws Exception {
         UUID e = item(fir, "E-09", "electronic");
         mvc.perform(post("/api/firs/" + fir + "/expert-requests").header("Authorization", io).contentType(MediaType.APPLICATION_JSON).content(body("forensic", ago(1), e))).andExpect(status().isCreated());

@@ -9,7 +9,7 @@ beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'hc.fictio
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); setSession(null) })
 
 const item = (over: object) => ({
-  id: 'i1', fir_id: 'f1', fir_no: 7, fir_year: 2026, label: '7/P-01', description: 'Fictional knife', station: 'Fictional PS',
+  id: 'i1', fir_id: 'f1', fir_no: 7, fir_year: 2026, label: '7/P-01', description: 'Fictional knife', withheld: false, station: 'Fictional PS',
   moved_at: '2026-10-03T11:00:00Z', location: 'Fictional malkhana', place: 'malkhana', seal_intact: true, status: 'in_malkhana', ...over,
 })
 const register = {
@@ -135,4 +135,11 @@ test('an item with no hand-over yet says so, and a failed history read shows its
   render(<Property />)
   fireEvent.click(await screen.findByRole('button', { name: '7/P-01' }))
   expect((await screen.findByRole('alert')).textContent).toContain('403')
+})
+
+test('the description of an item of a protected case is shown as withheld', async () => {
+  stub({ ...register, items: [item({ description: null, withheld: true })] })
+  render(<Property />)
+  const table = await screen.findByRole('table', { name: 'Seized items' })
+  expect(within(table).getAllByRole('row')[1].textContent).toContain('Withheld (BNS 72)')
 })

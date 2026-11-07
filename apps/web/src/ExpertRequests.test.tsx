@@ -9,7 +9,7 @@ beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'si.fictio
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); setSession(null) })
 
 const req = (over: object) => ({
-  id: 'r1', fir_id: 'f1', fir_no: 7, fir_year: 2026, kind: 'forensic', subject: 'Phone extraction', sent_to: 'Fictional Lab', sent_on: '2026-10-01',
+  id: 'r1', fir_id: 'f1', fir_no: 7, fir_year: 2026, kind: 'forensic', subject: 'Phone extraction', withheld: false, sent_to: 'Fictional Lab', sent_on: '2026-10-01',
   station: 'Fictional PS', status: 'sent', note: null, days_waiting: 5, reminder_due: false, ...over,
 })
 const list = {
@@ -151,4 +151,11 @@ test('the case list of the new-request form tolerates an answer of another shape
   vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => (url.startsWith('/api/firs?') ? {} : list) })))
   render(<ExpertRequests />)
   expect(await screen.findByRole('option', { name: 'Choose a case' })).toBeTruthy()
+})
+
+test('the subject of a request of a protected case is shown as withheld, in the list and over its steps', async () => {
+  stub({ ...list, requests: [req({ subject: null, withheld: true })] })
+  render(<ExpertRequests />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Withheld (BNS 72)' }))
+  expect(await screen.findByRole('heading', { name: 'Steps of this request: Withheld (BNS 72)' })).toBeTruthy()
 })

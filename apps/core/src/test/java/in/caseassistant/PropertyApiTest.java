@@ -105,6 +105,25 @@ class PropertyApiTest {
     }
 
     @Test
+    void theDescriptionOfAProtectedCasesItemIsWithheldFromTheFrontDesk() throws Exception {
+        // weekly review 7 Nov: the register let the front desk read the evidence descriptions of a BNS 64 case, which can name the victim
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '64(1)')").param(fir).update();
+        db.sql("insert into evidence_item (fir_id, label, description, kind, seized_at, seizure_memo) values (?, 'E-02', 'Fictional clothes of the victim', 'physical', '2026-10-02T10:00Z', 'SM-2')").param(fir).update();
+        mvc.perform(get("/api/property").header("Authorization", desk)).andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].label").value("E-02")).andExpect(jsonPath("$.items[0].description").isEmpty())
+                .andExpect(jsonPath("$.items[0].withheld").value(true));
+        // the case team and the station's malkhana (who hold the item and see it in the evidence register) still read it
+        for (String who : new String[] {io, sho, malkhana})
+            mvc.perform(get("/api/property").header("Authorization", who)).andExpect(jsonPath("$.items[0].description").value("Fictional clothes of the victim"))
+                    .andExpect(jsonPath("$.items[0].withheld").value(false));
+        // an ordinary case is not withheld from the front desk
+        mvc.perform(get("/api/property").header("Authorization", farMalkhana)).andExpect(jsonPath("$.items.length()").value(0));
+        item(otherFir, "F-01", "physical");
+        mvc.perform(get("/api/property").header("Authorization", TestAuth.bearer(tokens, user(otherStation, "front_desk"))))
+                .andExpect(jsonPath("$.items[0].description").value("Fictional item")).andExpect(jsonPath("$.items[0].withheld").value(false));
+    }
+
+    @Test
     void theHandOverPlaceMustBeOneOfTheList() throws Exception {
         UUID i = item(fir, "E-01", "physical");
         handOver(io, fir, i, "moon").andExpect(status().isBadRequest());
