@@ -15,7 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * Supervisor review (design board 11): the open cases of the supervisor's reach (the SHO's station, the SP's district)
  * by the nearest deadline, with the gaps still open in the readiness check and whether a final report waits for their
- * decision. It lists facts from the files; it scores no officer and no case. Needs the permission
+ * decision, and the open cases whose IO has left the station. It lists facts from the files; it scores no officer and no case. Needs the permission
  * {@code chargesheet.approve}; the cases are exactly those the user may read as case team (CaseTeam).
  */
 @RestController
@@ -68,6 +68,15 @@ class SupervisorController {
         out.put("waiting_approval", waiting);
         out.put("due_in_21_days", soon);
         out.put("cases", cases);
+        // decision 2(d) of 2 Nov 2026: open cases whose IO was moved to another station or whose account was closed,
+        // until the SHO or SP assigns a new IO (the old IO no longer reaches them, CaseTeam)
+        out.put("io_left", db.sql("""
+                select fir.id, fir.fir_no, fir.fir_year, io.full_name as io_name, io.active as io_active, ios.name as io_station_name
+                from fir join app_user io on io.id = fir.io_id left join police_station ios on ios.id = io.station_id
+                left join final_report_draft r on r.fir_id = fir.id
+                where %s and %s and (not io.active or io.station_id is distinct from fir.station_id) and coalesce(r.status, '') <> 'signed'
+                order by fir.fir_year, fir.fir_no limit %d""".formatted(team.readableFirsSql(), team.includesSql("fir.id"), LIMIT))
+                .params(me, me, me).query().listOfRows());
         return out;
     }
 }

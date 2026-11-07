@@ -27,7 +27,8 @@ class PeopleApiTest {
         db.sql("insert into state_pack (code, name, version, languages) values ('IN','National','1',array['en'])").update();
         station = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','Testpur'),'Testpur City') returning id")
                 .query(UUID.class).single();
-        io = db.sql("insert into app_user (full_name, rank, role) values ('Officer Asha Rao','SI','io') returning id").query(UUID.class).single();
+        // the IO is posted at the FIR's station: an IO elsewhere (or nowhere) is not on the case team (decision 2(d) of 2 Nov 2026)
+        io = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'Officer Asha Rao','SI','io') returning id").param(station).query(UUID.class).single();
         clerk = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'Clerk Dev Nair','HC','front_desk') returning id").param(station).query(UUID.class).single();
         fir = db.sql("""
                 insert into fir (station_id, fir_year, fir_no, gd_entry_no, registered_at, information_received_at,

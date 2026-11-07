@@ -25,7 +25,8 @@ class SupervisorApiTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcClient db;
     @Autowired JwtEncoder tokens;
-    UUID station, ioId, shoId, soon, later, none;
+    @Autowired CaseTeam team;
+    UUID station, far, ioId, shoId, soon, later, none;
     String io, sho, spOther, desk;
     int no = 0;
 
@@ -45,7 +46,7 @@ class SupervisorApiTest {
         db.sql("truncate fir, police_station, state_pack, app_user cascade").update();
         db.sql("insert into state_pack (code, name, version, languages) values ('IN','National','1',array['en'])").update();
         station = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','North'),'Fictional North PS') returning id").query(UUID.class).single();
-        UUID far = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','South'),'Fictional South PS') returning id").query(UUID.class).single();
+        far = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','South'),'Fictional South PS') returning id").query(UUID.class).single();
         ioId = user(station, "io");
         shoId = user(station, "sho");
         io = TestAuth.bearer(tokens, ioId);
@@ -104,6 +105,9 @@ class SupervisorApiTest {
         call(post(url + "/sign"), io, null).andExpect(status().isOk());
         call(get("/api/supervisor"), sho, null).andExpect(jsonPath("$.cases.length()").value(2))
                 .andExpect(jsonPath("$.cases[?(@.id=='" + soon + "')]").isEmpty());
+        db.sql("update app_user set station_id = ? where id = ?").params(far, ioId).update();   // a signed case needs no new IO
+        call(get("/api/supervisor"), sho, null).andExpect(jsonPath("$.io_left.length()").value(1))
+                .andExpect(jsonPath("$.io_left[0].id").value(later.toString()));
     }
 
     @Test
@@ -114,5 +118,42 @@ class SupervisorApiTest {
         call(post("/api/firs/" + mine + "/final-report/submit"), sho, null).andExpect(status().isOk());
         call(get("/api/supervisor"), sho, null).andExpect(jsonPath("$.cases[?(@.id=='" + mine + "')].can_decide").value(false))
                 .andExpect(jsonPath("$.waiting_approval").value(1));
+    }
+    /** Decision 2(d) of 2 Nov 2026: a transferred IO loses the old station's cases at once; they wait on the SHO's list. */
+    @Test
+    void aTransferredIoLosesTheCasesAndTheyWaitOnTheShosListUntilANewIo() throws Exception {
+        call(get("/api/firs/" + soon), io, null).andExpect(status().isOk());
+        call(get("/api/supervisor"), sho, null).andExpect(jsonPath("$.io_left.length()").value(0));
+        db.sql("update app_user set station_id = ? where id = ?").params(far, ioId).update();   // the state admin moves the account
+        call(get("/api/firs/" + soon), io, null).andExpect(status().isNotFound());
+        org.junit.jupiter.api.Assertions.assertFalse(team.includes(ioId, soon));    // nor may they add to the case
+        org.junit.jupiter.api.Assertions.assertFalse(team.canReadFir(ioId, soon));
+        call(get("/api/firs"), io, null).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        call(get("/api/firs/" + soon + "/people"), io, null).andExpect(status().is4xxClientError());
+        call(get("/api/firs/" + soon + "/diary"), io, null).andExpect(status().is4xxClientError());
+        call(get("/api/supervisor"), sho, null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.io_left.length()").value(2))
+                .andExpect(jsonPath("$.io_left[0].id").value(later.toString()))
+                .andExpect(jsonPath("$.io_left[0].fir_no").value(1))
+                .andExpect(jsonPath("$.io_left[1].id").value(soon.toString()))
+                .andExpect(jsonPath("$.io_left[0].io_name").value("Fictional io"))
+                .andExpect(jsonPath("$.io_left[0].io_station_name").value("Fictional South PS"))
+                .andExpect(jsonPath("$.io_left[0].io_active").value(true))
+                .andExpect(jsonPath("$.io_left[?(@.id=='" + none + "')]").isEmpty());
+        call(get("/api/supervisor"), spOther, null).andExpect(jsonPath("$.io_left.length()").value(0));
+        UUID newIo = user(station, "io");
+        call(post("/api/firs/" + soon + "/io"), sho, "{\"ioId\":\"" + newIo + "\",\"reason\":\"Former IO transferred to South PS\"}")
+                .andExpect(status().isNoContent());
+        call(get("/api/supervisor"), sho, null).andExpect(jsonPath("$.io_left.length()").value(1))
+                .andExpect(jsonPath("$.io_left[0].id").value(later.toString()));
+        call(get("/api/firs/" + soon), TestAuth.bearer(tokens, newIo), null).andExpect(status().isOk());
+    }
+
+    @Test
+    void anIoWhoseAccountWasClosedIsListedToo() throws Exception {
+        db.sql("update app_user set active = false where id = ?").param(ioId).update();
+        call(get("/api/supervisor"), sho, null).andExpect(jsonPath("$.io_left.length()").value(2))
+                .andExpect(jsonPath("$.io_left[0].io_active").value(false))
+                .andExpect(jsonPath("$.io_left[0].io_station_name").value("Fictional North PS"));
     }
 }

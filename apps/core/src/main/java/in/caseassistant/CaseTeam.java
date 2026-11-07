@@ -8,7 +8,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Who may do what on a case. The case team is the FIR's investigating officer plus everyone whose role sees all cases
+ * Who may do what on a case. The case team is the FIR's investigating officer (only while posted at the FIR's station:
+ * a transferred IO loses the old station's cases at once, decision 2(d) of 2 Nov 2026) plus everyone whose role sees all cases
  * of their station or district (by default the SHO of the FIR's station and the SP of its district; see
  * {@link Roles} and packs/{module}/roles.json). Only they see protected victim details (BNS 72, POCSO 23) and only they
  * add records to the case. The signed-in user comes from the login token (see {@link SecurityConfig}).
@@ -52,7 +53,7 @@ class CaseTeam {
                   join fir f on f.id = %s
                   join police_station fs on fs.id = f.station_id
                   left join police_station us on us.id = u.station_id
-                  where u.id = ? and u.active and (f.io_id = u.id or %s))""".formatted(firId, stationOrDistrict);
+                  where u.id = ? and u.active and ((f.io_id = u.id and u.station_id = f.station_id) or %s))""".formatted(firId, stationOrDistrict);
     }
 
     /** 403 unless the user is on the case team. An unknown FIR also gives 403, so it reveals nothing. */
@@ -119,7 +120,7 @@ class CaseTeam {
     /** SQL test on table "fir" (one ? = user id): the case team, or "fir.read_station" users of the FIR's station. */
     String canReadFirSql() {
         return "exists (select 1 from app_user u join police_station fs on fs.id = fir.station_id"
-                + " left join police_station us on us.id = u.station_id where u.id = ? and u.active and (fir.io_id = u.id"
+                + " left join police_station us on us.id = u.station_id where u.id = ? and u.active and ((fir.io_id = u.id and u.station_id = fir.station_id)"
                 + " or (u.role in " + Roles.in(roles.with("fir.read_station")) + " and u.station_id = fir.station_id)"
                 + " or " + stationOrDistrictOnFir + "))";
     }
@@ -130,7 +131,8 @@ class CaseTeam {
      * check on every FIR of the installation (load test 1 Nov 2026: 210,000 FIRs took an SP's first page 8 s, now ms).
      */
     String readableFirsSql() {
-        return "(fir.io_id = (select u.id from app_user u where u.id = ? and u.active) or fir.station_id = any(array(" + wholeStations + ")))";
+        return "((fir.io_id = (select u.id from app_user u where u.id = ? and u.active) and fir.station_id = (select io.station_id from app_user io where io.id = fir.io_id))"
+                + " or fir.station_id = any(array(" + wholeStations + ")))";
     }
 
     /** Reading the FIR itself: the case team, or the front desk of its station (who register it). */

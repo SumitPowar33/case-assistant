@@ -58,7 +58,7 @@ take a screenshot of it (desktop and 390 px) and compare it with its board; note
 shared classes in `index.css` (`.card`, `.chip`, `.btn`), never new colours.
 
 ## Who may see and do what
-Case access comes from the role's data in `packs/*/roles.json` (case team = the named IO plus roles scoped to the station or district). A state admin works only inside their own state; an admin without a station is the platform admin. A state, district or station may only tighten a policy (`policies.json`), never loosen what is above it. Do not hard-code role names in new code: use a permission from `roles.json`.
+Case access comes from the role's data in `packs/*/roles.json` (case team = the named IO while posted at the FIR's station, plus roles scoped to the station or district; a moved IO's open FIRs wait on the Supervisor review's "IO has left the station" list). A state admin works only inside their own state; an admin without a station is the platform admin. A state, district or station may only tighten a policy (`policies.json`), never loosen what is above it. Do not hard-code role names in new code: use a permission from `roles.json`.
 
 ## Start of every session
 After the baseline, push `In progress: item N (session S, started HH:MM IST)` at the top of the Next list in `docs/PROGRESS.md` as the first commit. Skip an item another session marked in progress less than 3 hours ago. Remove the line when you finish.
