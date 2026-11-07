@@ -18,6 +18,7 @@ function stub(status: number, body: unknown) {
 test('lists the cases by deadline with the IO, open gaps and the state of the final report, linked to the report', async () => {
   stub(200, {
     waiting_approval: 1, due_in_21_days: 2,
+    io_left: [],
     cases: [
       row({ open_gaps: 3, report_status: 'submitted', can_decide: true }),
       row({ id: 'f2', fir_no: 8, io_name: null, io_rank: null, deadline_kind: 'notice_reply:Fictional Bank', days_left: -2, open_gaps: 0, report_status: 'returned' }),
@@ -47,7 +48,7 @@ test('lists the cases by deadline with the IO, open gaps and the state of the fi
 })
 
 test('an empty queue says so', async () => {
-  stub(200, { waiting_approval: 0, due_in_21_days: 0, cases: [] })
+  stub(200, { waiting_approval: 0, due_in_21_days: 0, cases: [], io_left: [] })
   render(<Supervisor />)
   expect(await screen.findByText('No open cases.')).toBeTruthy()
   expect(screen.queryByRole('table')).toBeNull()
@@ -57,4 +58,34 @@ test('the reason is shown when the server refuses', async () => {
   stub(403, { message: 'Only a supervisor can review the cases of a station.' })
   render(<Supervisor />)
   expect((await screen.findByRole('alert')).textContent).toContain('403')
+})
+
+test('the cases whose IO has left the station are listed with where the IO went and a link to assign a new one', async () => {
+  stub(200, {
+    waiting_approval: 0, due_in_21_days: 0, cases: [],
+    io_left: [
+      { id: 'f5', fir_no: 11, fir_year: 2026, io_name: 'SI Fictional Ravi', io_active: true, io_station_name: 'Fictional South PS' },
+      { id: 'f6', fir_no: 12, fir_year: 2026, io_name: 'ASI Fictional Meena', io_active: false, io_station_name: 'Fictional North PS' },
+      { id: 'f7', fir_no: 13, fir_year: 2026, io_name: 'SI Fictional Kiran', io_active: true, io_station_name: null },
+    ],
+  })
+  render(<Supervisor />)
+  const table = await screen.findByRole('table', { name: 'Cases whose IO has left the station' })
+  const rows = within(table).getAllByRole('row')
+  expect(rows).toHaveLength(4)
+  expect(rows[1].textContent).toContain('FIR 11/2026')
+  expect(rows[1].textContent).toContain('SI Fictional Ravi')
+  expect(rows[1].textContent).toContain('Now at Fictional South PS')
+  expect(within(rows[1]).getByRole('link', { name: 'Assign a new IO' }).getAttribute('href')).toBe('#/firs/f5/case')
+  expect(rows[2].textContent).toContain('Account closed')
+  expect(rows[2].textContent).not.toContain('Fictional North PS')
+  expect(rows[3].textContent).toContain('Now at —')
+  expect(screen.getByText('No open cases.')).toBeTruthy()
+})
+
+test('no section for IOs who left when there are none', async () => {
+  stub(200, { waiting_approval: 0, due_in_21_days: 0, cases: [], io_left: [] })
+  render(<Supervisor />)
+  await screen.findByText('No open cases.')
+  expect(screen.queryByText('Cases whose IO has left the station')).toBeNull()
 })

@@ -6,14 +6,16 @@ type Row = {
   deadline_kind: string | null; due_on: string | null; days_left: number | null; open_gaps: number
   report_status: string | null; can_decide: boolean
 }
-type Queue = { waiting_approval: number; due_in_21_days: number; cases: Row[] }
+type IoLeft = { id: string; fir_no: number; fir_year: number; io_name: string; io_active: boolean; io_station_name: string | null }
+type Queue = { waiting_approval: number; due_in_21_days: number; cases: Row[]; io_left: IoLeft[] }
 
 const STATUS_CHIP: Record<string, string> = { draft: 'c-neu', returned: 'c-warn', submitted: 'c-info', approved: 'c-ok' }
 
 /**
  * Supervisor review (design board 11): the open cases of the supervisor's station or district by nearest deadline, the
  * gaps the readiness check still has open and the final reports waiting for a decision. It states what the files hold;
- * it does not rate an officer or a case. The server decides who may open it (permission chargesheet.approve).
+ * it does not rate an officer or a case. Below, the open cases whose IO was moved to another station or whose account was
+ * closed (decision 2(d) of 2 Nov 2026): the old IO no longer reaches them, so they wait here for a new IO. The server decides who may open it (permission chargesheet.approve).
  */
 export default function Supervisor() {
   const t = useT()
@@ -50,6 +52,25 @@ export default function Supervisor() {
             </tr>
           ))}</tbody>
         </table>
+      )}
+      {data.io_left.length > 0 && (
+        <section className="card">
+          <h2>{t('sup.ioLeftTitle')}</h2>
+          <p>{t('sup.ioLeftIntro')}</p>
+          <table>
+            <caption className="visually-hidden">{t('sup.ioLeftTitle')}</caption>
+            <thead><tr>
+              <th scope="col">{t('sup.colCase')}</th><th scope="col">{t('sup.colIoLeft')}</th><td />
+            </tr></thead>
+            <tbody>{data.io_left.map((r) => (
+              <tr key={r.id}>
+                <td>{t('fir.title', { no: r.fir_no, year: r.fir_year })}</td>
+                <td>{r.io_name}<div className="sub">{!r.io_active ? t('sup.ioClosed') : t('sup.ioMoved', { station: r.io_station_name ?? '—' })}</div></td>
+                <td><a className="btn" href={`#/firs/${r.id}/case`}>{t('sup.assignIo')}</a></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </section>
       )}
     </>
   )
