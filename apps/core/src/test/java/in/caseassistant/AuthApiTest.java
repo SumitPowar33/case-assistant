@@ -29,6 +29,7 @@ class AuthApiTest {
     @Autowired ObjectMapper json;
     @Autowired AuthController auth;
     @Autowired JwtEncoder tokens;
+    @Autowired org.springframework.security.crypto.password.PasswordEncoder passwords;
     static final String ADMIN_PW = "fictional-admin-pass-1";
 
     @BeforeEach
@@ -191,6 +192,24 @@ class AuthApiTest {
         mvc.perform(get("/api/me").header("Authorization", again)).andExpect(status().isOk());
         assertThat(db.sql("select outcome from sign_in_attempt order by at").query(String.class).list())
                 .containsExactly("ok", "wrong_current_password", "password_changed", "wrong_password", "ok");
+    }
+
+    /** A stolen token cannot be used to guess the password: wrong current passwords lock the change route and the sign-in alike. */
+    @Test
+    void guessingTheCurrentPasswordLocksTheChangeAndTheSignIn() throws Exception {
+        String token = "Bearer " + json.readTree(login("admin.one", ADMIN_PW, 200)).get("token").asText();
+        String change = "{\"currentPassword\":\"%s\",\"newPassword\":\"fictional-admin-pass-9\"}";
+        for (int i = 0; i < 5; i++)
+            mvc.perform(post("/api/me/password").header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
+                    .content(change.formatted("guess-number-" + i))).andExpect(status().isForbidden());
+        var locked = mvc.perform(post("/api/me/password").header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
+                .content(change.formatted(ADMIN_PW))).andExpect(status().isTooManyRequests()).andReturn().getResponse();
+        assertThat(locked.getContentAsString()).contains("Try again after");
+        login("admin.one", ADMIN_PW, 429);
+        // the password is unchanged
+        assertThat(db.sql("select password_hash from app_user where username = 'admin.one'").query(String.class).single())
+                .satisfies(h -> assertThat(passwords.matches(ADMIN_PW, h)).isTrue());
+        assertThat(db.sql("select outcome from sign_in_attempt order by at desc limit 2").query(String.class).list()).containsExactly("locked", "locked");
     }
 
     /** The screen language is the user's own choice among the languages of the installed modules (module.json). */

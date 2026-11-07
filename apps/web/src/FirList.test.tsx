@@ -59,3 +59,20 @@ test('in Hindi the list, its columns and the page buttons are in Hindi', async (
   expect(screen.getByRole('button', { name: 'पुराने' })).toBeTruthy()
   expect(screen.getAllByRole('cell', { name: 'जाँच शुरू की गई' }).length).toBeGreaterThan(0)   // the action taken, by its label
 })
+
+test('each row says zero FIR or FIR and marks a sexual offence; a refused list shows the reason', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
+    ok: true, status: 200,
+    json: async () => url.startsWith('/api/firs?') ? [{ ...fir(1), sexual_offence: true }, fir(2)] : [],
+  })))
+  render(<FirList />)
+  const first = (await screen.findByRole('link', { name: '1/2026' })).closest('tr')!
+  expect(first.textContent).toContain('Zero FIR · sexual offence')
+  const second = screen.getByRole('link', { name: '2/2026' }).closest('tr')!
+  expect(second.textContent).not.toContain('sexual offence')
+  expect(second.textContent).not.toContain('Zero FIR')
+  cleanup()
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })))
+  render(<FirList />)
+  expect((await screen.findByRole('alert')).textContent).toContain('500')
+})

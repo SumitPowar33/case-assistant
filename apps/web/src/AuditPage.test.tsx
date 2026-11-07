@@ -58,3 +58,24 @@ test('an empty log says so; another station shows the server refusal, not the ro
   expect((await screen.findByRole('alert')).textContent).toContain('403')
   expect(screen.queryByRole('table')).toBeNull()
 })
+
+test('an account without a station starts on the first station; no station at all says so; a refused station list is shown', async () => {
+  setSession({ token: 't', user: { id: 'u0', username: 'platform', full_name: 'Platform Admin', rank: 'Admin', role: 'state_admin', station_id: null, permissions: ['audit.read_protected'] } })
+  const urls = stub(() => ({ status: 200, body: [entry('protected_read', 'people', { fir_id: 'f9', fir_ref: null })] }))
+  render(<AuditPage />)
+  expect(screen.getByText('Loading…')).toBeTruthy()
+  const table = await screen.findByRole('table')
+  expect(urls).toContain('/api/audit-log?stationId=s1&limit=100&offset=0')
+  expect(within(table).getByRole('link', { name: 'FIR' }).getAttribute('href')).toBe('#/firs/f9')
+  cleanup()
+
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => [] })))
+  render(<AuditPage />)
+  expect(await screen.findByText('Nothing in the audit log of this police station.')).toBeTruthy()
+  expect(screen.queryByRole('table')).toBeNull()
+  cleanup()
+
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 403, json: async () => ({}) })))
+  render(<AuditPage />)
+  expect((await screen.findByRole('alert')).textContent).toContain('403')
+})
