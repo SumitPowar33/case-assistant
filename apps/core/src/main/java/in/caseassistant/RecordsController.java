@@ -125,17 +125,18 @@ class RecordsController {
 
     private static final java.time.ZoneId IST = java.time.ZoneId.of("Asia/Kolkata");
 
-    private static void badRequest(String message) {
-        throw new org.springframework.web.server.ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    /** Used as {@code throw badRequest(...)}, so the compiler and the coverage report both see that the line ends there. */
+    private static org.springframework.web.server.ResponseStatusException badRequest(String message) {
+        return new org.springframework.web.server.ResponseStatusException(HttpStatus.BAD_REQUEST, message);
     }
 
     /** The BNSS 187(3) 60/90 days run from the first remand, so it can never be before the arrest day (IST). */
     private static void checkRemand(LocalDate remand, OffsetDateTime arrestedAt) {
         if (remand != null && remand.isBefore(arrestedAt.atZoneSameInstant(IST).toLocalDate()))
-            badRequest("The first remand cannot be before the day of arrest.");
+            throw badRequest("The first remand cannot be before the day of arrest.");
         // a slipped year (2027 for 2026) would push the 60/90-day limit far out without anyone noticing
         if (remand != null && remand.isAfter(LocalDate.now(IST)))
-            badRequest("The first remand cannot be after today.");
+            throw badRequest("The first remand cannot be after today.");
     }
 
     /**
@@ -149,8 +150,8 @@ class RecordsController {
         team.requireTeam(me, firId);
         requireRow("person", a.personId, firId);
         if (!db.sql("select role = 'accused' from person where id = ?").param(a.personId).query(Boolean.class).single())
-            badRequest("Only an accused can be arrested. Change the person's role first.");
-        if (a.arrestedAt.isAfter(OffsetDateTime.now().plusMinutes(5))) badRequest("The time of arrest cannot be in the future.");
+            throw badRequest("Only an accused can be arrested. Change the person's role first.");
+        if (a.arrestedAt.isAfter(OffsetDateTime.now().plusMinutes(5))) throw badRequest("The time of arrest cannot be in the future.");
         checkRemand(a.firstRemandOn, a.arrestedAt);
         return created(db.sql("""
                 insert into arrest (person_id, arrested_at, place, grounds, informed_name, informed_contact,
@@ -232,8 +233,8 @@ class RecordsController {
         var arrestedAt = db.sql("select a.arrested_at from arrest_current a join person p on p.id = a.person_id where a.id = ? and p.fir_id = ?")
                 .params(arrestId, firId).query(OffsetDateTime.class).optional()
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (r.releasedOn.isBefore(arrestedAt.atZoneSameInstant(IST).toLocalDate())) badRequest("The release cannot be before the day of arrest.");
-        if (r.releasedOn.isAfter(todayIst())) badRequest("The release date cannot be in the future.");
+        if (r.releasedOn.isBefore(arrestedAt.atZoneSameInstant(IST).toLocalDate())) throw badRequest("The release cannot be before the day of arrest.");
+        if (r.releasedOn.isAfter(todayIst())) throw badRequest("The release date cannot be in the future.");
         int n = db.sql("""
                 update arrest set released_on = ?, release_basis = ?, release_recorded_by = ?, release_recorded_at = now()
                 where id = ? and released_on is null
@@ -254,9 +255,9 @@ class RecordsController {
         UUID me = CaseTeam.user(jwt);
         team.requireTeam(me, firId);
         requireFir(firId);
-        if (c.filedOn.isAfter(todayIst())) badRequest("The filing date cannot be in the future.");
+        if (c.filedOn.isAfter(todayIst())) throw badRequest("The filing date cannot be in the future.");
         var registered = db.sql("select ist_date(registered_at) from fir where id = ?").param(firId).query(LocalDate.class).single();
-        if (c.filedOn.isBefore(registered)) badRequest("A chargesheet cannot be filed before the FIR was registered.");
+        if (c.filedOn.isBefore(registered)) throw badRequest("A chargesheet cannot be filed before the FIR was registered.");
         return created(insertChargesheet(me, firId, c.filedOn, c.court, c.reportNo, c.accusedIds, null, null));
     }
 
@@ -265,7 +266,7 @@ class RecordsController {
         for (UUID p : accused) {
             requireRow("person", p, firId);
             if (!db.sql("select role = 'accused' from person where id = ?").param(p).query(Boolean.class).single())
-                badRequest("A chargesheet names only accused.");
+                throw badRequest("A chargesheet names only accused.");
         }
         UUID id = db.sql("""
                 insert into chargesheet (fir_id, filed_on, court, report_no, recorded_by, supersedes, correction_reason)
@@ -289,7 +290,7 @@ class RecordsController {
         team.requireTeam(me, firId);
         requireRow("chargesheet", chargesheetId, firId);
         requireReason(c.reason);
-        if (c.filedOn.isAfter(todayIst())) badRequest("The filing date cannot be in the future.");
+        if (c.filedOn.isAfter(todayIst())) throw badRequest("The filing date cannot be in the future.");
         if (db.sql("select exists (select 1 from chargesheet where supersedes = ?)").param(chargesheetId).query(Boolean.class).single())
             throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
                     "This chargesheet has already been replaced; correct the newest one.");
@@ -297,7 +298,7 @@ class RecordsController {
     }
 
     private static void requireReason(String reason) {
-        if (reason.trim().length() < 10) badRequest("Say why, in at least 10 characters.");
+        if (reason.trim().length() < 10) throw badRequest("Say why, in at least 10 characters.");
     }
 
     /**
@@ -317,11 +318,11 @@ class RecordsController {
         checkRemand(c.firstRemandOn, arrestedAt);
         // a recorded remand can be corrected but not cleared: clearing it would silently drop the BNSS 187(3) limit
         if (c.firstRemandOn == null && db.sql("select first_remand_on is not null from arrest_current where id = ?").param(arrestId).query(Boolean.class).single())
-            badRequest("A first remand is on record; a correction must restate its date.");
-        if ((c.releasedOn == null) != (c.releaseBasis == null)) badRequest("A release needs both its date and how it happened.");
+            throw badRequest("A first remand is on record; a correction must restate its date.");
+        if ((c.releasedOn == null) != (c.releaseBasis == null)) throw badRequest("A release needs both its date and how it happened.");
         if (c.releasedOn != null) {
-            if (c.releasedOn.isBefore(arrestedAt.atZoneSameInstant(IST).toLocalDate())) badRequest("The release cannot be before the day of arrest.");
-            if (c.releasedOn.isAfter(todayIst())) badRequest("The release date cannot be in the future.");
+            if (c.releasedOn.isBefore(arrestedAt.atZoneSameInstant(IST).toLocalDate())) throw badRequest("The release cannot be before the day of arrest.");
+            if (c.releasedOn.isAfter(todayIst())) throw badRequest("The release date cannot be in the future.");
         }
         UUID newest = db.sql("select id from arrest_correction c where arrest_id = ? and not exists (select 1 from arrest_correction n where n.supersedes = c.id)")
                 .param(arrestId).query(UUID.class).optional().orElse(null);
@@ -381,7 +382,7 @@ class RecordsController {
                 .params(arrestId, firId).query(Integer.class).optional()
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
         requireReason(c.reason);
-        if (c.arrestedAt.isAfter(OffsetDateTime.now().plusMinutes(5))) badRequest("The time of arrest cannot be in the future.");
+        if (c.arrestedAt.isAfter(OffsetDateTime.now().plusMinutes(5))) throw badRequest("The time of arrest cannot be in the future.");
         UUID newest = db.sql("select id from arrest_time_correction c where arrest_id = ? and not exists (select 1 from arrest_time_correction n where n.supersedes = c.id)")
                 .param(arrestId).query(UUID.class).optional().orElse(null);
         return created(db.sql("""
@@ -453,11 +454,11 @@ class RecordsController {
     }
 
     private void checkClosureDates(UUID firId, LocalDate filedOn, LocalDate informedOn) {
-        if (filedOn.isAfter(todayIst())) badRequest("The filing date cannot be in the future.");
+        if (filedOn.isAfter(todayIst())) throw badRequest("The filing date cannot be in the future.");
         if (informedOn != null && (informedOn.isBefore(filedOn) || informedOn.isAfter(todayIst())))
-            badRequest("The informant must be told on or after the filing day, and not in the future.");
+            throw badRequest("The informant must be told on or after the filing day, and not in the future.");
         var registered = db.sql("select ist_date(registered_at) from fir where id = ?").param(firId).query(LocalDate.class).single();
-        if (filedOn.isBefore(registered)) badRequest("A closure report cannot be filed before the FIR was registered.");
+        if (filedOn.isBefore(registered)) throw badRequest("A closure report cannot be filed before the FIR was registered.");
     }
 
     private UUID closureId(UUID firId) {
@@ -519,7 +520,7 @@ class RecordsController {
         requireFir(firId);
         UUID closure = closureId(firId);
         var filed = db.sql("select filed_on from closure_report_current where id = ?").param(closure).query(LocalDate.class).single();
-        if (d.decidedOn.isAfter(todayIst()) || d.decidedOn.isBefore(filed)) badRequest("The decision date must be between the filing day and today.");
+        if (d.decidedOn.isAfter(todayIst()) || d.decidedOn.isBefore(filed)) throw badRequest("The decision date must be between the filing day and today.");
         try {
             return created(db.sql("""
                     insert into closure_decision (closure_id, decision, decided_on, note, recorded_by) values (?,?,?,?,?) returning id""")
