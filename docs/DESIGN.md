@@ -33,7 +33,7 @@ committed** (CLAUDE.md, "Screens"). Where the app differs on purpose, the differ
 | 4 | Notices | FIR part "Notices" | restyled |
 | 5 | Evidence, custody, 63(4) | FIR part "Evidence" | restyled |
 | 6 | Statements and witnesses | FIR part "Statements" | built 3 Nov (session 65): witness tracker and statements kept as said (V40); translation, differences to clarify and the video player still to build |
-| 7 | Field seizure on tablet | — | to build |
+| 7 | Field seizure on tablet | FIR part `search` (`Search.tsx`) | first version (session 76): memo, witnesses, recording hash, sealed items, forwarding; no photos, selfie, QR or offline sync |
 | 8 | Money trail and accused links | — | to build |
 | 9 | Readiness check | FIR part "Readiness check" | restyled with status chips (session 59) |
 | 10 | Draft chargesheet and sign | FIR part "Final report": draft, submit, approve or return, sign (V41); AI drafting and print to build | partly built |

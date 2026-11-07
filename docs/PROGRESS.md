@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: weekly review and test audit, then item 13 (Field capture on a tablet, board 7) (session 76, started 21:06 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -89,6 +88,7 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
+Done in session 76 (7 Nov, Saturday 21:05 IST weekly review): weekly review and test audit (5 fixes, see the entry); item 13, Field capture on a tablet (board 7, search and seizure memo, V48).
 Done in session 75 (7 Nov, 02:05 IST scheduled run, last of the night): item 13m (second half), State setup and approvals (`#/state-setup`, V46); a date-dependent e2e test fixed.
 Done in session 74 (6 Nov, scheduled run): item 13l, Audit log (`#/audit`).
 Done in session 73 (6 Nov, scheduled run): item 13k, Ask the case file (`#/firs/{id}/ask`), first version; a flaky phone browser test fixed.
@@ -121,7 +121,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    j. DONE (session 72, without the AI explanation): Old law to new law finder (board 18), `#/laws`, table in the national pack (59 sections, draft). Still to build for it: the AI explanation through the gateway (A8), a reviewer.
    k. DONE (session 73, first version): Ask the case file (board 19), FIR part `ask`: only this case, through the gateway (`case_qa`), answers cite their sources, refuses guilt, truth and prediction questions. Still to build for it (plan section 9): real retrieval (embeddings kept on state servers; today it is word matching in the browser), the "note in case diary" button, the monthly evaluation set of fictional questions, the guilt refusal also in the gateway (a refused question is not in the audit log today), a Marathi/Hindi question guard.
    l. DONE (session 74, without the AI decisions): Audit log (board 20), `#/audit`, `GET /api/audit-log`. Still to build for it: the AI suggestions and decisions (kept by the gateway, not the core; needs a gateway read route), the export for one case, the monthly AI counts and the retention line of the board, readable labels for the admin action codes and the gap keys, a filter by kind.
-   m. State setup and approvals (board 21): DONE (session 75, first version): `#/state-setup`, a change to a state's pack is proposed (`pack.propose`), approved or sent back by another person of the state (`pack.approve`), V46. Still to build for it: the pack's parts as editable cards (forms, playbooks, deadlines, law table) with a diff, the list of other states, the connections panel, the new-state wizard, a change that applies itself once approved (today the approval is a record; pack files change with a release). **Field capture on a tablet (board 7) is still to build.**
+   m. State setup and approvals (board 21): DONE (session 75, first version): `#/state-setup`, a change to a state's pack is proposed (`pack.propose`), approved or sent back by another person of the state (`pack.approve`), V46. Still to build for it: the pack's parts as editable cards (forms, playbooks, deadlines, law table) with a diff, the list of other states, the connections panel, the new-state wizard, a change that applies itself once approved (today the approval is a record; pack files change with a release). Field capture on a tablet (board 7): DONE (session 76, first version): FIR part `search`, V48. Still to build for it: photos of items and witnesses, the officer's selfie, QR labels, the e-Sakshya link itself (today the hash is typed), signatures of the witnesses on the list (BNSS 103(5)), offline capture (waits for decision 1 of 2 Nov: online only), the search on the case diary's page.
    Each screen: backend with tests, the screen built to its board, screenshot compared, 11 languages.
 14. **AI features (Sumit, 2 Nov 2026: "we are selling as AI-driven")**, plan in `docs/AI-AND-SCREENS-PLAN.md` section 3, order A1 to A9; each keeps the five rules of section 2. Build each with its screen of item 13 where they meet (A6 with 13d, A5 with 13k).
 15. **POCSO case mode, 112 events, high-alert kinds** (plan section 6).
@@ -129,6 +129,42 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 7 Nov 2026, Weekly review and session 76 (Saturday 21:05 IST scheduled run, Sumit away)
+Started from `setup/seed` at e136d27 (session 75). Fresh container: PostgreSQL started, role `caseapp` (superuser) and both databases created, gateway requirements, psycopg, playwright, `npm ci`; nginx installed so the HTTPS proxy browser tests run (they were skipped without it). Baseline `scripts/test-all.sh`: 7 PASS, e2e FAIL: `test_answer_fields_gateway.py` read an answer while the browser was closing (TargetClosedError); fixed by waiting for the network to go quiet and removing the listener before closing.
+
+**Weekly review** (125 commits since 9b29796, 31 Oct; the sessions 55 to 58 security reviews already covered V32 to V38, so the focus was sessions 59 to 75: case diary, statements, final report, supervisor, money trail, property, lab requests, court, law finder, ask the case file, audit log, state setup). Checked: every new controller's access check and scoping, every migration V39 to V46 (kept-as-written triggers, own-decision rules), masking on the new lists, the law-finder table (all 59 rows against the IPC/CrPC/IEA to BNS/BNSS/BSA correspondence: no wrong row found), import undo against the new tables (the generic foreign-key walk covers them). Tried by hand: an outsider on every list route, a prosecutor without a station on the state setup, a state admin on another state's pack changes (refused), a front-desk officer on a BNS 64 case's property and lab lists, an approver renaming the submitter of a final report in SQL, a diary entry racing a page close.
+
+Fixed (each with a regression test seen failing first):
+- **Medium, tenancy (3e94404)**: a prosecutor without a police station could read every state's pack-change proposals (`GET /api/pack-changes?state=XX`); session 75's test even asserted it. Only an admin without a station is the platform admin; any other account without a station now reaches no state.
+- **Medium, BNS 72 (dbc9c7c)**: the property register showed the front desk the evidence descriptions of a protected case, and the lab-request list showed the subject and note ("medical examination of ..."), which can name the victim. Withheld outside the case team (and the malkhana for property), shown as "Withheld (BNS 72)" in 11 languages.
+- **Medium, final report (f0de497, V47)**: the database let the submitter of an approved report be renamed (to the approver, who could then sign it), and a draft be created already naming a submitter or signer. Each of the three names is now written only by its own step.
+- **Low, case diary (f0de497, V47)**: an entry written while the page was being closed could land on the closed page (only the close took the lock). The entry now takes the same lock.
+- **Test audit**: V38 (sign-out), V39 (diary) and V40 (statements) had no database tests: added. `SecurityMatrixTest` now walks every list route without a path variable as an outsider with a case, an item, a court date and a lab request present (it catches a leaking list: checked by running it as the station's SHO, which fails on `/api/court`). Core suite in random order: PASS. Every endpoint, migration, pack file and screen of the week has its tests.
+- Gates unchanged (no 2-point rise since the last raise).
+
+Still worried about (not fixed):
+- Ask the case file sends a protected case's FIR text, statements and diary to the AI gateway; with a cloud provider allowed by policy, the victim's name in that text leaves the state's servers (question 1).
+- Free text typed by officers (court summons names, diary event notice addressees, search memo grounds) can name a protected victim; it is shown to the case team only but not logged as a protected read.
+- A prosecutor (pack.approve) may still be created without a station; such an account now sees and decides nothing (question 2 of session 75 still open).
+- `Court.tsx` takes "today" from the browser's UTC date: between 00:00 and 05:30 IST it is yesterday's date (only a default value of the form).
+- "1 days" in English on the lab requests and search screens (no plural forms in the catalogs).
+- BNSS 184(6) (the medical report of a rape victim to the IO and Magistrate within 7 days) is not tracked.
+- `PackChangeController` has 8 untested branches (mostly the platform admin's paths).
+
+**Item 13, Field capture on a tablet (board 7)**, first version: the search and seizure memo. V48: `search_seizure` (place, grounds BNSS 185(1), start and end, the reason if fewer than two witnesses, frozen on saving), `search_witness`, `search_recording` (SHA-256 and length; the file stays in e-Sakshya), `evidence_item.search_id` (sealed items are ordinary evidence items, so they reach the evidence and property registers), `search_forward` (the day the recording went to the Magistrate, BNSS 105, once). A deferred check at commit needs a recording and two witnesses or the reason (BNSS 103(4)); nothing joins a memo after the transaction that wrote it; everything is kept as written; a search cannot start before the case's information was received or end in the future. API `SearchController` (case team only, one request per memo). Web `Search.tsx`, FIR part "Search and seizure", sized for a tablet, 11 languages (10 drafts). The app sets no forwarding limit of its own: it shows the days since the search until the forwarding is recorded ("without delay").
+- Tests: `db-tests/test_search_seizure.py` (5), `SearchApiTest` (5), `Search.test.tsx` (5), length parser in `formats.test.ts`, axe check, `FirDetail.test.tsx` and `tests/e2e/test_phone.py` count the new part, browser test `tests/e2e/test_search_seizure.py` on an 820 px tablet.
+- Screenshot compared with board 7 (desktop and 390 px, mocked answers on the built app): the board's photos of items and witnesses, the selfie, the QR labels, the seven e-Sakshya steps and the offline "sync now" are not built; the memo and the list sit side by side on a desktop, one under the other on a phone. A long warning chip overflowed its card on the desktop: fixed in CSS (chips inside a list card's paragraph wrap).
+
+`scripts/test-all.sh` at the end: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway (99%), PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.19% lines / 93.25% branches, web 99.96% statements / 95.72% branches / 98.23% functions, gateway 99%.
+- Skipped / not done: photos, selfie, QR and offline capture of board 7; the search on the case diary's page; the readiness check does not yet ask for a search memo's forwarding.
+- Next: items 14 to 18 (AI features first: A1 to A9), then the rest of item 13's "still to build" lists.
+- Blocked: nothing.
+
+Questions for Sumit:
+1. Should the text of a protected case (BNS 64 to 71, POCSO) ever go to a cloud AI provider through Ask the case file or drafting, or only to providers on the state's own servers?
+2. Search memo: should a missing forwarding of the recording to the Magistrate become a readiness gap (and after how many days should the Dashboard warn), or stay a note on the memo?
+3. Board 7 shows photos and a selfie. Storing photos needs file storage in the app (it keeps only hashes today). Build it, or keep files in e-Sakshya and link to them?
 
 ## 7 Nov 2026, session 75 (02:05 IST scheduled run, last of the night, Sumit away)
 - Baseline (fresh container; PostgreSQL started, role and databases created, `npm ci`, gateway requirements, psycopg, playwright): 6 of 8 suites PASS. The gateway suite was red only because `httpx` was not installed (installed from its requirements file); the e2e Indian-scripts test was red for a real reason: it posted a court date of 2 Nov on a demo FIR that the demo loader registers 4 days before today, and the core refuses a court date before the FIR (the test passed on 5 and 6 Nov by luck). Fixed: the dates in that test are now a day before today (India time). Not a core bug.
