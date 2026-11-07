@@ -20,7 +20,8 @@ import org.springframework.stereotype.Component;
 class ComplaintKinds {
     record Step(String id, String text, Integer withinMinutes, String basis) {}
 
-    record Kind(String id, String label, String module, List<Step> steps) {}
+    /** protectsIdentity: the information names a victim whose identity is protected (BNS 72, POCSO 23; acid attack, decision 4 of 2 Nov 2026). */
+    record Kind(String id, String label, String module, boolean protectsIdentity, List<Step> steps) {}
 
     private final Map<String, Kind> kinds = new LinkedHashMap<>();
 
@@ -40,6 +41,8 @@ class ComplaintKinds {
             if (kinds.containsKey(id)) throw new IllegalStateException("complaint kind " + id + " is declared twice (a module may only add kinds)");
             String label = e.getValue().path("label").asText("");
             if (label.isBlank()) throw new IllegalStateException("complaint kind " + id + " has no label");
+            JsonNode p = e.getValue().path("protects_identity");
+            if (!p.isMissingNode() && !p.isBoolean()) throw new IllegalStateException("complaint kind " + id + ": protects_identity must be true or false");
             var steps = new ArrayList<Step>();
             var seen = new HashSet<String>();
             for (JsonNode s : e.getValue().path("steps")) {
@@ -50,12 +53,23 @@ class ComplaintKinds {
                 if (!w.isMissingNode() && !(w.isInt() && w.asInt() >= 0)) throw new IllegalStateException("complaint kind " + id + ": step " + sid + " within_minutes must be 0 or more");
                 steps.add(new Step(sid, s.get("text").asText(), w.isMissingNode() ? null : w.asInt(), s.path("basis").asText(null)));
             }
-            kinds.put(id, new Kind(id, label, module, List.copyOf(steps)));
+            kinds.put(id, new Kind(id, label, module, p.asBoolean(false), List.copyOf(steps)));
         });
     }
 
     Kind get(String id) {
         return kinds.get(id);
+    }
+
+    /** The kind protects the victim's identity; an unknown kind does not. */
+    boolean protectsIdentity(Object id) {
+        Kind k = id instanceof String s ? kinds.get(s) : null;
+        return k != null && k.protectsIdentity();
+    }
+
+    /** The ids of the kinds that protect the victim's identity, for a query. */
+    String[] protectedIds() {
+        return kinds.values().stream().filter(Kind::protectsIdentity).map(Kind::id).toArray(String[]::new);
     }
 
     List<Kind> all() {

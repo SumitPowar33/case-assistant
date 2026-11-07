@@ -13,11 +13,23 @@
     },
     "sexual_offence": {
       "label": "Sexual offence (BNS 64-71, 74-79; POCSO)",
+      "protects_identity": true,
       "steps": [
         {"id": "woman_officer", "text": "The information is recorded by a woman police officer or a woman officer is present", "within_minutes": 0, "basis": "BNSS 173(1), proviso"},
         {"id": "protect_identity", "text": "Keep the victim's name and identity out of every paper that leaves the case file", "within_minutes": 0, "basis": "BNS 72; POCSO 23"},
         {"id": "medical_exam", "text": "Medical examination of the victim by a registered medical practitioner, with consent, within 24 hours of the information", "within_minutes": 1440, "basis": "BNSS 184"},
         {"id": "child_report", "text": "If the victim is a child: report to the Child Welfare Committee and the Special Court within 24 hours", "within_minutes": 1440, "basis": "POCSO 19(6)"}
+      ]
+    },
+    "acid_attack": {
+      "label": "Acid attack (BNS 124)",
+      "protects_identity": true,
+      "steps": [
+        {"id": "free_treatment", "text": "Take the survivor at once to the nearest hospital, public or private: first aid and treatment are free and may not be refused", "within_minutes": 0, "basis": "BNSS 397"},
+        {"id": "protect_identity", "text": "Keep the survivor's name and identity out of every paper that leaves the case file", "within_minutes": 0, "basis": "Masked like BNS 72 (project decision of 2 Nov 2026)"},
+        {"id": "injury_report", "text": "Ask the hospital for the injury report (MLC) with the nature of the burns", "within_minutes": 240},
+        {"id": "seize_container", "text": "Seize the container, the survivor's clothes and samples from the place for the forensic lab", "within_minutes": 240},
+        {"id": "compensation", "text": "Tell the survivor about victim compensation through the District Legal Services Authority", "within_minutes": 1440, "basis": "BNSS 396"}
       ]
     },
     "hurt": {

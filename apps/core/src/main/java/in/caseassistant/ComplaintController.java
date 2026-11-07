@@ -92,11 +92,11 @@ class ComplaintController {
         var rows = db.sql("""
                 select c.id, c.station_id, c.received_at, c.mode, c.informant_name, c.kind, c.signed_at, c.outcome, c.fir_id, c.enquiry_at,
                   case when c.fir_id is not null then identity_protected_case(c.fir_id) and not %s
-                       else c.kind = ? and c.recorded_by <> ? and not ? end as withheld,
-                  case when c.fir_id is not null then identity_protected_case(c.fir_id) else c.kind = ? end as protected
+                       else c.kind = any(?) and c.recorded_by <> ? and not ? end as withheld,
+                  case when c.fir_id is not null then identity_protected_case(c.fir_id) else c.kind = any(?) end as protected
                 from complaint c where c.station_id = ? and (not ? or c.outcome is null) order by c.received_at desc limit 200"""
                 .formatted(team.includesSql("c.fir_id")))
-                .params(me, SEXUAL_OFFENCE, me, team.supervisesStation(me, station), SEXUAL_OFFENCE, station, open).query().listOfRows();
+                .params(me, kinds.protectedIds(), me, team.supervisesStation(me, station), kinds.protectedIds(), station, open).query().listOfRows();
         // the informant's name of a protected complaint is shown to those who may read it: logged before it is sent
         reads.complaints(me, rows.stream().filter(r -> Boolean.TRUE.equals(r.get("protected")) && !Boolean.TRUE.equals(r.get("withheld")))
                 .map(r -> (UUID) r.get("id")).toList(), "complaint_list");
@@ -243,13 +243,14 @@ class ComplaintController {
         return isProtected(c) && !me.equals(c.get("recorded_by")) && !team.supervisesStation(me, (UUID) c.get("station_id"));
     }
 
-    /** The complaint names a protected victim: its FIR protects the victim's identity, or before an FIR it is about a sexual offence. */
+    /** The complaint names a protected victim: its FIR protects the victim's identity, or before an FIR its kind protects identity (sexual offence, acid attack). */
     private boolean isProtected(Map<String, Object> c) {
         UUID firId = (UUID) c.get("fir_id");
         if (firId != null) return team.identityProtected(firId);
         // before an FIR exists: information about a sexual offence names the victim (BNS 72; Nipun Saxena v Union of
-        // India, 2018), so only the officer who wrote it down and the station's supervisors read it
-        return SEXUAL_OFFENCE.equals(c.get("kind"));
+        // India, 2018), as does an acid attack (decision 4 of 2 Nov 2026), so only the officer who wrote it down and the
+        // station's supervisors read it
+        return kinds.protectsIdentity(c.get("kind"));
     }
 
     static final String SEXUAL_OFFENCE = "sexual_offence";

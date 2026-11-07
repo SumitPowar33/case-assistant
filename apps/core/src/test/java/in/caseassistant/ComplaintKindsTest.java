@@ -28,6 +28,12 @@ class ComplaintKindsTest {
         assertThat(k.get("other").module()).isEqualTo("IN");
         assertThat(k.get("no_such")).isNull();
         assertThat(k.all()).hasSizeGreaterThan(3);
+        // the kinds that name a protected victim, and only those
+        assertThat(k.protectedIds()).containsExactlyInAnyOrder("sexual_offence", "acid_attack");
+        assertThat(k.protectsIdentity("acid_attack")).isTrue();
+        assertThat(k.protectsIdentity("hurt")).isFalse();
+        assertThat(k.protectsIdentity("no_such")).isFalse();
+        assertThat(k.protectsIdentity(null)).isFalse();
     }
 
     @Test
@@ -39,6 +45,10 @@ class ComplaintKindsTest {
         assertThatThrownBy(() -> add("{\"kinds\":{\"k_one\":{\"label\":\"x\",\"steps\":[{\"id\":\"a1\",\"text\":\"t\"},{\"id\":\"a1\",\"text\":\"t\"}]}}}")).hasMessageContaining("repeated");
         assertThatThrownBy(() -> add("{\"kinds\":{\"k_two\":{\"label\":\"x\",\"steps\":[{\"id\":\"a1\",\"text\":\" \"}]}}}")).hasMessageContaining("no text");
         assertThatThrownBy(() -> add("{\"kinds\":{\"k_three\":{\"label\":\"x\",\"steps\":[{\"id\":\"a1\",\"text\":\"t\",\"within_minutes\":-5}]}}}")).hasMessageContaining("0 or more");
+        assertThatThrownBy(() -> add("{\"kinds\":{\"k_five\":{\"label\":\"x\",\"protects_identity\":\"yes\",\"steps\":[]}}}")).hasMessageContaining("true or false");
+        var k = kinds();
+        k.add(json.readTree("{\"module\":\"MH\",\"kinds\":{\"fictional_protected\":{\"label\":\"Fictional\",\"protects_identity\":true,\"steps\":[]}}}"));
+        assertThat(k.protectsIdentity("fictional_protected")).isTrue();   // a state module may add a protected kind
         assertThatThrownBy(() -> add("{\"kinds\":{\"k_four\":{\"label\":\"x\",\"steps\":[{\"id\":\"a1\",\"text\":\"t\",\"within_minutes\":\"soon\"}]}}}")).hasMessageContaining("0 or more");
     }
 }

@@ -236,6 +236,19 @@ def test_complaint_kinds_are_well_formed_and_marked_as_draft_until_reviewed():
     assert "other" in seen and "cyber_financial_fraud" in seen
 
 
+def test_the_kinds_naming_a_protected_victim_protect_identity():
+    """Before an FIR, only these kinds keep the information from the front desk: sexual offences (BNS 72, POCSO 23) and acid
+    attacks (decision 4 of 2 Nov 2026). The flag is a boolean; a state module may add a protected kind, never redeclare one."""
+    protected = set()
+    for path in sorted(ROOT.glob("*/complaint-kinds.json")):
+        for kid, k in json.loads(path.read_text(encoding="utf-8"))["kinds"].items():
+            assert isinstance(k.get("protects_identity", False), bool), kid
+            if k.get("protects_identity"):
+                protected.add(kid)
+                assert any(s["id"] == "protect_identity" for s in k["steps"]), kid
+    assert {"sexual_offence", "acid_attack"} <= protected and "hurt" not in protected
+
+
 SCRIPT = {"hi": 0x900, "mr": 0x900, "bn": 0x980, "pa": 0xA00, "gu": 0xA80, "or": 0xB00, "ta": 0xB80, "te": 0xC00, "kn": 0xC80, "ml": 0xD00}
 
 

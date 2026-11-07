@@ -198,6 +198,28 @@ class ComplaintApiTest {
     }
 
     @Test
+    void anAcidAttackComplaintIsProtectedLikeASexualOffenceButStartsNoTwoMonthLimit() throws Exception {
+        // decision 4 of 2 Nov 2026: acid-attack survivors (BNS 124) are masked like sexual-offence victims
+        UUID c = take("written", "acid_attack", Instant.now().minus(5, ChronoUnit.MINUTES));
+        String colleague = user("front_desk", station, "HC Fictional Colleague");
+        mvc.perform(get("/api/complaints/" + c).header("Authorization", colleague)).andExpect(jsonPath("$.withheld").value(true))
+                .andExpect(jsonPath("$.text_original").value((Object) null));
+        String list = mvc.perform(get("/api/complaints").header("Authorization", colleague)).andReturn().getResponse().getContentAsString();
+        assertThat(list).doesNotContain("Fictional Informant").contains("\"withheld\":true");
+        mvc.perform(get("/api/complaints/" + c).header("Authorization", sho)).andExpect(jsonPath("$.withheld").value(false));
+        send(clerk, "POST", "/api/complaints/" + c + "/sign", Map.of()).andExpect(status().isNoContent());
+        send(colleague, "POST", "/api/firs", fir(c)).andExpect(status().isForbidden());
+        String id = json.readTree(send(clerk, "POST", "/api/firs", fir(c)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        // protected before any section is recorded, never removed, and not a sexual offence: no BNSS 193(2) limit
+        assertThat(db.sql("select identity_protected_case(?::uuid)").param(id).query(Boolean.class).single()).isTrue();
+        assertThat(db.sql("select sexual_offence from fir where id = ?::uuid").param(id).query(Boolean.class).single()).isFalse();
+        assertThat(db.sql("select count(*) from case_deadline where fir_id = ?::uuid and kind = 'sexual_offence_investigation'").param(id).query(Integer.class).single()).isZero();
+        mvc.perform(get("/api/complaints/" + c).header("Authorization", colleague)).andExpect(jsonPath("$.withheld").value(true));
+        mvc.perform(get("/api/complaint-kinds").header("Authorization", clerk))
+                .andExpect(jsonPath("$[?(@.id=='acid_attack')].steps[?(@.id=='free_treatment')].basis").value("BNSS 397"));
+    }
+
+    @Test
     void electronicInformationLapsesUnlessSignedWithinThreeDays() throws Exception {
         UUID late = take("electronic", "other", Instant.now().minus(4, ChronoUnit.DAYS));
         mvc.perform(get("/api/complaints/" + late).header("Authorization", clerk)).andExpect(jsonPath("$.sign_by").isNotEmpty());

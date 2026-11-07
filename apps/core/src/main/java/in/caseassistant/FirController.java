@@ -35,8 +35,10 @@ class FirController {
     private final JdbcClient db;
     private final CaseTeam team;
     private final ProtectedReads reads;
+    private final ComplaintKinds kinds;
 
-    FirController(JdbcClient db, CaseTeam team, ProtectedReads reads) {
+    FirController(JdbcClient db, CaseTeam team, ProtectedReads reads, ComplaintKinds kinds) {
+        this.kinds = kinds;
         this.db = db;
         this.team = team;
         this.reads = reads;
@@ -79,7 +81,7 @@ class FirController {
         if (f.ioId != null && !team.canBeIo(f.ioId, f.stationId))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The IO must be an active IO or SHO of this police station.");
         Object received = f.informationReceivedAt, contents = f.contentsOriginal, language = f.contentsLanguage;
-        boolean sexualOffence = f.sexualOffence;
+        boolean sexualOffence = f.sexualOffence, identityProtected = false;
         if (f.complaintId != null) {
             // from a signed complaint of this station: the FIR carries its text and time of receipt unchanged
             var c = db.sql("select station_id, received_at, text_original, text_language, signed_at, outcome, kind, recorded_by from complaint where id = ? for update")
@@ -87,11 +89,13 @@ class FirController {
             if (c == null || !f.stationId.equals(c.get("station_id"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such complaint at this police station.");
             if (c.get("signed_at") == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "The informant has not signed the complaint yet (BNSS 173(1)).");
             if (c.get("outcome") != null) throw new ResponseStatusException(HttpStatus.CONFLICT, "This complaint is already closed.");
-            if (ComplaintController.SEXUAL_OFFENCE.equals(c.get("kind"))) {
+            if (kinds.protectsIdentity(c.get("kind"))) {
                 // BNS 72: only those who may read the information register it, and the FIR protects the victim's identity
                 if (!me.equals(c.get("recorded_by")) && !team.supervisesStation(me, f.stationId))
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the officer who wrote it down, the station's supervisors or the case team handle this complaint (BNS 72).");
-                sexualOffence = true;
+                identityProtected = true;
+                // only a sexual offence starts the BNSS 193(2) two-month limit; an acid attack is protected without it
+                if (ComplaintController.SEXUAL_OFFENCE.equals(c.get("kind"))) sexualOffence = true;
             }
             received = c.get("received_at");
             contents = c.get("text_original");
@@ -101,11 +105,11 @@ class FirController {
         UUID id = db.sql("""
                 insert into fir (station_id, fir_year, fir_no, gd_entry_no, registered_at, information_received_at,
                   is_zero_fir, outside_limits_place, contents_original, contents_language, action_taken,
-                  action_reason, io_id, sexual_offence)
-                values (?,?,?,?,?,?,?,?,?,?,?,?,?,?) returning id""")
+                  action_reason, io_id, sexual_offence, identity_protected)
+                values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) returning id""")
                 .params(f.stationId, f.firYear, f.firNo, f.gdEntryNo, f.registeredAt, received,
                         f.zeroFir, f.outsideLimitsPlace, contents, language, f.actionTaken,
-                        f.actionReason, f.ioId, sexualOffence)
+                        f.actionReason, f.ioId, sexualOffence, identityProtected)
                 .query(UUID.class).single();
         if (f.complaintId != null)
             db.sql("update complaint set outcome = 'fir', fir_id = ?, outcome_at = clock_timestamp(), outcome_by = ? where id = ?").params(id, me, f.complaintId).update();
