@@ -153,4 +153,22 @@ class PackChangeApiTest {
         call(admin, "POST", "/api/pack-changes", "{\"state\":\"IN\",\"title\":\"Fictional title\",\"body\":\"Fictional body long enough to be accepted\",\"testedNote\":\"   \"}").andExpect(status().isCreated());
         assertThat(db.sql("select count(*) from pack_change where tested_note is null").query(Long.class).single()).isEqualTo(1);
     }
+
+    /** The branches the tests of session 75 left out (coverage of 7 Nov: 8 missed in PackChangeController). */
+    @Test
+    void theRemainingPathsOfTheListAndTheOptionalNotes() throws Exception {
+        call(platformAdmin, "GET", "/api/pack-changes", null).andExpect(status().isBadRequest());
+        call(admin, "GET", "/api/pack-changes?state=IN", null).andExpect(status().isOk()).andExpect(jsonPath("$.pack.code").value("IN"));
+        call(admin, "POST", "/api/pack-changes", "{\"state\":\"IN\",\"title\":\"Fictional title\",\"body\":\"Fictional body long enough to be accepted\"}")
+                .andExpect(status().isCreated());
+        UUID id = db.sql("select id from pack_change").query(UUID.class).single();
+        assertThat(db.sql("select tested_note from pack_change where id = ?").param(id).query(String.class).optional()).isEmpty();
+        call(prosecutor, "POST", "/api/pack-changes/" + id + "/decision", "{\"decision\":\"approve\",\"note\":\"   \"}").andExpect(status().isOk());
+        assertThat(db.sql("select note from pack_change_decision where change_id = ?").param(id).query(String.class).optional()).isEmpty();
+        // the approver's own proposal and a decided change are both shown without the decide button
+        db.sql("insert into pack_change (state_code, title, body, drafted_by) values ('IN','Fictional own change','Fictional body long enough to be accepted',?)").param(prosecutor).update();
+        call(prosecutor, "GET", "/api/pack-changes", null).andExpect(jsonPath("$.changes.length()").value(2))
+                .andExpect(jsonPath("$.changes[0].title").value("Fictional own change")).andExpect(jsonPath("$.changes[0].can_decide").value(false))
+                .andExpect(jsonPath("$.changes[1].decision").value("approved")).andExpect(jsonPath("$.changes[1].can_decide").value(false));
+    }
 }
