@@ -88,6 +88,7 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
+Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
 Done in session 76 (7 Nov, Saturday 21:05 IST weekly review): weekly review and test audit (5 fixes, see the entry); item 13, Field capture on a tablet (board 7, search and seizure memo, V48).
 Done in session 75 (7 Nov, 02:05 IST scheduled run, last of the night): item 13m (second half), State setup and approvals (`#/state-setup`, V46); a date-dependent e2e test fixed.
@@ -99,14 +100,13 @@ Done in session 70 (5 Nov, scheduled run): item 13h, Forensic and medical reques
 Done in session 69 (5 Nov, 02:10 IST scheduled run): item 13g, Case property register (without QR); two red tests of the baseline fixed; more tests for older code (gateway 96 to 99%, Dashboard, FrontDesk, Notices).
 Done in session 66 (3 Nov, scheduled run): item 13d, the final report (draft, approve, sign; V41), without the AI drafting.
 Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens plan (docs/AI-AND-SCREENS-PLAN.md, items 14 to 18), centred sign-in, the court print format with the informant's copy.
-In progress: item 10 (session 78, started 02:05 IST): a transferred IO loses the old station's cases; the SHO's "IO has left the station" list.
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
 3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: online only (decision 1 of 2 Nov): typed text kept in memory and sent again when the network is back, nothing stored on the phone; the FIR screen opens on Deadlines on a phone (decision 6); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
-10. Account lifecycle (decision 2 of 2 Nov): acting SHO with an end date given by the SP, "IO has left the station" list.
+10. Account lifecycle (decision 2 of 2 Nov): "IO has left the station" list DONE (session 78; a moved IO loses the old station's cases). Left: acting SHO with an end date given by the SP (a temporary second role: every `u.role in` check in `CaseTeam` and the controllers must also read it, so build it with care).
 11. Acid-attack survivors (BNS 124): DONE (session 77, V49). Left for it: the withheld label still says "BNS 72" for an acid case (question 1 of session 77).
 12. Security: done in code (sessions 55 and 56). Left for people: an outside penetration test (CERT-In empanelled auditor) before real case data; the installation itself (deploy/nginx.conf, a real certificate).
 13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
@@ -131,6 +131,38 @@ In progress: item 10 (session 78, started 02:05 IST): a transferred IO loses the
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 8 Nov 2026, session 78 (02:05 IST scheduled run, last of the night, Sumit away)
+Started from `setup/seed` at 62a580d (session 77). Fresh container: PostgreSQL started, role `caseapp` and both databases created, gateway requirements, psycopg, playwright, `npm ci`, nginx. Baseline `scripts/test-all.sh` (on a clean copy of 62a580d): 7 PASS, e2e 32 of 34: the two HTTPS proxy tests got 404 because that copy sat in a folder nginx's worker user cannot enter; on the real checkout all 34 pass. Not a code fault.
+
+**Item 10, first half (decision 2(d) of 2 Nov 2026: a transferred IO loses the old station's cases at once; their open FIRs wait on the SHO's list):**
+- Found while tracing: the named IO stayed on the case team after a transfer (CaseTeam checked `fir.io_id = u.id` only), so an IO moved to another station, even another state, kept reading and adding to every old case. Now the IO is on the case team only while posted at the FIR's station, in the three places that decide it (`includesSql`, `canReadFirSql`, `readableFirsSql`; the list stays index-driven, the load test passes).
+- `GET /api/supervisor` now also answers `io_left`: the open cases of the supervisor's reach whose IO moved to another station or whose account was closed (not those with a signed final report), with where the IO is now, until the SHO or SP assigns a new IO (the existing assignment route, which already needs a reason). Web: a card on the Supervisor review, "Cases whose IO has left the station", link "Assign a new IO" to the FIR's case part; 11 languages (10 drafts).
+- Tests: `SupervisorApiTest` (transfer: the IO gets 404 on the FIR, an empty list, no people or diary, `includes` false; the SHO's list, another district's SP sees nothing, a new IO takes it off the list; a closed account listed; a signed case not listed; checked failing without the fix), `PeopleApiTest` fixture now posts its IO at the station (it had an IO with no station), `Supervisor.test.tsx` (2), axe check with the card, browser test `test_supervisor.py` (the state admin moves the IO through the admin route; the IO's fresh sign-in reaches nothing; the SHO sees the case, follows the link, a new IO is assigned and the card goes).
+- Screenshot (desktop and 390 px, mocked answers on the built app) compared with board 11: the board has no such panel (an addition); the board's AI-use box and the approve/return panel on this screen are still not built (they stay on the Final report part).
+
+**Tests for older code** (the "Not covered yet" list of TESTING.md is all done, so the rest of the time went here):
+- `PackChangeController` had 8 untested branches: the platform admin without a state, a user naming their own state, a proposal without a tested note, a blank decision note, the approver's own and decided changes now tested (`PackChangeApiTest`).
+- `RecordsController` showed 17 missed lines and 18 missed branches although its refusals are tested: JaCoCo does not count a line that ends in a helper that always throws. The helper now returns the exception (`throw badRequest(...)`): 11 lines / 5 branches left, all defensive (the read interceptor answers first) or a JSON parse that cannot fail.
+- `AuthController`: guessing the current password on the change-password route five times locks that route and the sign-in, and the password stays unchanged (`AuthApiTest`).
+- Web: `AuditPage` (account without a station, no stations, refused list, a case link without a number; branches 83% to 100%), `FirList` (zero FIR and sexual-offence labels, refused list).
+
+`scripts/test-all.sh` at the end: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway (99%), PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.46% lines / 94.33% branches (was 98.20 / 93.30 at the baseline), web 99.96% statements / 96.04% branches / 98.24% functions, gateway 99%. Gates unchanged (core 96/90, web 99/94/96, gateway 97: the rise is under 2 points since the last raise).
+- Skipped / not checked: acting SHO (item 10, second half); the admin screen still only says "N FIRs as IO" after a transfer, it does not point to the Supervisor list; the monthly mutation scripts were not rerun.
+- Risk: an IO who is moved and later moved back gets the old cases back (they are still named IO). A case imported with an IO posted elsewhere is now closed to that IO until reassigned (it is on the list).
+- Next: items 14 to 18 (AI features first: A1 fact extraction), item 10's acting SHO, then the rest of item 13's lists.
+- Blocked: nothing.
+
+## Tonight in short (7 Nov 21:05 IST to 8 Nov 04:00 IST: sessions 76, 77 and 78)
+- Session 76 (weekly review): 3 medium and 1 low access fault fixed (pack changes seen by a prosecutor without a station, protected case details on the property and lab lists, final report signer could be renamed, a diary entry on a closed page); Field capture on a tablet, first version (search and seizure memo, V48).
+- Session 77: acid-attack survivors protected like sexual-offence victims (BNS 124, IPC 326A/326B, V49); court and lab forms take today's date in India time.
+- Session 78: a transferred IO no longer reaches the old station's cases; the Supervisor review lists cases whose IO has left; more tests for older code (core branches 93.3% to 94.3%).
+- Every run of `scripts/test-all.sh` at the end of each session: all 8 suites PASS.
+
+Questions for Sumit:
+1. When an IO is transferred, should the new station's SHO be able to see which old cases the IO still had (for handing over), or is the old station's list enough?
+2. If an IO is moved back to the old station, should the old cases come back to them, or should the move clear them as IO (today they come back)?
+3. Still open: questions 1 and 2 of session 77 (the "Withheld (BNS 72)" label for acid cases; masking IPC 326A/326B old FIRs) and questions 1 to 3 of session 76.
 
 ## 7 Nov 2026, session 77 (23:35 IST scheduled run, Sumit away)
 Started from `setup/seed` at e486adc (session 76). Fresh container: PostgreSQL started, role `caseapp` and the databases created, gateway requirements, psycopg, playwright, `npm ci`, nginx. Baseline `scripts/test-all.sh` (run on a clean copy of e486adc): all 8 suites PASS.
