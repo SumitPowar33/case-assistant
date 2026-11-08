@@ -21,6 +21,7 @@ import LawFinder from './LawFinder'
 import AskCaseFile from './AskCaseFile'
 import Search from './Search'
 import FactCheck from './FactCheck'
+import Statements from './Statements'
 import SectionSuggest from './SectionSuggest'
 import { setSession } from './api'
 
@@ -97,6 +98,20 @@ test('the AI fact check with confirmed facts and an AI draft to check has no acc
   render(<FactCheck firId="f1" text="Fictional words" victimProtected={false} />)
   fireEvent.click(await screen.findByRole('button', { name: 'Find facts with AI' }))
   await screen.findByText('AI draft · check each fact')
+  expect(await violations()).toEqual([])
+})
+
+test('the statements with a checked translation and an AI translation draft to check have no accessibility faults either', async () => {
+  const base = { person_id: 'p1', label: 'W1', name: 'Fictional Son', masked: false, recorded_at: '2026-11-02T04:30:00Z', recorded_by_name: 'SI Fictional', language: 'mr', medium: 'video' }
+  const list = { witnesses: [{ person_id: 'p1', role: 'witness', label: 'W1', name: 'Fictional Son', statements: 2 }], statements: [
+    { ...base, id: 's1', original_text: 'बाबा व्हिडिओ कॉलवर होते.', translated_text: 'Father was on a video call.', translation_corrected: false, translation_checked_at: '2026-11-08T10:00:00Z', translation_checked_by_name: 'SI Fictional' },
+    { ...base, id: 's2', original_text: 'मी २८ तारखेला पैसे पाठवले.', translated_text: null, translation_corrected: null, translation_checked_at: null, translation_checked_by_name: null }] }
+  const answer = { request_id: 'r1', draft: 'I sent money on the 2nd.', provider: 'fake', model: 'm' }
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => (url.endsWith('generate') ? answer : list) })))
+  render(<Statements firId="f1" />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Translate into English with AI' }))
+  await screen.findByText('AI draft · read it against the original')
+  await screen.findByText(/Numbers of the original not in the draft/)
   expect(await violations()).toEqual([])
 })
 
