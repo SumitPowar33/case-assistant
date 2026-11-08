@@ -10,6 +10,8 @@ PLAYBOOKS = sorted(ROOT.glob("*/playbooks/*.json"))
 ID = re.compile(r"^[a-z][a-z0-9_]*$|^[a-z][a-z0-9-]*$")
 NOTICE_KINDS = {"BNSS_94", "BNSS_35_3", "BNSS_179", "follow_up"}  # must match V1__core.sql
 SEVERITIES = {"critical", "high", "medium"}
+# a charge is a section the officer can add to an FIR: an act fir_section takes (V1__core.sql) and a section (Playbooks.check)
+CHARGE_LAW = re.compile(r"^(BNS|IPC|IT Act|NDPS Act|POCSO Act|Arms Act|SC/ST Act|Other) [0-9][0-9A-Za-z()/.-]*$")
 
 
 def test_there_is_at_least_one_playbook():
@@ -28,7 +30,7 @@ def test_playbook_shape(path):
     for ch in pb["charges"]:
         assert ID.match(ch["id"]) and ch["id"] not in seen
         seen.add(ch["id"])
-        assert re.match(r"^(BNS|IT Act|NDPS Act|POCSO Act|BNSS|BSA) ", ch["law"]), ch["law"]
+        assert CHARGE_LAW.match(ch["law"]), ch["law"]
         assert ch["ingredients"], ch["id"]
         ing_ids = [i["id"] for i in ch["ingredients"]]
         assert len(ing_ids) == len(set(ing_ids))
@@ -43,6 +45,14 @@ def test_playbook_shape(path):
     for t in pb["tasks"]:
         if "notice_kind" in t:
             assert t["notice_kind"] in NOTICE_KINDS
+
+
+@pytest.mark.parametrize("law,ok", [
+    ("BNS 318(4)", True), ("IT Act 66D", True), ("SC/ST Act 3(1)(r)", True), ("BNSS 173", False), ("BSA 63", False),
+    ("BNS", False), ("BNS  318", False), ("BNS 318 (4)", False), ("IT 66D", False),
+])
+def test_a_charge_law_is_an_act_of_the_fir_and_a_section(law, ok):
+    assert bool(CHARGE_LAW.match(law)) is ok
 
 
 def test_no_ai_judgement_words():

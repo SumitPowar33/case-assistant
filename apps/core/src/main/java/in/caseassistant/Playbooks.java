@@ -17,7 +17,19 @@ import org.springframework.stereotype.Component;
 class Playbooks {
     record Ingredient(String id, String text, List<String> proof) {}
 
-    record Charge(String id, String law, String label, List<Ingredient> ingredients) {}
+    /** The acts fir_section takes (V1), longest first so "IT Act" is not read as an act "IT". */
+    static final List<String> ACTS = List.of("POCSO Act", "SC/ST Act", "NDPS Act", "Arms Act", "IT Act", "Other", "BNS", "IPC");
+
+    record Charge(String id, String law, String label, List<Ingredient> ingredients) {
+        /** The act of the law ("BNS" of "BNS 318(4)"); the playbook is refused at start-up if it names no act fir_section takes. */
+        String act() {
+            return ACTS.stream().filter(a -> law.startsWith(a + " ")).findFirst().orElseThrow();
+        }
+
+        String section() {
+            return law.substring(act().length() + 1);
+        }
+    }
 
     record Rule(String id, String severity, String text, String source, @JsonAlias("requires_any") List<String> requiresAny) {}
 
@@ -43,10 +55,18 @@ class Playbooks {
         for (var res : new PathMatchingResourcePatternResolver().getResources("classpath*:packs/*/playbooks/*.json")) {
             try (InputStream in = res.getInputStream()) {
                 Playbook pb = json.readValue(in, Playbook.class);
+                check(pb);
                 if (byId.putIfAbsent(pb.id, pb) != null)
                     throw new IllegalStateException("two playbooks with id " + pb.id + "; keep one version active");
             }
         }
+    }
+
+    /** Every charge names an act fir_section takes and a section ("BNS 318(4)", "IT Act 66D"), so the officer can add it to an FIR. */
+    static void check(Playbook pb) {
+        for (Charge c : pb.charges)
+            if (ACTS.stream().noneMatch(a -> c.law.startsWith(a + " ") && c.law.substring(a.length() + 1).matches("[0-9][0-9A-Za-z()/.-]*")))
+                throw new IllegalStateException("playbook " + pb.id + ": charge " + c.id + " names a law that is not an act and a section: " + c.law);
     }
 
     Optional<Playbook> get(String id) {

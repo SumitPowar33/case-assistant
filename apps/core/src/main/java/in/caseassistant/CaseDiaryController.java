@@ -61,7 +61,8 @@ class CaseDiaryController {
                 union all select at, 'io_assigned', null from fir_io_assignment where fir_id = ? and ist_date(at) = ?
                 union all select recorded_at, 'victim_update', told_to from victim_update where fir_id = ? and ist_date(recorded_at) = ?
                 union all select recorded_at, 'chargesheet', report_no from chargesheet where fir_id = ? and ist_date(recorded_at) = ?
-                order by 1""").params(firId, day, firId, day, firId, day, firId, day, firId, day, firId, day).query().listOfRows();
+                union all select added_at, 'section_added', act || ' ' || section from fir_section where fir_id = ? and ist_date(added_at) = ?
+                order by 1""").params(firId, day, firId, day, firId, day, firId, day, firId, day, firId, day, firId, day).query().listOfRows();
         var closed = db.sql("""
                 select p.page_no, p.closed_at, u.full_name as closed_by_name from case_diary_page p join app_user u on u.id = p.closed_by
                 where p.fir_id = ? and p.diary_date = ?""").params(firId, day).query().listOfRows();
