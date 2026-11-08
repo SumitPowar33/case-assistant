@@ -62,10 +62,13 @@ class FirController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         var out = new java.util.LinkedHashMap<>(fir);
         boolean protectedCase = team.identityProtected(id);
-        boolean withheld = protectedCase && !team.includes(CaseTeam.user(jwt), id);
+        boolean onTeam = team.includes(CaseTeam.user(jwt), id);
+        boolean withheld = protectedCase && !onTeam;
         if (withheld) out.put("contents_original", null);
         else if (protectedCase) reads.fir(CaseTeam.user(jwt), id, "fir_text");
         out.put("contents_withheld", withheld);
+        out.put("victim_protected", protectedCase);   // the AI fact check is not offered on such a case (FactCheck.tsx)
+        out.put("case_team", onTeam);                 // the parts only the case team reads are not shown to others
         out.put("io_name", fir.get("io_id") == null ? null
                 : db.sql("select full_name from app_user where id = ?").param(fir.get("io_id")).query(String.class).single());
         out.put("sections", db.sql("select act, section from fir_section where fir_id = ? order by act, section")
