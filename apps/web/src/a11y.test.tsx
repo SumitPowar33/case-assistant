@@ -20,12 +20,13 @@ import Court from './Court'
 import LawFinder from './LawFinder'
 import AskCaseFile from './AskCaseFile'
 import Search from './Search'
+import FactCheck from './FactCheck'
 import { setSession } from './api'
 
 // Fictional data only.
 const data: Record<string, unknown> = {
   '/firs': [{ id: 'f1', fir_year: 2026, fir_no: 9, registered_at: '2026-10-01T04:30:00Z', action_taken: 'investigate', io_name: 'SI Fictional', station_name: 'Fictional PS' }],
-  '/firs/f1': { id: 'f1', fir_year: 2026, fir_no: 9, registered_at: '2026-10-01T04:30:00Z', is_zero_fir: false, contents_original: 'Fictional words', contents_withheld: false, action_taken: 'investigate', io_name: 'SI Fictional', sections: [{ act: 'BNS', section: '318(4)' }] },
+  '/firs/f1': { id: 'f1', fir_year: 2026, fir_no: 9, registered_at: '2026-10-01T04:30:00Z', is_zero_fir: false, contents_original: 'Fictional words', contents_withheld: false, victim_protected: false, case_team: true, action_taken: 'investigate', io_name: 'SI Fictional', sections: [{ act: 'BNS', section: '318(4)' }] },
   '/firs/f1/money-trail': { evidence: [{ id: 'e1', label: '214/E-01' }], transfers: [{ id: 't1', from_account: 'Fictional A/c XXXX1', to_account: 'Fictional A/c XXXX2', amount_paise: 100000, transferred_on: '2026-08-19', evidence_label: null, to_person: 'A1' }], holds: [], accused: [{ person_id: 'a1', label: 'A1', name: 'Fictional Caller', received_paise: 100000, account_holder: true, second_links: 0, status: 'money_only' }], transferred_paise: 100000, held_paise: 0 },
   '/firs/f1/deadlines': [{ kind: 'victim_progress_update', due_on: '2026-12-30', basis: 'BNSS 193(3)(ii), 90 days' }],
   '/expert-requests': { requests: [{ id: 'r1', fir_id: 'f1', fir_no: 9, fir_year: 2026, kind: 'forensic', subject: 'Phone extraction 9', sent_to: 'Fictional Lab', sent_on: '2026-10-01', station: 'Fictional PS', status: 'sent', note: null, days_waiting: 35, reminder_due: true }], counts: { open: 1, reminder_due: 1, report_received: 0 } },
@@ -50,6 +51,8 @@ const data: Record<string, unknown> = {
     no_witness_reason: null, recorded_by_name: 'SI Fictional', forwarded_on: null, forwarded_to: null, days_since: 2,
     witnesses: [{ name: 'Fictional Neighbour', address: 'Fictional lane' }], recordings: [{ sha256: 'ab'.repeat(32), seconds: 221, esakshya_id: null }],
     items: [{ id: 'e1', label: '9/E-03', description: 'Fictional phone', kind: 'physical', seal_no: '9/E-03' }] }],
+  '/firs/f1/facts': [{ id: 'k1', kind: 'amount', value: 'Rs 40,000', ai_value: 'Rs 40,000', corrected: false, quote: 'Fictional words', confirmed_at: '2026-11-08T10:00:00Z', confirmed_by_name: 'SI Fictional' }],
+  '/ai/v1/generate': { request_id: 'r1', draft: '[{"kind":"place","value":"Fictional","quote":"Fictional"}]', provider: 'fake', model: 'm' },
   '/glossary': { status: 'draft', entries: [{ id: 'remand', term: 'Remand', law: 'BNSS 187', meaning: 'Custody ordered by a Magistrate.', terms: { hi: 'रिमांड' } }] },
 }
 beforeEach(() => {
@@ -84,6 +87,13 @@ test.each([
 ])('the %s screen has no accessibility faults axe can see', async (_name, screenOf, ready) => {
   render(screenOf())
   await screen.findAllByText(new RegExp(ready.replace(/[()/.]/g, '\\$&')))
+  expect(await violations()).toEqual([])
+})
+
+test('the AI fact check with confirmed facts and an AI draft to check has no accessibility faults either', async () => {
+  render(<FactCheck firId="f1" text="Fictional words" victimProtected={false} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Find facts with AI' }))
+  await screen.findByText('AI draft · check each fact')
   expect(await violations()).toEqual([])
 })
 

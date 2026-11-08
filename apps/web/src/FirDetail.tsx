@@ -6,6 +6,7 @@ import AskCaseFile from './AskCaseFile'
 import MoneyTrail from './MoneyTrail'
 import Statements from './Statements'
 import Search from './Search'
+import FactCheck from './FactCheck'
 import FinalReport from './FinalReport'
 import Notices from './Notices'
 import Certificates from './Certificates'
@@ -20,7 +21,7 @@ import { useT } from './i18n'
 import { currentSession } from './api'
 import { PARTS, PART_LABEL, type Part } from './firParts'
 
-type Fir = { id: string; fir_year: number; fir_no: number; registered_at: string; is_zero_fir: boolean; contents_original: string | null; contents_withheld: boolean; action_taken: string; io_name: string | null; sections: { act: string; section: string }[] }
+type Fir = { id: string; fir_year: number; fir_no: number; registered_at: string; is_zero_fir: boolean; contents_original: string | null; contents_withheld: boolean; victim_protected: boolean; case_team: boolean; action_taken: string; io_name: string | null; sections: { act: string; section: string }[] }
 type Person = { id: string; role: string; label: string; display_name: string; age_years: number | null; identity_masked: boolean }
 type Deadline = { kind: string; due_on: string; basis: string }
 type Evidence = { id: string; label: string; kind: string; sha256: string | null; court_ready: boolean }
@@ -80,6 +81,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
           ? <p>{t('fir.withheld')}</p>
           : <blockquote>{fir.contents_original}</blockquote>}
         </section>
+        {fir.case_team && fir.contents_original && <FactCheck firId={id} text={fir.contents_original} victimProtected={fir.victim_protected} />}
       </div>
       <div className={shown('people')}>
         <section>
