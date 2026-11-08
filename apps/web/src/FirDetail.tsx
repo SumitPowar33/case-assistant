@@ -7,6 +7,7 @@ import MoneyTrail from './MoneyTrail'
 import Statements from './Statements'
 import Search from './Search'
 import FactCheck from './FactCheck'
+import SectionSuggest from './SectionSuggest'
 import FinalReport from './FinalReport'
 import Notices from './Notices'
 import Certificates from './Certificates'
@@ -82,6 +83,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
           : <blockquote>{fir.contents_original}</blockquote>}
         </section>
         {fir.case_team && fir.contents_original && <FactCheck firId={id} text={fir.contents_original} victimProtected={fir.victim_protected} />}
+        {fir.case_team && fir.contents_original && <SectionSuggest firId={id} text={fir.contents_original} victimProtected={fir.victim_protected} version={version} onSaved={saved} />}
       </div>
       <div className={shown('people')}>
         <section>

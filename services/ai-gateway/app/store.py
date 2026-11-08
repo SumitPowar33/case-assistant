@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 FEATURES = {
     # feature id: human label. Every AI call must name one of these.
     "fir_extract": "Pull facts out of an FIR or complaint",
+    "section_suggest": "Suggest sections from the playbooks",
     "notice_draft": "Draft BNSS 94 notices and follow-up letters",
     "reply_check": "Check bank and telecom replies",
     "statement_translate": "Translate statements (original always kept)",

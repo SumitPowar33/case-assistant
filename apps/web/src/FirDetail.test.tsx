@@ -134,18 +134,22 @@ test('the Ask part loads the case file only when it is chosen (opening a FIR mus
   expect(asked()).toContain('/api/firs/f1/case-file')
 })
 
-test('the AI fact check is on the case details part for the case team only, and not offered on a protected case', async () => {
-  stub({ '/firs/f1': { ...fir, case_team: false, victim_protected: false } })
+test('the AI fact check and section suggestion are on the case details part for the case team only, and not offered on a protected case', async () => {
+  const sections = { '/firs/f1/sections': { law: 'new', sections: [], charges: [] } }
+  stub({ ...sections, '/firs/f1': { ...fir, case_team: false, victim_protected: false } })
   render(<FirDetail id="f1" />)
   expect(await screen.findByText('Fictional complaint words')).toBeTruthy()
   expect(screen.queryByRole('heading', { name: 'AI fact check' })).toBeNull()
+  expect(screen.queryByRole('heading', { name: 'AI section suggestion' })).toBeNull()
   cleanup()
-  stub({ '/firs/f1': { ...fir, case_team: true, victim_protected: false } })
+  stub({ ...sections, '/firs/f1': { ...fir, case_team: true, victim_protected: false } })
   render(<FirDetail id="f1" />)
   expect(await screen.findByRole('heading', { name: 'AI fact check' })).toBeTruthy()
   expect(await screen.findByRole('button', { name: 'Find facts with AI' })).toBeTruthy()
+  expect(await screen.findByRole('button', { name: 'Suggest sections with AI' })).toBeTruthy()
   cleanup()
-  stub({ '/firs/f1': { ...fir, case_team: true, victim_protected: true } })
+  stub({ ...sections, '/firs/f1': { ...fir, case_team: true, victim_protected: true } })
   render(<FirDetail id="f1" />)
-  expect(await screen.findByText(/not offered on a case that protects the victim's identity/)).toBeTruthy()
+  await screen.findByText(/The offence is from 1 July 2024/)
+  expect(screen.getAllByText(/not offered on a case that protects the victim's identity/)).toHaveLength(2)
 })

@@ -40,7 +40,7 @@ export function locate(text: string, quote: string): { at: number; quote: string
 }
 
 /** The JSON list in a model's answer (it may wrap it in ``` fences or a sentence), or null. */
-function jsonList(draft: string): unknown[] | null {
+export function jsonList(draft: string): unknown[] | null {
   for (let i = draft.indexOf('['); i >= 0; i = draft.indexOf('[', i + 1)) {
     if (!/^\[\s*(\{|\])/.test(draft.slice(i))) continue
     for (let j = draft.lastIndexOf(']'); j > i; j = draft.lastIndexOf(']', j - 1)) {

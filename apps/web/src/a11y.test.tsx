@@ -21,6 +21,7 @@ import LawFinder from './LawFinder'
 import AskCaseFile from './AskCaseFile'
 import Search from './Search'
 import FactCheck from './FactCheck'
+import SectionSuggest from './SectionSuggest'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -52,6 +53,8 @@ const data: Record<string, unknown> = {
     witnesses: [{ name: 'Fictional Neighbour', address: 'Fictional lane' }], recordings: [{ sha256: 'ab'.repeat(32), seconds: 221, esakshya_id: null }],
     items: [{ id: 'e1', label: '9/E-03', description: 'Fictional phone', kind: 'physical', seal_no: '9/E-03' }] }],
   '/firs/f1/facts': [{ id: 'k1', kind: 'amount', value: 'Rs 40,000', ai_value: 'Rs 40,000', corrected: false, quote: 'Fictional words', confirmed_at: '2026-11-08T10:00:00Z', confirmed_by_name: 'SI Fictional' }],
+  '/firs/f1/sections': { law: 'unknown', sections: [{ act: 'BNS', section: '318(4)', added_at: null, reason: null, chosen_by_name: null }, { act: 'IT Act', section: '66D', added_at: '2026-11-08T10:00:00Z', reason: 'Fictional reason given', chosen_by_name: 'SI Fictional' }],
+    charges: [{ playbook_id: 'p', charge_id: 'c', act: 'BNS', law: 'BNS 319(2)', label: 'Fictional charge', ingredients: [{ id: 'i', text: 'Fictional ingredient' }, { id: 'j', text: 'Another ingredient' }], in_fir: false }] },
   '/ai/v1/generate': { request_id: 'r1', draft: '[{"kind":"place","value":"Fictional","quote":"Fictional"}]', provider: 'fake', model: 'm' },
   '/glossary': { status: 'draft', entries: [{ id: 'remand', term: 'Remand', law: 'BNSS 187', meaning: 'Custody ordered by a Magistrate.', terms: { hi: 'रिमांड' } }] },
 }
@@ -94,6 +97,16 @@ test('the AI fact check with confirmed facts and an AI draft to check has no acc
   render(<FactCheck firId="f1" text="Fictional words" victimProtected={false} />)
   fireEvent.click(await screen.findByRole('button', { name: 'Find facts with AI' }))
   await screen.findByText('AI draft · check each fact')
+  expect(await violations()).toEqual([])
+})
+
+test('the AI section suggestion with a suggestion to add has no accessibility faults either', async () => {
+  const answer = { request_id: 'r1', draft: '[{"charge":"p/c","ingredients":[{"id":"i","quote":"Fictional"}]}]', provider: 'fake', model: 'm' }
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => (url.endsWith('generate') ? answer : data[url.replace('/api', '')]) })))
+  render(<SectionSuggest firId="f1" text="Fictional words" victimProtected={false} version={0} onSaved={() => undefined} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Suggest sections with AI' }))
+  await screen.findByText('AI draft · you choose the sections')
+  await screen.findByRole('button', { name: 'Add to the FIR' })
   expect(await violations()).toEqual([])
 })
 
