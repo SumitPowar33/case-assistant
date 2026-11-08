@@ -80,3 +80,18 @@ test('no stations at all, and a station list that fails', async () => {
   render(<ReadsPage />)
   expect((await screen.findByRole('alert')).textContent).not.toBe('')
 })
+
+test('an account without a station starts on the first station listed, and with no station at all nothing is asked for', async () => {
+  setSession({ token: 't', user: { id: 'u0', username: 'admin.all', full_name: 'Platform Admin', rank: 'SP', role: 'state_admin', station_id: null, permissions: ['audit.read_protected'] } })
+  const urls = stub(() => ({ status: 200, body: [{ ...read(1), fir_ref: null }] }))
+  render(<ReadsPage />)
+  expect((await screen.findByRole('link', { name: 'FIR' })).getAttribute('href')).toBe('#/firs/f1')   // a case without its number still links to it
+  expect(urls).toContain('/api/protected-reads?stationId=s1&limit=100&offset=0')
+  cleanup()
+  const none: string[] = []
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => { none.push(url); return { ok: true, status: 200, json: async () => [] } }))
+  render(<ReadsPage />)
+  expect(await screen.findByText('No reads of protected details at this police station.')).toBeTruthy()
+  expect((screen.getByLabelText('Police station') as HTMLSelectElement).value).toBe('')
+  expect(none.some((u) => u.includes('protected-reads'))).toBe(false)
+})

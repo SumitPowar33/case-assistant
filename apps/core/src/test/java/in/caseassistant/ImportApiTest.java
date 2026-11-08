@@ -194,6 +194,14 @@ class ImportApiTest {
     }
 
     @Test
+    void anIoMovedToAnotherStationBeforeApprovalIsNotNamedOnTheImportedFirs() throws Exception {
+        UUID b = stage(sho1, s1, GOOD);
+        db.sql("update app_user set station_id = ? where id = ?").params(s3, ioUser).update();   // transferred between check and approval
+        commit(sho1, b).andExpect(status().isOk()).andExpect(jsonPath("$.rows_imported").value(2));
+        assertThat(db.sql("select count(*) from fir where io_id is not null").query(Long.class).single()).as("left for the SHO to assign").isZero();
+    }
+
+    @Test
     void whoMayLoadRecordsForWhichStation() throws Exception {
         send(io, "/api/imports", stageBody(s1, GOOD)).andExpect(status().isForbidden());
         send(sho1, "/api/imports", stageBody(s2, GOOD)).andExpect(status().isForbidden());
@@ -374,6 +382,20 @@ class ImportApiTest {
                 .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("already recorded"))));
         send(sho1, "/api/imports/" + differs + "/commit", Map.of("authority", "Order 13/2026 of the Fictional SP")).andExpect(status().isConflict());
                 assertThat(db.sql("select count(*) from arrest").query(Long.class).single()).isEqualTo(2);
+    }
+
+    @Test
+    void anArrestRecordedBetweenStagingAndApprovalIsSkippedAndTheRestLoaded() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        String one = "1,Fictional Accused One,06/03/2024 18:30,Fictional Chowk,Theft,,,07/03/2024,,,less_than_10_years\n";
+        UUID first = stageArrests(sho1, s1, AHEAD + one);
+        UUID second = stageArrests(sho1, s1, AHEAD + one + "1,Fictional Accused Two,06/03/2024,,,,,07/03/2024,,,less_than_10_years\n");
+        commit(sho1, first).andExpect(status().isOk());
+        commit(sho1, second).andExpect(status().isOk()).andExpect(jsonPath("$.rows_imported").value(1));
+        mvc.perform(get("/api/imports/" + second + "/rows?status=skipped").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("This arrest was recorded in the meantime"))));
+        assertThat(db.sql("select a.import_batch_id from arrest a join person p on p.id = a.person_id where p.full_name = 'Fictional Accused One'")
+                .query(UUID.class).single()).as("the first record is never overwritten").isEqualTo(first);
     }
 
     @Test
@@ -581,6 +603,21 @@ class ImportApiTest {
         UUID twice = stageChargesheets(sho1, s1, CHEAD + "1,CS-20/2024,20/04/2024,,Fictional Accused One\n1,cs-20/2024,20/04/2024,,Fictional Accused Two\n");
         mvc.perform(get("/api/imports/" + twice).header("Authorization", sho1)).andExpect(jsonPath("$.rows_error").value(1)).andExpect(jsonPath("$.rows_warning").value(1));
         assertThat(db.sql("select count(*) from chargesheet").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void aChargesheetRecordedBetweenStagingAndApprovalIsSkippedAndTheRestLoaded() throws Exception {
+        commit(sho1, stage(sho1, s1, GOOD));
+        String row = "1,CS-12/2024,20/04/2024,Fictional JMFC Court,Fictional Accused One\n";
+        UUID first = stageChargesheets(sho1, s1, CHEAD + row);
+        UUID second = stageChargesheets(sho1, s1, CHEAD + "1,cs-12/2024,22/04/2024,Other Court,Fictional Accused Two\n" + "1,CS-15/2024,25/04/2024,,Fictional Accused Two\n");
+        commit(sho1, first).andExpect(status().isOk());
+        commit(sho1, second).andExpect(status().isOk()).andExpect(jsonPath("$.rows_imported").value(1));
+        mvc.perform(get("/api/imports/" + second + "/rows?status=skipped").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[*].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("This chargesheet was recorded in the meantime"))));
+        assertThat(db.sql("select court from chargesheet where report_no = 'CS-12/2024'").query(String.class).single()).isEqualTo("Fictional JMFC Court");
+        assertThat(db.sql("select count(*) from chargesheet").query(Long.class).single()).isEqualTo(2);
+        assertThat(db.sql("select count(*) from chargesheet_accused").query(Long.class).single()).as("no accused rows for the skipped one").isEqualTo(2);
     }
 
     @Test
