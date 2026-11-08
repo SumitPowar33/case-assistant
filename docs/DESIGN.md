@@ -28,7 +28,7 @@ committed** (CLAUDE.md, "Screens"). Where the app differs on purpose, the differ
 | # | Board | Screen in the app | State |
 |---|---|---|---|
 | 1 | Main · Officer dashboard | `#/` Dashboard | built 2 Nov (session 59) |
-| 2 | Intake · FIR intake and fact check | FIR screen, part "Case details" | restyled; AI fact check still to build |
+| 2 | Intake · FIR intake and fact check | FIR screen, part "Case details" | restyled; AI fact check, first version (session 79: one document, the FIR text; no conflicts across documents, no cross-case links) |
 | 3 | Playbook · plan, sections, deadlines | FIR part "Deadlines" | restyled; plan of tasks still to build |
 | 4 | Notices | FIR part "Notices" | restyled |
 | 5 | Evidence, custody, 63(4) | FIR part "Evidence" | restyled |
