@@ -111,4 +111,71 @@ class StatementApiTest {
         mvc.perform(get("/api/firs/" + fir + "/statements").header("Authorization", io)).andExpect(status().isOk());
         assertThat(db.sql("select count(*) from protected_read where what = 'statements' and fir_id = ?").param(fir).query(Long.class).single()).isOne();
     }
+
+    // English translation beside a statement (AI feature A3, V52)
+    static final String REQ = "7d0c3f1e-2b4a-4c55-9a77-0f1e2d3c4b5a";
+
+    UUID statement(UUID person) throws Exception {
+        record(io, fir, person, "मी २८ तारखेला ४०,००० रुपये पाठवले.").andExpect(status().isCreated());
+        return db.sql("select id from witness_statement where person_id = ?").param(person).query(UUID.class).single();
+    }
+
+    ResultActions translate(String who, UUID firId, UUID statementId, String text, String aiText) throws Exception {
+        return mvc.perform(post("/api/firs/" + firId + "/statements/" + statementId + "/translation").header("Authorization", who)
+                .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("text", text, "aiText", aiText, "aiRequestId", REQ))));
+    }
+
+    @Test
+    void aCheckedTranslationIsKeptBesideTheOriginalOnceWithWhatTheAiDrafted() throws Exception {
+        UUID s = statement(person(fir, "witness", "W1", "Fictional Son"));
+        mvc.perform(get("/api/firs/" + fir + "/statements").header("Authorization", io))
+                .andExpect(jsonPath("$.statements[0].translated_text").doesNotExist()).andExpect(jsonPath("$.statements[0].masked").value(false));
+        translate(io, fir, s, "  I sent Rs 40,000 on the 28th. ", "I sent Rs 4,000 on the 28th.").andExpect(status().isCreated());
+        mvc.perform(get("/api/firs/" + fir + "/statements").header("Authorization", io)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.statements[0].original_text").value("मी २८ तारखेला ४०,००० रुपये पाठवले."))
+                .andExpect(jsonPath("$.statements[0].translated_text").value("I sent Rs 40,000 on the 28th."))
+                .andExpect(jsonPath("$.statements[0].translation_corrected").value(true))
+                .andExpect(jsonPath("$.statements[0].translation_checked_by_name").value("Fictional io"))
+                .andExpect(jsonPath("$.statements[0].translation_checked_at").exists());
+        assertThat(db.sql("select ai_request_id::text from statement_translation").query(String.class).single()).isEqualTo(REQ);
+        translate(io, fir, s, "Another translation", "Another translation").andExpect(status().isConflict())
+                .andExpect(status().reason("This statement already has a checked translation."));
+        assertThatThrownBy(() -> db.sql("update statement_translation set translated_text = 'changed'").update()).hasMessageContaining("kept as written");
+        assertThatThrownBy(() -> db.sql("delete from statement_translation").update()).hasMessageContaining("kept as written");
+    }
+
+    @Test
+    void noTranslationOfAnEnglishStatementOrOfAProtectedCaseOrMaskedPerson() throws Exception {
+        UUID w = person(fir, "witness", "W1", "Fictional Witness");
+        mvc.perform(post("/api/firs/" + fir + "/statements").header("Authorization", io).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("personId", w.toString(), "language", "en", "medium", "written", "text", "Said in English.")))).andExpect(status().isCreated());
+        UUID english = db.sql("select id from witness_statement where language = 'en'").query(UUID.class).single();
+        translate(io, fir, english, "Said in English.", "Said in English.").andExpect(status().isBadRequest())
+                .andExpect(status().reason("A statement made in English is not translated."));
+        UUID masked = person(fir, "witness", "W2", "Fictional Masked");
+        db.sql("update person set identity_masked = true where id = ?").param(masked).update();
+        UUID ms = statement(masked);
+        translate(io, fir, ms, "x words", "x words").andExpect(status().isBadRequest())
+                .andExpect(status().reason("A statement of a protected victim's case or of a masked person is not sent for translation."));
+        UUID plain = statement(person(fir, "witness", "W3", "Fictional Plain"));
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '124(1)')").param(fir).update();   // acid attack: protected
+        translate(io, fir, plain, "x words", "x words").andExpect(status().isBadRequest());
+        assertThat(db.sql("select count(*) from statement_translation").query(Long.class).single()).isZero();
+    }
+
+    @Test
+    void onlyTheCaseTeamTranslatesAStatementOfItsOwnCaseWithEveryFieldGiven() throws Exception {
+        UUID s = statement(person(fir, "witness", "W1", "Fictional Son"));
+        translate(outsider, fir, s, "Words", "Words").andExpect(status().isForbidden());
+        translate(desk, fir, s, "Words", "Words").andExpect(status().isForbidden());
+        UUID other = fir(3);
+        translate(io, other, s, "Words", "Words").andExpect(status().isNotFound());        // the statement is not of that case
+        translate(io, fir, UUID.randomUUID(), "Words", "Words").andExpect(status().isNotFound());
+        translate(io, fir, s, " ", "Words").andExpect(status().isBadRequest());
+        translate(io, fir, s, "Words", "").andExpect(status().isBadRequest());
+        translate(io, fir, s, "x".repeat(40001), "Words").andExpect(status().isBadRequest());
+        mvc.perform(post("/api/firs/" + fir + "/statements/" + s + "/translation").header("Authorization", io).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("text", "Words", "aiText", "Words")))).andExpect(status().isBadRequest());
+        assertThat(db.sql("select count(*) from statement_translation").query(Long.class).single()).isZero();
+    }
 }
