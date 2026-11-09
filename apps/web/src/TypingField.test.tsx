@@ -119,6 +119,19 @@ test('speech adds finished phrases in the chosen language after what is typed, a
   expect(screen.getByRole('button', { name: 'Speak' })).toBeTruthy()
 })
 
+test('with English chosen speech listens in Indian English, and the first phrase goes into an empty box without a leading space', () => {
+  const made = fakeRecogniser()
+  function English() {
+    const [v, setV] = useState('')
+    return <TypingContext.Provider value={{ lang: 'en', setLang: () => {} }}><TypingField label="Statement" value={v} onChange={setV} speech /></TypingContext.Provider>
+  }
+  render(<English />)
+  fireEvent.click(screen.getByRole('button', { name: 'Speak' }))
+  expect(made[0].lang).toBe('en-IN')
+  say(made[0], [['  first words ', true]])
+  expect((screen.getByLabelText('Statement') as HTMLInputElement).value).toBe('first words')
+})
+
 test('a speech error is shown and typing still works; leaving the page stops listening', () => {
   const made = fakeRecogniser()
   const { unmount } = render(<SpeechHarness speech />)

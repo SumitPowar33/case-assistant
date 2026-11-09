@@ -6,7 +6,7 @@ export default mergeConfig(viteConfig, defineConfig({
   test: {
     coverage: {
       provider: 'v8', include: ['src/**'], exclude: ['src/**/*.test.*', 'src/main.tsx'],
-      thresholds: { statements: 99, branches: 94, functions: 96, lines: 99 },
+      thresholds: { statements: 99, branches: 96, functions: 96, lines: 99 },
     },
   },
 }))

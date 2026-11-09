@@ -121,6 +121,20 @@ class FinalReportApiTest {
     }
 
     @Test
+    void eachPartNeedsTwentyCharactersAndAReturnNeedsAReasonOfTenWhateverIsWrongWithIt() throws Exception {
+        playbook();
+        for (String[] w : new String[][] {{FACTS, "too short"}, {"too short", EVIDENCE}, {FACTS, "   "}, {"   ", EVIDENCE}}) {
+            call(put(url("")), io, words(w[0], w[1])).andExpect(status().isOk());
+            call(post(url("/submit")), io, null).andExpect(status().isConflict());
+        }
+        call(put(url("")), io, words(FACTS, EVIDENCE)).andExpect(status().isOk());
+        call(post(url("/submit")), io, null).andExpect(status().isOk());
+        for (String note : new String[] {"", "   ", "too short", null})
+            call(post(url("/decision")), sho, note == null ? "{\"decision\":\"return\"}" : "{\"decision\":\"return\",\"note\":\"" + note + "\"}").andExpect(status().isBadRequest());
+        call(get(url("")), sho, null).andExpect(jsonPath("$.draft.status").value("submitted"));   // still waiting for a decision
+    }
+
+    @Test
     void nobodyApprovesTheirOwnSubmission() throws Exception {
         playbook();
         call(put(url("")), sho, words(FACTS, EVIDENCE)).andExpect(status().isOk());

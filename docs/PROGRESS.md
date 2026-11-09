@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 3, MH glossary draft (session 83, started 02:35 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -89,6 +88,8 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
+Done in session 84 (10 Nov, 02:05 IST scheduled run, last of the night): tests for older code only (item 3 not built, see its entry); gates raised.
+Done in session 83 (9 Nov, 23:35 IST scheduled run): the gateway refuses guilt, truth and prediction questions for `case_qa` and logs the refusal.
 Done in session 82 (9 Nov, scheduled run): item 14, A4: AI reply reader on the Notices reply form (board 4), no new migration.
 Done in session 81 (9 Nov, 02:05 IST scheduled run, last of the night): item 14, A3: AI translation of a statement into English, checked by the officer, beside the original (V52).
 Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section suggestion from the playbooks, with the BNS/IPC date rule (V51).
@@ -136,6 +137,33 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 10 Nov 2026, session 84 (02:05 IST scheduled run, last of the night, Sumit away)
+Started from `setup/seed` at 392253a (session 83's progress entry was already in the file). Fresh container: PostgreSQL started, role `caseapp` and databases `caseapp_test` and `caseapp_dev` created, `npm ci`, and the gateway's `requirements.txt` installed (the first baseline failed only because `httpx` and `fastapi` were missing in the new container; the dev requirements file does not list them, only `requirements.txt` does). Baseline after that: all 8 suites PASS.
+
+**Item 3 (rest of the MH pack): not built, on purpose.** Every part left (roles, playbooks, Marathi labels, punishment differences, glossary terms) needs Maharashtra law or police structure that I would have to invent. I tried a Maharashtra glossary of one term; `panchnama` is already in the national glossary and a state may only add, so there was nothing true to add. Nothing was left in the repo. It needs a person who knows the state's practice (question 1).
+
+**Tests for older code (instead of a new feature):**
+- Web: `TypingField` (speech with English chosen listens as `en-IN`; the first phrase goes into an empty box with no leading space), `Search` (a recording sent without a named court), `AdminPage` (a new installation: no stations, no admin changes, no sign-in attempts).
+- Core: `AdminApiTest` (a station's CCTNS code is trimmed; missing or blank is kept as none), `FinalReportApiTest` (each part needs 20 characters, in each of the four short/blank combinations; a return needs a reason of 10 characters whether it is missing, empty, blank or short).
+- What is left uncovered in the core is almost all unreachable: `catch` lines for exceptions that cannot happen (JSON, SHA-256, HMAC), and the "reader is not on the case team" branch of the arrests and memo-correction answers. A reader off the team never reaches it, because `ReadAccess` answers 404 first (I wrote a test for it, it showed that, and I dropped it). That branch is a second guard behind the first; I left it.
+- Gates raised: web branches 94 to 96 (now 97.04), core branches 90 to 93 (now 95.42).
+
+`scripts/test-all.sh` at the end (before the gate change; web coverage and core `verify` were rerun after it and pass): PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway (99.47%), PASS web, PASS database rules, PASS core, PASS e2e browser (36 passed, 3 skipped as before). Coverage: core 98.77% lines / 95.42% branches, web 99.97% statements / 97.04% branches / 98.47% functions, gateway 99.47%.
+- Skipped / not checked: no screenshot step (no screen changed); no new migration; no change to app code.
+- Next: A5 as real RAG (item 17) or A6 chargesheet drafting (13d); item 10 acting SHO (the last piece of item 10).
+- Blocked: item 3 waits for a reviewer (question 1).
+
+Questions for Sumit:
+1. Who can tell me the Maharashtra roles (is a sub-divisional officer role needed, and what may it see), the Marathi legal terms and the Maharashtra-specific offences? Until then item 3 stays unbuilt, and I will keep picking the next item.
+2. Add `httpx` and `fastapi` to `services/ai-gateway/requirements-dev.txt`? Today a fresh machine needs both files installed (I left it as it is).
+
+## Tonight in short (9 Nov 21:05 IST to 10 Nov 04:00 IST: sessions 82, 83 and 84)
+- 82: AI reply reader on the Notices reply form (A4), no migration.
+- 83: the gateway refuses guilt, truth and prediction questions for `case_qa` and logs them (gateway tests only).
+- 84: item 3 not built (needs a Maharashtra reviewer); tests for older code in web and core; two coverage gates raised.
+- Last `scripts/test-all.sh` (session 84): 8 of 8 PASS. Core 98.77% / 95.42%, web 99.97% / 97.04% / 98.47%, gateway 99.47%. Gates now: core 96/93, web 99/96/96, gateway 97.
+- Open questions: session 84 (1 to 2), session 83 (1), session 82 (1 to 2).
 
 ## 9 Nov 2026, session 83 (23:35 IST scheduled run, Sumit away)
 Started from `setup/seed` at 933efda. No other session marked in progress.

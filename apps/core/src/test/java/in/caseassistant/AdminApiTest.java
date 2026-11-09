@@ -169,6 +169,14 @@ class AdminApiTest {
     }
 
     @Test
+    void aStationsCctnsCodeIsTrimmedAndAMissingOrBlankOneIsKeptAsNone() throws Exception {
+        for (String code : new String[] {",\"cctnsCode\":\"  TRIM-01  \"", ",\"cctnsCode\":\"   \"", ""})
+            post(admin, "/api/stations", "{\"stateCode\":\"IN\",\"district\":\"D\",\"name\":\"PS " + code.length() + "\"" + code + "}").andExpect(status().isCreated());
+        var codes = db.sql("select cctns_code from police_station where name like 'PS %' order by name").query(String.class).list();
+        org.assertj.core.api.Assertions.assertThat(codes).containsExactlyInAnyOrder("TRIM-01", null, null);
+    }
+
+    @Test
     void unlockEndsALockOnlyWhenThereIsOne() throws Exception {
         UUID io = createIo();
         post(admin, "/api/users/" + io + "/unlock", REASON).andExpect(status().isConflict());

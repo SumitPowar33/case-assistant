@@ -220,3 +220,17 @@ test('a police station is added to a loaded state pack; an empty CCTNS code is s
   expect((await screen.findByRole('status')).textContent).toBe('Station added.')
   expect(writes).toEqual([{ url: '/api/stations', body: { stateCode: 'IN', district: 'Demo District', name: 'Demo Harbour PS', cctnsCode: null } }])
 })
+
+test('a fresh installation says so: no stations, no admin changes and no sign-in attempts yet', async () => {
+  stub()
+  const before = { ...lists }
+  for (const k of ['/stations', '/admin-actions', '/sign-ins']) lists[k] = []
+  try {
+    render(<AdminPage />)
+    expect(await screen.findByText('No sign-in attempts.')).toBeTruthy()
+    expect(screen.getByText('None yet.')).toBeTruthy()
+    expect(screen.getByText('Nothing yet.')).toBeTruthy()
+  } finally {
+    Object.assign(lists, before)
+  }
+})

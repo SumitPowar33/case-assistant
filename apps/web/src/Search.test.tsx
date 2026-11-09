@@ -56,6 +56,12 @@ test('the memos show their witnesses, recording, items and whether the recording
   expect(screen.getByText('Recording sent to Fictional JMFC on 2026-10-21')).toBeTruthy()
 })
 
+test('a recording sent without a named court is shown by its date alone', async () => {
+  stub([memo({ forwarded_on: '2026-10-22', forwarded_to: null })])
+  render(<Search firId="f1" onSaved={() => {}} />)
+  expect((await screen.findByText(/Recording sent to\s+on 2026-10-22/)).textContent).toBe('Recording sent to  on 2026-10-22')
+})
+
 test('an empty list says so, a failed read shows its error, and an answer of another shape does not crash', async () => {
   stub([])
   render(<Search firId="f1" onSaved={() => {}} />)
