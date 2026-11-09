@@ -2,6 +2,7 @@ import { useState, type MouseEvent } from 'react'
 import { ai, send } from './api'
 import { NOTICE_PROMPT_VERSION, noticePrompt, type NoticeFacts } from './noticePrompt'
 import { Form } from './Forms'
+import { REPLY_PROMPT_VERSION, MAX_REPLY, readReply, replyPrompt, type ReplyRead } from './replyReader'
 import TypingField from './TypingField'
 import { fmt, istIso, text } from './formats'
 import { useLoad } from './useLoad'
@@ -37,20 +38,79 @@ function SendForm({ firId, notice, onSaved }: { firId: string; notice: Notice; o
   )
 }
 
-/** Logs a reply. The officer ticks each outstanding item the reply brought; unticked means it did not come. */
-function ReplyForm({ firId, notice, onSaved }: { firId: string; notice: Notice; onSaved: () => void }) {
+/**
+ * Logs a reply. The officer ticks each outstanding item the reply brought; unticked means it did not come.
+ * "Read the reply with AI" (design board 4, AI feature A4): the officer pastes the reply's text (it is not saved) and the
+ * AI gateway (feature reply_check) suggests which items it brings, each with the words of the reply that show it, and
+ * whether a BSA 63(4) certificate is in it. The boxes are only pre-ticked: the officer changes them, and saving logs
+ * whether the ticks were kept (accepted) or changed (edited). Not offered on a case that protects the victim's identity.
+ */
+function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string; notice: Notice; victimProtected: boolean; onSaved: () => void }) {
   const t = useT()
   const items = notice.items_requested.length ? notice.items_missing : [FULL_REPLY]
+  const [ticks, setTicks] = useState<boolean[]>(() => items.map(() => false))
+  const [text, setText] = useState('')
+  const [asked, setAsked] = useState<{ request_id: string; read: Extract<ReplyRead, { kind: 'read' }> }>()
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+  const canAsk = !victimProtected && notice.items_requested.length > 0
+
+  async function readIt() {
+    setNote('')
+    if (!text.trim()) { setNote(t('notice.replyNeedText')); return }
+    if (text.length > MAX_REPLY) { setNote(t('notice.replyTooLong')); return }
+    setBusy(true)
+    try {
+      const out = await ai<{ request_id: string; draft: string }>('/v1/generate', { method: 'POST', body: {
+        feature: 'reply_check', prompt_version: REPLY_PROMPT_VERSION, prompt: replyPrompt(items, text, true), case_ref: firId, max_tokens: 1500 } })
+      const read = readReply(out.draft, items, text, true)
+      if (read.kind === 'unreadable') setNote(t('notice.replyUnreadable'))
+      else { setAsked({ request_id: out.request_id, read }); setTicks(read.items.map((i) => i.present)) }
+    } catch (err) {
+      setNote((err as Error).message)
+    }
+    setBusy(false)
+  }
+
   return (
-    <Form title={t('notice.replyTitle')} onSaved={onSaved}
-      submit={(f) => send(`/firs/${firId}/notices/${notice.id}/replies`, 'POST', {
-        receivedAt: istIso(String(f.get('received'))), channel: f.get('channel'),
-        checksJson: JSON.stringify(items.map((item, i) => ({ item, present: f.get(`item${i}`) === 'on' }))),
-      })}>
+    <Form title={t('notice.replyTitle')} onSaved={() => { setTicks(items.map(() => false)); setText(''); setAsked(undefined); onSaved() }}
+      submit={async (f) => {
+        const result = await send(`/firs/${firId}/notices/${notice.id}/replies`, 'POST', {
+          receivedAt: istIso(String(f.get('received'))), channel: f.get('channel'),
+          checksJson: JSON.stringify(items.map((item, i) => ({ item, present: ticks[i] }))),
+        })
+        if (asked) {  // the reply is saved; a failure to log the decision must not make the officer save it twice
+          const same = asked.read.items.every((r, i) => r.present === ticks[i])
+          await ai('/v1/decisions', { method: 'POST', body: { request_id: asked.request_id, decision: same ? 'accepted' : 'edited', feature: 'reply_check', case_ref: firId, note: '' } }).catch(() => undefined)
+        }
+        return result
+      }}>
       <label>{t('notice.received')} <input name="received" type="datetime-local" required /></label>
       <label>{t('notice.channel')} <select name="channel">{CHANNELS.map((c) => <option key={c} value={c}>{t.code('notice.channel', c)}</option>)}</select></label>
+      {canAsk && (
+        <>
+          <label>{t('notice.replyText')} <textarea rows={5} value={text} onChange={(e) => setText(e.target.value)} /></label>
+          <p><button type="button" onClick={readIt} disabled={busy}>{t(busy ? 'notice.asking' : 'notice.readReply')}</button>{' '}
+            <small>{t('notice.replySends')}</small></p>
+        </>
+      )}
+      {note && <p role="alert">{note}</p>}
+      {asked && (
+        <section aria-label={t('notice.aiRead')} className="ai-draft">
+          <p><span className="chip c-ai">{t('notice.aiRead')}</span> <small>{t('notice.aiReadHint')}</small></p>
+          <ul>{asked.read.items.map((r) => (
+            <li key={r.item}>{r.present ? t('notice.readFound', { item: r.item }) : t('notice.readNotFound', { item: r.item })}{r.quote && <> <q>{r.quote}</q></>}</li>
+          ))}
+            {asked.read.certificate && (
+              <li>{asked.read.certificate.present ? t('notice.readCertYes') : t('notice.readCertNo')}{asked.read.certificate.quote && <> <q>{asked.read.certificate.quote}</q></>}</li>
+            )}
+          </ul>
+        </section>
+      )}
       {notice.items_requested.length > 0 && <p>{t('notice.tick')}</p>}
-      {items.map((item, i) => <label key={item}><input name={`item${i}`} type="checkbox" /> {item === FULL_REPLY ? t('notice.fullReply') : item}</label>)}
+      {items.map((item, i) => (
+        <label key={item}><input type="checkbox" checked={ticks[i] ?? false} onChange={(e) => setTicks(ticks.map((x, j) => (j === i ? e.target.checked : x)))} /> {item === FULL_REPLY ? t('notice.fullReply') : item}</label>
+      ))}
     </Form>
   )
 }
@@ -147,7 +207,7 @@ function NewNoticeForm({ firId, fir, onSaved }: { firId: string; fir?: NoticeFac
 }
 
 /** Notices on the case, what each still waits for, and forms to write, send and log replies (case team only). */
-export default function Notices({ firId, fir }: { firId: string; fir?: NoticeFacts['fir'] }) {
+export default function Notices({ firId, fir, victimProtected = false }: { firId: string; fir?: NoticeFacts['fir']; victimProtected?: boolean }) {
   const [version, setVersion] = useState(0)
   const saved = () => setVersion((v) => v + 1)
   const { data, error } = useLoad<Notice[]>(`/firs/${firId}/notices`, version)
@@ -170,7 +230,7 @@ export default function Notices({ firId, fir }: { firId: string; fir?: NoticeFac
               ))}</ul>
             )}
             {n.status === 'draft' && <SendForm firId={firId} notice={n} onSaved={saved} />}
-            {['sent', 'reply_incomplete'].includes(n.status) && <ReplyForm firId={firId} notice={n} onSaved={saved} />}
+            {['sent', 'reply_incomplete'].includes(n.status) && <ReplyForm firId={firId} notice={n} victimProtected={victimProtected} onSaved={saved} />}
           </li>
         ))}</ul>
       )}

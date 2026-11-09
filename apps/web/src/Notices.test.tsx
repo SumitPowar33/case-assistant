@@ -327,3 +327,98 @@ test('a notice with a status the screen does not know is still listed, with the 
   render(<Notices firId="f1" />)
   expect(await screen.findByText('weird_status')).toBeTruthy()
 })
+
+/** A sent notice is listed; the gateway answers `answer` (or fails with 503 when it is null); every write is recorded. */
+function stubReply(answer: string | null, replyItems = sent) {
+  const writes: { url: string; body: Record<string, unknown> }[] = []
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method && init.method !== 'GET') {
+      const body = JSON.parse(init.body as string)
+      writes.push({ url, body })
+      if (url === '/ai/v1/generate') {
+        return answer === null ? { ok: false, status: 503, json: async () => ({ detail: 'gateway down' }) } : { ok: true, status: 200, json: async () => ({ request_id: 'rr1', draft: answer }) }
+      }
+      return { ok: true, status: url.startsWith('/ai') ? 200 : 201, json: async () => ({}) }
+    }
+    return { ok: true, status: 200, json: async () => (url.endsWith('/notices') ? [replyItems] : []) }
+  }))
+  return writes
+}
+const open2 = { ...sent, items_missing: ['Account statement', 'KYC documents'] }
+const REPLY_TEXT = 'The account statement for September is attached. KYC will follow.'
+const reading = (items: unknown[]) => JSON.stringify(items)
+
+test('A4: the reply reader pre-ticks what the reply brings, with its words; the officer changes a tick and the decision is logged as edited', async () => {
+  const writes = stubReply(reading([
+    { item: 'Account statement', present: true, quote: 'The account statement for September is attached' },
+    { item: 'KYC documents', present: true, quote: 'KYC is enclosed' },   // words not in the reply: stays unticked
+    { item: 'certificate', present: false, quote: '' },
+  ]), open2)
+  render(<Notices firId="f1" />)
+  const form = (await screen.findByText('Log a reply')).closest('details')!
+  fireEvent.click(within(form).getByRole('button', { name: 'Read the reply with AI' }))
+  expect((await within(form).findByRole('alert')).textContent).toBe('Paste the text of the reply first.')
+  type(/^Text of the reply/, REPLY_TEXT, within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Read the reply with AI' }))
+  const box = await within(form).findByRole('region', { name: 'AI reading, check before saving' })
+  expect(writes[0]).toMatchObject({ url: '/ai/v1/generate', body: { feature: 'reply_check', prompt_version: 'reply_check/reply@1', case_ref: 'f1' } })
+  expect(within(box).getByText('Account statement: found in the reply')).toBeTruthy()
+  expect(within(box).getByText('KYC documents: not found in the reply')).toBeTruthy()
+  expect(within(box).getByText('BSA 63(4) certificate: not found in the reply')).toBeTruthy()
+  expect((within(form).getByLabelText('Account statement') as HTMLInputElement).checked).toBe(true)
+  expect((within(form).getByLabelText('KYC documents') as HTMLInputElement).checked).toBe(false)
+  fireEvent.click(within(form).getByLabelText('KYC documents'))   // the officer saw the post note and ticks it by hand
+  type(/^Received/, '2026-10-11T15:00', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(3))
+  expect(writes[1]).toMatchObject({ url: '/api/firs/f1/notices/n1/replies', body: { checksJson: '[{"item":"Account statement","present":true},{"item":"KYC documents","present":true}]' } })
+  expect(writes[2]).toEqual({ url: '/ai/v1/decisions', body: { request_id: 'rr1', decision: 'edited', feature: 'reply_check', case_ref: 'f1', note: '' } })
+})
+
+test('A4: ticks kept as the AI suggested are logged as accepted; a certificate found is shown with its words', async () => {
+  const writes = stubReply(reading([
+    { item: 'Account statement', present: true, quote: 'account statement for September is attached' },
+    { item: 'KYC documents', present: false, quote: '' },
+    { item: 'certificate', present: true, quote: 'KYC will follow' },
+  ]), open2)
+  render(<Notices firId="f1" />)
+  const form = (await screen.findByText('Log a reply')).closest('details')!
+  type(/^Text of the reply/, REPLY_TEXT, within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Read the reply with AI' }))
+  expect(await within(form).findByText('BSA 63(4) certificate: found in the reply')).toBeTruthy()
+  type(/^Received/, '2026-10-11T15:00', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(3))
+  expect(writes[2].body).toMatchObject({ decision: 'accepted', feature: 'reply_check' })
+  await vi.waitFor(() => expect((within(form).getByLabelText('Account statement') as HTMLInputElement).checked).toBe(false))   // form cleared after saving
+  expect(within(form).queryByRole('region')).toBeNull()
+})
+
+test('A4: an unreadable answer, a gateway failure and a too long reply leave the boxes to the officer; no AI on a protected case or a notice without a list', async () => {
+  stubReply('I cannot tell.', open2)
+  const { unmount } = render(<Notices firId="f1" />)
+  let form = (await screen.findByText('Log a reply')).closest('details')!
+  type(/^Text of the reply/, REPLY_TEXT, within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Read the reply with AI' }))
+  expect((await within(form).findByRole('alert')).textContent).toBe('The AI answer could not be read. Tick the items by hand.')
+  unmount()
+  stubReply(null, open2)
+  const second = render(<Notices firId="f1" />)
+  form = (await screen.findByText('Log a reply')).closest('details')!
+  type(/^Text of the reply/, REPLY_TEXT, within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Read the reply with AI' }))
+  expect((await within(form).findByRole('alert')).textContent).toBe('The AI gateway answered 503: gateway down')
+  type(/^Text of the reply/, 'x'.repeat(30001), within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Read the reply with AI' }))
+  expect((await within(form).findByRole('alert')).textContent).toBe('The reply text is too long for the AI. Tick the items by hand.')
+  second.unmount()
+  stubReply('[]', open2)
+  const third = render(<Notices firId="f1" victimProtected />)
+  form = (await screen.findByText('Log a reply')).closest('details')!
+  expect(within(form).queryByRole('button', { name: 'Read the reply with AI' })).toBeNull()
+  third.unmount()
+  stubReply('[]', { ...sent, items_requested: [], items_missing: [] })
+  render(<Notices firId="f1" />)
+  form = (await screen.findByText('Log a reply')).closest('details')!
+  expect(within(form).queryByRole('button', { name: 'Read the reply with AI' })).toBeNull()
+})

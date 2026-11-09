@@ -114,7 +114,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
         </Section>
       </div>
       <div className={shown('search')}><Search firId={id} onSaved={saved} /></div>
-      <div className={shown('notices')}><Notices firId={id} fir={fir} /></div>
+      <div className={shown('notices')}><Notices firId={id} fir={fir} victimProtected={fir.victim_protected} /></div>
       <div className={shown('readiness')}><Readiness key={version} firId={id} people={people ?? []} /></div>
       <div className={shown('statements')}><Statements key={version} firId={id} victimProtected={fir.victim_protected} /></div>
       <div className={shown('money')}><MoneyTrail key={version} firId={id} /></div>
