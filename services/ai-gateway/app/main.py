@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import threading
 import time
 import uuid
@@ -67,6 +68,26 @@ class DraftLimit:
             if len(self.seen) > 10000:   # forget officers with nothing in the window
                 self.seen = {k: v for k, v in self.seen.items() if v and v[-1] > now - self.window}
             return 0
+
+
+# "Ask the case file" never answers guilt, truth or prediction questions (CLAUDE.md hard rules). The browser refuses them first
+# (apps/web/src/askFile.ts, same patterns); this is the second check, so a caller that skips the screen is refused and logged too.
+# Only the officer's question line is read, never the case pieces below it.
+QUESTION_LINE = re.compile(r"^Question from the investigating officer:(.*)$", re.M)
+REFUSED_QUESTIONS = {
+    "guilt": re.compile(r"\b(guilty|guilt|innocent|innocence|culprit|criminal|convict\w*)\b|\b(who|whom) (did|committed|is behind|is responsible)\b"
+                        r"|\bdid (he|she|they|it|[a-z]\d) (do|commit)\b", re.I),
+    "truth": re.compile(r"\b(lying|liar|lies|lie|truthful|truthfully|credible|credibility|believable|trustworthy|honest|dishonest)\b"
+                        r"|\b(is|are|was|were) (he|she|they|[a-z]\d|the (witness|victim|accused|complainant)) (telling|speaking)\b"
+                        r"|\bcan (we|i) (trust|believe)\b", re.I),
+    "predict": re.compile(r"\b(will|would|might|likely|going to|chance|probability|probable)\b.{0,40}\b(commit|reoffend|re-offend|offend|flee|abscond|escape|repeat)\b", re.I),
+}
+
+
+def refused_question(feature: str, prompt: str) -> str | None:
+    """'guilt', 'truth' or 'predict' when a case_qa question asks what the app never answers, else None."""
+    m = QUESTION_LINE.search(prompt) if feature == "case_qa" else None
+    return next((why for why, rx in REFUSED_QUESTIONS.items() if rx.search(m.group(1))), None) if m else None
 
 
 class GenerateIn(BaseModel):
@@ -203,6 +224,9 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             refuse(403, "Your unit's policy keeps case text on the state's servers, so a cloud AI provider "
                         f"({provider_name}) cannot be used. Ask the admin to set an on-premises provider for this feature.",
                    provider=provider_name, model=model)
+        why = refused_question(body.feature, body.prompt)
+        if why:
+            refuse(422, f"This question asks about {why}, which the app does not answer. Ask what the file says.", question_refused=why)
         system = SAFETY_SYSTEM
         # The text itself is not kept (it may name people); its hash proves later which exact text was sent.
         versions = {"prompt_version": body.prompt_version, "safety_version": SAFETY_VERSION,

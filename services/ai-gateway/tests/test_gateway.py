@@ -228,6 +228,34 @@ def test_prompt_version_is_required_and_logged_with_a_hash_not_the_text(setup):
     assert len(d["prompt_sha256"]) == 64 and "Who is witness" not in json.dumps(store.audit_rows())
 
 
+ASK = "Question from the investigating officer: {}\n\nPieces of this case file:\n[S1] FIR: {}"
+
+
+@pytest.mark.parametrize("question,why", [
+    ("Is the accused guilty?", "guilt"), ("Who committed the theft?", "guilt"), ("Did he do it?", "guilt"),
+    ("Is witness W2 lying?", "truth"), ("Can we trust the complainant?", "truth"), ("Was the victim telling the truth?", "truth"),
+    ("Will A1 flee before the trial?", "predict"), ("Is he likely to reoffend?", "predict"),
+])
+def test_ask_the_case_file_refuses_guilt_truth_and_prediction_and_logs_it(setup, question, why):
+    c, store = setup
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": ASK.format(question, "x"), "prompt_version": "case_qa/ask@1", "case_ref": "FIR-1"})
+    assert r.status_code == 422 and why in r.json()["detail"]
+    row = store.audit_rows()[0]
+    assert row["action"] == "ai_refused" and row["detail"]["question_refused"] == why
+    assert question not in json.dumps(store.audit_rows())   # the question is not kept
+
+
+def test_ask_the_case_file_reads_only_the_question_and_only_for_case_qa(setup):
+    c, store = setup
+    # the words sit in the case text, not in the question: answered
+    ok = ASK.format("When was the phone taken?", "The accused is guilty, said the neighbour who was lying.")
+    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": ok, "prompt_version": "case_qa/ask@1"}).status_code == 200
+    # another feature is not a question
+    assert c.post("/v1/generate", json={"feature": "fir_extract", "prompt": ASK.format("Is he guilty?", "x"), "prompt_version": "t@1"}).status_code == 200
+    # a case_qa prompt with no question line (an old caller) goes on as before
+    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "Who is witness W1?", "prompt_version": "t@1"}).status_code == 200
+
+
 def core_app(answers):
     """A fake core app: answers[i] is the reply to the i-th GET /api/me (a status code, an exception or a dict)."""
     calls = []
