@@ -67,6 +67,17 @@ class ActingChargeController {
                 where c.station_id = ? order by c.starts_at desc, c.id""").param(stationId).query().listOfRows();
     }
 
+    /** What the screen offers for one station: its active officers and the roles that can be held as an acting charge. */
+    @GetMapping("/api/acting-charges/options")
+    Map<String, Object> options(@AuthenticationPrincipal Jwt jwt, @RequestParam UUID stationId) {
+        if (!team.canAt(CaseTeam.user(jwt), GRANT, stationId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the SP of the district or the state admin can see this.");
+        var officers = db.sql("select id, full_name, rank, role from app_user where station_id = ? and active order by full_name, id")
+                .param(stationId).query().listOfRows();
+        var allowed = roles.list().stream().filter(r -> roles.has((String) r.get("code"), ALLOWED))
+                .map(r -> Map.of("code", r.get("code"), "label", r.get("label"))).toList();
+        return Map.of("officers", officers, "roles", allowed);
+    }
+
     @PostMapping("/api/acting-charges")
     @Transactional
     ResponseEntity<Map<String, Object>> give(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody NewCharge c) {

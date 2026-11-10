@@ -229,6 +229,19 @@ class ActingChargeApiTest {
     }
 
     @Test
+    void theOptionsAreTheActiveOfficersOfTheStationAndTheRolesThatMayBeHeld_forGrantorsOnly() throws Exception {
+        db.sql("update app_user set active = false where id = ?").param(otherIoId).update();
+        call(get("/api/acting-charges/options?stationId=" + station), sp, null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.officers[?(@.id=='" + ioId + "')].full_name").value("Fictional io"))
+                .andExpect(jsonPath("$.officers[?(@.id=='" + otherIoId + "')]").isEmpty())
+                .andExpect(jsonPath("$.roles[?(@.code=='sho')].label").isNotEmpty())
+                .andExpect(jsonPath("$.roles[?(@.code=='io')]").isEmpty());
+        call(get("/api/acting-charges/options?stationId=" + station), stateAdmin, null).andExpect(status().isOk());
+        call(get("/api/acting-charges/options?stationId=" + station), spFar, null).andExpect(status().isForbidden());
+        call(get("/api/acting-charges/options?stationId=" + station), io, null).andExpect(status().isForbidden());
+    }
+
+    @Test
     void startAndEndAreInTheAdminLogAndOnTheAuditScreen() throws Exception {
         UUID id = give(sp, ioId, 20);
         call(post("/api/acting-charges/" + id + "/end"), sp, "{\"reason\":\"The SHO is back from leave\"}").andExpect(status().isNoContent());

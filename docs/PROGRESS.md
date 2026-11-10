@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 10 acting charge screen (session 87, started 02:35 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -98,6 +97,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 87 (11 Nov, 02:05 IST scheduled run, last of the night): item 10, the acting charge screen (`#/acting`).
 Done in session 86 (10 Nov, 23:35 IST scheduled run): item 10, the "Acting as SHO until ..." banner.
 Done in session 76 (7 Nov, Saturday 21:05 IST weekly review): weekly review and test audit (5 fixes, see the entry); item 13, Field capture on a tablet (board 7, search and seizure memo, V48).
 Done in session 75 (7 Nov, 02:05 IST scheduled run, last of the night): item 13m (second half), State setup and approvals (`#/state-setup`, V46); a date-dependent e2e test fixed.
@@ -115,7 +115,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: online only (decision 1 of 2 Nov): typed text kept in memory and sent again when the network is back, nothing stored on the phone; the FIR screen opens on Deadlines on a phone (decision 6); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
-10. Account lifecycle (decision 2 of 2 Nov): "IO has left the station" list DONE (session 78; a moved IO loses the old station's cases). Acting SHO: DONE, backend (session 85, V53). Banner "Acting as SHO until ...": DONE (session 86). Left for it: a screen (give and end a charge, list; needs an officers-of-a-station lookup for the SP), choosing an acting officer as IO and registering FIRs.
+10. Account lifecycle (decision 2 of 2 Nov): "IO has left the station" list DONE (session 78; a moved IO loses the old station's cases). Acting SHO: DONE, backend (session 85, V53). Banner "Acting as SHO until ...": DONE (session 86). Screen DONE (session 87). Left for it: choosing an acting officer as IO and registering FIRs.
 11. Acid-attack survivors (BNS 124): DONE (session 77, V49). Left for it: the withheld label still says "BNS 72" for an acid case (question 1 of session 77).
 12. Security: done in code (sessions 55 and 56). Left for people: an outside penetration test (CERT-In empanelled auditor) before real case data; the installation itself (deploy/nginx.conf, a real certificate).
 13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
@@ -140,6 +140,27 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 11 Nov 2026, session 87 (02:05 IST scheduled run, last of the night, Sumit away)
+Started from `setup/seed` at c091171. Fresh container: PostgreSQL, role `caseapp` (superuser) and the two databases, `npm ci`, gateway requirements (both files), `psycopg[binary]`, `pytest-playwright`. Baseline `scripts/test-all.sh`: all 8 suites PASS.
+
+**Item 10, the acting charge screen:**
+- Core: `GET /api/acting-charges/options?stationId=` for holders of `acting.grant` in reach of the station: its active officers and the roles with `acting.allowed` (from the packs, no role name in code). Test in `ActingChargeApiTest` (active only, only allowed roles, state admin yes, SP of another district and an IO refused).
+- Web: `ActingPage` (`#/acting`, link "Acting charge" shown to holders of `acting.grant`): station choice, a form to give a charge (officer, role, last day, reason), one card per charge with its state chip (running, ended early, finished) and, for a running one, a form to end it with a reason. The server's refusals are shown as they are. 18 new keys in all 11 catalogs (10 drafts). Tests: `ActingPage.test.tsx` (6) and a nav test in `App.test.tsx`.
+- `scripts/test-all.sh` at the end: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway (99.47%), PASS web (390 tests; lint and build clean), PASS database rules, PASS core, PASS e2e browser (36 passed, 3 skipped as before). Coverage: core 98.79% lines / 95.49% branches, web 99.97% / 96.96% / 98.5%, gateway 99.47%. Gates unchanged (no rise of 2 points). The first web run failed on the build only (`Array.at` in my test, fixed).
+- Skipped / not checked: no screenshot against a board (no board shows this screen); not added to the axe test or the 11-script browser rendering test; no browser (e2e) test of the screen; the last-day field has no `max` (the server refuses more than 90 days); the date is shown with the time (end of the last day, India time); I had no time left over for tests of older code.
+- Next: choosing an acting officer as IO and registering FIRs (end of item 10), A5 as real RAG (item 17) or A6 chargesheet drafting (13d); add the acting screen to the axe and e2e script tests.
+- Blocked: item 3 waits for a reviewer (question 1 of session 84).
+
+Questions for Sumit:
+1. Same as before, still open: sessions 84 (1, 2), 85 (1, 2), 86 (1).
+
+## Tonight in short (10 Nov 21:05 IST to 11 Nov 04:00 IST: sessions 85, 86 and 87)
+- 85: acting SHO backend (V53, permissions `acting.grant` and `acting.allowed`).
+- 86: the "Acting as SHO until ..." banner in the header.
+- 87: the acting charge screen and its options route.
+- Last `scripts/test-all.sh` (session 87): 8 of 8 PASS. Core 98.79% / 95.49%, web 99.97% / 96.96% / 98.5%, gateway 99.47%. Gates: core 96/93, web 99/96/96, gateway 97.
+- Open questions: sessions 84 (1, 2), 85 (1, 2), 86 (1).
 
 ## 10 Nov 2026, session 86 (23:35 IST scheduled run, Sumit away)
 Started from `setup/seed` at 8142237. Fresh container: PostgreSQL, role `caseapp` and the two databases, `npm ci`, gateway requirements (both files), and `psycopg[binary]` plus `pytest-playwright` for the e2e and database suites (they are not in any requirements file; first baseline failed on that only). Baseline: all 8 suites PASS after that.

@@ -338,3 +338,15 @@ test('an acting charge shows as a banner with the role and the last moment, in t
   await screen.findByRole('link', { name: '7/2026' })
   expect(screen.queryByRole('status')).toBeNull()
 })
+
+test('the Acting charge link shows only to a holder of the acting.grant permission', async () => {
+  mockApi()
+  setSession({ ...io, user: { ...io.user, permissions: [...(io.user.permissions ?? []), 'acting.grant'] } })
+  const { unmount } = render(<App />)
+  expect(await screen.findByRole('link', { name: 'Acting charge' })).toBeTruthy()
+  unmount(); cleanup()
+  setSession(io)
+  render(<App />)
+  await screen.findByRole('link', { name: '7/2026' })
+  expect(screen.queryByRole('link', { name: 'Acting charge' })).toBeNull()
+})
