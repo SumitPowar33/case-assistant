@@ -1,5 +1,6 @@
 {
  "app.tagline": "demo · fictional data only · the AI drafts, a person decides",
+ "acting.banner": "Acting as {role} until {date}",
  "nav.main": "Main",
  "nav.firs": "FIRs",
  "nav.frontDesk": "Front desk",

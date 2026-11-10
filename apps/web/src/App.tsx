@@ -22,6 +22,7 @@ import { ComplaintPage, FrontDeskPage } from './FrontDesk'
 import { currentSession, onSessionChange, setMessageLanguage, setScreenLanguage, signOut } from './api'
 import { REVIEWED, SCREEN_LANGS, ScreenLangContext, translate, type Key } from './i18n'
 import { LANGS, TypingContext, type TypingLang } from './typing'
+import { fmt } from './formats'
 
 export default function App() {
   const [hash, setHash] = useState(window.location.hash)
@@ -114,6 +115,7 @@ export default function App() {
       </header>
       <div className="topstrip">
         <span className="chip demo-chip">{t('app.tagline')}</span>
+        {session?.user.acting?.map((a) => <span key={a.role} className="chip demo-chip" role="status">{t('acting.banner').replace('{role}', a.role.toUpperCase()).replace('{date}', fmt(a.ends_at))}</span>)}
       </div>
       <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} only={firPart} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : hash === '#/audit' ? <AuditPage /> : hash === '#/state-setup' ? <StatePage /> : hash === '#/supervisor' ? <Supervisor /> : hash === '#/property' ? <Property /> : hash === '#/expert' ? <ExpertRequests /> : hash === '#/court' ? <Court /> : hash === '#/laws' ? <LawFinder /> : hash === '#/firs' ? <FirList /> : <Dashboard />}</main>
     </TypingContext.Provider>

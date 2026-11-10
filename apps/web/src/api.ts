@@ -5,6 +5,8 @@ import { translateServer } from './i18n'
 export type User = { id: string; username: string; full_name: string; rank: string; role: string; station_id: string | null; station_name?: string | null; can_import?: boolean; can_set_policy?: boolean
   /** From the role's data in the packs (GET /api/me, POST /api/login): what the screens may offer. The server checks every call again. */
   permissions?: string[]; case_scope?: 'none' | 'station' | 'district'
+  /** Acting charges running now (role code and last moment), shown as a banner. */
+  acting?: { role: string; ends_at: string }[]
   /** Screen language (GET /api/me), one of the installed modules' languages. */
   ui_language?: string }
 export type Session = { token: string; user: User }

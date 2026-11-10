@@ -326,3 +326,15 @@ test('the Old to new law link is for every signed-in account and opens the finde
   render(<App />)
   expect(await screen.findByRole('heading', { name: 'Old law to new law' })).toBeTruthy()
 })
+
+test('an acting charge shows as a banner with the role and the last moment, in the screen language; none shows nothing', async () => {
+  mockApi()
+  setSession({ ...io, user: { ...io.user, acting: [{ role: 'sho', ends_at: '2026-11-20T18:29:59Z' }] } })
+  const { unmount } = render(<App />)
+  expect((await screen.findByRole('status')).textContent).toBe('Acting as SHO until 20 Nov 2026, 11:59 pm IST')
+  unmount(); cleanup()
+  setSession(io)
+  render(<App />)
+  await screen.findByRole('link', { name: '7/2026' })
+  expect(screen.queryByRole('status')).toBeNull()
+})
