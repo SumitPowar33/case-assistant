@@ -310,3 +310,16 @@ def test_only_station_and_district_heads_approve_a_final_report():
     approvers = {c for c, r in roles.items() if "chargesheet.approve" in r["permissions"]}
     assert approvers == {"sho", "sp"}
     assert all(roles[c]["case_scope"] in {"station", "district"} for c in approvers)
+
+
+def test_acting_charge_is_given_by_the_roles_that_reach_a_station_and_held_by_a_station_role():
+    """Acting charge (decision 2, 2 Nov 2026): only roles with a reach over a station (a district or the whole state) give it; the
+    role that can be held is a station role that leads cases; nobody who can give it is a role without a reach."""
+    roles = json.loads((ROOT / "IN/roles.json").read_text(encoding="utf-8"))["roles"]
+    givers = {c for c, r in roles.items() if "acting.grant" in r["permissions"]}
+    held = {c for c, r in roles.items() if "acting.allowed" in r["permissions"]}
+    assert givers == {"sp", "state_admin"}
+    assert held == {"sho"}
+    assert all(roles[c]["case_scope"] == "station" and "case.lead" in roles[c]["permissions"] for c in held)
+    assert all(roles[c]["case_scope"] == "district" or "admin.manage" in roles[c]["permissions"] for c in givers)
+    assert not givers & held

@@ -1,5 +1,7 @@
 package in.caseassistant;
 
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -25,17 +27,39 @@ class CaseTeam {
     CaseTeam(JdbcClient db, Roles roles) {
         this.db = db;
         this.roles = roles;
-        String station = Roles.in(roles.scoped("station"));
-        String district = Roles.in(roles.scoped("district"));
+        var stationRoles = roles.scoped("station");
+        var districtRoles = roles.scoped("district");
         // "f" is the FIR, "u" the user, "fs" the FIR's station, "us" the user's station
-        this.stationOrDistrict = "(u.role in " + station + " and u.station_id = f.station_id) or (u.role in " + district
+        this.stationOrDistrict = "(" + holds("u", stationRoles) + " and u.station_id = f.station_id) or (" + holds("u", districtRoles)
                 + " and us.district_id = fs.district_id)";
         this.stationOrDistrictOnFir = stationOrDistrict.replace("f.station_id", "fir.station_id");
         // the stations whose every FIR the user may open: their own (station scope or "fir.read_station"), or every
         // station of their district (district scope); "us" is the user's station, "s" a station they read
         this.wholeStations = "select s.id from app_user u join police_station us on us.id = u.station_id join police_station s on"
-                + " ((u.role in " + station + " or u.role in " + Roles.in(roles.with("fir.read_station")) + ") and s.id = us.id)"
-                + " or (u.role in " + district + " and s.district_id = us.district_id) where u.id = ? and u.active";
+                + " ((" + holds("u", stationRoles) + " or " + holds("u", roles.with("fir.read_station")) + ") and s.id = us.id)"
+                + " or (" + holds("u", districtRoles) + " and s.district_id = us.district_id) where u.id = ? and u.active";
+    }
+
+    /**
+     * SQL test that user alias {@code u} holds one of the role codes: as their own role, or as an acting charge at their own
+     * station that is running now (not ended early, not past its end). The codes come from the packs, so they are safe in SQL.
+     */
+    static String holds(String u, Set<String> codes) {
+        String in = Roles.in(codes);
+        return "(" + u + ".role in " + in + " or exists (select 1 from acting_charge ac where ac.user_id = " + u + ".id and ac.station_id = "
+                + u + ".station_id and ac.role in " + in + " and ac.starts_at <= clock_timestamp() and ac.ends_at > clock_timestamp()"
+                + " and not exists (select 1 from acting_charge_end ae where ae.charge_id = ac.id)))";
+    }
+
+    /** The roles the user holds now: their own and the acting charges running at their station (null user: none). */
+    List<String> activeRoles(UUID userId) {
+        return userId == null ? List.of() : db.sql("""
+                select u.role from app_user u where u.id = :u and u.active
+                union
+                select ac.role from acting_charge ac join app_user u on u.id = ac.user_id and u.station_id = ac.station_id
+                where ac.user_id = :u and u.active and ac.starts_at <= clock_timestamp() and ac.ends_at > clock_timestamp()
+                  and not exists (select 1 from acting_charge_end ae where ae.charge_id = ac.id)
+                order by 1""").param("u", userId).query(String.class).list();
     }
 
     static UUID user(Jwt jwt) {
@@ -153,8 +177,7 @@ class CaseTeam {
 
     /** Whether the user is active and holds a permission (account management: "admin.manage"). */
     boolean can(UUID userId, String permission) {
-        return userId != null && db.sql("select exists (select 1 from app_user where id = ? and active and role in "
-                + Roles.in(roles.with(permission)) + ")").param(userId).query(Boolean.class).single();
+        return activeRoles(userId).stream().anyMatch(r -> roles.has(r, permission));
     }
 
     /**
@@ -164,14 +187,18 @@ class CaseTeam {
      */
     boolean canAt(UUID userId, String permission, UUID stationId) {
         var u = db.sql("""
-                select u.role, u.station_id, m.state_code as my_state, m.district_id as my_district, t.state_code, t.district_id
+                select u.station_id, m.state_code as my_state, m.district_id as my_district, t.state_code, t.district_id
                 from app_user u left join police_station m on m.id = u.station_id, police_station t
                 where u.id = ? and u.active and t.id = ?""").params(userId, stationId).query().listOfRows().stream().findFirst().orElse(null);
-        if (u == null || !roles.has((String) u.get("role"), permission)) return false;
+        return u != null && activeRoles(userId).stream().anyMatch(role -> canAtAs(role, permission, stationId, u));
+    }
+
+    private boolean canAtAs(String role, String permission, UUID stationId, java.util.Map<String, Object> u) {
+        if (!roles.has(role, permission)) return false;
         if (u.get("my_state") == null) return true;
         if (!u.get("my_state").equals(u.get("state_code"))) return false;
-        if (roles.has((String) u.get("role"), "admin.manage")) return true;
-        return switch (roles.caseScope((String) u.get("role"))) {
+        if (roles.has(role, "admin.manage")) return true;
+        return switch (roles.caseScope(role)) {
             case "station" -> stationId.equals(u.get("station_id"));
             case "district" -> u.get("district_id").equals(u.get("my_district"));
             default -> false;

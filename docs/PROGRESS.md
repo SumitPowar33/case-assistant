@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 10 acting SHO (session 85, started 09:00 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -89,6 +88,7 @@ Done in session 55 (2 Nov, Sumit present from 11:26 IST): every open question de
 Done in session 56 (2 Nov, Sumit present from 13:29 IST): the security risks left by session 55 (item 12), see its entry.
 Done in session 58 (2 Nov, Sumit present from 15:16 IST): penetration test round 2 (docs/PENTEST-2026-11-02.md), one medium and two low findings fixed.
 Done in session 59 (2 Nov, Sumit present from 15:51 IST): item 13 a and b (the design as the reference, the new look and frame, Dashboard, FIR parts as pages, readiness chips, Case diary).
+Done in session 85 (10 Nov, 21:20 IST scheduled run): item 10, acting SHO, backend (V53, no screen yet).
 Done in session 84 (10 Nov, 02:05 IST scheduled run, last of the night): tests for older code only (item 3 not built, see its entry); gates raised.
 Done in session 83 (9 Nov, 23:35 IST scheduled run): the gateway refuses guilt, truth and prediction questions for `case_qa` and logs the refusal.
 Done in session 82 (9 Nov, scheduled run): item 14, A4: AI reply reader on the Notices reply form (board 4), no new migration.
@@ -113,7 +113,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: online only (decision 1 of 2 Nov): typed text kept in memory and sent again when the network is back, nothing stored on the phone; the FIR screen opens on Deadlines on a phone (decision 6); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
-10. Account lifecycle (decision 2 of 2 Nov): "IO has left the station" list DONE (session 78; a moved IO loses the old station's cases). Left: acting SHO with an end date given by the SP (a temporary second role: every `u.role in` check in `CaseTeam` and the controllers must also read it, so build it with care).
+10. Account lifecycle (decision 2 of 2 Nov): "IO has left the station" list DONE (session 78; a moved IO loses the old station's cases). Acting SHO: DONE, backend (session 85, V53). Left for it: a screen (give and end a charge, list; needs an officers-of-a-station lookup for the SP), a banner "Acting as SHO until ..." from `acting` of `GET /api/me`, choosing an acting officer as IO and registering FIRs.
 11. Acid-attack survivors (BNS 124): DONE (session 77, V49). Left for it: the withheld label still says "BNS 72" for an acid case (question 1 of session 77).
 12. Security: done in code (sessions 55 and 56). Left for people: an outside penetration test (CERT-In empanelled auditor) before real case data; the installation itself (deploy/nginx.conf, a real certificate).
 13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
@@ -138,6 +138,25 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 10 Nov 2026, session 85 (scheduled run, Sumit away)
+Started from `setup/seed` at ec8371b. Fresh container: PostgreSQL started, role `caseapp` (created as superuser, as the db tests need) and the databases, `npm ci`, gateway requirements and its dev requirements, nginx. Baseline `scripts/test-all.sh`: all 8 suites PASS.
+
+**Item 10, acting SHO (backend):**
+- V53: `acting_charge` (officer, station, role, reason of 10+ characters, start, end at most 90 days after the start, given by; nobody to themselves; only to an active officer posted at that station) and `acting_charge_end` (once per charge, reason). Both kept as written. The admin log takes `acting_started` and `acting_ended` (reason, detail and station required), so the Audit screen shows both without a change.
+- Packs: new permissions `acting.grant` (given to `sp` and `state_admin`) and `acting.allowed` (on `sho`: the role an officer may hold while its holder is away). No role name is in the code.
+- `ActingChargeController`: `POST /api/acting-charges` (giver needs `acting.grant` at the officer's station by reach, so an SP of another district is refused; last day today to today+89 in India date, so it never passes 90 days; one running charge per officer and role; refused if the officer already holds the role or the account is closed), `POST .../{id}/end` (reason; another unit gets 404), `GET /api/acting-charges?stationId=` (grantors only; status running, ended or finished).
+- Access: `CaseTeam.holds` (SQL) and `activeRoles` (Java) count a running charge at the officer's own station in the case reach (FIR list, FIR reads, supervisor review), `can`, `canAt`, the policy rights, and `/api/me` (`permissions`, `case_scope` = widest, new `acting` list). It stops by itself after its last day, when ended, when the officer moves to another station and when the account is closed. An acting SHO cannot give acting charge (no `acting.grant`).
+- Tests: `ActingChargeApiTest` (14: who gives and to whom, every refusal, the 90-day edge, ends by itself and not before its start, early end, the list, admin log and audit screen, policy rights, a moved officer, a closed account), `test_acting_charge.py` (7 database rules), a pack test for the two permissions; `MigrationTest` now expects V53.
+
+`scripts/test-all.sh` at the end: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway (99.47%), PASS web, PASS database rules, PASS core, PASS e2e browser. Coverage: core 98.78% lines / 95.48% branches, web unchanged (99.97% / 97.04% / 98.47%), gateway 99.47%. Gates unchanged (no rise of 2 points). Left uncovered in my files: the `default -> false` of two scope switches (no pack role has a permission with scope none).
+- Skipped / not checked: no screen (so no screenshot, no browser test, no 11-language texts); the acting officer cannot yet be chosen as IO (`canBeIo`) or register at the station (`fir.register`) through the charge, they keep what their own role gives; no limit on how many charges one SP may give; a charge is not shown on the SHO's own screen.
+- Next: the acting charge screen (item 10), A5 as real RAG (item 17) or A6 chargesheet drafting (13d).
+- Blocked: item 3 waits for a reviewer (question 1 of session 84).
+
+Questions for Sumit:
+1. May an SP give an acting SHO charge at any station of the district, or only after the SHO's leave is recorded somewhere (there is no leave record in the app yet)? Today the SP's reason (10+ characters) is the record.
+2. Should an acting SHO approve final reports (`chargesheet.approve`)? Today yes, as the SHO role does. Say no if only the real SHO should sign.
 
 ## 10 Nov 2026, session 84 (02:05 IST scheduled run, last of the night, Sumit away)
 Started from `setup/seed` at 392253a (session 83's progress entry was already in the file). Fresh container: PostgreSQL started, role `caseapp` and databases `caseapp_test` and `caseapp_dev` created, `npm ci`, and the gateway's `requirements.txt` installed (the first baseline failed only because `httpx` and `fastapi` were missing in the new container; the dev requirements file does not list them, only `requirements.txt` does). Baseline after that: all 8 suites PASS.

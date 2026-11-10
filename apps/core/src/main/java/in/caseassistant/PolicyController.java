@@ -113,18 +113,18 @@ class PolicyController {
     /** Whether this user may set or read policies of a unit (see the class comment). */
     boolean mayManage(UUID userId, String level, String stateCode, UUID districtId, UUID stationId) {
         var u = db.sql("""
-                select u.role, s.id as station_id, s.state_code, s.district_id from app_user u
+                select s.id as station_id, s.state_code, s.district_id from app_user u
                 left join police_station s on s.id = u.station_id where u.id = ? and u.active""")
                 .param(userId).query().listOfRows().stream().findFirst().orElse(null);
         if (u == null) return false;
-        String role = (String) u.get("role");
         String myState = (String) u.get("state_code");
         if (team.can(userId, "admin.manage")) return myState == null || myState.equals(stateCode);
-        if (!roles.has(role, "policy.set") || myState == null || !myState.equals(stateCode)) return false;
-        return switch (roles.caseScope(role)) {
+        if (myState == null || !myState.equals(stateCode)) return false;
+        // any role held now (an acting charge counts while it runs), each by its own scope
+        return team.activeRoles(userId).stream().filter(role -> roles.has(role, "policy.set")).anyMatch(role -> switch (roles.caseScope(role)) {
             case "station" -> level.equals("station") && u.get("station_id").equals(stationId);
             case "district" -> !level.equals("state") && u.get("district_id").equals(districtId);
             default -> false;
-        };
+        });
     }
 }

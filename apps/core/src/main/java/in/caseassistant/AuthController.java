@@ -118,16 +118,23 @@ class AuthController implements ApplicationRunner {
         return me;
     }
 
+    private static int reach(String scope) {
+        return switch (scope) { case "district" -> 2; case "station" -> 1; default -> 0; };
+    }
+
     /**
      * What the screens may offer this user, from the role's data in the packs (never from a role name): the role's
      * permissions and case scope, and two shortcuts. Only for showing or hiding things; every route checks again.
      */
     private void rights(Map<String, Object> user) {
         UUID id = (UUID) user.get("id");
-        String role = (String) user.get("role");
-        boolean known = roles.exists(role);   // a role no pack declares any more gives nothing
-        user.put("permissions", known ? roles.permissions(role) : List.of());
-        user.put("case_scope", known ? roles.caseScope(role) : "none");
+        // the user's own role and any acting charge running now (decision 2 of 2 Nov 2026); a role no pack declares gives nothing
+        var held = team.activeRoles(id).stream().filter(roles::exists).toList();
+        user.put("permissions", held.stream().flatMap(r -> roles.permissions(r).stream()).distinct().toList());
+        user.put("case_scope", held.stream().map(roles::caseScope).max(java.util.Comparator.comparing(AuthController::reach)).orElse("none"));
+        user.put("acting", db.sql("""
+                select ac.role, ac.ends_at from acting_charge ac where ac.user_id = ? and ac.starts_at <= clock_timestamp() and ac.ends_at > clock_timestamp()
+                  and not exists (select 1 from acting_charge_end ae where ae.charge_id = ac.id) order by ac.ends_at""").param(id).query().listOfRows());
         user.put("can_import", team.can(id, "import.run"));
         user.put("can_set_policy", team.can(id, "policy.set") || team.can(id, "admin.manage"));
     }
