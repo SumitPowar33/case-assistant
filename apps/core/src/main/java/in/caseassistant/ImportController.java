@@ -158,7 +158,7 @@ class ImportController {
             var raw = rawOf(headers, cells);
             var fields = fieldsOf(map, raw);
             var r = rules.check(fields, u -> ios.computeIfAbsent(u, k -> db.sql(
-                    "select id from app_user where username = ? and active and station_id = ? and role in " + team.caseLeadRoles())
+                    "select u.id from app_user u where u.username = ? and u.active and u.station_id = ? and " + team.caseLead("u"))
                     .params(k, s.stationId).query(UUID.class).optional().orElse(null)), now);
             var msgs = new ArrayList<>(r.messages());
             String status = r.status();

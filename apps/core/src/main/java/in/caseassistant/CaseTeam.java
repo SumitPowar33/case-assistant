@@ -106,16 +106,15 @@ class CaseTeam {
                 .params(stationId, userId).query(Boolean.class).single();
     }
 
-    /** Who can be the IO of an FIR: an active user of a role with "case.lead" posted at the FIR's police station. */
+    /** Who can be the IO of an FIR: an active user posted at the FIR's police station who holds, as own role or acting charge, a role with "case.lead". */
     boolean canBeIo(UUID userId, UUID stationId) {
-        return db.sql("select exists (select 1 from app_user where id = ? and active and role in " + Roles.in(roles.with("case.lead"))
-                        + " and station_id = ?)")
+        return db.sql("select exists (select 1 from app_user u where u.id = ? and u.active and " + caseLead("u") + " and u.station_id = ?)")
                 .params(userId, stationId).query(Boolean.class).single();
     }
 
-    /** SQL for the IO candidates of an FIR ("u" is the user): the roles with "case.lead". */
-    String caseLeadRoles() {
-        return Roles.in(roles.with("case.lead"));
+    /** SQL test on user alias {@code u}: holds a role with "case.lead" now (own role or running acting charge). */
+    String caseLead(String u) {
+        return holds(u, roles.with("case.lead"));
     }
 
     /** Evidence custody: the case team, or users with "evidence.custody" (malkhana) at the FIR's station. */
@@ -167,8 +166,8 @@ class CaseTeam {
 
     /** Registering an FIR or taking a complaint: users with "fir.register" posted at that station. */
     boolean canRegisterAt(UUID userId, UUID stationId) {
-        return userId != null && stationId != null && db.sql("select exists (select 1 from app_user where id = ? and active and station_id = ? and role in "
-                + Roles.in(roles.with("fir.register")) + ")").params(userId, stationId).query(Boolean.class).single();
+        return userId != null && stationId != null && db.sql("select exists (select 1 from app_user u where u.id = ? and u.active and u.station_id = ? and "
+                + holds("u", roles.with("fir.register")) + ")").params(userId, stationId).query(Boolean.class).single();
     }
 
     void requireStationStaff(UUID userId, UUID stationId) {

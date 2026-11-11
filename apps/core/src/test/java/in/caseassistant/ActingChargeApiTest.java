@@ -278,4 +278,23 @@ class ActingChargeApiTest {
         assertThat(team.activeRoles(ioId)).isEmpty();
         assertThat(team.activeRoles(null)).isEmpty();
     }
+
+    @Test
+    void anActingShoMayBeChosenAsIoAndRegisterFirsWhileItRuns_andNotAfter() throws Exception {
+        UUID keeper = user(station, "malkhana");   // a role with neither "case.lead" nor "fir.register"
+        assertThat(team.canBeIo(keeper, station)).isFalse();
+        assertThat(team.canRegisterAt(keeper, station)).isFalse();
+        UUID id = give(sp, keeper, 10);
+        assertThat(team.canBeIo(keeper, station)).isTrue();
+        assertThat(team.canBeIo(keeper, near)).isFalse();                  // only at the station of the charge
+        assertThat(team.canRegisterAt(keeper, station)).isTrue();
+        assertThat(team.canRegisterAt(keeper, near)).isFalse();
+        call(get("/api/firs/" + fir + "/io-candidates"), sp, null).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id=='" + keeper + "')]").isNotEmpty());
+        call(post("/api/firs/" + fir + "/io"), sp, "{\"ioId\":\"" + keeper + "\",\"reason\":\"Acting SHO takes the case\"}").andExpect(status().is2xxSuccessful());
+        call(post("/api/acting-charges/" + id + "/end"), sp, "{\"reason\":\"The SHO is back from leave\"}").andExpect(status().isNoContent());
+        assertThat(team.canBeIo(keeper, station)).isFalse();
+        assertThat(team.canRegisterAt(keeper, station)).isFalse();
+        call(get("/api/firs/" + fir + "/io-candidates"), sp, null).andExpect(jsonPath("$[?(@.id=='" + keeper + "')]").isEmpty());
+    }
 }

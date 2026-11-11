@@ -133,7 +133,7 @@ class FirController {
         team.requireTeam(CaseTeam.user(jwt), id);
         return db.sql("""
                 select u.id, u.full_name, u.rank, u.role from app_user u join fir f on f.station_id = u.station_id
-                where f.id = ? and u.active and u.role in """ + team.caseLeadRoles() + " order by u.full_name").param(id).query().listOfRows();
+                where f.id = ? and u.active and """ + team.caseLead("u") + " order by u.full_name").param(id).query().listOfRows();
     }
 
     /**
