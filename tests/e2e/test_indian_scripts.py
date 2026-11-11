@@ -26,7 +26,7 @@ from demo_case import load_demo  # noqa: E402
 # the scripts of the 10 languages of the national module (Unicode blocks)
 SCRIPTS = {"hi": "ऀ-ॿ", "mr": "ऀ-ॿ", "bn": "ঀ-৿", "pa": "਀-੿", "gu": "઀-૿",
            "or": "଀-୿", "ta": "஀-௿", "te": "ఀ-౿", "kn": "ಀ-೿", "ml": "ഀ-ൿ"}
-SCREENS = ("#/", "#/front-desk", "#/type", "#/policies", "#/password", "#/property", "#/expert", "#/court", "#/laws")
+SCREENS = ("#/", "#/acting", "#/front-desk", "#/type", "#/policies", "#/password", "#/property", "#/expert", "#/court", "#/laws")
 WIDTHS = (1280, 390)   # a station desktop, a phone
 
 # wraps every drawn text node in the script (not those in a closed <details>) in a span[data-script] (CDP reports fonts only for the text directly inside an

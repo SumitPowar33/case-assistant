@@ -23,6 +23,7 @@ import Search from './Search'
 import FactCheck from './FactCheck'
 import Statements from './Statements'
 import SectionSuggest from './SectionSuggest'
+import ActingPage from './ActingPage'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -42,6 +43,8 @@ const data: Record<string, unknown> = {
   '/complaints/c1': { id: 'c1', received_at: '2026-10-30T04:30:00Z', mode: 'written', informant_name: 'Fictional Informant', informant_contact: null, kind: 'other', kind_label: 'Other information',
     withheld: false, text_original: 'Fictional words.', text_language: 'en', recorded_by_name: 'HC Fictional', read_back_language: null, signed_at: null, signed_by_name: null,
     outcome: null, outcome_reason: null, fir_id: null, fir_no: null, fir_year: null, sign_by: null, enquiry_due: null, steps: [] },
+  '/acting-charges/options': { officers: [{ id: 'o1', full_name: 'SI Fictional Asha', rank: 'SI', role: 'io' }], roles: [{ code: 'sho', label: 'Station House Officer' }] },
+  '/acting-charges': [{ id: 'c1', full_name: 'SI Fictional Asha', rank: 'SI', role: 'sho', role_label: 'Station House Officer', reason: 'Fictional leave of the SHO', ends_at: '2026-11-20T18:29:59Z', status: 'running', ended_reason: null }],
   '/stations': [{ id: 's1', district: 'Fictional District', name: 'Fictional PS' }],
   '/pack-changes': { pack: { code: 'IN', name: 'Fictional National', version: '1', languages: ['en', 'hi'], status: 'draft' }, can_propose: true, changes: [
     { id: 'p1', title: 'Fictional playbook v1.5', body: 'Fictional text of the change.', tested_note: 'Fictional test', drafted_at: '2026-11-01T04:30:00Z', drafted_by_name: 'Fictional Officer', drafted_by_rank: 'SP',
@@ -87,6 +90,7 @@ test.each([
   ['court and trial tracker', () => <Court />, 'CC 9/2026'],
   ['old law to new law finder', () => <LawFinder />, 'IPC 302'],
   ['ask the case file', () => <AskCaseFile firId="f1" />, 'Your question'],
+  ['acting charge', () => <ActingPage />, 'Give acting charge'],
   ['search and seizure memo', () => <Search firId="f1" onSaved={() => {}} />, 'Fictional house'],
 ])('the %s screen has no accessibility faults axe can see', async (_name, screenOf, ready) => {
   render(screenOf())
