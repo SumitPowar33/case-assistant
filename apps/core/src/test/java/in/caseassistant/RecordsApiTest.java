@@ -350,6 +350,24 @@ class RecordsApiTest {
     }
 
     @Test
+    void theInformedPersonOfAnArrestIsReadOnlyByTheCaseTeam() throws Exception {
+        String a1 = idOf(send("/people", "{\"role\":\"accused\",\"label\":\"A1\",\"identityKnown\":true,\"fullName\":\"Fictional Accused\"}", 201));
+        String arrest = idOf(send("/arrests", """
+                {"personId":"%s","arrestedAt":"2026-10-02T10:00:00+05:30","place":"Testpur","grounds":["proper investigation"],
+                 "informedName":"Fictional Relative","informedContact":"000","maxPunishment":"less_than_10_years"}""".formatted(a1), 201));
+        send("/arrests/" + arrest + "/memo-corrections", "{\"place\":\"Testpur Market\",\"grounds\":[\"to prevent escape\"],\"informedName\":\"Fictional Friend\",\"informedContact\":\"111\",\"reason\":\"place was the market\"}", 201);
+        UUID station = db.sql("select station_id from fir where id = ?").param(fir).query(UUID.class).single();
+        UUID clerk = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'HC Fictional Clerk','HC','front_desk') returning id")
+                .param(station).query(UUID.class).single();
+        String desk = TestAuth.bearer(tokens, clerk);
+        // the team sees the informed person; the front desk of the station gets no arrest record at all (404, nothing to leak)
+        mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", auth)).andExpect(jsonPath("$[0].informed_name").value("Fictional Friend"));
+        mvc.perform(get("/api/firs/" + fir + "/arrests").header("Authorization", desk)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/firs/" + fir + "/arrests/memo-corrections").header("Authorization", auth)).andExpect(jsonPath("$[0].informed_name").value("Fictional Friend"));
+        mvc.perform(get("/api/firs/" + fir + "/arrests/memo-corrections").header("Authorization", desk)).andExpect(status().isNotFound());
+    }
+
+    @Test
     void onlyTheCaseTeamAddsRecords() throws Exception {
         UUID station = db.sql("select station_id from fir where id = ?").param(fir).query(UUID.class).single();
         UUID clerk = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'HC Fictional Clerk','HC','front_desk') returning id")

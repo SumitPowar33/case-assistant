@@ -97,6 +97,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 90 (11 Nov, last scheduled run of the night): tests only, the acting screen in the axe and 11-script browser tests, `typing.ts` unit tests, a privacy test for the informed person of an arrest.
 Done in session 89 (11 Nov, scheduled run): item 10 finished, an acting SHO can be chosen as IO and registers FIRs.
 Done in session 88 (11 Nov, scheduled run): item 9, the FIR screen opens on Deadlines on a phone; forms keep typed text and resend once when the network is back.
 Done in session 87 (11 Nov, 02:05 IST scheduled run, last of the night): item 10, the acting charge screen (`#/acting`).
@@ -142,6 +143,27 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 11 Nov 2026, session 90 (last scheduled run of the night, Sumit away)
+Started from `setup/seed` at 7b06b87 (the branch was fetched from origin; `add_repo` was not offered in this session, the clone already pointed at the repository). Fresh container: PostgreSQL, role `caseapp` (superuser) and the two databases, `npm ci`, gateway requirements, `psycopg[binary]`, `pytest-playwright`. Baseline `scripts/test-all.sh`: all 8 suites PASS (9 min 45 s).
+
+No new feature: the only open items are blocked on questions (item 9 rest on question 1 of session 88; item 3 on question 1 of session 84), and A5/A6 are large, so as the last session of the night the time went to tests of older code.
+- The acting charge screen is now in the axe test (`a11y.test.tsx`) and in the 11-script browser rendering test (`SCREENS` in `tests/e2e/test_indian_scripts.py`), as session 87 had left open.
+- `typing.test.ts` (new): `wordBefore`, `suggestions` and `convertAll` (English untouched, empty word, Hindi), `typing.ts` branches 88.9% before.
+- `RecordsApiTest`: the informed person of an arrest (name and contact, also in memo corrections) is seen by the case team, and the front desk of the same station gets 404 on both routes. The `if (!onTeam)` blanking in `RecordsController` is therefore only a second line of defence that no role can reach today; the remaining uncovered lines of that class are unreachable `IOException` catches.
+- Coverage gateway 99%; web and core numbers in "Tonight in short".
+
+Skipped / not checked: FirList's `rows?.length ?? 0` fallbacks (cannot happen once rows have loaded); the unreachable `IOException` catches; no new tests for Arrests/ClosureReport branches (next time, lowest web branch files: `Arrests.tsx` 91.7%, `ClosureReport.tsx` 91.3%, `FirList.tsx` 90.5%, then in core `ComplaintController` 10 branches, `AuthController`, `AdminController`).
+- Next: item 9 rest (waits on question 1 of session 88), A5 as real RAG (17) or A6 chargesheet drafting (13d), then the branch tests above.
+- Blocked: item 3 waits for a reviewer (question 1 of session 84).
+
+Questions for Sumit:
+1. Same as before, still open: sessions 88 (1), 84 (1, 2), 85 (1, 2), 86 (1).
+
+## Tonight in short (11 Nov, session 90 after the 21:05 and 23:35 runs)
+- 90: tests only (see its entry). Sessions 88 and 89 earlier today: item 9 (phone FIR screen, form resend) and the end of item 10 (acting SHO as IO).
+- Last `scripts/test-all.sh` (session 90): 8 of 8 PASS (repo rules, packs, xlit, ai-gateway 99%, web, database rules, core, e2e browser). Core 98.79% lines / 95.49% branches, web 99.97% / 97.02% / 98.51%, gateway 99%.
+- Gates unchanged: core 96/93, web 99/96/96, gateway 97.
 
 ## 11 Nov 2026, session 89 (scheduled run, Sumit away)
 Started from `setup/seed` at 2f40bb2. Fresh container: PostgreSQL, role `caseapp` and the two databases, `npm ci`, gateway requirements, `psycopg[binary]`, `pytest-playwright`. Baseline `scripts/test-all.sh`: all 8 suites PASS.
