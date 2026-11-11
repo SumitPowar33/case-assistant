@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 10 (session 89, started 21:10 IST): an acting officer chosen as IO and registering FIRs
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -98,6 +97,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 89 (11 Nov, scheduled run): item 10 finished, an acting SHO can be chosen as IO and registers FIRs.
 Done in session 88 (11 Nov, scheduled run): item 9, the FIR screen opens on Deadlines on a phone; forms keep typed text and resend once when the network is back.
 Done in session 87 (11 Nov, 02:05 IST scheduled run, last of the night): item 10, the acting charge screen (`#/acting`).
 Done in session 86 (10 Nov, 23:35 IST scheduled run): item 10, the "Acting as SHO until ..." banner.
@@ -117,7 +117,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
 9. Phones in the field (Sumit, 1 Nov): first design done (session 47); the FIR screen one part at a time and the readiness controls done (session 48). Next: online only (decision 1 of 2 Nov): typed text kept in memory and sent again when the network is back, nothing stored on the phone; the FIR screen opens on Deadlines on a phone (decision 6); the front-desk complaint page part by part like the FIR screen if officers find it long; a check on a real phone.
-10. Account lifecycle (decision 2 of 2 Nov): "IO has left the station" list DONE (session 78; a moved IO loses the old station's cases). Acting SHO: DONE, backend (session 85, V53). Banner "Acting as SHO until ...": DONE (session 86). Screen DONE (session 87). Left for it: choosing an acting officer as IO and registering FIRs.
+10. Account lifecycle (decision 2 of 2 Nov): "IO has left the station" list DONE (session 78; a moved IO loses the old station's cases). Acting SHO: DONE, backend (session 85, V53). Banner "Acting as SHO until ...": DONE (session 86). Screen DONE (session 87). Acting officer as IO and registering FIRs: DONE (session 89). Item 10 is finished.
 11. Acid-attack survivors (BNS 124): DONE (session 77, V49). Left for it: the withheld label still says "BNS 72" for an acid case (question 1 of session 77).
 12. Security: done in code (sessions 55 and 56). Left for people: an outside penetration test (CERT-In empanelled auditor) before real case data; the installation itself (deploy/nginx.conf, a real certificate).
 13. **Screens to the owner's design (Sumit, 2 Nov 2026: "the exact screens of the Figma, or better, and all missing screens"; FIRST, before items 3, 9, 10, 11).** Boards in `docs/design/boards/`, map in `docs/DESIGN.md`. Order:
@@ -142,6 +142,20 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 11 Nov 2026, session 89 (scheduled run, Sumit away)
+Started from `setup/seed` at 2f40bb2. Fresh container: PostgreSQL, role `caseapp` and the two databases, `npm ci`, gateway requirements, `psycopg[binary]`, `pytest-playwright`. Baseline `scripts/test-all.sh`: all 8 suites PASS.
+
+**Item 10, the last piece (acting officer as IO and registering FIRs):**
+- `CaseTeam.canBeIo` and `canRegisterAt` now use the same `holds` test as case reach: an officer posted at the station who holds `case.lead` or `fir.register` as own role or as a running acting charge. The IO candidate list (`/api/firs/{id}/io-candidates`) and the import's IO lookup use the same test (`CaseTeam.caseLead`, replaces `caseLeadRoles`). It stops when the charge ends or runs out, and holds only at the station of the charge.
+- Test: `ActingChargeApiTest` (a malkhana officer is refused both before the charge, gets both while it runs, only at that station, appears in the candidates and can be made IO, loses both when it ends).
+- `scripts/test-all.sh` at the end: all 8 suites PASS. Gates unchanged.
+- Skipped / not checked: `evidence.custody` (malkhana) is not followed by an acting charge, since the only role that may be held is `sho`; a registered FIR does not record that the officer acted under a charge (the admin log holds the charge itself); no tests of older code this session.
+- Next: item 9 rest (resend for the front desk and AI screens, a real-phone check; waits on question 1 of session 88 for the duplicate-key design), A5 as real RAG (17) or A6 chargesheet drafting (13d); acting screen into the axe and e2e script tests.
+- Blocked: item 3 waits for a reviewer (question 1 of session 84).
+
+Questions for Sumit:
+1. Same as before, still open: session 88 (1), 84 (1, 2), 85 (1, 2), 86 (1).
 
 ## 11 Nov 2026, session 88 (scheduled run, Sumit away)
 Started from `setup/seed` at the tip of origin. Fresh container: PostgreSQL, role `caseapp`, the two databases, `npm ci`, gateway requirements, `psycopg[binary]`, `pytest-playwright`. Baseline `scripts/test-all.sh`: all 8 suites PASS.
