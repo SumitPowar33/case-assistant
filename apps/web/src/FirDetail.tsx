@@ -46,10 +46,13 @@ function Section<T>({ title, path, version, children, form }: {
   )
 }
 
+/** On a phone (the same 40rem the style sheet uses) the FIR opens on Deadlines: in the field the 24-hour and 60/90-day limits matter most. */
+const onPhone = () => typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 40rem)').matches
+
 export default function FirDetail({ id, only }: { id: string; only?: Part }) {
   const t = useT()
   const [version, setVersion] = useState(0)
-  const [part, setPart] = useState<Part>(only ?? 'case')
+  const [part, setPart] = useState<Part>(only ?? (onPhone() ? 'deadlines' : 'case'))
   useEffect(() => { if (only) setPart(only) }, [only])
   const shown = (p: Part) => (p === part ? 'fir-part shown' : 'fir-part')
   const { data: fir, error } = useLoad<Fir>(`/firs/${id}`, version)

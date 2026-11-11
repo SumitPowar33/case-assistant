@@ -1,4 +1,4 @@
-import { useContext, useState, type FormEvent, type ReactNode } from 'react'
+import { useContext, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { can, currentSession, send } from './api'
 import TypingField from './TypingField'
 import { TypingContext } from './typing'
@@ -11,18 +11,33 @@ export function Form({ title, submit, onSaved, children }: {
   const t = useT()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  async function go(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const form = e.currentTarget
+  // A dropped network (fetch throws a TypeError before any answer): the typed values stay in the page, nothing goes to the
+  // phone's storage, and the form is sent once more when the browser says the network is back (decision 1 of 2 Nov 2026).
+  const waiting = useRef<FormData | null>(null)
+  const submitRef = useRef(submit)
+  submitRef.current = submit
+  async function attempt(data: FormData, form: HTMLFormElement | null) {
     setError(''); setBusy(true)
     try {
-      const result = await submit(new FormData(form))
-      form.reset()
+      const result = await submitRef.current(data)
+      waiting.current = null
+      form?.reset()
       onSaved(result)
     } catch (err) {
-      setError((err as Error).message)
+      if (err instanceof TypeError) { waiting.current = data; setError(t('form.offline')) }
+      else { waiting.current = null; setError((err as Error).message) }
     }
     setBusy(false)
+  }
+  useEffect(() => {
+    const again = () => { const data = waiting.current; waiting.current = null; if (data) void attempt(data, null) }
+    window.addEventListener('online', again)
+    return () => window.removeEventListener('online', again)
+  })
+  function go(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const form = e.currentTarget
+    return attempt(new FormData(form), form)
   }
   return (
     <details>

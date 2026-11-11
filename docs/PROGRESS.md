@@ -97,6 +97,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 88 (11 Nov, scheduled run): item 9, the FIR screen opens on Deadlines on a phone; forms keep typed text and resend once when the network is back.
 Done in session 87 (11 Nov, 02:05 IST scheduled run, last of the night): item 10, the acting charge screen (`#/acting`).
 Done in session 86 (10 Nov, 23:35 IST scheduled run): item 10, the "Acting as SHO until ..." banner.
 Done in session 76 (7 Nov, Saturday 21:05 IST weekly review): weekly review and test audit (5 fixes, see the entry); item 13, Field capture on a tablet (board 7, search and seizure memo, V48).
@@ -140,6 +141,21 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 11 Nov 2026, session 88 (scheduled run, Sumit away)
+Started from `setup/seed` at the tip of origin. Fresh container: PostgreSQL, role `caseapp`, the two databases, `npm ci`, gateway requirements, `psycopg[binary]`, `pytest-playwright`. Baseline `scripts/test-all.sh`: all 8 suites PASS.
+
+**Item 9, phones in the field (decisions 1 and 6 of 2 Nov):**
+- The FIR screen opens on Deadlines on a phone (`matchMedia('(max-width: 40rem)')`, the same width the style sheet uses); a part named in the address still wins; a wide screen opens on Case details as before. Tests in `FirDetail.test.tsx` (2).
+- Online only, nothing stored on the phone: when the network drops (`fetch` throws a TypeError) the shared `Form` keeps what was typed in the page, shows the note `form.offline` (11 languages, 10 drafts), and sends the same values once more when the browser fires `online`. A refusal from the server is shown and never sent again. Tests in `Forms.test.tsx` (3): resend once, no storage writes, refusal not resent, still-down waits for the next `online`.
+- `scripts/test-all.sh` at the end: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web (lint and build clean), PASS database rules, PASS core, PASS e2e browser. Coverage: core 99% lines / 95% branches, web 99.97% / 96.97% / 98.51%, gateway unchanged. Gates unchanged.
+- Skipped / not checked: forms that do not use the shared `Form` (front desk complaint page, Type page, some AI screens) have no resend yet; no check on a real phone; a resent POST could in theory arrive twice if the first one reached the server but its answer was lost (the server refuses duplicate FIR numbers and similar keys, but not every record type); no tests of older code (no time left).
+- Next: item 9 rest (resend for the front desk and AI screens, a real-phone check), choosing an acting officer as IO and registering FIRs (item 10), A5 real RAG (17), A6 (13d).
+- Blocked: item 3 waits for a reviewer (question 1 of session 84).
+
+Questions for Sumit:
+1. Should a resent form carry a one-time key so the server can drop a duplicate (needs a small change in the core), or is the current "send again once" enough for the pilot?
+2. Same as before, still open: sessions 84 (1, 2), 85 (1, 2), 86 (1).
 
 ## 11 Nov 2026, session 87 (02:05 IST scheduled run, last of the night, Sumit away)
 Started from `setup/seed` at c091171. Fresh container: PostgreSQL, role `caseapp` (superuser) and the two databases, `npm ci`, gateway requirements (both files), `psycopg[binary]`, `pytest-playwright`. Baseline `scripts/test-all.sh`: all 8 suites PASS.

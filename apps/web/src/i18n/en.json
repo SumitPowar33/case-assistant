@@ -89,6 +89,7 @@
  "victimMeans.other": "by other means",
  "form.save": "Save",
  "form.saving": "Saving…",
+ "form.offline": "No network. What you typed is kept on this page and will be sent again when the connection is back.",
  "desk.intro": "Write the information down in the informant's own words, read it over to them, and have them sign it (BNSS 173(1)). The steps of the first hour start from the time it was received.",
  "desk.take": "Take a complaint",
  "desk.needWords": "Write the information in the informant's words.",

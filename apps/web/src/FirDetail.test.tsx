@@ -153,3 +153,25 @@ test('the AI fact check and section suggestion are on the case details part for 
   await screen.findByText(/The offence is from 1 July 2024/)
   expect(screen.getAllByText(/not offered on a case that protects the victim's identity/)).toHaveLength(2)
 })
+
+test('on a phone the FIR opens on Deadlines; a wide screen opens on Case details', async () => {
+  const mm = (matches: boolean) => Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: (q: string) => ({ matches: matches && q.includes('40rem') }) })
+  mm(true)
+  stub({})
+  const { unmount } = render(<FirDetail id="f1" />)
+  const picker = await screen.findByRole('combobox', { name: 'Show' })
+  expect((picker as HTMLSelectElement).value).toBe('deadlines')
+  unmount()
+  mm(false)
+  render(<FirDetail id="f1" />)
+  expect(((await screen.findByRole('combobox', { name: 'Show' })) as HTMLSelectElement).value).toBe('case')
+  delete (window as unknown as { matchMedia?: unknown }).matchMedia
+})
+
+test('a part named in the address wins over the phone default', async () => {
+  Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: () => ({ matches: true }) })
+  stub({})
+  render(<FirDetail id="f1" only="people" />)
+  expect(((await screen.findByRole('combobox', { name: 'Show' })) as HTMLSelectElement).value).toBe('people')
+  delete (window as unknown as { matchMedia?: unknown }).matchMedia
+})

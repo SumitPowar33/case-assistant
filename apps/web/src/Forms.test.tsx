@@ -148,3 +148,58 @@ test('in Hindi the FIR form from a signed complaint names where the text comes f
   render(<ScreenLangContext.Provider value="hi"><NewFirForm /></ScreenLangContext.Provider>)
   expect(screen.getByText('केवल पुलिस थाने के कर्मचारी एफआईआर दर्ज कर सकते हैं।')).toBeTruthy()
 })
+
+test('when the network drops, what was typed stays, a note says so, and the form is sent again once when the network is back; nothing goes to the phone storage', async () => {
+  const calls: unknown[] = []
+  let down = true
+  vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+    if (down) throw new TypeError('Failed to fetch')
+    calls.push(JSON.parse(init!.body as string))
+    return { ok: true, status: 201, json: async () => ({}) }
+  }))
+  const saved = vi.fn()
+  const setItem = vi.spyOn(Storage.prototype, 'setItem')
+  render(<AddPersonForm firId="f1" onSaved={saved} />)
+  fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'accused' } })
+  type('Label', 'A9')
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  expect((await screen.findByRole('alert')).textContent).toMatch(/No network.*sent again/)
+  expect((screen.getByLabelText('Label') as HTMLInputElement).value).toBe('A9')
+  expect(saved).not.toHaveBeenCalled()
+  down = false
+  window.dispatchEvent(new Event('online'))
+  await vi.waitFor(() => expect(saved).toHaveBeenCalledTimes(1))
+  expect(calls).toHaveLength(1)
+  expect(calls[0]).toMatchObject({ role: 'accused', label: 'A9' })
+  window.dispatchEvent(new Event('online'))   // a second "online" sends nothing more
+  await Promise.resolve()
+  expect(calls).toHaveLength(1)
+  expect(setItem).not.toHaveBeenCalled()
+  setItem.mockRestore()
+})
+
+test('a refusal from the server is not sent again when the network comes back', async () => {
+  const calls = stub(403, { message: 'Only the case team can do this.' })
+  render(<AddPersonForm firId="f1" onSaved={() => undefined} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await screen.findByText('Only the case team can do this.')
+  window.dispatchEvent(new Event('online'))
+  await Promise.resolve()
+  expect(calls).toHaveLength(1)
+})
+
+test('if the network is still down when "online" fires, the form waits for the next one', async () => {
+  let fail = true
+  const fetchMock = vi.fn(async () => { if (fail) throw new TypeError('Failed to fetch'); return { ok: true, status: 201, json: async () => ({}) } })
+  vi.stubGlobal('fetch', fetchMock)
+  const saved = vi.fn()
+  render(<AddPersonForm firId="f1" onSaved={saved} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await screen.findByRole('alert')
+  window.dispatchEvent(new Event('online'))
+  await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+  await screen.findByRole('alert')
+  fail = false
+  window.dispatchEvent(new Event('online'))
+  await vi.waitFor(() => expect(saved).toHaveBeenCalledTimes(1))
+})
