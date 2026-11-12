@@ -96,4 +96,22 @@ class CaseFileApiTest {
         read(other, io);   // an ordinary case is not logged
         assertThat(db.sql("select count(*) from protected_read where fir_id = ?").param(other).query(Long.class).single()).isZero();
     }
+
+    @Test
+    void aCheckedEnglishTranslationComesAfterTheStatementsWithItsOwnTitle() throws Exception {
+        // session 92 (item 17): an English question can find a statement made in Marathi through its checked translation
+        UUID w = db.sql("insert into person (fir_id, role, label, full_name) values (?, 'witness', 'W2', 'Fictional Cashier Name') returning id").param(fir).query(UUID.class).single();
+        UUID st = db.sql("insert into witness_statement (fir_id, person_id, recorded_by, language, medium, original_text) values (?,?,?,'mr','written','मी बँकेत रोखपाल आहे.') returning id")
+                .params(fir, w, ioId).query(UUID.class).single();
+        db.sql("insert into statement_translation (statement_id, translated_text, ai_text, ai_request_id, checked_by) values (?, 'I am a cashier at the bank.', 'I am a cashier at the bank.', gen_random_uuid(), ?)")
+                .params(st, ioId).update();
+        JsonNode p = read(fir, io);
+        assertThat(p).hasSize(3);
+        assertThat(p.get(1).get("kind").asText()).isEqualTo("statement");
+        assertThat(p.get(2).get("kind").asText()).isEqualTo("translation");
+        assertThat(p.get(2).get("title").asText()).startsWith("English translation of the statement of W2, recorded ");
+        assertThat(p.get(2).get("text").asText()).isEqualTo("I am a cashier at the bank.");
+        assertThat(p.toString()).doesNotContain("Fictional Cashier Name");
+        assertThat(read(other, io).toString()).doesNotContain("cashier");
+    }
 }
