@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * The passages of one case that "Ask the case file" (design board 19) may answer from: the complaint, the statements and
  * their checked English translations, the diary, the evidence descriptions, the notices, the requests to a lab or hospital with
- * their step notes, the court events and the search and seizure memos. Only this case, only for its team (ReadAccess answers 404 to
+ * their step notes, the court events, the search and seizure memos and the money trail (transfers and bank holds). Only this case, only for its team (ReadAccess answers 404 to
  * anyone else); a person is named by their label, never by name. The question and the answer are made in the browser and
  * the AI gateway; nothing from another case or any search across cases is possible here. A protected case's read is
  * logged like its FIR text.
@@ -68,6 +68,18 @@ class CaseFileController {
                 select 'Search and seizure memo, ' || to_char(ist_date(started_at), 'DD Mon YYYY') as title,
                        place || ' | ' || grounds || coalesce(' | no witness: ' || no_witness_reason, '') as text
                 from search_seizure where fir_id = ? order by started_at, id limit 100""").params(firId));
+        // session 94 (item 17): the money trail as typed from bank replies; a receiving accused is named by label only
+        add(rows, "money", db.sql("""
+                select 'Transfer on ' || to_char(t.transferred_on, 'DD Mon YYYY') as title,
+                       'Rs ' || to_char(t.amount_paise / 100.0, 'FM999,999,999,990.00') || ' from account ' || t.from_account || ' to account ' || t.to_account
+                       || coalesce(' (' || p.label || ')', '') || coalesce(' | bank reply ' || e.label, '') as text
+                from money_transfer t left join person p on p.id = t.to_person_id left join evidence_item e on e.id = t.evidence_item_id
+                where t.fir_id = ? order by t.transferred_on, t.recorded_at limit 100""").params(firId));
+        add(rows, "money", db.sql("""
+                select 'Bank hold on ' || to_char(h.held_on, 'DD Mon YYYY') as title,
+                       'Rs ' || to_char(h.amount_paise / 100.0, 'FM999,999,999,990.00') || ' held in account ' || h.account || coalesce(' | bank reply ' || e.label, '') as text
+                from money_hold h left join evidence_item e on e.id = h.evidence_item_id
+                where h.fir_id = ? order by h.held_on, h.recorded_at limit 100""").params(firId));
         if (!rows.isEmpty() && team.identityProtected(firId)) reads.fir(me, firId, "fir_text");
         var out = new LinkedHashMap<String, Object>();
         out.put("passages", rows);

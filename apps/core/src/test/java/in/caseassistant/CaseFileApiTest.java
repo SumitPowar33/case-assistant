@@ -149,4 +149,28 @@ class CaseFileApiTest {
         assertThat(p.toString()).doesNotContain("bicycle injury").doesNotContain("Fictional Hospital");
         assertThat(read(other, io).get(1).get("title").asText()).isEqualTo("Request to Fictional Hospital (medical), sent 01 Sep 2026");
     }
+
+    @Test
+    void theMoneyTrailsTransfersAndHoldsArePassagesOfThisCaseOnly() throws Exception {
+        // session 94 (item 17): amounts in rupees, a receiving accused by label, the bank reply named when linked
+        UUID acc = db.sql("insert into person (fir_id, role, label, full_name) values (?, 'accused', 'A1', 'Fictional Accused Name') returning id").param(fir).query(UUID.class).single();
+        UUID ev = db.sql("insert into evidence_item (fir_id,label,description,kind,seized_at,seizure_memo,sha256) values (?,'E-02','Fictional bank reply','document','2026-10-02T10:00Z','SM-2',?) returning id")
+                .params(fir, "d".repeat(64)).query(UUID.class).single();
+        db.sql("insert into money_transfer (fir_id, from_account, to_account, to_person_id, amount_paise, transferred_on, evidence_item_id, recorded_by) values (?, 'XX1111', 'XX2222', ?, 1250050, date '2026-08-21', ?, ?)")
+                .params(fir, acc, ev, ioId).update();
+        db.sql("insert into money_transfer (fir_id, from_account, to_account, amount_paise, transferred_on, recorded_by) values (?, 'XX2222', 'XX3333', 500, date '2026-08-22', ?)").params(fir, ioId).update();
+        db.sql("insert into money_hold (fir_id, account, amount_paise, held_on, recorded_by) values (?, 'XX3333', 10000000, date '2026-08-25', ?)").params(fir, ioId).update();
+        db.sql("insert into money_hold (fir_id, account, amount_paise, held_on, recorded_by) values (?, 'XX9999', 100, date '2026-08-25', ?)").params(other, ioId).update();
+
+        JsonNode p = read(fir, io);
+        assertThat(p).hasSize(5);
+        assertThat(p.get(2).get("kind").asText()).isEqualTo("money");
+        assertThat(p.get(2).get("title").asText()).isEqualTo("Transfer on 21 Aug 2026");
+        assertThat(p.get(2).get("text").asText()).isEqualTo("Rs 12,500.50 from account XX1111 to account XX2222 (A1) | bank reply E-02");
+        assertThat(p.get(3).get("text").asText()).isEqualTo("Rs 5.00 from account XX2222 to account XX3333");
+        assertThat(p.get(4).get("title").asText()).isEqualTo("Bank hold on 25 Aug 2026");
+        assertThat(p.get(4).get("text").asText()).isEqualTo("Rs 100,000.00 held in account XX3333");
+        assertThat(p.toString()).doesNotContain("Fictional Accused Name").doesNotContain("XX9999");
+        assertThat(read(other, io).get(1).get("text").asText()).isEqualTo("Rs 1.00 held in account XX9999");
+    }
 }
