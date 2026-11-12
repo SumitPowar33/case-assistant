@@ -40,14 +40,14 @@ function Movements({ item, onSaved }: { item: Item; onSaved: () => void }) {
       <h2 id="prop-moves">{t('prop.moves', { label: item.label })}</h2>
       <p><a href={`#/firs/${item.fir_id}/evidence`}>{t('prop.openCase', { no: item.fir_no, year: item.fir_year })}</a></p>
       {loadError ? <p role="alert">{loadError}</p> : moves.length === 0 ? <p>{t('common.noneYet')}</p> : (
-        <div className="table-scroll"><table>
+        <div className="table-scroll"><table className="cards">
           <caption>{t('prop.moves', { label: item.label })}</caption>
           <thead><tr>{(['When', 'From', 'To', 'Where', 'Why', 'Seal'] as const).map((c) => <th key={c} scope="col">{t(`prop.col${c}`)}</th>)}</tr></thead>
           <tbody>{moves.map((m, i) => (
             <tr key={i}>
-              <td>{m.at.slice(0, 16).replace('T', ' ')}</td><td>{m.handed_by}</td><td>{m.received_by}</td>
-              <td>{m.location}{m.place ? <div className="sub">{t.code('propPlace', m.place)}</div> : null}</td><td>{m.purpose}</td>
-              <td>{m.seal_intact ? t('prop.sealOk') : <span className="chip c-crit">{t('prop.sealBroken')}</span>}</td>
+              <td data-label={t('prop.colWhen')}>{m.at.slice(0, 16).replace('T', ' ')}</td><td data-label={t('prop.colFrom')}>{m.handed_by}</td><td data-label={t('prop.colTo')}>{m.received_by}</td>
+              <td data-label={t('prop.colWhere')}>{m.location}{m.place ? <div className="sub">{t.code('propPlace', m.place)}</div> : null}</td><td data-label={t('prop.colWhy')}>{m.purpose}</td>
+              <td data-label={t('prop.colSeal')}>{m.seal_intact ? t('prop.sealOk') : <span className="chip c-crit">{t('prop.sealBroken')}</span>}</td>
             </tr>
           ))}</tbody>
         </table></div>
@@ -94,17 +94,17 @@ export default function Property() {
       </p>
       {data.truncated && <p className="note">{t('prop.truncated')}</p>}
       {items.length === 0 ? <p>{t('prop.none')}</p> : (
-        <div className="table-scroll"><table>
+        <div className="table-scroll"><table className="cards">
           <caption>{t('prop.caption')}</caption>
           <thead><tr>{(['Item', 'Case', 'Place', 'Status'] as const).map((c) => <th key={c} scope="col">{t(`prop.col${c}`)}</th>)}</tr></thead>
           <tbody>{items.map((i) => (
             <tr key={i.id}>
-              <td><button type="button" className="btn" aria-pressed={i.id === picked} onClick={() => setPicked(i.id)}>{i.label}</button>
+              <td data-label={t('prop.colItem')}><button type="button" className="btn" aria-pressed={i.id === picked} onClick={() => setPicked(i.id)}>{i.label}</button>
                 <div className="sub">{i.withheld ? t('common.withheld') : i.description}</div></td>
-              <td>{t('fir.title', { no: i.fir_no, year: i.fir_year })}<div className="sub">{i.station}</div></td>
-              <td>{i.moved_at ? <>{i.location}<div className="sub">{i.moved_at.slice(0, 10)}</div></> : '—'}
+              <td data-label={t('prop.colCase')}>{t('fir.title', { no: i.fir_no, year: i.fir_year })}<div className="sub">{i.station}</div></td>
+              <td data-label={t('prop.colPlace')}>{i.moved_at ? <>{i.location}<div className="sub">{i.moved_at.slice(0, 10)}</div></> : '—'}
                 {i.seal_intact === false && <div><span className="chip c-crit">{t('prop.sealBroken')}</span></div>}</td>
-              <td><span className={`chip ${STATUS_CHIP[i.status] ?? 'c-neu'}`}>{t.code('propStatus', i.status)}</span></td>
+              <td data-label={t('prop.colStatus')}><span className={`chip ${STATUS_CHIP[i.status] ?? 'c-neu'}`}>{t.code('propStatus', i.status)}</span></td>
             </tr>
           ))}</tbody>
         </table></div>
