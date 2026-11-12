@@ -1,7 +1,7 @@
 // "Ask the case file" (design board 19, AI feature A5, gateway feature case_qa). Plain logic, no screen:
 // which questions are refused, which passages of the case answer a question, the prompt sent to the gateway, and the
 // check of the answer against its sources. Change ASK_PROMPT_VERSION whenever the prompt text changes (the gateway logs it).
-export const ASK_PROMPT_VERSION = 'case_qa/ask@1'
+export const ASK_PROMPT_VERSION = 'case_qa/ask@1'   // the prompt is unchanged; the pieces it carries are ranked by BM25 since session 92
 export const NOT_IN_FILE = 'NOT IN THE FILE'
 
 export type Passage = { id: string; kind: string; title: string; text: string }
@@ -30,41 +30,65 @@ export function words(text: string): string[] {
   return (text.toLowerCase().match(/[\p{L}\p{M}\p{N}]+/gu) ?? []).filter((w) => !STOP.has(w) && (w.length > 1 || /\d/.test(w)))
 }
 
-/** A passage cut into pieces of at most `max` characters at sentence ends, so a quote stays short. */
-export function chunks(text: string, max = 500): string[] {
-  const out: string[] = []
-  let cur = ''
-  for (const s of text.split(/(?<=[.!?।])\s+|\n+/).map((x) => x.trim()).filter(Boolean)) {
-    if (cur && cur.length + 1 + s.length > max) { out.push(cur); cur = '' }
-    cur = cur ? `${cur} ${s}` : s
-    while (cur.length > max) { out.push(cur.slice(0, max)); cur = cur.slice(max) }   // one very long sentence
-  }
+type Piece = { text: string; from: number; to: number }
+
+/** A passage cut into pieces of at most `max` characters at sentence ends, each with the lines (from 1) it spans. */
+export function pieces(text: string, max = 500): Piece[] {
+  const out: Piece[] = []
+  let cur: Piece | null = null
+  text.split('\n').forEach((line, n) => {
+    for (const s of line.split(/(?<=[.!?।])\s+/).map((x) => x.trim()).filter(Boolean)) {
+      if (cur && cur.text.length + 1 + s.length > max) { out.push(cur); cur = null }
+      cur = cur ? { text: `${cur.text} ${s}`, from: cur.from, to: n + 1 } : { text: s, from: n + 1, to: n + 1 }
+      while (cur.text.length > max) { out.push({ ...cur, text: cur.text.slice(0, max) }); cur = { ...cur, text: cur.text.slice(max), from: cur.to } }   // one very long sentence
+    }
+  })
   if (cur) out.push(cur)
   return out
 }
 
-/** The pieces of this case that share words with the question, best first. A match is a whole word, or the same first five letters of a long word (theft / thefts). Numbers count double. */
+/** The pieces' texts only. */
+export const chunks = (text: string, max = 500) => pieces(text, max).map((p) => p.text)
+
+// BM25, the usual ranking of search engines: a word found in few pieces of this case counts more than one found in most,
+// a word repeated in a piece counts less each time, and a long piece does not win just by being long.
+const K1 = 1.2, B = 0.75
+
+/**
+ * The pieces of this case that share words with the question (in their text or their passage's name), best first (BM25). A
+ * match is a whole word, a longer word that starts with a question word of 4+ letters (call / caller), or the same first five
+ * letters of a long word (theft / thefts). Numbers count double. Each piece is named by its passage and, for a passage
+ * of several lines, the lines it spans (or its part, for one long line), so the officer can find the words.
+ */
 export function retrieve(question: string, passages: Passage[], limit = 6): Source[] {
   const q = [...new Set(words(question))]
   if (!q.length) return []
-  const scored: { score: number; order: number; s: Omit<Source, 'tag'> }[] = []
-  let order = 0
-  for (const p of passages) {
-    const parts = chunks(p.text)
-    parts.forEach((piece, i) => {
-      const have = words(piece)
-      const set = new Set(have)
-      const stems = new Set(have.filter((w) => w.length >= 5).map((w) => w.slice(0, 5)))
-      let score = 0
-      for (const w of q) {
-        if (set.has(w) || (w.length >= 5 && stems.has(w.slice(0, 5)))) score += /\d/.test(w) ? 2 : 1
-      }
-      if (score) scored.push({ score, order: order++, s: { title: parts.length > 1 ? `${p.title}, part ${i + 1} of ${parts.length}` : p.title, quote: piece, text: piece } })
-      else order++
-    })
-  }
-  scored.sort((a, b) => b.score - a.score || a.order - b.order)
-  return scored.slice(0, limit).map((x, i) => ({ tag: `S${i + 1}`, ...x.s }))
+  const all = passages.flatMap((p) => {
+    const parts = pieces(p.text)
+    const lines = p.text.split('\n').length > 1
+    return parts.map((piece, i) => ({
+      title: lines ? `${p.title}, ${piece.from === piece.to ? `line ${piece.from}` : `lines ${piece.from}-${piece.to}`}`
+        : parts.length > 1 ? `${p.title}, part ${i + 1} of ${parts.length}` : p.title,
+      text: piece.text, have: words(`${p.title} ${piece.text}`),   // the passage's name counts too ("the notice", "W1")
+    }))
+  })
+  if (!all.length) return []
+  // the same word, a longer word starting with a word of 4+ letters (call / caller), or the same first five letters (theft / thefts)
+  const tf = (w: string, have: string[]) => have.filter((h) => h === w || (w.length >= 4 && !/\d/.test(w) && h.startsWith(w))
+    || (w.length >= 5 && h.length >= 5 && h.slice(0, 5) === w.slice(0, 5))).length
+  const counts = all.map((c) => q.map((w) => tf(w, c.have)))
+  const df = q.map((_, j) => counts.filter((c) => c[j] > 0).length)
+  const avg = all.reduce((n, c) => n + c.have.length, 0) / all.length || 1
+  const scored = all.map((c, i) => ({
+    c, i, score: q.reduce((sum, w, j) => {
+      const f = counts[i][j]
+      if (!f) return sum
+      const idf = Math.log(1 + (all.length - df[j] + 0.5) / (df[j] + 0.5))
+      return sum + (/\d/.test(w) ? 2 : 1) * idf * (f * (K1 + 1)) / (f + K1 * (1 - B + B * c.have.length / avg))
+    }, 0),
+  })).filter((x) => x.score > 0)
+  scored.sort((a, b) => b.score - a.score || a.i - b.i)
+  return scored.slice(0, limit).map((x, n) => ({ tag: `S${n + 1}`, title: x.c.title, quote: x.c.text, text: x.c.text }))
 }
 
 /** The text sent to the gateway: the question, only the found pieces, and the rules for the answer. Written in English whatever the screen language. */

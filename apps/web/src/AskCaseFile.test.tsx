@@ -45,7 +45,8 @@ test('a question with matching passages sends only those, shows the answer with 
   expect(calls).toHaveLength(1)
   expect(calls[0].url).toBe('/ai/v1/generate')
   expect(calls[0].body).toMatchObject({ feature: 'case_qa', prompt_version: 'case_qa/ask@1', case_ref: 'f1' })
-  expect(calls[0].body.prompt).toContain('[S1] FIR complaint')
+  expect(calls[0].body.prompt).toContain('] FIR complaint: ')
+  expect(calls[0].body.prompt).toContain('[S1] Statement of W1')   // the shorter piece first when both match alike (BM25)
   expect((screen.getByLabelText(/Your question/) as HTMLInputElement).value).toBe('')
 
   fireEvent.click(screen.getByRole('button', { name: 'Useful' }))

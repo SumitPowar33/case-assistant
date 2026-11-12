@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ASK_PROMPT_VERSION, NOT_IN_FILE, askPrompt, checkAnswer, chunks, refusal, retrieve, words, type Passage } from './askFile'
+import { ASK_PROMPT_VERSION, NOT_IN_FILE, askPrompt, checkAnswer, chunks, pieces, refusal, retrieve, words, type Passage } from './askFile'
 
 const P: Passage[] = [
   { id: 'P1', kind: 'complaint', title: 'FIR complaint', text: 'Fictional complaint. A transfer of Rs 9,80,000 was made on 21 August 2026 to account XXXX4471. The caller said he was a bank officer.' },
@@ -40,8 +40,8 @@ describe('retrieve', () => {
     expect(r[0].quote).toContain('21 August 2026')
     expect(r[1].title).toBe('Statement of W1')
   })
-  it('matches the same first five letters of a long word, and counts numbers double', () => {
-    expect(retrieve('transfers', P)[0].title).toBe('FIR complaint')
+  it('matches the same first five letters of a long word, ranks the shorter of two equal matches first, and counts numbers double', () => {
+    expect(retrieve('transfers', P).map((s) => s.title)).toEqual(['Statement of W1', 'FIR complaint'])
     expect(retrieve('22', P)[0].title).toBe('Statement of W1')
   })
   it('finds nothing for a question the file has no words for, or one made of stop words only', () => {
@@ -56,12 +56,39 @@ describe('retrieve', () => {
   })
 })
 
+describe('pieces and ranking (session 92)', () => {
+  it('each piece knows the lines it spans; a long sentence stays on its line', () => {
+    expect(pieces('One.\n\nTwo. Three.', 500)).toEqual([{ text: 'One. Two. Three.', from: 1, to: 3 }])
+    expect(pieces('Aaaa.\nBbbb. Cccc.', 10)).toEqual([{ text: 'Aaaa.', from: 1, to: 1 }, { text: 'Bbbb.', from: 2, to: 2 }, { text: 'Cccc.', from: 2, to: 2 }])
+    expect(pieces('x\n' + 'y'.repeat(15), 10)).toEqual([{ text: 'x', from: 1, to: 1 }, { text: 'y'.repeat(10), from: 2, to: 2 }, { text: 'y'.repeat(5), from: 2, to: 2 }])
+  })
+  it('names a piece of a passage of several lines by its lines', () => {
+    const p: Passage = { id: 'P1', kind: 'diary', title: 'Case diary', text: 'Visited the bank branch and spoke to the staff. '.repeat(10) + '\n' + 'Collected the CCTV footage of the branch. '.repeat(12) + '\nWrote to the telecom company. '.repeat(30) }
+    expect(retrieve('CCTV footage', [p])[0].title).toBe('Case diary, line 2')
+    expect(retrieve('telecom', [p])[0].title).toMatch(/^Case diary, lines \d+-\d+$/)
+  })
+  it('a word found in every piece counts less than a rare one, so the piece with the rare word wins', () => {
+    const ps: Passage[] = [
+      { id: 'P1', kind: 'notice', title: 'Notice to the bank', text: 'The bank account holder details were asked from the bank. The bank account was frozen by the bank.' },
+      { id: 'P2', kind: 'evidence', title: 'Evidence E3', text: 'Bank statement showing the UPI handle fictional@upi.' },
+      { id: 'P3', kind: 'diary', title: 'Case diary', text: 'The bank manager was met at the bank.' },
+    ]
+    expect(retrieve('Which bank UPI handle got the money?', ps)[0].title).toBe('Evidence E3')
+  })
+  it('finds nothing in an empty file', () => {
+    expect(retrieve('transfer', [])).toEqual([])
+    expect(retrieve('transfer', [{ id: 'P1', kind: 'diary', title: 'Empty', text: '   ' }])).toEqual([])
+    expect(retrieve('transfer', [{ id: 'P1', kind: 'diary', title: '!!', text: '?? !!' }])).toEqual([])   // pieces without a word
+  })
+})
+
 describe('prompt and answer check', () => {
   const sent = retrieve('When was the transfer?', P)
   it('the prompt holds the question, only the sent pieces and the rules', () => {
     const p = askPrompt(' When was the transfer? ', sent)
     expect(p).toContain('Question from the investigating officer: When was the transfer?')
-    expect(p).toContain('[S1] FIR complaint: ')
+    expect(p).toContain('[S1] Statement of W1: ')
+    expect(p).toContain('[S2] FIR complaint: ')
     expect(p).toContain(NOT_IN_FILE)
     expect(p).toContain('Do not choose one')
     expect(p).not.toContain('Case diary')
