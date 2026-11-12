@@ -5,6 +5,7 @@ import CaseDiary from './CaseDiary'
 import AskCaseFile from './AskCaseFile'
 import { AiUseCase } from './AiUse'
 import MoneyTrail from './MoneyTrail'
+import Cdr from './Cdr'
 import Statements from './Statements'
 import Search from './Search'
 import FactCheck from './FactCheck'
@@ -129,6 +130,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
       <div className={shown('readiness')}><Readiness key={version} firId={id} people={people ?? []} /></div>
       <div className={shown('statements')}><Statements key={version} firId={id} victimProtected={fir.victim_protected} /></div>
       <div className={shown('money')}><MoneyTrail key={version} firId={id} /></div>
+      <div className={shown('cdr')}>{fir.case_team ? <Cdr firId={id} /> : <section><h2>{t('cdr.part')}</h2><p>{t('cdr.teamOnly')}</p></section>}</div>
       <div className={shown('finalReport')}><FinalReport key={version} firId={id} me={currentSession()?.user.id ?? ''} text={fir.contents_original} victimProtected={fir.victim_protected} /></div>
       <div className={shown('diary')}><CaseDiary firId={id} />{part === 'diary' && <AiUseCase firId={id} />}</div>
       <div className={shown('ask')}>{part === 'ask' && <AskCaseFile firId={id} />}</div>
