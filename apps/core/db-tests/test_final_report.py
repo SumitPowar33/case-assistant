@@ -102,3 +102,17 @@ def test_a_returned_report_submitted_again_clears_the_decider_and_may_name_a_new
     db.execute("UPDATE final_report_draft SET status='submitted', submitted_by=%s, decided_by=NULL WHERE id=%s", (sho, d))
     assert one(db, "SELECT submitted_by, decided_by FROM final_report_draft WHERE id=%s", d) == (sho, None)
     db.execute("UPDATE final_report_draft SET status='approved', decided_by=%s WHERE id=%s", (sp, d))
+
+
+def test_only_a_save_names_the_ai_request_it_took_sentences_from(db):
+    # V54 (A6): a save that took AI-drafted sentences names the gateway's request; no other step does, and it is kept
+    st, io, fir = seed_case(db)
+    d = _draft(db, fir, io)
+    req = "6f1c1d1e-0000-4000-8000-000000000054"
+    ev = one(db, "INSERT INTO final_report_event(draft_id,by_user,action,ai_request) VALUES (%s,%s,'saved',%s) RETURNING id", d, io, req)[0]
+    assert str(one(db, "SELECT ai_request FROM final_report_event WHERE id=%s", ev)[0]) == req
+    one(db, "INSERT INTO final_report_event(draft_id,by_user,action) VALUES (%s,%s,'saved') RETURNING id", d, io)   # a save without one
+    with pytest.raises(REFUSED):
+        db.execute("INSERT INTO final_report_event(draft_id,by_user,action,ai_request) VALUES (%s,%s,'submitted',%s)", (d, io, req))
+    with pytest.raises(REFUSED):
+        db.execute("UPDATE final_report_event SET ai_request=NULL WHERE id=%s", (ev,))

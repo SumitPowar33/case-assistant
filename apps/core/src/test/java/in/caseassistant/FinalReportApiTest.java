@@ -198,4 +198,16 @@ class FinalReportApiTest {
         call(post(url("/decision")), sho, "{\"decision\":\"approve\"}").andExpect(status().isConflict());   // already decided
         call(get(url("")), sho, null).andExpect(jsonPath("$.events[?(@.action=='approved')].note").value("Looks complete to me."));
     }
+
+    @Test
+    void aSaveThatTookAiSentencesNamesTheGatewayRequestOnlyThatSave() throws Exception {
+        // A6 (V54): the step of a save that took AI-drafted sentences shows the gateway's request; other saves show none
+        String req = "6f1c1d1e-0000-4000-8000-000000000054";
+        call(put(url("")), io, "{\"language\":\"en\",\"facts\":\"" + FACTS + "\",\"evidence\":\"\",\"aiRequestId\":\"" + req + "\"}").andExpect(status().isOk());
+        call(put(url("")), io, words(FACTS, EVIDENCE)).andExpect(status().isOk());
+        call(put(url("")), io, "{\"language\":\"en\",\"facts\":\"" + FACTS + "\",\"evidence\":\"\",\"aiRequestId\":\"not-a-request\"}").andExpect(status().isBadRequest());
+        call(get(url("")), io, null).andExpect(jsonPath("$.events.length()").value(2))
+                .andExpect(jsonPath("$.events[0].ai_request").value(req)).andExpect(jsonPath("$.events[1].ai_request").doesNotExist());
+        call(put(url("")), desk, words(FACTS, EVIDENCE)).andExpect(status().isForbidden());   // the front desk is not on the case team
+    }
 }

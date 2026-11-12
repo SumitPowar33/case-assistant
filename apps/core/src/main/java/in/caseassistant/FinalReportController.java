@@ -19,7 +19,8 @@ import org.springframework.web.server.ResponseStatusException;
  * evidence for the charges (the AI gateway may draft them later; a person always reads and decides), submits the draft
  * once the readiness check has been made and has no open gap, the holder of {@code chargesheet.approve} (packs
  * roles.json) approves it or returns it with a reason, and the officer who submitted it signs. Nobody approves their
- * own submission. Every step is kept in an event list nobody can change. Filing with the court is recorded elsewhere
+ * own submission. A save that takes sentences the AI gateway drafted (feature chargesheet_draft, A6) names the gateway's
+ * request in its step (V54); the officer has read and may have rewritten them. Every step is kept in an event list nobody can change. Filing with the court is recorded elsewhere
  * (chargesheets, V14).
  */
 @RestController
@@ -27,7 +28,8 @@ import org.springframework.web.server.ResponseStatusException;
 class FinalReportController {
     static final String APPROVE = "chargesheet.approve";
 
-    record Words(@NotBlank @Pattern(regexp = "[a-z]{2,3}") String language, @Size(max = 40000) String facts, @Size(max = 40000) String evidence) {}
+    record Words(@NotBlank @Pattern(regexp = "[a-z]{2,3}") String language, @Size(max = 40000) String facts, @Size(max = 40000) String evidence,
+                 UUID aiRequestId) {}
     record Decision(@NotBlank @Pattern(regexp = "approve|return") String decision, @Size(max = 2000) String note) {}
 
     private final JdbcClient db;
@@ -49,7 +51,11 @@ class FinalReportController {
     }
 
     private void event(UUID draft, UUID by, String action, String note) {
-        db.sql("insert into final_report_event (draft_id, by_user, action, note) values (?,?,?,?)").params(draft, by, action, note).update();
+        event(draft, by, action, note, null);
+    }
+
+    private void event(UUID draft, UUID by, String action, String note, UUID aiRequest) {
+        db.sql("insert into final_report_event (draft_id, by_user, action, note, ai_request) values (?,?,?,?,?)").params(draft, by, action, note, aiRequest).update();
     }
 
     @GetMapping
@@ -64,7 +70,7 @@ class FinalReportController {
                 from final_report_draft d left join app_user s on s.id = d.submitted_by left join app_user a on a.id = d.decided_by
                 left join app_user g on g.id = d.signed_by where d.fir_id = ?""").param(firId).query().singleRow());
         out.put("events", d == null ? java.util.List.of() : db.sql("""
-                select e.at, e.action, e.note, u.full_name as by_name from final_report_event e join app_user u on u.id = e.by_user
+                select e.at, e.action, e.note, e.ai_request, u.full_name as by_name from final_report_event e join app_user u on u.id = e.by_user
                 where e.draft_id = ? order by e.at, e.id""").param(d.get("id")).query().listOfRows());
         boolean checked = db.sql("select exists (select 1 from case_playbook where fir_id = ?)").param(firId).query(Boolean.class).single();
         out.put("readinessChecked", checked);
@@ -90,7 +96,7 @@ class FinalReportController {
         if (d == null) {
             UUID id = db.sql("insert into final_report_draft (fir_id, language, facts_text, evidence_text, created_by) values (?,?,?,?,?) returning id")
                     .params(firId, w.language, facts, evidence, me).query(UUID.class).single();
-            event(id, me, "saved", null);
+            event(id, me, "saved", null, w.aiRequestId);
             return Map.of("id", id, "status", "draft");
         }
         String status = (String) d.get("status");
@@ -98,7 +104,7 @@ class FinalReportController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "The words can be changed only while the report is a draft or returned (now " + status + ").");
         db.sql("update final_report_draft set language = ?, facts_text = ?, evidence_text = ?, updated_at = clock_timestamp() where id = ?")
                 .params(w.language, facts, evidence, d.get("id")).update();
-        event((UUID) d.get("id"), me, "saved", null);
+        event((UUID) d.get("id"), me, "saved", null, w.aiRequestId);
         return Map.of("id", d.get("id"), "status", status);
     }
 
