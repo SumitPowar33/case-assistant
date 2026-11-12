@@ -1,0 +1,21 @@
+{
+  "status": "draft",
+  "note": "Column names of call detail records (CDR) as telecom operators send them in reply to a BNSS 94 notice. Made-up generic layout until masked samples from each operator are checked; a state module may add its own file. Case, spaces, dashes and underscores in a heading are ignored.",
+  "fields": {
+    "target": {"aliases": ["target", "target no", "target number", "a party", "a party no", "a party number", "msisdn", "calling number", "subscriber number"]},
+    "other": {"required": true, "aliases": ["b party", "b party no", "b party number", "other party", "other number", "called number", "calling called number", "party number"]},
+    "datetime": {"aliases": ["date time", "call date time", "start time", "call start", "start date time"]},
+    "date": {"aliases": ["date", "call date", "start date"]},
+    "time": {"aliases": ["time", "call time"]},
+    "duration": {"required": true, "aliases": ["duration", "duration sec", "duration seconds", "call duration", "dur"]},
+    "type": {"required": true, "aliases": ["call type", "type", "event type", "service type"]},
+    "cell": {"aliases": ["first cell id", "cell id", "first cgi", "cgi", "first cell global id", "cell global id"]},
+    "imei": {"aliases": ["imei", "imei no"]}
+  },
+  "types": {
+    "call_out": ["moc", "out", "outgoing", "voice out", "call out"],
+    "call_in": ["mtc", "in", "incoming", "voice in", "call in"],
+    "sms_out": ["smo", "smsmo", "sms out", "sms outgoing"],
+    "sms_in": ["smt", "smsmt", "sms in", "sms incoming"]
+  }
+}

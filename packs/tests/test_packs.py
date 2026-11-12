@@ -323,3 +323,19 @@ def test_acting_charge_is_given_by_the_roles_that_reach_a_station_and_held_by_a_
     assert all(roles[c]["case_scope"] == "station" and "case.lead" in roles[c]["permissions"] for c in held)
     assert all(roles[c]["case_scope"] == "district" or "admin.manage" in roles[c]["permissions"] for c in givers)
     assert not givers & held
+
+
+def test_cdr_layouts_are_a_draft_whose_column_names_and_call_types_each_mean_one_thing():
+    # CdrController finds the columns of an operator's call records file by these names: one name must not feed two fields
+    files = sorted(ROOT.glob("*/cdr-layouts.json"))
+    assert files, "the national module names the CDR columns"
+    for path in files:
+        layout = json.loads(path.read_text(encoding="utf-8"))
+        assert layout["status"] == "draft" and "made-up" in layout["note"].lower()
+        norm = lambda s: re.sub(r"[\s_\-()]+", "", s.lower())
+        names = [norm(a) for f in layout["fields"].values() for a in f["aliases"]]
+        assert len(names) == len(set(names)), f"{path}: a column name feeds two fields"
+        assert {"other", "duration", "type"} <= {k for k, f in layout["fields"].items() if f.get("required")}
+        assert set(layout["types"]) == {"call_out", "call_in", "sms_out", "sms_in"}
+        words = [norm(w) for ws in layout["types"].values() for w in ws]
+        assert len(words) == len(set(words)), f"{path}: a call type word means two things"
