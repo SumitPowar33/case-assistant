@@ -16,7 +16,7 @@ type Draft = { request_id: string; draft: string; provider: string; model: strin
 
 /** Kinds a new notice can have; labels are notice.kind.<code>. Notices of old cases loaded from a file keep the CrPC
  *  section they were issued under (notice.kind.CrPC_91 and others); they cannot be typed new. */
-const KINDS = ['BNSS_94', 'BNSS_35_3', 'BNSS_179', 'follow_up']
+const KINDS = ['BNSS_94', 'BNSS_35_3', 'BNSS_179', 'BNSS_106', 'follow_up']
 const CHANNELS = ['email', 'portal', 'post', 'by_hand']
 /** The check stored for a notice that asked for no list of items. It is stored in English, whatever the screen language. */
 const FULL_REPLY = 'Reply answers the notice fully'
@@ -166,6 +166,7 @@ function NewNoticeForm({ firId, fir, onSaved }: { firId: string; fir?: NoticeFac
         if (!body.trim()) throw new Error(t('notice.needText'))
         const items = lines(String(f.get('items') ?? ''))
         if (f.get('kind') === 'BNSS_94' && !items.length) throw new Error(t('notice.need94'))
+        if (f.get('kind') === 'BNSS_106' && !items.length) throw new Error(t('notice.need106'))
         const sendNow = f.get('sendNow') === 'on'
         const result = await send(`/firs/${firId}/notices`, 'POST', {
           kind: f.get('kind'), addressee: text(f, 'addressee'), itemsRequested: items, body: body.trim(),
