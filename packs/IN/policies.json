@@ -16,6 +16,10 @@
     "session_hours": {
       "label": "Hours a sign-in lasts before the officer signs in again; a unit may only choose fewer",
       "default": 8, "min": 1, "max": 8
+    },
+    "freeze_report_days": {
+      "label": "Days after a bank is told to freeze an account (BNSS 106 notice issued) by which the seizure must be reported to the Magistrate (law: forthwith, BNSS 106(3)); a unit may only choose fewer",
+      "default": 1, "min": 0, "max": 1
     }
   }
 }
