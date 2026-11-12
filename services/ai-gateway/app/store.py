@@ -27,6 +27,7 @@ FEATURES = {
     "chargesheet_draft": "Draft chargesheet paragraphs",
     "case_qa": "Answer questions about the case file",
     "victim_update": "Draft the 90-day victim update",
+    "cdr_summary": "Summarise call records",   # the analysis tables only: numbers, counts, dates, cells, labels (apps/web/src/cdrSummary.ts)
     "app_help": "Help with using the app",   # the screens and their texts only, never case data (apps/web/src/appHelp.ts)
 }
 PROVIDERS = {"claude", "gemini", "fake"}

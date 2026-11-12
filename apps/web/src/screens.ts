@@ -10,12 +10,12 @@ export type Screen = { href: string; label: Key; about: Key; group: Group; keys:
 const PART_ABOUT: Record<Part, Key> = {
   case: 'about.case', people: 'about.people', arrests: 'about.arrests', chargesheets: 'about.chargesheets', closure: 'about.closure',
   deadlines: 'about.deadlines', evidence: 'about.evidence', search: 'search.lede', notices: 'about.notices', readiness: 'about.readiness',
-  statements: 'statement.lede', money: 'money.lede', finalReport: 'fr.lede', diary: 'diary.lede', ask: 'ask.lede',
+  statements: 'statement.lede', money: 'money.lede', cdr: 'cdr.lede', finalReport: 'fr.lede', diary: 'diary.lede', ask: 'ask.lede',
 }
 const PART_KEYS: Record<Part, string[]> = {
   case: ['fir', 'facts', 'sections'], people: ['person', 'personForm', 'io', 'victim'], arrests: ['arrest'], chargesheets: ['cs'], closure: ['closure'], deadlines: ['deadline'],
   evidence: ['evidence', 'evForm', 'cert'], search: ['search'], notices: ['notice'], readiness: ['readiness'], statements: ['statement', 'translate'],
-  money: ['money'], finalReport: ['fr', 'csd'], diary: ['diary'], ask: ['ask'],
+  money: ['money'], cdr: ['cdr'], finalReport: ['fr', 'csd'], diary: ['diary'], ask: ['ask'],
 }
 
 export function screensFor(user: User, firId?: string): Screen[] {
