@@ -173,4 +173,30 @@ class CaseFileApiTest {
         assertThat(p.toString()).doesNotContain("Fictional Accused Name").doesNotContain("XX9999");
         assertThat(read(other, io).get(1).get("text").asText()).isEqualTo("Rs 1.00 held in account XX9999");
     }
+    @Test
+    void certificatesInForceArePassagesWithoutTheSignersName() throws Exception {
+        // session 95 (item 17): a replaced certificate is left out, the signer is not named, another case's certificate is not shown
+        UUID ev = db.sql("insert into evidence_item (fir_id,label,description,kind,seized_at,seizure_memo,sha256) values (?,'E-03','Fictional phone','electronic','2026-10-02T10:00Z','SM-3',?) returning id")
+                .params(fir, "e".repeat(64)).query(UUID.class).single();
+        UUID otherEv = db.sql("insert into evidence_item (fir_id,label,description,kind,seized_at,seizure_memo,sha256) values (?,'E-04','Fictional laptop','electronic','2026-10-02T10:00Z','SM-4',?) returning id")
+                .params(other, "f".repeat(64)).query(UUID.class).single();
+        UUID old = db.sql("insert into certificate_63_4 (item_id, part, signer_name, device_type, device_ids, hash_algo, hash_value, signed_at, place) values (?, 'A', 'Fictional Signer One', 'mobile phone', 'IMEI 000000000000001', 'SHA256', ?, '2026-10-03T05:00Z', 'Fictional Station') returning id")
+                .params(ev, "e".repeat(64)).query(UUID.class).single();
+        db.sql("insert into certificate_63_4 (item_id, part, signer_name, device_type, hash_algo, hash_value, signed_at, place, supersedes, correction_reason) values (?, 'A', 'Fictional Signer Two', 'mobile phone', 'MD5', 'abc', '2026-10-04T05:00Z', 'Fictional Station', ?, 'Fictional: wrong IMEI')")
+                .params(ev, old).update();
+        db.sql("insert into certificate_63_4 (item_id, part, signer_name, device_type, hash_algo, hash_value, signed_at, place) values (?, 'B', 'Fictional Expert', 'mobile phone', 'SHA256', ?, '2026-10-05T05:00Z', 'Fictional Lab')")
+                .params(ev, "e".repeat(64)).update();
+        db.sql("insert into certificate_63_4 (item_id, part, signer_name, device_type, hash_algo, hash_value, signed_at, place) values (?, 'A', 'Fictional Other Signer', 'laptop', 'SHA256', ?, '2026-10-05T05:00Z', 'Fictional Other Place')")
+                .params(otherEv, "f".repeat(64)).update();
+
+        JsonNode p = read(fir, io);
+        assertThat(p).hasSize(4);
+        assertThat(p.get(2).get("kind").asText()).isEqualTo("certificate");
+        assertThat(p.get(2).get("title").asText()).isEqualTo("BSA 63(4) certificate Part A for E-03, signed 04 Oct 2026");
+        assertThat(p.get(2).get("text").asText()).isEqualTo("mobile phone | MD5 abc | signed at Fictional Station");
+        assertThat(p.get(3).get("title").asText()).isEqualTo("BSA 63(4) certificate Part B for E-03, signed 05 Oct 2026");
+        assertThat(p.get(3).get("text").asText()).isEqualTo("mobile phone | SHA256 " + "e".repeat(64) + " | signed at Fictional Lab");
+        assertThat(p.toString()).doesNotContain("Fictional Signer").doesNotContain("Fictional Expert").doesNotContain("IMEI 000000000000001").doesNotContain("Fictional Other");
+        assertThat(read(other, io).get(2).get("title").asText()).isEqualTo("BSA 63(4) certificate Part A for E-04, signed 05 Oct 2026");
+    }
 }

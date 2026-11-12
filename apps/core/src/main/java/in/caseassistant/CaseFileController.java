@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * The passages of one case that "Ask the case file" (design board 19) may answer from: the complaint, the statements and
  * their checked English translations, the diary, the evidence descriptions, the notices, the requests to a lab or hospital with
- * their step notes, the court events, the search and seizure memos and the money trail (transfers and bank holds). Only this case, only for its team (ReadAccess answers 404 to
+ * their step notes, the court events, the search and seizure memos, the money trail (transfers and bank holds) and the BSA 63(4) certificates in force. Only this case, only for its team (ReadAccess answers 404 to
  * anyone else); a person is named by their label, never by name. The question and the answer are made in the browser and
  * the AI gateway; nothing from another case or any search across cases is possible here. A protected case's read is
  * logged like its FIR text.
@@ -80,6 +80,14 @@ class CaseFileController {
                        'Rs ' || to_char(h.amount_paise / 100.0, 'FM999,999,999,990.00') || ' held in account ' || h.account || coalesce(' | bank reply ' || e.label, '') as text
                 from money_hold h left join evidence_item e on e.id = h.evidence_item_id
                 where h.fir_id = ? order by h.held_on, h.recorded_at limit 100""").params(firId));
+        // session 95 (item 17): the BSA 63(4) certificates in force (a certificate replaced by a correction is left out); the signer's
+        // name is not given, only the part, the device, the hash and where and when it was signed
+        add(rows, "certificate", db.sql("""
+                select 'BSA 63(4) certificate Part ' || c.part || ' for ' || e.label || ', signed ' || to_char(ist_date(c.signed_at), 'DD Mon YYYY') as title,
+                       concat_ws(' | ', c.device_type, c.device_ids, c.hash_algo || ' ' || c.hash_value, 'signed at ' || c.place) as text
+                from certificate_63_4 c join evidence_item e on e.id = c.item_id
+                where e.fir_id = ? and not exists (select 1 from certificate_63_4 n where n.supersedes = c.id)
+                order by e.label, c.part limit 100""").params(firId));
         if (!rows.isEmpty() && team.identityProtected(firId)) reads.fir(me, firId, "fir_text");
         var out = new LinkedHashMap<String, Object>();
         out.put("passages", rows);

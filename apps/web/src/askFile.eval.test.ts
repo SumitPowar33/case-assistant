@@ -26,6 +26,7 @@ const FILE: Passage[] = [
   { id: 'P12', kind: 'search', title: 'Search and seizure memo, 06 Nov 2026', text: 'Fictional shop, Demo Road | grounds: the phone was believed to be kept in the shop' },
   { id: 'P13', kind: 'money', title: 'Transfer on 21 Aug 2026', text: 'Rs 4,50,000.00 from account XXXX1200 to account XXXX4471 (A1) | bank reply E1' },
   { id: 'P14', kind: 'money', title: 'Bank hold on 25 Aug 2026', text: 'Rs 1,20,000.00 held in account XXXX4471 | bank reply E1' },
+  { id: 'P15', kind: 'certificate', title: 'BSA 63(4) certificate Part B for E2, signed 05 Oct 2026', text: 'mobile phone | SHA256 0123abcd | signed at Fictional Forensic Lab' },
 ]
 
 // question, the piece(s) that must be among the first three
@@ -47,6 +48,8 @@ const FOUND: [string, string[]][] = [
   ['Where was the shop searched and why?', ['P12']],
   ['How much money is held by the bank?', ['P14']],
   ['Which account did the transfer go to?', ['P13']],
+  ['Where was the electronic certificate signed?', ['P15']],
+  ['Which hash is given for the phone?', ['P15']],
 ]
 
 describe('the evaluation set of Ask the case file', () => {
