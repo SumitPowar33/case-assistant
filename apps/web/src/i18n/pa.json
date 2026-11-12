@@ -1252,5 +1252,15 @@
  "help.notInApp": "ਐਪ ਵਿੱਚ ਇਹ ਨਹੀਂ ਹੈ",
  "help.unsourced": "ਕਿਸੇ ਸਕਰੀਨ ਦਾ ਨਾਮ ਨਹੀਂ",
  "help.goTo": "{screen} ਖੋਲ੍ਹੋ",
- "aiFeature.app_help": "ਐਪ ਦੀ ਵਰਤੋਂ ਵਿੱਚ ਮਦਦ"
+ "aiFeature.app_help": "ਐਪ ਦੀ ਵਰਤੋਂ ਵਿੱਚ ਮਦਦ",
+ "earlier.check": "{label} ਦੇ ਪਿਛਲੇ ਰਿਕਾਰਡ ਜਾਂਚੋ",
+ "earlier.checking": "ਜਾਂਚ ਰਹੇ ਹਾਂ…",
+ "earlier.title": "{label} ਦੇ ਪਿਛਲੇ ਰਿਕਾਰਡ",
+ "earlier.note": "ਇਸ ਰਾਜ ਦੀਆਂ ਹੋਰ ਐਫਆਈਆਰਾਂ ਜਿਨ੍ਹਾਂ ਵਿੱਚ ਕਿਸੇ ਮੁਲਜ਼ਮ ਜਾਂ ਸ਼ੱਕੀ ਦਾ ਉਹੀ ਫ਼ੋਨ, ਉਹੀ ਨਾਮ ਅਤੇ ਪਿਤਾ ਦਾ ਨਾਮ, ਜਾਂ ਜੁੜਿਆ ਖਾਤਾ ਹੈ। ਮੇਲ ਇਸ ਦਾ ਸਬੂਤ ਨਹੀਂ ਕਿ ਉਹ ਉਹੀ ਵਿਅਕਤੀ ਹੈ: ਦੋਵੇਂ ਰਿਕਾਰਡ ਖੋਲ੍ਹ ਕੇ ਫ਼ੈਸਲਾ ਕਰੋ। ਇਹ ਜਾਂਚ ਦਰਜ ਹੁੰਦੀ ਹੈ।",
+ "earlier.none": "ਕਿਸੇ ਹੋਰ ਐਫਆਈਆਰ ਦਾ ਕੋਈ ਮੁਲਜ਼ਮ ਜਾਂ ਸ਼ੱਕੀ ਮੇਲ ਨਹੀਂ ਖਾਂਦਾ।",
+ "earlier.truncated": "ਸਿਰਫ਼ ਨਵੀਨਤਮ 100 ਦਿਖਾਏ ਗਏ ਹਨ।",
+ "earlier.match.phone": "ਉਹੀ ਫ਼ੋਨ",
+ "earlier.match.name_parentage": "ਉਹੀ ਨਾਮ ਅਤੇ ਪਿਤਾ ਦਾ ਨਾਮ",
+ "earlier.match.account": "ਜੁੜਿਆ ਖਾਤਾ",
+ "audit.kind.involvement_search": "ਪਿਛਲੇ ਰਿਕਾਰਡ ਜਾਂਚੇ"
 }

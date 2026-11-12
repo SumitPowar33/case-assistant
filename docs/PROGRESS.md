@@ -146,6 +146,13 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
 
+## 12 Nov 2026, earlier records of an accused (Sumit present)
+- Asked by Sumit: find whether a criminal already exists. Face recognition was asked for and not built (CLAUDE.md hard rule; wrong matches, no clear legal basis); this is the exact-identifier search instead, the gap the import audits named.
+- `InvolvementController`, `GET /api/firs/{firId}/people/{personId}/involvement`, V55 `involvement_search`: for an accused or suspect of the FIR, the other FIRs of the same state where an accused or suspect has the same phone (last ten digits), the same name and parentage (case and spaces ignored), or an account the money trail links to both. Each record says what matched; no score, nothing merged. Case team only (others 404, like any case they are not on); a victim, complainant or witness is refused (400). Every check is kept as written (who, when, person, count) and listed on the station's Audit screen (`involvement_search`). A record links only when the officer may open that FIR.
+- Web: "Check earlier records of A1" under each accused or suspect on the People part (`EarlierRecords.tsx`); asked on purpose, never by itself. 10 new texts in all 11 catalogs.
+- Tests: `InvolvementApiTest` (matches, other state and other roles excluded, name alone and short phones do not match, log and audit, kept as written, access), `EarlierRecords.test.tsx`; full suite green.
+- Not done: no reason asked before a check; no search by a typed phone or account outside a case; aliases are not compared; the two refusal messages have no screen-language text yet.
+
 ## 12 Nov 2026, tour and help chat (Sumit present)
 - Asked by Sumit: a first-run tour of which screen does what, and a support chat that answers "how do I fill an FIR" from the app itself, no static answers.
 - One list of screens (`screens.ts`, `screensFor`) now drives the menu, the tour and the chat, filtered by the user's permissions exactly as the menu was; each screen names its plain sentence (an existing `*.intro`/`*.lede` where there was one, new `about.*` otherwise) and the key prefixes of its own texts.

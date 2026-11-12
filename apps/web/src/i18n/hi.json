@@ -1252,5 +1252,15 @@
  "help.notInApp": "ऐप में यह नहीं है",
  "help.unsourced": "किसी स्क्रीन का नाम नहीं",
  "help.goTo": "{screen} खोलें",
- "aiFeature.app_help": "ऐप के उपयोग में सहायता"
+ "aiFeature.app_help": "ऐप के उपयोग में सहायता",
+ "earlier.check": "{label} के पुराने रिकॉर्ड जाँचें",
+ "earlier.checking": "जाँच रहे हैं…",
+ "earlier.title": "{label} के पुराने रिकॉर्ड",
+ "earlier.note": "इस राज्य की अन्य एफआईआर जिनमें किसी अभियुक्त या संदिग्ध का वही फ़ोन, वही नाम और पिता का नाम, या जुड़ा खाता है। मेल होना इस बात का प्रमाण नहीं कि वह वही व्यक्ति है: दोनों रिकॉर्ड खोलकर निर्णय लें। यह जाँच दर्ज की जाती है।",
+ "earlier.none": "किसी अन्य एफआईआर का कोई अभियुक्त या संदिग्ध मेल नहीं खाता।",
+ "earlier.truncated": "केवल नवीनतम 100 दिखाए गए हैं।",
+ "earlier.match.phone": "वही फ़ोन",
+ "earlier.match.name_parentage": "वही नाम और पिता का नाम",
+ "earlier.match.account": "जुड़ा खाता",
+ "audit.kind.involvement_search": "पुराने रिकॉर्ड जाँचे गए"
 }

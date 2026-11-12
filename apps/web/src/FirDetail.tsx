@@ -7,6 +7,7 @@ import MoneyTrail from './MoneyTrail'
 import Statements from './Statements'
 import Search from './Search'
 import FactCheck from './FactCheck'
+import EarlierRecords from './EarlierRecords'
 import SectionSuggest from './SectionSuggest'
 import FinalReport from './FinalReport'
 import Notices from './Notices'
@@ -92,7 +93,8 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
         <section>
           <h2>{t('fir.people')}</h2>
           {peopleError ? <p role="alert">{peopleError}</p> : !people ? <p>{t('common.loading')}</p> : people.length ? <ul>{people.map((p) => (
-            <li key={p.id}>{p.label} ({t.code('person', p.role)}){p.age_years ? `, ${p.age_years}` : ''}: {p.display_name}{p.identity_masked ? ` (${t('fir.identityProtected')})` : ''}</li>
+            <li key={p.id}>{p.label} ({t.code('person', p.role)}){p.age_years ? `, ${p.age_years}` : ''}: {p.display_name}{p.identity_masked ? ` (${t('fir.identityProtected')})` : ''}
+              {fir.case_team && (p.role === 'accused' || p.role === 'suspect') && <EarlierRecords firId={id} personId={p.id} label={p.label} />}</li>
           ))}</ul> : <p>{t('common.noneYet')}</p>}
           <AddPersonForm firId={id} onSaved={saved} />
         </section>

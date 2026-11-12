@@ -1252,5 +1252,15 @@
  "help.notInApp": "એપમાં આ નથી",
  "help.unsourced": "કોઈ સ્ક્રીનનું નામ નથી",
  "help.goTo": "{screen} ખોલો",
- "aiFeature.app_help": "એપ વાપરવામાં મદદ"
+ "aiFeature.app_help": "એપ વાપરવામાં મદદ",
+ "earlier.check": "{label} ના અગાઉના રેકોર્ડ તપાસો",
+ "earlier.checking": "તપાસી રહ્યા છીએ…",
+ "earlier.title": "{label} ના અગાઉના રેકોર્ડ",
+ "earlier.note": "આ રાજ્યની બીજી એફઆઈઆર જેમાં કોઈ આરોપી કે શંકાસ્પદનો એ જ ફોન, એ જ નામ અને પિતાનું નામ, કે જોડાયેલું ખાતું છે. મેળ ખાવો એ જ વ્યક્તિ હોવાનો પુરાવો નથી: બંને રેકોર્ડ ખોલીને નિર્ણય કરો. આ તપાસ નોંધાય છે.",
+ "earlier.none": "બીજી કોઈ એફઆઈઆરનો કોઈ આરોપી કે શંકાસ્પદ મેળ ખાતો નથી.",
+ "earlier.truncated": "ફક્ત નવીનતમ 100 બતાવ્યા છે.",
+ "earlier.match.phone": "એ જ ફોન",
+ "earlier.match.name_parentage": "એ જ નામ અને પિતાનું નામ",
+ "earlier.match.account": "જોડાયેલું ખાતું",
+ "audit.kind.involvement_search": "અગાઉના રેકોર્ડ તપાસ્યા"
 }

@@ -1252,5 +1252,15 @@
  "help.notInApp": "The app does not cover this",
  "help.unsourced": "names no screen",
  "help.goTo": "Open {screen}",
- "aiFeature.app_help": "Help with using the app"
+ "aiFeature.app_help": "Help with using the app",
+ "earlier.check": "Check earlier records of {label}",
+ "earlier.checking": "Checking…",
+ "earlier.title": "Earlier records of {label}",
+ "earlier.note": "Other FIRs of this state where an accused or suspect has the same phone, the same name and parentage, or a linked account. A match is not proof that it is the same person: open both records and decide. This check is logged.",
+ "earlier.none": "No accused or suspect in another FIR matches.",
+ "earlier.truncated": "Only the newest 100 are shown.",
+ "earlier.match.phone": "same phone",
+ "earlier.match.name_parentage": "same name and parentage",
+ "earlier.match.account": "linked account",
+ "audit.kind.involvement_search": "Earlier records checked"
 }
