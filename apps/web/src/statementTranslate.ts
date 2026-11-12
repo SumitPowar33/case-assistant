@@ -6,13 +6,13 @@
 export const TRANSLATE_PROMPT_VERSION = 'statement_translate/en@1'
 export const MAX_TRANSLATION = 40000
 
-const NAMES: Record<string, string> = {
-  hi: 'Hindi', mr: 'Marathi', bn: 'Bengali', pa: 'Punjabi', gu: 'Gujarati', or: 'Odia', ta: 'Tamil', te: 'Telugu', kn: 'Kannada', ml: 'Malayalam',
+export const LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English', hi: 'Hindi', mr: 'Marathi', bn: 'Bengali', pa: 'Punjabi', gu: 'Gujarati', or: 'Odia', ta: 'Tamil', te: 'Telugu', kn: 'Kannada', ml: 'Malayalam',
 }
 
 /** The text sent to the gateway. Written in English whatever the screen language. */
 export function translatePrompt(text: string, language: string): string {
-  const from = NAMES[language] ?? `the language with the code "${language}"`
+  const from = LANGUAGE_NAMES[language] ?? `the language with the code "${language}"`
   return [
     `Translate the witness statement below from ${from} into English.`,
     'Translate only: keep every name, number, date, time, amount and place exactly, and keep the order in which the person said things.',

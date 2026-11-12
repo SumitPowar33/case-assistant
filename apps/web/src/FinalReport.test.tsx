@@ -25,7 +25,7 @@ function stub(load: unknown, write: { status: number; body: unknown } = { status
 
 test('the officer writes both parts, saves the draft and submits it; the particulars come from the file', async () => {
   const calls = stub({ ...base, draft: draft('draft'), events: [{ at: '2026-11-02T04:30:00Z', action: 'saved', note: null, by_name: 'SI Fictional' }] })
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   expect(await screen.findByText(/sections BNS 318\(4\); 1 accused; 2 witnesses, 1 with a statement; 3 evidence items/)).toBeTruthy()
   expect(screen.getAllByText('Draft').length).toBe(1)
   fireEvent.change(screen.getByLabelText('Facts in brief'), { target: { value: FACTS + ' More.' } })
@@ -38,24 +38,24 @@ test('the officer writes both parts, saves the draft and submits it; the particu
 
 test('a new draft starts empty in the typing language, and the missing readiness check and open gaps are said before submitting', async () => {
   const calls = stub({ ...base, readinessChecked: false })
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   fireEvent.change(await screen.findByLabelText('Facts in brief'), { target: { value: FACTS } })
   fireEvent.click(screen.getByRole('button', { name: 'Save draft' }))
   await vi.waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true))
   expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ language: 'en', facts: FACTS, evidence: '' })
   cleanup()
   stub({ ...base, draft: draft('returned'), openGaps: 2 })
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   expect(await screen.findByText(/2 gap\(s\) of the readiness check are still open/)).toBeTruthy()
   cleanup()
   stub({ ...base, draft: draft('draft'), readinessChecked: false })
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   expect(await screen.findByText(/Choose a playbook and make the readiness check/)).toBeTruthy()
 })
 
 test('the station head sees Approve and Return on a submitted report of someone else, and a return needs the reason sent along', async () => {
   const calls = stub({ ...base, canApprove: true, draft: draft('submitted', { submitted_by: 'u2', submitted_by_name: 'SI Other' }) })
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   await screen.findByRole('button', { name: 'Approve' })
   expect(screen.queryByRole('button', { name: 'Submit for approval' })).toBeNull()
   expect(screen.queryByLabelText('Facts in brief')).toBeNull()     // the words are read-only now
@@ -70,17 +70,17 @@ test('the station head sees Approve and Return on a submitted report of someone 
 
 test('nobody sees Approve on their own submission, and only the submitting officer sees Sign on an approved report', async () => {
   stub({ ...base, canApprove: true, draft: draft('submitted') })
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   await screen.findByText('Submitted')
   expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
   cleanup()
   stub({ ...base, draft: draft('approved', { submitted_by: 'u2' }) })
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   await screen.findByText('Approved')
   expect(screen.queryByRole('button', { name: 'Sign the final report' })).toBeNull()
   cleanup()
   const calls = stub({ ...base, draft: draft('approved'), events: [{ at: '2026-11-02T05:00:00Z', action: 'returned', note: 'Add the call records.', by_name: 'SHO Fictional' }] })
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   expect(await screen.findByText('Add the call records.')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Sign the final report' }))
   await vi.waitFor(() => expect(calls.some((c) => c.url.endsWith('/sign'))).toBe(true))
@@ -88,25 +88,25 @@ test('nobody sees Approve on their own submission, and only the submitting offic
 
 test('a signed report shows who signed it, and a refusal from the server is shown', async () => {
   stub({ ...base, draft: draft('signed', { signed_by_name: 'SI Fictional' }) })
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   expect(await screen.findByText('Signed')).toBeTruthy()
   expect(screen.getByText(/SI Fictional/)).toBeTruthy()
   expect(screen.queryByRole('button')).toBeNull()
   cleanup()
   stub({ ...base, draft: draft('draft') }, { status: 409, body: { message: '2 gap(s) of the readiness check are open.' } })
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   fireEvent.click(await screen.findByRole('button', { name: 'Submit for approval' }))
   expect(await screen.findByRole('alert')).toBeTruthy()
 })
 
 test('a failed load is shown as an alert', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({ message: 'Boom' }) })))
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   expect(await screen.findByRole('alert')).toBeTruthy()
 })
 
 test('an answer without particulars or steps still shows the page', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => [] })))
-  render(<FinalReport firId="f1" me="u1" />)
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   expect(await screen.findByText(/Taken from the file: sections —; 0 accused/)).toBeTruthy()
 })

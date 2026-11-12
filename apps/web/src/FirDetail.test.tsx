@@ -134,7 +134,7 @@ test('the Ask part loads the case file only when it is chosen (opening a FIR mus
   expect(asked()).toContain('/api/firs/f1/case-file')
 })
 
-test('the AI fact check and section suggestion are on the case details part for the case team only, and not offered on a protected case', async () => {
+test('the AI fact check and section suggestion are on the case details part for the case team only, and no AI draft is offered on a protected case', async () => {
   const sections = { '/firs/f1/sections': { law: 'new', sections: [], charges: [] } }
   stub({ ...sections, '/firs/f1': { ...fir, case_team: false, victim_protected: false } })
   render(<FirDetail id="f1" />)
@@ -151,7 +151,9 @@ test('the AI fact check and section suggestion are on the case details part for 
   stub({ ...sections, '/firs/f1': { ...fir, case_team: true, victim_protected: true } })
   render(<FirDetail id="f1" />)
   await screen.findByText(/The offence is from 1 July 2024/)
-  expect(screen.getAllByText(/not offered on a case that protects the victim's identity/)).toHaveLength(2)
+  // the fact check, the section suggestion and the final report's AI draft (A6) each say so
+  expect(screen.getAllByText(/not offered on a case that protects the victim's identity/)).toHaveLength(3)
+  expect(screen.getByText(/The AI draft is not offered/)).toBeTruthy()
 })
 
 test('on a phone the FIR opens on Deadlines; a wide screen opens on Case details', async () => {
