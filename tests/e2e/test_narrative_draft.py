@@ -6,6 +6,7 @@ so the test puts a model's answer in its draft: one sentence from the FIR, one f
 and one whose quote is in no piece of the file. Only the two grounded sentences are shown; the IO ticks both, they go
 into the two parts with their sources, the decision reaches the gateway's log, and the save names the request: after a
 reload the words are kept and the step shows it took AI-drafted sentences. Fictional data only."""
+from conftest import no_tour
 import json
 import re
 import sys
@@ -39,7 +40,7 @@ def test_an_officer_takes_ai_drafted_sentences_with_their_sources_into_the_final
     sent = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = no_tour(browser.new_page(viewport={"width": 1280, "height": 900}))
         page.set_default_timeout(15000)
         page.on("request", lambda r: sent.append(r.url.rsplit("/", 1)[-1]) if "/ai/v1/" in r.url else None)
         page.goto(web)

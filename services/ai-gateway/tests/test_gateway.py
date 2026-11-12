@@ -222,6 +222,14 @@ def test_the_law_explain_feature_is_known_and_logs_without_a_case_reference():
     assert [(a["action"], a["feature"], a["case_ref"]) for a in store.audit_rows()][:2] == [("accepted", "law_explain", None), ("ai_request", "law_explain", None)]
 
 
+def test_the_help_chat_reads_no_case_and_needs_no_case_reference():
+    store = Store(":memory:")
+    c = client(store, {"fake": FakeProvider()})
+    c.put("/v1/settings/app_help", json={"provider": "fake"})
+    r = c.post("/v1/generate", json={"feature": "app_help", "prompt": "How do I register an FIR?", "prompt_version": "app_help/guide@1"})
+    assert r.status_code == 200 and store.audit_rows()[0]["case_ref"] is None
+
+
 def test_every_call_needs_a_valid_login_token():
     store = Store(":memory:")
     app = create_app(store, {"fake": FakeProvider()}, SECRET, core_says_active)

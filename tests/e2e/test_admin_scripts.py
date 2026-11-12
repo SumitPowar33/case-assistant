@@ -9,7 +9,7 @@ import sys
 import pytest
 from playwright.sync_api import expect, sync_playwright
 
-from conftest import ROOT, running_core, serving_web
+from conftest import ROOT, running_core, serving_web, no_tour
 from test_ai_gateway import running_gateway
 from test_indian_scripts import language_problems
 from test_load_data import sign_in
@@ -37,7 +37,7 @@ def test_the_admin_screens_are_drawn_with_real_glyphs_and_fit(admin_web, width):
     web, admin, password, _ = admin_web
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": width, "height": 900})
+        page = no_tour(browser.new_page(viewport={"width": width, "height": 900}))
         page.set_default_timeout(15000)
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))

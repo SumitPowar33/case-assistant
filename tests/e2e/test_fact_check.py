@@ -4,6 +4,7 @@ goes through the real gateway (logged there); the offline provider only echoes t
 answer in place of its draft: two facts that point at the FIR text and one that does not. The IO corrects and confirms one,
 marks one wrong, finishes the check (the decision reaches the gateway's log), and the confirmed fact is read back from the
 core with its quote after a reload. Fictional data only."""
+from conftest import no_tour
 import json
 
 from playwright.sync_api import expect, sync_playwright
@@ -23,7 +24,7 @@ def test_an_officer_confirms_the_facts_the_ai_found_in_the_fir(admin_web):  # no
     sent = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = no_tour(browser.new_page(viewport={"width": 1280, "height": 900}))
         page.set_default_timeout(15000)
         page.on("request", lambda r: sent.append(r.url.rsplit("/", 1)[-1]) if "/ai/v1/" in r.url else None)
         page.goto(web)
