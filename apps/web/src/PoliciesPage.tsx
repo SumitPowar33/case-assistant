@@ -50,13 +50,13 @@ export default function PoliciesPage() {
   return (
     <>
       <h1>{t('policies.title')}</h1>
-      <p>{t('policies.intro')}</p>
+      <p className="lede">{t('policies.intro')}</p>
       {error && <p role="alert">{error}</p>}
       {done && <p role="status">{done}</p>}
-      <table>
+      <table className="cards">
         <caption>{t('policies.caption')}</caption>
         <thead><tr><th scope="col">{t('policies.colPolicy')}</th><th scope="col">{t('policies.colValue')}</th><th scope="col">{t('policies.colRange')}</th></tr></thead>
-        <tbody>{policies.map((p) => <tr key={p.key}><th scope="row">{p.label}</th><td>{p.effective}</td><td>{t('policies.range', { min: p.min, max: p.max })}</td></tr>)}</tbody>
+        <tbody>{policies.map((p) => <tr key={p.key}><th scope="row">{p.label}</th><td data-label={t('policies.colValue')}>{p.effective}</td><td data-label={t('policies.colRange')}>{t('policies.range', { min: p.min, max: p.max })}</td></tr>)}</tbody>
       </table>
       {currentSession()?.user.can_set_policy && <form onSubmit={save} aria-label={t('policies.formTitle')}>
         <h2>{t('policies.formTitle')}</h2>

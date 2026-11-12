@@ -24,7 +24,7 @@ export default function AuditPage() {
   return (
     <>
       <h1>{t('audit.title')}</h1>
-      <p>{t('audit.intro')}</p>
+      <p className="lede">{t('audit.intro')}</p>
       <label>{t('common.policeStation')} <select value={station ?? ''} onChange={(e) => setChosen(e.target.value)}>
         {stations.data.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.district})</option>)}
       </select></label>
