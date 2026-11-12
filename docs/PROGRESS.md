@@ -146,6 +146,13 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
 
+## 12 Nov 2026, murder playbook (Sumit present, local demo run)
+- Done: `packs/IN/playbooks/murder.v1.json` (draft): BNS 103(1) with four ingredients (death, cause of death, act of the accused, intention under BNS 101), rules for BNSS 176(3), 194, 105, 106, BSA 23 and 63(4), and the scene-to-filing tasks. A murder FIR could not reach a signed final report before: submitting needs a playbook (`FinalReportController`) and the only one was cyber-fraud. Checked by hand on a fictional murder FIR: readiness check, 0 gaps once E1 and E3 were linked, submitted, approved by the SHO, signed, chargesheet recorded.
+- Tests: packs and repo rules pass; `scripts/test-all.sh --no-db` passed on Sumit's machine (gateway 99.5%, web, xlit). Not run there: the core, database and e2e suites (no `caseapp_test` database on that machine).
+- Risks: the ingredient and rule texts are a reading of BNS 101/103 and BNSS; a draft until the Directorate of Prosecution reviews it. No murder demo case in `scripts/demo_case.py` and no e2e test of the murder playbook.
+- Fixed: Gemini counts its thinking in `maxOutputTokens`; with the request's 1024 a Gemini 3 model thought for 825 tokens and the fact check answer was cut off ("could not be read as a list of facts"). `GeminiProvider` now asks for `max_tokens` + the installation's `GEMINI_THINKING_TOKENS` (environment, no value in the code; unset = none) and refuses an answer with `finishReason` MAX_TOKENS, naming the variable; regression test in `test_gateway.py`. Checked live: the fact check of a fictional murder FIR lists dates, times and places. Risk: a Gemini call may bill up to `GEMINI_THINKING_TOKENS` more output tokens of thinking (8192 on Sumit's local run; about 800 used in tests); an installation that does not set it gets the old limit and a clear error. Not fixed: the default Gemini model `gemini-3.7-flash` is not served to a new API key (`gemini-3-flash-preview` is); set per state on the AI settings screen.
+- Questions for Sumit: 1. Change the default Gemini model in `store.py` to one a new key can use? 2. Should a prosecutor review the murder playbook before it is offered outside demos?
+
 ## 12 Nov 2026, session 92 (on-demand run from about 13:00 IST, Sumit away)
 Started from `setup/seed` at 6f02697 (session 91's push, same container). Baseline `scripts/test-all.sh`: all 8 suites PASS.
 

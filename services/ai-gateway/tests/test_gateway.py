@@ -377,6 +377,28 @@ def test_gemini_error_status_empty_candidates_and_system_text():
     assert seen[0]["systemInstruction"]["parts"][0]["text"] == "be brief"
 
 
+def test_gemini_thinking_room_comes_from_the_environment_and_a_cut_off_answer_is_an_error(monkeypatch):
+    """Gemini counts its thinking in maxOutputTokens: with 1024 a Gemini 3 model thought for 825 tokens and the fact
+    list came back cut off mid-JSON. The room for thinking is the installation's GEMINI_THINKING_TOKENS (none if unset),
+    on top of the answer's max_tokens, and a cut-off answer is never passed on: the error names the variable."""
+    seen = []
+
+    def ok(r):
+        seen.append(json.loads(r.content))
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "Fictional answer"}]}, "finishReason": "STOP"}]})
+    monkeypatch.setenv("GEMINI_THINKING_TOKENS", "3000")
+    call(GeminiProvider("k", mock_client(ok)))
+    monkeypatch.delenv("GEMINI_THINKING_TOKENS")
+    call(GeminiProvider("k", mock_client(ok)))
+    assert [s["generationConfig"]["maxOutputTokens"] for s in seen] == [50 + 3000, 50]
+    monkeypatch.setenv("GEMINI_THINKING_TOKENS", "lots")
+    with pytest.raises(ValueError):
+        GeminiProvider("k")
+    cut = {"candidates": [{"content": {"parts": [{"text": "[{\"kind\": \"ti"}]}, "finishReason": "MAX_TOKENS"}]}
+    with pytest.raises(ProviderError, match="cut off.*GEMINI_THINKING_TOKENS"):
+        call(GeminiProvider("k", mock_client(lambda r: httpx.Response(200, json=cut)), thinking_tokens=0))
+
+
 def test_admin_settings_follow_the_permission_from_the_core_never_the_role_name():
     store = Store(":memory:")
     put = lambda me: TestClient(create_app(store, {"fake": FakeProvider()}, SECRET, lambda tok, sub: {**me, "id": sub}),
