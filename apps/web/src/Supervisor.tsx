@@ -33,7 +33,7 @@ export default function Supervisor() {
         <span className="chip c-warn">{t('sup.due', { n: data.due_in_21_days })}</span>
       </p>
       {data.cases.length === 0 ? <p>{t('sup.none')}</p> : (
-        <table>
+        <table className="cards">
           <caption>{t('sup.caption')}</caption>
           <thead><tr>
             {(['Case', 'Offence', 'Io', 'Deadline', 'Gaps', 'Report'] as const).map((c) => <th key={c} scope="col">{t(`sup.col${c}`)}</th>)}
@@ -41,13 +41,13 @@ export default function Supervisor() {
           </tr></thead>
           <tbody>{data.cases.map((r) => (
             <tr key={r.id}>
-              <td>{t('fir.title', { no: r.fir_no, year: r.fir_year })}</td>
-              <td>{r.sections}</td>
-              <td>{r.io_name ? `${r.io_name} (${r.io_rank})` : t('sup.noIo')}</td>
-              <td>{r.due_on && r.deadline_kind && r.days_left !== null
+              <td data-label={t('sup.colCase')}>{t('fir.title', { no: r.fir_no, year: r.fir_year })}</td>
+              <td data-label={t('sup.colOffence')}>{r.sections}</td>
+              <td data-label={t('sup.colIo')}>{r.io_name ? `${r.io_name} (${r.io_rank})` : t('sup.noIo')}</td>
+              <td data-label={t('sup.colDeadline')}>{r.due_on && r.deadline_kind && r.days_left !== null
                 ? <>{kind(r.deadline_kind)}<div className="sub">{r.due_on} · {left(r.days_left)}</div></> : t('sup.noDeadline')}</td>
-              <td>{r.open_gaps > 0 ? <span className="chip c-crit">{r.open_gaps}</span> : t('sup.noGaps')}</td>
-              <td>{r.report_status ? <span className={`chip ${STATUS_CHIP[r.report_status] ?? 'c-neu'}`}>{t.code('frStatus', r.report_status)}</span> : t('sup.notStarted')}</td>
+              <td data-label={t('sup.colGaps')}>{r.open_gaps > 0 ? <span className="chip c-crit">{r.open_gaps}</span> : t('sup.noGaps')}</td>
+              <td data-label={t('sup.colReport')}>{r.report_status ? <span className={`chip ${STATUS_CHIP[r.report_status] ?? 'c-neu'}`}>{t.code('frStatus', r.report_status)}</span> : t('sup.notStarted')}</td>
               <td><a className="btn" href={`#/firs/${r.id}/finalReport`}>{t('sup.review')}</a></td>
             </tr>
           ))}</tbody>

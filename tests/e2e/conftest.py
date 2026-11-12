@@ -168,12 +168,23 @@ def web(core):
         yield url
 
 
+# The tour starts by itself at a user's first sign-in on a browser (apps/web/src/Guide.tsx) and covers part of the page;
+# the tests of other screens begin as a user who has seen it. test_tour_help.py checks the tour itself.
+NO_TOUR = ("Storage.prototype.getItem = (get => function (k) { return String(k).startsWith('tour-seen:') ? '1' : get.call(this, k) })"
+           "(Storage.prototype.getItem)")
+
+
+def no_tour(pg):
+    pg.add_init_script(NO_TOUR)
+    return pg
+
+
 @pytest.fixture
 def page(web):
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        pg = browser.new_page()
+        pg = no_tour(browser.new_page())
         pg.set_default_timeout(15000)
         errors = []
         pg.on("pageerror", lambda e: errors.append(str(e)))

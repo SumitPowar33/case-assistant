@@ -18,9 +18,10 @@ export default function FirList() {
   if (!data) return <p>{t('common.loading')}</p>
   return (
     <>
+    <h1>{t('nav.firs')}</h1>
     <NewFirForm />
     {!data.length ? <p>{t('firs.empty')}</p> : <table className="cards">
-      <caption>{t('nav.firs')}</caption>
+      <caption className="visually-hidden">{t('nav.firs')}</caption>
       <thead><tr><th scope="col">{t('firs.colFir')}</th><th scope="col">{t('firs.colRegistered')}</th><th scope="col">{t('firs.colType')}</th><th scope="col">{t('firs.colAction')}</th></tr></thead>
       <tbody>
         {data.map((f) => (

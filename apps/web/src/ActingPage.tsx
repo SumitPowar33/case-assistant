@@ -25,7 +25,7 @@ export default function ActingPage() {
   return (
     <>
       <h1>{t('acting.title')}</h1>
-      <p>{t('acting.intro')}</p>
+      <p className="lede">{t('acting.intro')}</p>
       <label>{t('common.policeStation')} <select value={station ?? ''} onChange={(e) => setChosen(e.target.value)}>
         {stations.data.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.district})</option>)}
       </select></label>

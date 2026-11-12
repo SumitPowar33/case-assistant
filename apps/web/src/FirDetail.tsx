@@ -25,7 +25,7 @@ import { PARTS, PART_LABEL, type Part } from './firParts'
 type Fir = { id: string; fir_year: number; fir_no: number; registered_at: string; is_zero_fir: boolean; contents_original: string | null; contents_withheld: boolean; victim_protected: boolean; case_team: boolean; action_taken: string; io_name: string | null; sections: { act: string; section: string }[] }
 type Person = { id: string; role: string; label: string; display_name: string; age_years: number | null; identity_masked: boolean }
 type Deadline = { kind: string; due_on: string; basis: string }
-type Evidence = { id: string; label: string; kind: string; sha256: string | null; court_ready: boolean }
+type Evidence = { id: string; label: string; kind: string; description: string | null; sha256: string | null; court_ready: boolean }
 
 /** A deadline kind from the case_deadline view; a notice reply comes as notice_reply:<addressee>. */
 function deadlineLabel(t: ReturnType<typeof useT>, kind: string) {
@@ -112,6 +112,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
             <li key={e.id} className="card"><strong>{e.label}</strong> ({t.code('evidenceKind', e.kind)})
               {e.kind === 'electronic' && <> <span className={`chip ${e.court_ready ? 'c-ok' : 'c-warn'}`}>{t(e.court_ready ? 'evidence.courtReady' : 'evidence.notCourtReady')}</span></>}
               {e.sha256 && <> · <code title={e.sha256}>{e.sha256.slice(0, 4)}…{e.sha256.slice(-4)}</code></>}
+              {e.description && <div className="sub">{e.description}</div>}
               {e.kind === 'electronic' && <Certificates firId={id} item={e} onSaved={saved} />}</li>
           ))}</ul>}
         </Section>

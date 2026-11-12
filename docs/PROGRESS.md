@@ -146,6 +146,24 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
 
+## 12 Nov 2026, tour and help chat (Sumit present)
+- Asked by Sumit: a first-run tour of which screen does what, and a support chat that answers "how do I fill an FIR" from the app itself, no static answers.
+- One list of screens (`screens.ts`, `screensFor`) now drives the menu, the tour and the chat, filtered by the user's permissions exactly as the menu was; each screen names its plain sentence (an existing `*.intro`/`*.lede` where there was one, new `about.*` otherwise) and the key prefixes of its own texts.
+- Tour (`Guide.tsx`, `Tour`): a welcome, then one step per screen in menu order that opens it and says what it is for; starts by itself once per user on this browser (browser storage; without it only offered), again from "Take the tour" in the top strip. FIR parts are toured only when an FIR is open.
+- Help chat (`Guide.tsx`, `HelpChat`; `appHelp.ts`; gateway feature `app_help`, prompt `app_help/guide@1`): sends the question, every screen's name and sentence, and the texts (labels, buttons, messages from the catalogs) of the open screen and the 3 that match the question best (BM25, `askFile.retrieve`); never case data, no `case_ref`. The answer must name screens as [S#]; those become links; none named is marked, "NOT IN THE APP" is shown as such. Audit-logged by the gateway like every AI call.
+- 36 new texts in all 11 catalogs (10 are drafts like the rest). Phone and desktop checked (no overflow); the panel floats bottom right, full width on a phone.
+- Not done: no board for the tour or chat (no `docs/design/boards` file; follows the shared classes); no useful/wrong verdict buttons on help answers; no e2e test. Not checked live with Gemini: this machine's VPN DNS answers 0.0.0.0 for generativelanguage.googleapis.com; checked with the offline provider. A new gateway feature defaults to Claude: an installation without a Claude key sets `app_help` on the AI settings screen.
+
+## 12 Nov 2026, layout pass over every screen (Sumit present)
+- Every signed-in screen photographed at 1440 px and 390 px (34 screens, 4 roles) before and after; no new colours, components or texts.
+- Fixed: the case diary was 339 px wider than a phone (a sentence shown as a one-line chip); a chip now wraps inside its column and a sentence chip keeps soft corners. The tab title read "Vite + React + TS"; now "Case Assistant".
+- Each screen opens the board's way (DESIGN.md "Frame"): h1 and its plain sentence above the cards on FIRs (h1 added; the table caption stays for screen readers), Front desk, Old to new law, Load data, Admin; the intro of Policies, AI settings, Audit, Protected reads, State setup and Acting charge now reads as the lede.
+- Phone: the tables of Case property (both), Supervisor review, Policies and AI settings are cards with each value's column name (`table.cards`), as the FIR list already was; before, words stood one per line and the status column was cut off. Admin tables still scroll sideways (desk use).
+- A row's own name (`tbody th`: a policy, an AI feature) reads as content, no longer as a small grey capital column title. `.sub` (the second line under a value) is styled everywhere, not only on the dashboard.
+- Evidence: each item shows its description (the API already sent it), not only "E1 (physical)".
+- Tests: web 448 pass, coverage 99.97/97.1, lint and build clean.
+- Not changed (differences kept): the readiness check still shows a Link picker under every ingredient, also a linked one (more than one item may be linked); the Register a new FIR and Take a complaint forms stay folded; Admin has no board.
+
 ## 12 Nov 2026, murder playbook (Sumit present, local demo run)
 - Done: `packs/IN/playbooks/murder.v1.json` (draft): BNS 103(1) with four ingredients (death, cause of death, act of the accused, intention under BNS 101), rules for BNSS 176(3), 194, 105, 106, BSA 23 and 63(4), and the scene-to-filing tasks. A murder FIR could not reach a signed final report before: submitting needs a playbook (`FinalReportController`) and the only one was cyber-fraud. Checked by hand on a fictional murder FIR: readiness check, 0 gaps once E1 and E3 were linked, submitted, approved by the SHO, signed, chargesheet recorded.
 - Tests: packs and repo rules pass; `scripts/test-all.sh --no-db` passed on Sumit's machine (gateway 99.5%, web, xlit). Not run there: the core, database and e2e suites (no `caseapp_test` database on that machine).

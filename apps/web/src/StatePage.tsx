@@ -27,7 +27,7 @@ export default function StatePage() {
   return (
     <>
       <h1>{t('state.title')}</h1>
-      <p>{t('state.intro')}</p>
+      <p className="lede">{t('state.intro')}</p>
       {!own && <label>{t('state.code')} <input value={typed} maxLength={3} onChange={(e) => setTyped(e.target.value)} /></label>}
       {(own || /^[A-Z]{2,3}$/.test(state)) && <Pack key={state} state={own ? '' : state} />}
     </>

@@ -74,8 +74,9 @@ export default function AdminPage() {
 
   if (!accounts) return <section><h1>{t('admin.title')}</h1>{error ? <p role="alert">{error}</p> : <p>{t('common.loading')}</p>}</section>
   return (
+    <>
+    <h1>{t('admin.title')}</h1>
     <section>
-      <h1>{t('admin.title')}</h1>
       {error && <p role="alert">{error}</p>}
       {done && <p role="status">{done}</p>}
 
@@ -158,6 +159,7 @@ export default function AdminPage() {
             actor: l.actor_name })}{l.reason ? `. ${t('io.reasonShown', { reason: l.reason })}` : ''}</li>))}
         </ul>)}
     </section>
+    </>
   )
 }
 

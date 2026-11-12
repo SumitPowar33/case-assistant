@@ -16,11 +16,14 @@ export default function LawFinder() {
   const laws = [...new Map(entries.map((e) => [e.law, e.newLaw])).entries()]
   const shown = entries.filter((e) => (!law || e.law === law) && (!q || [e.from, e.to ?? '', e.what, `${e.law} ${e.from}`, `${e.newLaw} ${e.to ?? ''}`].some((s) => s.toLowerCase().includes(q))))
   return (
+    <>
+    <div>
+      <h1 id="laws-title">{t('laws.title')}</h1>
+      <p className="lede">{t('laws.intro')}</p>
+    </div>
     <section aria-labelledby="laws-title">
-      <h2 id="laws-title">{t('laws.title')}</h2>
       {error ? <p role="alert">{error}</p> : !data ? <p>{t('common.loading')}</p> : (
         <>
-          <p>{t('laws.intro')}</p>
           {data.status !== 'reviewed' && <p><strong>{t('laws.draft')}</strong></p>}
           <label>{t('laws.search')} <input type="search" value={find} onChange={(e) => setFind(e.target.value)} /></label>
           <div className="chips" role="group" aria-label={t('laws.title')}>
@@ -48,5 +51,6 @@ export default function LawFinder() {
         </>
       )}
     </section>
+    </>
   )
 }
