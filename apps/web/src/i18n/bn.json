@@ -1252,5 +1252,15 @@
  "help.notInApp": "অ্যাপে এটি নেই",
  "help.unsourced": "কোনো স্ক্রিনের নাম নেই",
  "help.goTo": "{screen} খুলুন",
- "aiFeature.app_help": "অ্যাপ ব্যবহারে সাহায্য"
+ "aiFeature.app_help": "অ্যাপ ব্যবহারে সাহায্য",
+ "earlier.check": "{label}-এর আগের রেকর্ড দেখুন",
+ "earlier.checking": "দেখা হচ্ছে…",
+ "earlier.title": "{label}-এর আগের রেকর্ড",
+ "earlier.note": "এই রাজ্যের অন্য এফআইআর যেখানে কোনো অভিযুক্ত বা সন্দেহভাজনের একই ফোন, একই নাম ও পিতার নাম, বা যুক্ত অ্যাকাউন্ট আছে। মিল মানেই একই ব্যক্তি নয়: দুটি রেকর্ড খুলে সিদ্ধান্ত নিন। এই যাচাই লিখে রাখা হয়।",
+ "earlier.none": "অন্য কোনো এফআইআরের অভিযুক্ত বা সন্দেহভাজন মেলেনি।",
+ "earlier.truncated": "শুধু নতুনতম 100টি দেখানো হয়েছে।",
+ "earlier.match.phone": "একই ফোন",
+ "earlier.match.name_parentage": "একই নাম ও পিতার নাম",
+ "earlier.match.account": "যুক্ত অ্যাকাউন্ট",
+ "audit.kind.involvement_search": "আগের রেকর্ড দেখা হয়েছে"
 }

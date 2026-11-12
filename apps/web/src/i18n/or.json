@@ -1252,5 +1252,15 @@
  "help.notInApp": "ଆପରେ ଏହା ନାହିଁ",
  "help.unsourced": "କୌଣସି ସ୍କ୍ରିନର ନାମ ନାହିଁ",
  "help.goTo": "{screen} ଖୋଲନ୍ତୁ",
- "aiFeature.app_help": "ଆପ ବ୍ୟବହାରରେ ସାହାଯ୍ୟ"
+ "aiFeature.app_help": "ଆପ ବ୍ୟବହାରରେ ସାହାଯ୍ୟ",
+ "earlier.check": "{label} ର ପୂର୍ବ ରେକର୍ଡ ଯାଞ୍ଚ କରନ୍ତୁ",
+ "earlier.checking": "ଯାଞ୍ଚ ହେଉଛି…",
+ "earlier.title": "{label} ର ପୂର୍ବ ରେକର୍ଡ",
+ "earlier.note": "ଏହି ରାଜ୍ୟର ଅନ୍ୟ ଏଫଆଇଆର ଯେଉଁଥିରେ କୌଣସି ଅଭିଯୁକ୍ତ ବା ସନ୍ଦିଗ୍ଧର ସେହି ଫୋନ, ସେହି ନାମ ଓ ପିତାଙ୍କ ନାମ, ବା ଯୋଡ଼ା ଖାତା ଅଛି। ମେଳ ହେବା ସେହି ବ୍ୟକ୍ତି ହେବାର ପ୍ରମାଣ ନୁହେଁ: ଦୁଇଟି ରେକର୍ଡ ଖୋଲି ନିଷ୍ପତ୍ତି ନିଅନ୍ତୁ। ଏହି ଯାଞ୍ଚ ଲେଖାଯାଏ।",
+ "earlier.none": "ଅନ୍ୟ କୌଣସି ଏଫଆଇଆରର ଅଭିଯୁକ୍ତ ବା ସନ୍ଦିଗ୍ଧ ମେଳ ହେଉନାହିଁ।",
+ "earlier.truncated": "କେବଳ ନୂଆ 100ଟି ଦେଖାଯାଇଛି।",
+ "earlier.match.phone": "ସେହି ଫୋନ",
+ "earlier.match.name_parentage": "ସେହି ନାମ ଓ ପିତାଙ୍କ ନାମ",
+ "earlier.match.account": "ଯୋଡ଼ା ଖାତା",
+ "audit.kind.involvement_search": "ପୂର୍ବ ରେକର୍ଡ ଯାଞ୍ଚ ହେଲା"
 }
