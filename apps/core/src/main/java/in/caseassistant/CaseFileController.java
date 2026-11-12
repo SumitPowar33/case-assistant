@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * The passages of one case that "Ask the case file" (design board 19) may answer from: the complaint, the statements and
- * their checked English translations, the diary, the evidence descriptions and the notices. Only this case, only for its team (ReadAccess answers 404 to
+ * their checked English translations, the diary, the evidence descriptions, the notices, the requests to a lab or hospital with
+ * their step notes, the court events and the search and seizure memos. Only this case, only for its team (ReadAccess answers 404 to
  * anyone else); a person is named by their label, never by name. The question and the answer are made in the browser and
  * the AI gateway; nothing from another case or any search across cases is possible here. A protected case's read is
  * logged like its FIR text.
@@ -53,6 +54,20 @@ class CaseFileController {
         add(rows, "notice", db.sql("""
                 select 'Notice ' || kind || ' to ' || addressee || ' (' || status || ')' as title, body as text from notice
                 where fir_id = ? order by id limit 100""").params(firId));
+        // session 93 (item 17): what the lab or hospital was asked and every step's note, the court events, the search memos
+        add(rows, "expert", db.sql("""
+                select 'Request to ' || r.sent_to || ' (' || r.kind || '), sent ' || to_char(r.sent_on, 'DD Mon YYYY') as title,
+                       r.subject || coalesce(' | ' || (select string_agg(st.status || ' ' || to_char(st.on_date, 'DD Mon YYYY') || coalesce(': ' || st.note, ''), '; ' order by st.recorded_at)
+                                                       from expert_request_step st where st.request_id = r.id), '') as text
+                from expert_request r where r.fir_id = ? order by r.sent_on, r.id limit 100""").params(firId));
+        add(rows, "court", db.sql("""
+                select 'Court event ' || kind || ', ' || to_char(on_date, 'DD Mon YYYY') as title,
+                       concat_ws(' | ', court, 'case no ' || case_no, note) as text
+                from court_event where fir_id = ? order by on_date, id limit 100""").params(firId));
+        add(rows, "search", db.sql("""
+                select 'Search and seizure memo, ' || to_char(ist_date(started_at), 'DD Mon YYYY') as title,
+                       place || ' | ' || grounds || coalesce(' | no witness: ' || no_witness_reason, '') as text
+                from search_seizure where fir_id = ? order by started_at, id limit 100""").params(firId));
         if (!rows.isEmpty() && team.identityProtected(firId)) reads.fir(me, firId, "fir_text");
         var out = new LinkedHashMap<String, Object>();
         out.put("passages", rows);

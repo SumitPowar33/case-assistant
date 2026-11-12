@@ -21,6 +21,9 @@ const FILE: Passage[] = [
   { id: 'P7', kind: 'evidence', title: 'Evidence E1', text: 'Bank statement of the complainant showing three debits on 21 August 2026 to account XXXX4471.' },
   { id: 'P8', kind: 'evidence', title: 'Evidence E2', text: 'Pen drive with the CCTV footage of the bank branch, sealed.' },
   { id: 'P9', kind: 'notice', title: 'Notice BNSS 94 to Fictional Bank (replied)', text: 'Give the account holder details, KYC and the statement of account XXXX4471 from 1 August 2026, with the BSA 63(4) certificate.' },
+  { id: 'P10', kind: 'expert', title: 'Request to Fictional Regional Lab (forensic), sent 10 Nov 2026', text: 'Fictional phone image | sent 10 Nov 2026; at_lab 12 Nov 2026: the lab says the chat of 21 August was deleted' },
+  { id: 'P11', kind: 'court', title: 'Court event cognizance, 15 Dec 2026', text: 'Fictional JMFC Court | case no CC 12/2026 | next date 3 January' },
+  { id: 'P12', kind: 'search', title: 'Search and seizure memo, 06 Nov 2026', text: 'Fictional shop, Demo Road | grounds: the phone was believed to be kept in the shop' },
 ]
 
 // question, the piece(s) that must be among the first three
@@ -37,6 +40,9 @@ const FOUND: [string, string[]][] = [
   ['What did the telecom company reply?', ['P6']],
   ['Was the KYC asked for?', ['P9']],
   ['How many transfers were made?', ['P1']],
+  ['What did the lab say about the chat?', ['P10']],
+  ['What is the next date in the court?', ['P11']],
+  ['Where was the shop searched and why?', ['P12']],
 ]
 
 describe('the evaluation set of Ask the case file', () => {

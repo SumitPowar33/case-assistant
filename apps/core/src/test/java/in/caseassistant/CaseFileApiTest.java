@@ -114,4 +114,39 @@ class CaseFileApiTest {
         assertThat(p.toString()).doesNotContain("Fictional Cashier Name");
         assertThat(read(other, io).toString()).doesNotContain("cashier");
     }
+
+    @Test
+    void expertRequestsCourtEventsAndSearchMemosAreAlsoPassagesOfThisCaseOnly() throws Exception {
+        // session 93 (item 17)
+        UUID req = db.sql("insert into expert_request (fir_id, kind, subject, sent_to, sent_on, recorded_by) values (?, 'forensic', 'Fictional phone image', 'Fictional Regional Lab', date '2026-09-01', ?) returning id")
+                .params(fir, ioId).query(UUID.class).single();
+        db.sql("insert into expert_request_step (request_id, fir_id, status, on_date, note, recorded_by) values (?,?,'sent',date '2026-09-01',null,?)").params(req, fir, ioId).update();
+        db.sql("insert into expert_request_step (request_id, fir_id, status, on_date, note, recorded_by) values (?,?,'report_received',date '2026-09-20','Fictional: report says the chat was deleted',?)").params(req, fir, ioId).update();
+        db.sql("insert into court_event (fir_id, kind, on_date, court, case_no, note, recorded_by) values (?, 'cognizance', date '2026-10-05', 'Fictional JMFC Court', 'CC 12/2026', 'Fictional: next date 3 Dec', ?)").params(fir, ioId).update();
+        db.sql("insert into court_event (fir_id, kind, on_date, recorded_by) values (?, 'other', date '2026-10-06', ?)").params(fir, ioId).update();
+        db.sql("""
+                with m as (insert into search_seizure (fir_id, place, grounds, started_at, ended_at, no_witness_reason, recorded_by)
+                           values (?, 'Fictional shop, Demo Road', 'Fictional grounds: phone believed kept here', now() - interval '3 hours', now() - interval '2 hours', 'Fictional: no resident agreed to witness', ?)
+                           returning id)
+                insert into search_recording (search_id, fir_id, sha256, seconds) select id, ?, ?, 600 from m""").params(fir, ioId, fir, "c".repeat(64)).update();
+        // the same kinds in another case must not appear
+        UUID req2 = db.sql("insert into expert_request (fir_id, kind, subject, sent_to, sent_on, recorded_by) values (?, 'medical', 'Fictional bicycle injury', 'Fictional Hospital', date '2026-09-01', ?) returning id")
+                .params(other, ioId).query(UUID.class).single();
+        db.sql("insert into expert_request_step (request_id, fir_id, status, on_date, recorded_by) values (?,?,'sent',date '2026-09-01',?)").params(req2, other, ioId).update();
+
+        JsonNode p = read(fir, io);
+        assertThat(p).hasSize(5);
+        assertThat(p.get(1).get("kind").asText()).isEqualTo("expert");
+        assertThat(p.get(1).get("title").asText()).isEqualTo("Request to Fictional Regional Lab (forensic), sent 01 Sep 2026");
+        assertThat(p.get(1).get("text").asText()).isEqualTo("Fictional phone image | sent 01 Sep 2026; report_received 20 Sep 2026: Fictional: report says the chat was deleted");
+        assertThat(p.get(2).get("kind").asText()).isEqualTo("court");
+        assertThat(p.get(2).get("title").asText()).isEqualTo("Court event cognizance, 05 Oct 2026");
+        assertThat(p.get(2).get("text").asText()).isEqualTo("Fictional JMFC Court | case no CC 12/2026 | Fictional: next date 3 Dec");
+        assertThat(p.get(3).get("title").asText()).isEqualTo("Court event other, 06 Oct 2026");
+        assertThat(p.get(3).get("text").asText()).isEmpty();
+        assertThat(p.get(4).get("kind").asText()).isEqualTo("search");
+        assertThat(p.get(4).get("text").asText()).isEqualTo("Fictional shop, Demo Road | Fictional grounds: phone believed kept here | no witness: Fictional: no resident agreed to witness");
+        assertThat(p.toString()).doesNotContain("bicycle injury").doesNotContain("Fictional Hospital");
+        assertThat(read(other, io).get(1).get("title").asText()).isEqualTo("Request to Fictional Hospital (medical), sent 01 Sep 2026");
+    }
 }
