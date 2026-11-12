@@ -67,6 +67,21 @@ test('a BNSS 94 notice needs items; sending now needs the issue time and is sent
     aiRequestId: null, status: 'sent', issuedAt: '2026-10-05T10:00:00+05:30', replyDueOn: '2026-10-12' })
 })
 
+test('a BNSS 106 freeze notice must name the accounts to freeze', async () => {
+  const writes = stub({ '/firs/f1/notices': [] })
+  render(<Notices firId="f1" />)
+  await screen.findByText('None yet.')
+  fireEvent.change(screen.getByLabelText('Kind'), { target: { value: 'BNSS_106' } })
+  type('To', 'Nodal Officer, Fictional Bank')
+  type('Text of the notice', 'Debit-freeze the accounts listed.')
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  expect((await screen.findByRole('alert')).textContent).toMatch(/must list the accounts to freeze/)
+  type(/Items to produce/, 'FICT 0000 4471')
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0].body).toMatchObject({ kind: 'BNSS_106', itemsRequested: ['FICT 0000 4471'], status: 'draft' })
+})
+
 test('a draft can be signed and sent; it offers no reply form', async () => {
   const writes = stub({ '/firs/f1/notices': [{ ...sent, status: 'draft', issued_at: null, signed_by_name: null, replies: 0, items_missing: sent.items_requested }] },
     { status: 204, body: null })
@@ -113,7 +128,7 @@ test('an AI draft is shown apart, used only when the officer chooses, and an edi
   const box = await screen.findByRole('region', { name: 'AI draft' })
   expect(within(box).getByText('AI draft - check before use')).toBeTruthy()
   expect(writes[0].url).toBe('/ai/v1/generate')
-  expect(writes[0].body).toMatchObject({ feature: 'notice_draft', prompt_version: 'notice_draft/notice@1', case_ref: 'f1' })
+  expect(writes[0].body).toMatchObject({ feature: 'notice_draft', prompt_version: 'notice_draft/notice@2', case_ref: 'f1' })
   expect(writes[0].body.prompt).toContain('FIR No. 214/2026, registered under BNS 318(4)')
   expect((screen.getByLabelText('Text of the notice') as HTMLTextAreaElement).value).toBe('') // not copied until chosen
   fireEvent.click(within(box).getByRole('button', { name: 'Use this draft' }))

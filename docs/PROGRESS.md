@@ -146,6 +146,15 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
 
+## 12 Nov 2026, bank account freeze (Sumit present)
+- Asked by Sumit: how bank details are got and accounts frozen. Details: the existing BNSS 94 notice to the bank, its reply reader and the money trail. Missing was the freeze itself; added on the same notices.
+- Notice kind `BNSS_106` (V57; "BNSS 106: freeze bank accounts (seizure)"): written, AI-drafted, signed and sent like any notice; it must list the accounts (database and screen); the AI draft names the bank and lists the accounts to freeze against debits (`notice_draft/notice@2`).
+- Steps (`FreezeController`, `GET /api/firs/{id}/freezes`, `POST .../freezes/{noticeId}/steps`, V57 `freeze_step`): the report of the seizure to the Magistrate (BNSS 106(3), "forthwith") and the release (order or letter and a reason of 10+ characters), each once, dated between the notice and today, the release only after the report; kept as written (Java checks with plain messages; a trigger as backstop). Case team only.
+- Deadline `freeze_report` in `case_deadline`: from the day the notice was issued plus the policy `freeze_report_days` (pack default 1; a unit may make it 0), until the report is recorded; shows on the dashboard, the FIR and the supervisor review.
+- Web: "Bank freezes (BNSS 106)" on the Money trail part (`Freezes.tsx`): each freeze notice with its accounts, the amount the bank holds on them (the money trail's holds, matched by account), the report due (red when overdue), and the two steps. 20 new texts in all 11 catalogs.
+- Tests: `FreezeApiTest`, `Freezes.test.tsx`, a notices test, e2e `test_freeze.py`; full suite green.
+- Not done: no attachment under BNSS 107 (needs the Magistrate's order first), no CFCFRMS / 1930 portal link (no public API), no partial release of an amount; the "forthwith" reading as 1 day is a draft for the prosecutor to confirm.
+
 ## 12 Nov 2026, call records (CDR) (Sumit present)
 - Asked by Sumit: where the CDR is, with a proper backend. Before this only the BNSS 94 notice to the operator and its reply existed.
 - Loading (`CdrController`, `POST /api/firs/{id}/cdr`, V56 `cdr_file`, `cdr_call`): the file must first be an electronic item of the case's evidence register; its bytes must have that item's SHA-256 (else refused, naming the item), so what is analysed is what was seized. Columns are found by the names in `packs/IN/cdr-layouts.json` (draft, made-up generic layout; call types MOC/MTC/SMO/SMT and words), not in code. Each readable line is kept as written with its line number; an unreadable line (date, duration, unknown type, another subscriber's line) is counted and named, never guessed. One load per item; 50,000 lines; the request may be 16 MiB like an import (`BodyLimit`).
