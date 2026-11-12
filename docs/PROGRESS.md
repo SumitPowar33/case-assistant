@@ -146,6 +146,14 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
 
+## 12 Nov 2026, tour and help chat (Sumit present)
+- Asked by Sumit: a first-run tour of which screen does what, and a support chat that answers "how do I fill an FIR" from the app itself, no static answers.
+- One list of screens (`screens.ts`, `screensFor`) now drives the menu, the tour and the chat, filtered by the user's permissions exactly as the menu was; each screen names its plain sentence (an existing `*.intro`/`*.lede` where there was one, new `about.*` otherwise) and the key prefixes of its own texts.
+- Tour (`Guide.tsx`, `Tour`): a welcome, then one step per screen in menu order that opens it and says what it is for; starts by itself once per user on this browser (browser storage; without it only offered), again from "Take the tour" in the top strip. FIR parts are toured only when an FIR is open.
+- Help chat (`Guide.tsx`, `HelpChat`; `appHelp.ts`; gateway feature `app_help`, prompt `app_help/guide@1`): sends the question, every screen's name and sentence, and the texts (labels, buttons, messages from the catalogs) of the open screen and the 3 that match the question best (BM25, `askFile.retrieve`); never case data, no `case_ref`. The answer must name screens as [S#]; those become links; none named is marked, "NOT IN THE APP" is shown as such. Audit-logged by the gateway like every AI call.
+- 36 new texts in all 11 catalogs (10 are drafts like the rest). Phone and desktop checked (no overflow); the panel floats bottom right, full width on a phone.
+- Not done: no board for the tour or chat (no `docs/design/boards` file; follows the shared classes); no useful/wrong verdict buttons on help answers; no e2e test. Not checked live with Gemini: this machine's VPN DNS answers 0.0.0.0 for generativelanguage.googleapis.com; checked with the offline provider. A new gateway feature defaults to Claude: an installation without a Claude key sets `app_help` on the AI settings screen.
+
 ## 12 Nov 2026, layout pass over every screen (Sumit present)
 - Every signed-in screen photographed at 1440 px and 390 px (34 screens, 4 roles) before and after; no new colours, components or texts.
 - Fixed: the case diary was 339 px wider than a phone (a sentence shown as a one-line chip); a chip now wraps inside its column and a sentence chip keeps soft corners. The tab title read "Vite + React + TS"; now "Case Assistant".

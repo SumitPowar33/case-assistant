@@ -27,6 +27,7 @@ FEATURES = {
     "chargesheet_draft": "Draft chargesheet paragraphs",
     "case_qa": "Answer questions about the case file",
     "victim_update": "Draft the 90-day victim update",
+    "app_help": "Help with using the app",   # the screens and their texts only, never case data (apps/web/src/appHelp.ts)
 }
 PROVIDERS = {"claude", "gemini", "fake"}
 DEFAULT_MODELS = {"claude": "claude-sonnet-5-5", "gemini": "gemini-3.7-flash", "fake": "fake-1"}

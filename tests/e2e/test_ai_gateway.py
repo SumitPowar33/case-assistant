@@ -12,7 +12,7 @@ import urllib.request
 import psycopg
 from playwright.sync_api import expect, sync_playwright
 
-from conftest import PG, ROOT, Api, free_port, running_core, serving_web
+from conftest import PG, ROOT, Api, free_port, running_core, serving_web, no_tour
 from test_load_data import sign_in
 
 DB = "caseapp_e2e_ai"
@@ -59,7 +59,7 @@ def anchored():
 def settings_screen_says(web, admin, password, text):
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page()
+        page = no_tour(browser.new_page())
         page.set_default_timeout(15000)
         page.goto(web)
         sign_in(page, admin, password)

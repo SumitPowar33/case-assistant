@@ -3,6 +3,7 @@ The admin sets the feature to `fake`; the IO opens the demo case's Ask part: a q
 sent, a question the file has no words for says "not in the file" and nothing is sent, and a question the complaint answers
 reaches the gateway with the matching passage, shows the passage as the source, and the verdict is written to the audit log.
 Fictional data only."""
+from conftest import no_tour
 from playwright.sync_api import expect, sync_playwright
 
 from test_admin_scripts import admin_web  # noqa: F401  (the fixture: core with the demo case, gateway, web app)
@@ -14,7 +15,7 @@ def test_an_officer_asks_the_case_file(admin_web):  # noqa: F811
     sent = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = no_tour(browser.new_page(viewport={"width": 1280, "height": 900}))
         page.set_default_timeout(15000)
         page.on("request", lambda r: sent.append(r.url.rsplit("/", 1)[-1]) if "/ai/v1/" in r.url else None)
         page.goto(web)
