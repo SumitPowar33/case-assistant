@@ -156,6 +156,8 @@ Started from `setup/seed` at 7935fb9. The container was new (no Postgres data, p
 - `askFile.eval.test.ts`: three passages of these kinds and three more questions (the lab, the next court date, the search); 15 questions now, and the 3 questions with no words in the file still send nothing.
 - No screen change (the web side treats `kind` as text), no migration.
 
+`scripts/test-all.sh` at the end: PASS repo rules, PASS packs, PASS xlit, PASS ai-gateway, PASS web (gate, lint, build), PASS database rules, PASS core, PASS e2e browser. Core coverage 98.85% lines / 95.49% branches (`CaseFileController`: no missed lines); web and gateway gates passed, numbers not printed by the script (unchanged from session 92: web 99.97 / 97.14, gateway 99%). Gates unchanged.
+
 Skipped / risks:
 - Not added yet: money trail, bank replies, 63(4) certificates, seizure memos' item lists; embeddings (question 1 of session 92 still open).
 - Blocked: item 3 (question 1 of session 84), item 9 rest (question 1 of session 88).
