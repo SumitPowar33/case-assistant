@@ -149,10 +149,44 @@ main ul.plain > li > .chip, main ul.plain > li > p > .chip { text-align: left; }
 .login label { display: grid; gap: .25rem; font-weight: 600; font-size: 14px; }
 .inline { display: inline; margin-left: .5rem; }
 form.inline { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.record-form { display: grid; gap: .6rem; max-width: 36rem; margin: .5rem 0 1rem; }
-.record-form label { display: grid; gap: .25rem; font-weight: 600; font-size: 14px; }
-.record-form label:has(input[type=checkbox]) { display: flex; gap: .4rem; align-items: center; font-weight: 400; }
+/* A form to record something: short fields side by side (two or three to a row on a desktop), a long text, notes,
+   check boxes and the buttons across the whole row; opened from a button-like line, it sits in its own panel. */
+.record-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 14px 16px; max-width: 52rem; margin: .5rem 0 1rem; align-items: end; }
+.record-form > :not(label), .record-form label:has(textarea), .record-form label:has(input[type=checkbox]), .record-form label:has(input[type=file]) { grid-column: 1 / -1; }
+.record-form label { display: grid; gap: 6px; font-weight: 600; font-size: 13px; color: var(--text-2); }
+.record-form input:not([type=checkbox]):not([type=radio]), .record-form select, .record-form textarea { width: 100%; font-weight: 400; color: var(--text); }
+.record-form textarea { min-height: 110px; line-height: 1.5; }
+.record-form label:has(input[type=checkbox]) { display: flex; gap: .5rem; align-items: center; font-weight: 400; font-size: 14px; color: var(--text); }
 .record-form button { justify-self: start; }
+.record-form button[type=submit] { min-width: 8rem; }
+.record-form p { margin: 0; }
+details:has(> .record-form) > summary, details:has(> form) > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px;
+  border: 1px solid var(--field); border-radius: 8px; background: var(--surface); }
+details:has(> .record-form) > summary:hover, details:has(> form) > summary:hover { background: var(--hover); }
+details[open]:has(> .record-form) > summary, details[open]:has(> form) > summary { background: var(--selected); border-color: var(--primary); }
+details[open] > .record-form { padding: 16px 18px; background: var(--quote); border: 1px solid var(--line); border-radius: 10px; max-width: none; }
+
+/* the final report on paper for the court (CourtPaper.tsx): a preview on screen, the court's format when printed */
+.court-paper { margin-top: 16px; border: 1px solid var(--line); border-radius: 10px; padding: 20px 24px; background: var(--surface); }
+.court-paper h2, .paper-sub, .paper-court { text-align: center; }
+.court-paper h2 { text-transform: uppercase; margin-bottom: 4px; }
+.paper-sub { margin: 0 0 12px; color: var(--text-2); }
+.paper-court { font-weight: 700; margin: 0 0 12px; }
+.paper-items { padding-left: 1.4em; display: grid; gap: 10px; }
+.court-paper table { border-collapse: collapse; margin: 6px 0 4px; font-size: 13px; }
+.court-paper th, .court-paper td { border: 1px solid var(--line); padding: 4px 8px; text-transform: none; letter-spacing: 0; font-size: inherit; color: inherit; font-weight: 400; vertical-align: top; }
+.court-paper thead th { font-weight: 700; }
+.court-paper blockquote { margin-top: 6px; }
+.paper-draft { text-align: center; font-weight: 700; letter-spacing: .3em; border: 2px solid currentColor; padding: 4px; margin: 0 0 12px; }
+.paper-signs { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 24px; margin-top: 40px; }
+@media print { .court-paper th, .court-paper td { border-color: #000; font-size: 12pt; } .court-paper { border: 0; padding: 0; } }
+
+/* the case file: one tab per part (FirDetail.tsx); a phone keeps the picker */
+.fir-tabs { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.fir-tabs a { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border-radius: 999px; text-decoration: none; font-size: 13px; font-weight: 600;
+  color: var(--text-2); background: var(--surface); border: 1px solid var(--line); }
+.fir-tabs a:hover { background: var(--hover); color: var(--text); }
+.fir-tabs a[aria-current="page"] { background: var(--primary); border-color: var(--primary); color: #FFFFFF; }
 .ai-draft { border: 1px solid #D9CCF2; border-radius: 10px; padding: 12px 14px; background: #F8F5FE; }
 .ai-draft pre { white-space: pre-wrap; font: inherit; }
 /* the tour step and the help chat float in a corner above the page (Guide.tsx); on a phone they take the screen's width */
@@ -259,6 +293,7 @@ body { overflow-wrap: break-word; }
   table.cards td a { display: inline-flex; align-items: center; min-height: 44px; }
 
   /* the FIR screen: one part at a time (FirDetail.tsx), chosen in the list at the top, which stays in reach */
+  .fir-tabs { display: none; }
   .fir-parts { display: grid; gap: .25rem; position: sticky; top: 0; z-index: 1; background: var(--ground); padding: .5rem 0; font-weight: 600; }
   .fir-parts select { width: 100%; }
   .fir-part:not(.shown) { display: none; }

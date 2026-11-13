@@ -547,6 +547,7 @@ class RecordsController {
     ResponseEntity<Map<String, UUID>> evidence(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody NewEvidence e) {
         team.requireTeam(CaseTeam.user(jwt), firId);
         requireFir(firId);
+        if (e.seizedAt.isAfter(OffsetDateTime.now().plusMinutes(5))) throw badRequest("The time of seizure cannot be in the future.");
         return created(db.sql("""
                 insert into evidence_item (fir_id, label, description, kind, seized_at, seizure_memo, esakshya_id, seal_no, sha256)
                 values (?,?,?,?,?,?,?,?,?) returning id""")
@@ -668,6 +669,7 @@ class RecordsController {
     ResponseEntity<Map<String, UUID>> certificate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @PathVariable UUID itemId, @Valid @RequestBody Certificate c) {
         team.requireTeam(CaseTeam.user(jwt), firId);
         requireRow("evidence", itemId, firId);
+        if (c.signedAt.isAfter(OffsetDateTime.now().plusMinutes(5))) throw badRequest("The time of signing cannot be in the future.");
         return created(db.sql("""
                 insert into certificate_63_4 (item_id, part, signer_name, device_type, device_ids, hash_algo, hash_value,
                   signed_at, place, supersedes, correction_reason) values (?,?,?,?,?,?,?,?,?,?,?) returning id""")
