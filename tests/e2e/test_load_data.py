@@ -96,12 +96,14 @@ def test_load_firs_then_arrests_then_chargesheets(core, page):
     expect(main).to_contain_text("A2: arrested 6 Mar 2024, 12:00 am IST at Not in the old record, officer not in the old record")
     expect(main).to_contain_text("First remand 2024-03-07 (recorded by Fictional SHO): chargesheet within 60 days, last day 2024-05-05")
     expect(main).to_contain_text("Chargesheet naming A1 filed on 2024-04-20.")
+    page.get_by_role("navigation", name="This case").get_by_role("link", name="Evidence").click()   # one part of the case at a time
     evidence = page.locator("section", has=page.get_by_role("heading", name="Evidence", exact=True))
     expect(evidence).to_contain_text("1/E-01 (physical)")
     expect(evidence).to_contain_text("1/E-02 (electronic) not court-ready yet (BSA 63(4))")   # imported without its certificate
     expect(evidence).not_to_contain_text("1/E-03")                                              # no hash, not loaded
     expect(main).to_contain_text("CrPC 91 (old law): produce documents to Fictional Bank Ltd sent, waiting for reply")
     expect(main).not_to_contain_text("Fictional Telecom Ltd")
+    page.get_by_role("navigation", name="This case").get_by_role("link", name="Deadlines").click()
     deadlines = page.locator("section", has=page.get_by_role("heading", name="Deadlines", exact=True))
     expect(deadlines).not_to_contain_text("Loading")
     expect(deadlines).to_contain_text("Progress update to the victim: by 2024-06-03 (BNSS 193(3)(ii), 90 days)")
@@ -119,6 +121,7 @@ def test_load_firs_then_arrests_then_chargesheets(core, page):
     page.get_by_role("link", name="1/2024", exact=True).click()
     expect(main).not_to_contain_text("Chargesheet naming A1")
     # A1 is still in custody (A2 was released on bail), so the 60-day clock from the first remand is back
+    page.get_by_role("navigation", name="This case").get_by_role("link", name="Deadlines").click()
     expect(deadlines).to_contain_text("Chargesheet for an accused in custody: by 2024-05-05 (BNSS 187(3), from first remand of an accused in custody)")
 
 
