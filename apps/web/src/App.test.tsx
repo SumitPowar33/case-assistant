@@ -259,7 +259,7 @@ test('a part of the case opens as its own page from the sidebar; the whole case 
   expect(await screen.findByText(/not court-ready yet/)).toBeTruthy()
   const nav = within(screen.getByRole('navigation', { name: 'Main' }))
   expect(nav.queryByRole('link', { name: 'Evidence' })).toBeNull()   // the parts are tabs on the case screen, not menu entries
-  expect(within(screen.getByRole('navigation', { name: 'Show' })).getByRole('link', { name: 'Evidence' }).getAttribute('aria-current')).toBe('page')
+  expect(within(screen.getByRole('navigation', { name: 'This case' })).getByRole('link', { name: 'Evidence' }).getAttribute('aria-current')).toBe('page')
   expect(nav.getByRole('link', { name: 'Whole case file' }).getAttribute('href')).toBe('#/firs/f1')
   expect(document.querySelector('.fir-body')!.className).toBe('fir-body one-part')
 })

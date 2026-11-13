@@ -76,7 +76,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
         <div className="chips">{fir.sections.map((s) => <span key={s.act + s.section} className="chip c-info">{s.act} {s.section}</span>)}</div>
       </div>
       {/* desktop: one tab per part of the case file (links, so a part can be bookmarked); a phone keeps the picker below */}
-      <nav className="fir-tabs" aria-label={t('fir.partShow')}>
+      <nav className="fir-tabs" aria-label={t('nav.groupCase')}>
         {PARTS.map((p) => <a key={p} href={`#/firs/${id}/${p}`} aria-current={p === part ? 'page' : undefined}>{t(PART_LABEL[p])}</a>)}
       </nav>
       <label className="fir-parts">{t('fir.partShow')}{' '}

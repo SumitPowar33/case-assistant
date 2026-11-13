@@ -13,6 +13,11 @@ def form(page, title):
     return page.locator("details", has=page.locator("summary", has_text=title)).locator("form")
 
 
+def tab(page, name):
+    """Opens one part of the case file (the parts are tabs on the FIR screen)."""
+    page.get_by_role("navigation", name="This case").get_by_role("link", name=name, exact=True).click()
+
+
 def test_an_io_registers_an_fir_adds_the_accused_records_the_arrest_and_sees_the_deadlines(core, page):
     accounts = setup_station(core, "flow", roles=("io",))
     sign_in(page, "io.flow", accounts["io.flow"])
@@ -36,6 +41,7 @@ def test_an_io_registers_an_fir_adds_the_accused_records_the_arrest_and_sees_the
     expect(main).to_contain_text("Fictional complaint: a fictional phone was taken at a bus stop.")
     expect(main).to_contain_text("Add the person as an accused first; only an accused can be arrested.")
 
+    tab(page, "People")
     person = form(page, "Add a person")
     person.get_by_label("Role").select_option("accused")
     person.get_by_label("Label").fill("A1")
@@ -43,6 +49,7 @@ def test_an_io_registers_an_fir_adds_the_accused_records_the_arrest_and_sees_the
     person.get_by_role("button", name="Save").click()
     expect(main).to_contain_text("A1 (accused): Fictional Accused Alpha")
 
+    tab(page, "Arrests")
     arrest = form(page, "Record an arrest (BNSS 35 memo)")
     arrest.get_by_label("Arrested (date and time, IST)").fill(f"{registered}T18:00")
     arrest.get_by_label("Place of arrest").fill("Fictional bus stand")
@@ -55,16 +62,19 @@ def test_an_io_registers_an_fir_adds_the_accused_records_the_arrest_and_sees_the
     last_day = remand + dt.timedelta(days=59)
     expect(main).to_contain_text("A1: arrested")
     expect(main).to_contain_text(f"chargesheet within 60 days, last day {last_day}")
+    tab(page, "Deadlines")
     deadlines = page.locator("section", has=page.get_by_role("heading", name="Deadlines", exact=True))
     expect(deadlines).to_contain_text(f"Chargesheet for an accused in custody: by {last_day} (BNSS 187(3)")
     expect(deadlines).to_contain_text(f"Progress update to the victim: by {registered + dt.timedelta(days=90)} (BNSS 193(3)(ii), 90 days)")
 
     # a witness is added and her statement is kept as said; the tracker then shows her as recorded (BNSS 180)
+    tab(page, "People")
     person.get_by_label("Role").select_option("witness")
     person.get_by_label("Label").fill("W1")
     person.get_by_label("Full name (leave empty if not known)").fill("Fictional Witness One")
     person.get_by_role("button", name="Save").click()
     expect(main).to_contain_text("W1 (witness): Fictional Witness One")
+    tab(page, "Statements")
     statements = page.locator("section", has=page.get_by_role("heading", name="Statements and witnesses (BNSS 180)"))
     statements.get_by_label("The statement, in the words and language spoken").fill("I saw a fictional man take the phone at the bus stop.")
     statements.get_by_role("button", name="Save statement").click()
@@ -72,6 +82,7 @@ def test_an_io_registers_an_fir_adds_the_accused_records_the_arrest_and_sees_the
     expect(page.locator("section", has=page.get_by_role("heading", name="Witness tracker"))).to_contain_text("Recorded")
 
     # the final report (BNSS 193) is drafted: both parts are kept as a draft; it is not submitted without the readiness check
+    tab(page, "Final report")
     report = page.locator("section", has=page.get_by_role("heading", name="Final report under BNSS 193"))
     report.get_by_label("Facts in brief").fill("A fictional phone was taken at a fictional bus stop.")
     report.get_by_label("Evidence for the charges").fill("The fictional witness saw the accused take the phone.")

@@ -184,7 +184,7 @@ test('someone outside the case team sees the case details and, on every other pa
   expect(await screen.findByText('Fictional complaint words')).toBeTruthy()
   expect(screen.getAllByText('Only the case team sees this part of the case.').length).toBe(15)
   expect(screen.queryByText(/The server answered/)).toBeNull()
-  const tabs = screen.getByRole('navigation', { name: 'Show' })
+  const tabs = screen.getByRole('navigation', { name: 'This case' })
   expect(within(tabs).getAllByRole('link')).toHaveLength(16)
   expect(within(tabs).getByRole('link', { name: 'People' }).getAttribute('aria-current')).toBe('page')
   expect(within(tabs).getByRole('link', { name: 'Call records' }).getAttribute('href')).toBe('#/firs/f1/cdr')

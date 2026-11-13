@@ -44,7 +44,7 @@ def test_every_field_a_screen_expects_is_in_the_gateways_real_answer(admin_web):
         page.get_by_role("button", name="Sign out").click()
 
         sign_in(page, "io.adminui", demo["accounts"]["io.adminui"])
-        page.evaluate(f"location.hash = '#/firs/{demo['fir_id']}'")
+        page.evaluate(f"location.hash = '#/firs/{demo['fir_id']}/notices'")   # the Notices part of the case file
         notices = page.locator("section", has=page.get_by_role("heading", name="Notices", exact=True))
         notices.locator("summary", has_text="Write a notice").click()
         notices.get_by_label("To", exact=True).fill("Fictional Bank Ltd, nodal officer")
