@@ -100,3 +100,11 @@ test('in Hindi the empty page offers the closure form; the decision form names i
   expect(within(dec).getByRole('option', { name: 'मजिस्ट्रेट ने रिपोर्ट स्वीकार की' })).toBeTruthy()
   expect(screen.getByText(/सूचनाकर्ता को बताया जाना अभी दर्ज नहीं/)).toBeTruthy()
 })
+
+test('a decision with no date and no note is shown without them', async () => {
+  stub([{ ...recorded, decision: 'accepted', decided_on: null, decision_note: null }], [])
+  render(<ClosureReport firId="f1" version={0} onSaved={() => undefined} />)
+  const decided = await screen.findByText(/Magistrate accepted the report on/)
+  expect(decided.textContent).not.toMatch(/undefined|null|order/)
+  expect(screen.queryByText(/Record the Magistrate's decision/)).toBeNull()
+})
