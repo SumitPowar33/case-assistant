@@ -55,8 +55,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 3. Evidence and notices import files: **build both**, same pattern as FIRs, arrests and chargesheets (insert-only, approved by a person, undoable until work is recorded).
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
-In progress: item 14 A8 (session 98, started 02:10 IST)
-
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
@@ -99,6 +97,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 98 (13 Nov, last scheduled run of the night): item 14, A8: AI explanation of an old-to-new law section on the law finder (no migration, no core change).
 Done in session 97 (13 Nov, scheduled run): item 14, A7: AI draft of the 90-day victim letter on the Deadlines part (no migration, no core change).
 Done in session 96 (13 Nov, scheduled run): item 17, fifth part: a search memo's seized-item list is part of its passage of the case file (no migration).
 Done in session 95 (12 Nov, 02:05 IST scheduled run, last of the night): item 17, fourth part: BSA 63(4) certificates are passages of the case file (no migration); core coverage gates raised.
@@ -152,6 +151,31 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests). First part DONE (session 92): BM25 ranking in the browser over this case's pieces (passage names searched too, "call" finds "caller"), each piece named by its lines (flaw 3, no pages: the documents are typed text), checked English translations of statements in the case file, and the evaluation set `askFile.eval.test.ts` (flaws 4, 6, 8: 12 questions with known answer pieces, a disagreement, 3 questions the file has no words for). Left: embeddings kept on state servers (needs an on-premises embedding model and where the index lives, question 1 of session 92), more documents (bank replies as text and 63(4) certificates; money trail DONE in session 94; 63(4) certificates DONE in session 95; searches, lab/hospital requests and court events DONE in session 93), opening a source on click, the AI's own answers judged on the set (needs a provider), questions in Indian languages beyond word matching, the "note in case diary" button.
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## Tonight in short (13 Nov, scheduled runs; the last is session 98)
+Sessions 96 (search memo's seized items in the case file), 97 (A7, AI draft of the 90-day victim letter) and 98 (A8, AI explanation in the law finder). `scripts/test-all.sh` at the end of session 98: all 8 suites PASS (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e browser). Coverage: core 98.79% lines / 95.49% branches, web 99.97 / 97.22 / 98.65 (statements / branches / functions), gateway 99%. Gates unchanged (less than 2 points of room).
+
+## 13 Nov 2026, session 98 (last scheduled run of the night, Sumit away)
+Started from `setup/seed` in a new container. Setup: Postgres role and databases made, gateway packages installed (a pip install of the wrong file had left `httpx` out), and Maven Central again answered 429 and left cached misses; deleting `~/.m2/**/*.lastUpdated` and re-running `mvn -U` several times resolved it, no change to the repo. Baseline `scripts/test-all.sh`: all 8 suites PASS once the dependencies resolved.
+
+**Item 14, A8: AI explanation of an old-to-new law section (law finder, board 18):**
+- Gateway: new feature `law_explain` (store.py; its name is in all 11 screen catalogs, checked by the repo-rules test). Web only otherwise (`lawExplain.ts`, `LawExplain.tsx`, a button in each row of `#/laws` that has a new section). No core or migration change.
+- The table stays the answer. Only the two section numbers and the table's own short description go to the gateway: no case, no case reference, so every signed-in officer may use it. The officer picks the language (starts as the screen language).
+- An explanation that gives an opinion on guilt or truthfulness (`judges`, reused) is not shown and its rejection is logged; numbers that are not in the table (years, other sections) are listed above the text for checking against the Act. "Helpful" or "Not helpful" is logged in the gateway as accepted or rejected. Nothing is stored in the core.
+- 14 new screen texts in all 11 languages (the 10 are drafts, as before).
+- Tests: `lawExplain.test.ts` (4), `LawExplain.test.tsx` (5), `LawFinder.test.tsx` (row button), axe test, gateway test (feature known, audit rows without a case reference), `tests/e2e/test_law_explain.py` through the real gateway. A test for a closure-report decision without a date or note (older code, ClosureReport branches 91% to 96%).
+
+Skipped / risks:
+- The number check reads digits only, so a spelled-out number passes; the opinion check reads English words only (as A6 and A7). A word list in the other scripts needs a reviewer.
+- The AI may state a difference between the old and new section wrongly; the text says "check it against the Act" and the officer decides. A prosecutor should review the law table and a sample of explanations before pilot use.
+- Little time left for older code; the lowest-covered web files are now FirList (90%), Arrests (92%), FrontDesk (93%) and App (94%) on branches, and their gaps are small.
+
+Next: A5 when question 1 is answered; otherwise A9 (supervisor briefing), then items 15, 16, 18.
+
+Questions for Sumit:
+1. Same as sessions 92 to 97: may the AI gateway get a small open embedding model on the state's own server? (Decides the real RAG work of item 17 and A5.)
+2. Law finder: should the explanation be offered only after the table has been reviewed by a prosecutor, or is a draft table with a "check it against the Act" line enough for the pilot?
+3. Still open from before: sessions 97 (2), 96 (2), 95 (2), 91 (1, 2), 88 (1), 84 (1, 2), 85 (1, 2), 86 (1).
 
 ## 13 Nov 2026, session 97 (scheduled run, Sumit away)
 Started from `setup/seed` in a new container (Postgres, gateway and web packages set up). Maven Central answered 429 (rate limit) for several minutes; retrying `mvn -U` with pauses resolved everything, no change to the repo. Baseline `scripts/test-all.sh`: all 8 suites PASS once the dependencies resolved.
