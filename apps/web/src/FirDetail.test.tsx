@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, test, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { ScreenLangContext } from './i18n'
 import FirDetail from './FirDetail'
 import { setSession } from './api'
@@ -9,13 +9,13 @@ import { setSession } from './api'
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); setSession(null) })
 
 const fir = { id: 'f1', fir_year: 2026, fir_no: 9, registered_at: '2026-10-01T05:00:00Z', is_zero_fir: false, contents_original: 'Fictional complaint words',
-  contents_withheld: false, action_taken: 'investigate', io_name: 'SI Fictional One', sections: [{ act: 'BNS', section: '318(4)' }] }
+  contents_withheld: false, action_taken: 'investigate', io_name: 'SI Fictional One', sections: [{ act: 'BNS', section: '318(4)' }], case_team: true }
 
 function stub(over: Record<string, unknown>, failing: string[] = []) {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const path = url.replace('/api', '')
     if (failing.includes(path)) return { ok: false, status: 500, json: async () => null }
-    return { ok: true, status: 200, json: async () => (path in over ? over[path] : path === '/firs/f1' ? fir : path === '/firs/f1/readiness' ? { gaps: [], issues: [] } : path === '/firs/f1/punishment-hint' ? { suggested: null, unknown: [], sections: [] } : path === '/firs/f1/statements' ? { witnesses: [], statements: [] } : path === "/firs/f1/money-trail" ? { evidence: [], transfers: [], holds: [], accused: [], transferred_paise: 0, held_paise: 0 } : path === "/firs/f1/final-report" ? { draft: null, events: [], readinessChecked: false, openGaps: 0, canApprove: false, particulars: { sections: '', accused: 0, witnesses: 0, statements_from: 0, evidence_items: 0 } } : path === '/firs/f1/diary' ? { date: '2026-11-02', today: true, page: null, entries: [], events: [], days: [] } : []) }
+    return { ok: true, status: 200, json: async () => (path in over ? over[path] : path === '/firs/f1' ? fir : path === '/firs/f1/sections' ? { law: 'new', sections: [], charges: [] } : path === '/firs/f1/readiness' ? { gaps: [], issues: [] } : path === '/firs/f1/punishment-hint' ? { suggested: null, unknown: [], sections: [] } : path === '/firs/f1/statements' ? { witnesses: [], statements: [] } : path === "/firs/f1/money-trail" ? { evidence: [], transfers: [], holds: [], accused: [], transferred_paise: 0, held_paise: 0 } : path === "/firs/f1/final-report" ? { draft: null, events: [], readinessChecked: false, openGaps: 0, canApprove: false, particulars: { sections: '', accused: 0, witnesses: 0, statements_from: 0, evidence_items: 0 } } : path === '/firs/f1/diary' ? { date: '2026-11-02', today: true, page: null, entries: [], events: [], days: [] } : []) }
   }))
 }
 
@@ -35,7 +35,7 @@ test('a full case page: sections, people, deadlines and electronic evidence with
   expect(screen.getByText('Sections: BNS 318(4)')).toBeTruthy()
   expect(screen.getByText('Fictional complaint words')).toBeTruthy()
   expect(await screen.findByText(/V1 \(victim\), 17: Victim V1 \(identity protected\)/)).toBeTruthy()
-  expect(screen.getByText(/A1 \(accused\): Fictional Accused$/)).toBeTruthy()
+  expect(screen.getByText(/A1 \(accused\): Fictional Accused/)).toBeTruthy()
   expect(await screen.findByText(/Chargesheet for an accused in custody: by 2026-11-30/)).toBeTruthy()
   expect(screen.getByText(/Reply to the notice from Fictional Bank Ltd: by 2026-11-10/)).toBeTruthy()
   expect(screen.getByText(/a_kind_added_later: by 2026-12-01/)).toBeTruthy()   // a code no catalog knows shows as it is
@@ -176,4 +176,16 @@ test('a part named in the address wins over the phone default', async () => {
   render(<FirDetail id="f1" only="people" />)
   expect(((await screen.findByRole('combobox', { name: 'Show' })) as HTMLSelectElement).value).toBe('people')
   delete (window as unknown as { matchMedia?: unknown }).matchMedia
+})
+
+test('someone outside the case team sees the case details and, on every other part, that only the case team sees it; tabs name every part', async () => {
+  stub({ '/firs/f1': { ...fir, case_team: false, victim_protected: false } })
+  render(<FirDetail id="f1" only="people" />)
+  expect(await screen.findByText('Fictional complaint words')).toBeTruthy()
+  expect(screen.getAllByText('Only the case team sees this part of the case.').length).toBe(15)
+  expect(screen.queryByText(/The server answered/)).toBeNull()
+  const tabs = screen.getByRole('navigation', { name: 'Show' })
+  expect(within(tabs).getAllByRole('link')).toHaveLength(16)
+  expect(within(tabs).getByRole('link', { name: 'People' }).getAttribute('aria-current')).toBe('page')
+  expect(within(tabs).getByRole('link', { name: 'Call records' }).getAttribute('href')).toBe('#/firs/f1/cdr')
 })

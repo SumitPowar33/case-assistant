@@ -26,7 +26,7 @@ function stub(load: unknown, write: { status: number; body: unknown } = { status
 test('the officer writes both parts, saves the draft and submits it; the particulars come from the file', async () => {
   const calls = stub({ ...base, draft: draft('draft'), events: [{ at: '2026-11-02T04:30:00Z', action: 'saved', note: null, by_name: 'SI Fictional' }] })
   render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
-  expect(await screen.findByText(/sections BNS 318\(4\); 1 accused; 2 witnesses, 1 with a statement; 3 evidence items/)).toBeTruthy()
+  expect(await screen.findByText(/sections BNS 318\(4\); 1 accused; 2 witnesses; statements recorded from 1 people \(victims and witnesses\); 3 evidence items/)).toBeTruthy()
   expect(screen.getAllByText('Draft').length).toBe(1)
   fireEvent.change(screen.getByLabelText('Facts in brief'), { target: { value: FACTS + ' More.' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save draft' }))

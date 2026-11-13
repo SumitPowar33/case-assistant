@@ -32,11 +32,13 @@ class SectionController {
     private final JdbcClient db;
     private final CaseTeam team;
     private final Playbooks playbooks;
+    private final Punishments punishments;
 
-    SectionController(JdbcClient db, CaseTeam team, Playbooks playbooks) {
+    SectionController(JdbcClient db, CaseTeam team, Playbooks playbooks, Punishments punishments) {
         this.db = db;
         this.team = team;
         this.playbooks = playbooks;
+        this.punishments = punishments;
     }
 
     private String law(UUID firId) {
@@ -51,6 +53,12 @@ class SectionController {
                 from fir_section s left join app_user u on u.id = s.chosen_by
                 where s.fir_id = ? order by s.added_at nulls first, s.act, s.section""").param(firId).query().listOfRows();
         var inFir = sections.stream().map(s -> s.get("act") + " " + s.get("section")).toList();
+        // each charge carries its punishment class (packs punishments.json): the screen marks a suggested charge heavier than
+        // every section already on the FIR, so the officer does not register a lighter section than the facts describe
+        String state = db.sql("select s.state_code from fir f join police_station s on s.id = f.station_id where f.id = ?").param(firId).query(String.class).single();
+        String firTop = null;
+        for (String key : inFir) if (Punishments.heavier(punishments.classOf(state, key), firTop)) firTop = punishments.classOf(state, key);
+        final String top = firTop;
         var charges = playbooks.all().stream().flatMap(pb -> pb.charges().stream().map(c -> {
             var m = new LinkedHashMap<String, Object>();
             m.put("playbook_id", pb.id());
@@ -60,9 +68,17 @@ class SectionController {
             m.put("label", c.label());
             m.put("ingredients", c.ingredients().stream().map(i -> Map.of("id", i.id(), "text", i.text())).toList());
             m.put("in_fir", inFir.contains(c.act() + " " + c.section()));
+            String cls = punishments.classOf(state, c.act() + " " + c.section());
+            m.put("punishment", cls);
+            m.put("graver", !inFir.contains(c.act() + " " + c.section()) && Punishments.heavier(cls, top));
             return m;
         })).toList();
-        return Map.of("law", law(firId), "sections", sections, "charges", charges);
+        var out = new LinkedHashMap<String, Object>();
+        out.put("law", law(firId));
+        out.put("sections", sections);
+        out.put("charges", charges);
+        out.put("fir_punishment", top);
+        return out;
     }
 
     @PostMapping

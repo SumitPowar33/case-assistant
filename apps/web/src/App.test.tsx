@@ -6,7 +6,7 @@ import { setSession, type Session } from './api'
 
 const io: Session = { token: 'tok-io', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional Rao', rank: 'SI', role: 'io', station_id: 's1', permissions: ['fir.register', 'case.lead'], case_scope: 'none' } }
 
-const fir = { id: 'f1', fir_year: 2026, fir_no: 7, registered_at: '2026-09-10T10:00:00Z', is_zero_fir: false, action_taken: 'registered', sexual_offence: false, contents_original: 'Fictional complaint text', sections: [{ act: 'BNS', section: '318' }] }
+const fir = { id: 'f1', fir_year: 2026, fir_no: 7, registered_at: '2026-09-10T10:00:00Z', is_zero_fir: false, action_taken: 'registered', sexual_offence: false, contents_original: 'Fictional complaint text', sections: [{ act: 'BNS', section: '318' }], case_team: true }
 const routes: Record<string, unknown> = {
   '/api/firs?limit=51&offset=0': [fir],
   '/api/firs/f1': fir,
@@ -258,7 +258,8 @@ test('a part of the case opens as its own page from the sidebar; the whole case 
   render(<App />)
   expect(await screen.findByText(/not court-ready yet/)).toBeTruthy()
   const nav = within(screen.getByRole('navigation', { name: 'Main' }))
-  expect(nav.getByRole('link', { name: 'Evidence' }).getAttribute('aria-current')).toBe('page')
+  expect(nav.queryByRole('link', { name: 'Evidence' })).toBeNull()   // the parts are tabs on the case screen, not menu entries
+  expect(within(screen.getByRole('navigation', { name: 'Show' })).getByRole('link', { name: 'Evidence' }).getAttribute('aria-current')).toBe('page')
   expect(nav.getByRole('link', { name: 'Whole case file' }).getAttribute('href')).toBe('#/firs/f1')
   expect(document.querySelector('.fir-body')!.className).toBe('fir-body one-part')
 })

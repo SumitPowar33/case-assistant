@@ -48,6 +48,8 @@ export default function App() {
   const firPart = isPart(firMatch?.[2]) ? firMatch?.[2] : undefined
   const complaintId = /^#\/complaints\/([\w-]+)$/.exec(hash)?.[1]
   const screens = session ? screensFor(session.user, firId) : []
+  // the menu names the case file once; its parts are tabs on the FIR screen (the tour and the help chat still know each part)
+  const menu = screens.filter((sc) => sc.group !== 'case' || sc.label === 'nav.wholeCase')
   const [guide, setGuide] = useState<'help' | 'tour' | null>(null)
   const userId = session?.user.id
   useEffect(() => { setGuide(userId && !tourSeen(userId) ? 'tour' : null) }, [userId])
@@ -77,8 +79,8 @@ export default function App() {
         <button type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="header-menu" onClick={() => setMenuOpen(!menuOpen)}>{t('header.menu')}</button>
         <div id="header-menu" className={menuOpen ? 'header-menu open' : 'header-menu'}>
         {session && <nav aria-label={t('nav.main')} onClick={() => setMenuOpen(false)}>
-          {screens.map((sc, i) => <Fragment key={sc.href}>
-            {GROUP_HEAD[sc.group] && screens[i - 1]?.group !== sc.group && <div className="nav-group">{t(GROUP_HEAD[sc.group]!)}</div>}
+          {menu.map((sc, i) => <Fragment key={sc.href}>
+            {GROUP_HEAD[sc.group] && menu[i - 1]?.group !== sc.group && <div className="nav-group">{t(GROUP_HEAD[sc.group]!)}</div>}
             {link(sc.href, t(sc.label))}
           </Fragment>)}
         </nav>}

@@ -72,6 +72,17 @@ class Punishments {
         return out;
     }
 
+    /** The punishment class of one section ("BNS 103(1)") by the tables of this state; null when the tables do not name it or it has no penalty of its own. */
+    String classOf(String state, String key) {
+        String c = national.containsKey(key) ? national.get(key) : byState.getOrDefault(state, Map.of()).get(key);
+        return NO_PENALTY.equals(c) ? null : c;
+    }
+
+    /** Whether class a is heavier than class b (a null b: a is heavier when it is known). */
+    static boolean heavier(String a, String b) {
+        return a != null && BY_SEVERITY.indexOf(a) > (b == null ? -1 : BY_SEVERITY.indexOf(b));
+    }
+
     /** {suggested: the heaviest class, or null if any section is not in the table, sections: [...], unknown: [...]}, by the tables of this state. */
     Map<String, Object> hint(String state, List<Map<String, Object>> firSections) {
         var own = byState.getOrDefault(state, Map.of());

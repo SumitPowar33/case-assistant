@@ -210,4 +210,29 @@ class FinalReportApiTest {
                 .andExpect(jsonPath("$.events[0].ai_request").value(req)).andExpect(jsonPath("$.events[1].ai_request").doesNotExist());
         call(put(url("")), desk, words(FACTS, EVIDENCE)).andExpect(status().isForbidden());   // the front desk is not on the case team
     }
+
+    @Test
+    void thePrintGathersTheCourtFormFromTheRecordsAndNamesAProtectedVictimOnlyByLabel() throws Exception {
+        db.sql("update fir set sexual_offence = true where id = ?").param(fir).update();
+        db.sql("insert into person (fir_id, role, label, full_name, parentage, age_years, gender, address_present, identity_masked) values (?, 'victim', 'V1', 'Fictional Victim', 'D/o Fictional', 19, 'F', 'Fictional Lane', true)").param(fir).update();
+        UUID a1 = db.sql("insert into person (fir_id, role, label, full_name, parentage, age_years, gender, address_present) values (?, 'accused', 'A1', 'Fictional Accused', 'S/o Fictional Father', 30, 'M', 'Fictional Street') returning id").param(fir).query(UUID.class).single();
+        db.sql("insert into person (fir_id, role, label, full_name) values (?, 'accused', 'A2', 'Fictional Absconder')").param(fir).update();
+        db.sql("insert into evidence_item (fir_id, label, description, kind, seized_at, seizure_memo, seal_no) values (?, 'E1', 'Fictional knife', 'physical', now() - interval '1 day', 'SM-1', 'SEAL-1')").param(fir).update();
+        UUID cs = db.sql("insert into chargesheet (fir_id, filed_on, court, report_no, recorded_by) values (?, current_date, 'Fictional JMFC Court', 'CS-1/2026', ?) returning id").params(fir, ioId).query(UUID.class).single();
+        db.sql("insert into chargesheet_accused (chargesheet_id, person_id) values (?, ?)").params(cs, a1).update();
+        call(get(url("/print")), io, null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.head.station").value("Fictional North PS"))
+                .andExpect(jsonPath("$.head.district").value("North"))
+                .andExpect(jsonPath("$.head.report_no").value("CS-1/2026"))
+                .andExpect(jsonPath("$.head.io_name").value("Fictional io"))
+                .andExpect(jsonPath("$.people[?(@.label=='V1')].masked").value(true))
+                .andExpect(jsonPath("$.people[?(@.label=='V1')].name").value(org.hamcrest.Matchers.contains((Object) null)))
+                .andExpect(jsonPath("$.people[?(@.label=='V1')].address").value(org.hamcrest.Matchers.contains((Object) null)))
+                .andExpect(jsonPath("$.people[?(@.label=='A1')].parentage").value("S/o Fictional Father"))
+                .andExpect(jsonPath("$.people[?(@.label=='A1')].sent_up").value(true))
+                .andExpect(jsonPath("$.people[?(@.label=='A2')].sent_up").value(false))
+                .andExpect(jsonPath("$.property[0].seal_no").value("SEAL-1"));
+        call(get(url("/print")), desk, null).andExpect(status().is4xxClientError());
+        call(get(url("/print")), outsider, null).andExpect(status().is4xxClientError());
+    }
 }

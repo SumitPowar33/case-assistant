@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { readSuggestions, sectionPrompt, type Charge } from './sectionSuggest'
+import { readSuggestions, sectionPrompt, type Charge, graverFirst } from './sectionSuggest'
 
 // Fictional data only.
 const TEXT = 'A caller said he was from my bank. He asked me for a code sent to my phone.\nRs 40,000 went out of my account.'
@@ -65,4 +65,12 @@ test('an answer that is not a JSON list cannot be read; an empty list suggests n
   expect(readSuggestions('BNS 319(2) applies.', TEXT, CHARGES)).toEqual({ kind: 'unreadable' })
   expect(readSuggestions('{"charge": "cyber-fraud/cheating"}', TEXT, CHARGES)).toEqual({ kind: 'unreadable' })
   expect(readSuggestions('[]', TEXT, CHARGES)).toEqual({ kind: 'suggestions', suggestions: [], dropped: 0 })
+})
+
+test('a charge graver than every section on the FIR comes first; the others keep their order', () => {
+  const c = (id: string, graver: boolean) => ({ playbook_id: 'p', charge_id: id, act: 'BNS', law: `BNS ${id}`, label: id, ingredients: [], in_fir: false, graver })
+  const read = { kind: 'suggestions' as const, dropped: 0, suggestions: [{ charge: c('a', false), met: [] }, { charge: c('b', true), met: [] }, { charge: c('c', false), met: [] }] }
+  const sorted = graverFirst(read)
+  expect(sorted.kind === 'suggestions' && sorted.suggestions.map((s) => s.charge.charge_id)).toEqual(['b', 'a', 'c'])
+  expect(graverFirst({ kind: 'unreadable' })).toEqual({ kind: 'unreadable' })
 })

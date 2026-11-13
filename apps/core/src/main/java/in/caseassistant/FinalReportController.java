@@ -86,6 +86,47 @@ class FinalReportController {
         return out;
     }
 
+    /**
+     * The final report as it goes to the court, in the order of the police form for a report under BNSS 193 (heading,
+     * Acts and sections, the officer, the complainant, the accused sent up for trial and those not, the witnesses, the
+     * property seized, the facts in brief and the evidence, the approval and the signature). Read only, from what is
+     * recorded; nothing is typed again. A victim whose identity is protected (BNS 72) is named only by label, as everywhere
+     * outside the case team's own screens, so the paper can be filed without masking by hand.
+     */
+    @GetMapping("/print")
+    Map<String, Object> print(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId) {
+        team.requireTeam(CaseTeam.user(jwt), firId);
+        var out = new LinkedHashMap<String, Object>();
+        out.put("head", db.sql("""
+                select f.fir_no, f.fir_year, f.registered_at, f.information_received_at, s.name as station, dt.name as district, sp.name as state,
+                       io.full_name as io_name, io.rank as io_rank,
+                       (select coalesce(string_agg(act || ' ' || section, ', ' order by act, section), '') from fir_section where fir_id = f.id) as sections,
+                       d.status, d.facts_text, d.evidence_text, ap.full_name as approved_by, ap.rank as approved_rank, sg.full_name as signed_by, sg.rank as signed_rank,
+                       (select max(at) from final_report_event e where e.draft_id = d.id and e.action = 'signed') as signed_at,
+                       c.report_no, c.court, c.filed_on
+                from fir f join police_station s on s.id = f.station_id left join district dt on dt.id = s.district_id join state_pack sp on sp.code = s.state_code
+                left join app_user io on io.id = f.io_id left join final_report_draft d on d.fir_id = f.id
+                left join app_user ap on ap.id = d.decided_by and d.status in ('approved', 'signed') left join app_user sg on sg.id = d.signed_by
+                left join lateral (select * from chargesheet c where c.fir_id = f.id and not exists (select 1 from chargesheet n where n.supersedes = c.id)
+                                   order by c.recorded_at desc limit 1) c on true
+                where f.id = ?""").param(firId).query().singleRow());
+        out.put("people", db.sql("""
+                select p.role, p.label, person_masked(p.role, p.identity_masked, p.fir_id) as masked,
+                       case when person_masked(p.role, p.identity_masked, p.fir_id) then null else p.full_name end as name,
+                       case when person_masked(p.role, p.identity_masked, p.fir_id) then null else p.parentage end as parentage,
+                       p.age_years, p.gender, case when person_masked(p.role, p.identity_masked, p.fir_id) then null else p.address_present end as address,
+                       p.nationality, a.arrested_at, a.first_remand_on, a.released_on,
+                       exists (select 1 from chargesheet_accused ca join chargesheet c on c.id = ca.chargesheet_id
+                               where ca.person_id = p.id and not exists (select 1 from chargesheet n where n.supersedes = c.id)) as sent_up,
+                       exists (select 1 from witness_statement w where w.person_id = p.id) as has_statement
+                from person p left join lateral (select * from arrest_current a where a.person_id = p.id order by a.arrested_at desc limit 1) a on true
+                where p.fir_id = ? order by p.role, p.label""").param(firId).query().listOfRows());
+        out.put("property", db.sql("""
+                select label, kind, description, seized_at, seal_no, sha256 from evidence_item where fir_id = ? order by seized_at, label""")
+                .param(firId).query().listOfRows());
+        return out;
+    }
+
     /** Creates the draft, or changes the words of one that is a draft or returned. */
     @PutMapping
     Map<String, Object> save(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody Words w) {

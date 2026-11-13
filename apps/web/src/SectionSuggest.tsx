@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ai, send } from './api'
-import { SECTION_PROMPT_VERSION, readSuggestions, sectionPrompt, type Charge, type SuggestRead } from './sectionSuggest'
+import { SECTION_PROMPT_VERSION, graverFirst, readSuggestions, sectionPrompt, type Charge, type SuggestRead } from './sectionSuggest'
 import { fmt } from './formats'
 import { useLoad } from './useLoad'
 import { useT } from './i18n'
@@ -38,7 +38,7 @@ export default function SectionSuggest({ firId, text, victimProtected, version, 
     try {
       const request = await ai<Draft>('/v1/generate', { method: 'POST', body: {
         feature: 'section_suggest', prompt_version: SECTION_PROMPT_VERSION, prompt: sectionPrompt(text, b.charges), case_ref: firId, max_tokens: 1500 } })
-      const read = readSuggestions(request.draft, text, b.charges)
+      const read = graverFirst(readSuggestions(request.draft, text, b.charges))
       const n = read.kind === 'suggestions' ? read.suggestions.length : 0
       setCheck({ request, read, choices: Array<Choice>(n).fill('open'), reasons: Array<string>(n).fill('') })
     } catch (err) {
@@ -103,6 +103,8 @@ export default function SectionSuggest({ firId, text, victimProtected, version, 
                 return (
                   <li key={charge.playbook_id + charge.charge_id} className="card" aria-label={charge.law}>
                     <span className="chip c-info">{charge.law}</span> <strong>{charge.label}</strong>
+                    {charge.punishment && <> <span className="chip c-neu">{t.code('arrest.pun', charge.punishment)}</span></>}
+                    {charge.graver && <> <span className="chip c-crit">{t('sections.graver')}</span><p><small>{t('sections.graverNote')}</small></p></>}
                     <p>{t('sections.mayDescribe')}</p>
                     <ul>{met.map((m) => (
                       <li key={m.id}>{charge.ingredients.find((g) => g.id === m.id)!.text}: <small>{t('facts.from')} <q><mark className="c-ai">{m.quote}</mark></q></small></li>

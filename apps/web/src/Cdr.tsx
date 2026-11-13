@@ -20,10 +20,10 @@ function base64(buf: ArrayBuffer): string {
  * it was seized as. Analysis: shown only when asked for, because each view is logged (the records hold numbers of people
  * outside the case). The AI summary gets only the tables' rows and keeps only sentences that name them.
  */
-export default function Cdr({ firId }: { firId: string }) {
+export default function Cdr({ firId, version = 0 }: { firId: string; version?: number }) {
   const t = useT()
   const lang = useContext(ScreenLangContext)
-  const items = useLoad<Item[]>(`/firs/${firId}/evidence`)
+  const items = useLoad<Item[]>(`/firs/${firId}/evidence`, version)   // an item added on the Evidence part shows here at once
   const electronic = (Array.isArray(items.data) ? items.data : []).filter((e) => e.kind === 'electronic')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)

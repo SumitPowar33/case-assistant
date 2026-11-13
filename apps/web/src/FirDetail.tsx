@@ -12,6 +12,7 @@ import FactCheck from './FactCheck'
 import EarlierRecords from './EarlierRecords'
 import SectionSuggest from './SectionSuggest'
 import FinalReport from './FinalReport'
+import CourtPaper from './CourtPaper'
 import Notices from './Notices'
 import Certificates from './Certificates'
 import Arrests from './Arrests'
@@ -74,12 +75,16 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
         </div>
         <div className="chips">{fir.sections.map((s) => <span key={s.act + s.section} className="chip c-info">{s.act} {s.section}</span>)}</div>
       </div>
+      {/* desktop: one tab per part of the case file (links, so a part can be bookmarked); a phone keeps the picker below */}
+      <nav className="fir-tabs" aria-label={t('fir.partShow')}>
+        {PARTS.map((p) => <a key={p} href={`#/firs/${id}/${p}`} aria-current={p === part ? 'page' : undefined}>{t(PART_LABEL[p])}</a>)}
+      </nav>
       <label className="fir-parts">{t('fir.partShow')}{' '}
         <select value={part} onChange={(e) => setPart(e.target.value as Part)}>
           {PARTS.map((p) => <option key={p} value={p}>{t(PART_LABEL[p])}</option>)}
         </select>
       </label>
-      <div className={only ? 'fir-body one-part' : 'fir-body'}>
+      <div className="fir-body one-part">
       <div className={shown('case')}>
         <section>
         <IoAssignment firId={id} ioName={fir.io_name} version={version} onSaved={saved} />
@@ -91,12 +96,15 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
         {fir.case_team && fir.contents_original && <FactCheck firId={id} text={fir.contents_original} victimProtected={fir.victim_protected} />}
         {fir.case_team && fir.contents_original && <SectionSuggest firId={id} text={fir.contents_original} victimProtected={fir.victim_protected} version={version} onSaved={saved} />}
       </div>
+      {!fir.case_team ? PARTS.filter((p) => p !== 'case').map((p) => (
+        <div key={p} className={shown(p)}><section><h2>{t(PART_LABEL[p])}</h2><p>{t('fir.teamOnly')}</p></section></div>
+      )) : <>
       <div className={shown('people')}>
         <section>
           <h2>{t('fir.people')}</h2>
           {peopleError ? <p role="alert">{peopleError}</p> : !people ? <p>{t('common.loading')}</p> : people.length ? <ul>{people.map((p) => (
             <li key={p.id}>{p.label} ({t.code('person', p.role)}){p.age_years ? `, ${p.age_years}` : ''}: {p.display_name}{p.identity_masked ? ` (${t('fir.identityProtected')})` : ''}
-              {fir.case_team && (p.role === 'accused' || p.role === 'suspect') && <EarlierRecords firId={id} personId={p.id} label={p.label} />}</li>
+              {(p.role === 'accused' || p.role === 'suspect') && <EarlierRecords firId={id} personId={p.id} label={p.label} />}</li>
           ))}</ul> : <p>{t('common.noneYet')}</p>}
           <AddPersonForm firId={id} onSaved={saved} />
         </section>
@@ -125,11 +133,12 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
       <div className={shown('notices')}><Notices firId={id} fir={fir} victimProtected={fir.victim_protected} /></div>
       <div className={shown('readiness')}><Readiness key={version} firId={id} people={people ?? []} /></div>
       <div className={shown('statements')}><Statements key={version} firId={id} victimProtected={fir.victim_protected} /></div>
-      <div className={shown('money')}><MoneyTrail key={version} firId={id} />{fir.case_team && <Freezes key={`f${version}`} firId={id} />}</div>
-      <div className={shown('cdr')}>{fir.case_team ? <Cdr firId={id} /> : <section><h2>{t('cdr.part')}</h2><p>{t('cdr.teamOnly')}</p></section>}</div>
-      <div className={shown('finalReport')}><FinalReport key={version} firId={id} me={currentSession()?.user.id ?? ''} text={fir.contents_original} victimProtected={fir.victim_protected} /></div>
+      <div className={shown('money')}><MoneyTrail key={version} firId={id} /><Freezes key={`f${version}`} firId={id} /></div>
+      <div className={shown('cdr')}><Cdr firId={id} version={version} /></div>
+      <div className={shown('finalReport')}><FinalReport key={version} firId={id} me={currentSession()?.user.id ?? ''} text={fir.contents_original} victimProtected={fir.victim_protected} /><CourtPaper key={`p${version}`} firId={id} /></div>
       <div className={shown('diary')}><CaseDiary firId={id} /></div>
       <div className={shown('ask')}>{part === 'ask' && <AskCaseFile firId={id} />}</div>
+      </>}
       </div>
     </>
   )

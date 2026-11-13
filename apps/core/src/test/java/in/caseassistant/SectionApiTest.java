@@ -95,6 +95,21 @@ class SectionApiTest {
     }
 
     @Test
+    void aChargeHeavierThanEverySectionOnTheFirIsMarkedFromThePunishmentTable() throws Exception {
+        // the FIR has BNS 318(4) (less than ten years): murder (BNS 103(1), death) is graver; the other cheating charges are not
+        mvc.perform(get("/api/firs/" + fir + "/sections").header("Authorization", io))
+                .andExpect(jsonPath("$.fir_punishment").value("less_than_10_years"))
+                .andExpect(jsonPath("$.charges[?(@.law == 'BNS 103(1)')].punishment").value(org.hamcrest.Matchers.hasItem("death")))
+                .andExpect(jsonPath("$.charges[?(@.law == 'BNS 103(1)')].graver").value(org.hamcrest.Matchers.hasItem(true)))
+                .andExpect(jsonPath("$.charges[?(@.charge_id == 'cheating')].graver").value(org.hamcrest.Matchers.hasItem(false)))
+                .andExpect(jsonPath("$.charges[?(@.charge_id == 'it_personation')].graver").value(org.hamcrest.Matchers.hasItem(false)));
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '103(1)')").param(fir).update();
+        mvc.perform(get("/api/firs/" + fir + "/sections").header("Authorization", io))
+                .andExpect(jsonPath("$.fir_punishment").value("death"))
+                .andExpect(jsonPath("$.charges[?(@.law == 'BNS 103(1)')].graver").value(org.hamcrest.Matchers.hasItem(false)));   // already on the FIR
+    }
+
+    @Test
     void everyFieldIsChecked() throws Exception {
         add(io, choice("it_personation", "too short")).andExpect(status().isBadRequest());
         add(io, choice("it_personation", "         x")).andExpect(status().isBadRequest())
