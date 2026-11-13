@@ -97,6 +97,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 96 (13 Nov, scheduled run): item 17, fifth part: a search memo's seized-item list is part of its passage of the case file (no migration).
 Done in session 95 (12 Nov, 02:05 IST scheduled run, last of the night): item 17, fourth part: BSA 63(4) certificates are passages of the case file (no migration); core coverage gates raised.
 Done in session 94 (12 Nov, scheduled run): item 17, third part: money trail transfers and bank holds are passages of the case file (no migration).
 Done in session 93 (12 Nov, scheduled run): item 17, second part: expert requests, court events and search memos are passages of the case file (no migration).
@@ -148,6 +149,29 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests). First part DONE (session 92): BM25 ranking in the browser over this case's pieces (passage names searched too, "call" finds "caller"), each piece named by its lines (flaw 3, no pages: the documents are typed text), checked English translations of statements in the case file, and the evaluation set `askFile.eval.test.ts` (flaws 4, 6, 8: 12 questions with known answer pieces, a disagreement, 3 questions the file has no words for). Left: embeddings kept on state servers (needs an on-premises embedding model and where the index lives, question 1 of session 92), more documents (bank replies as text and 63(4) certificates; money trail DONE in session 94; 63(4) certificates DONE in session 95; searches, lab/hospital requests and court events DONE in session 93), opening a source on click, the AI's own answers judged on the set (needs a provider), questions in Indian languages beyond word matching, the "note in case diary" button.
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 13 Nov 2026, session 96 (scheduled run, Sumit away)
+Started from `setup/seed` in a new container (Postgres role and databases made, gateway and web packages installed). A first Maven run failed to fetch a plugin dependency (a cached miss); `mvn -U` fixed it, no change to the repo. Baseline `scripts/test-all.sh`: all 8 suites PASS.
+
+**Item 17, fifth part: a search memo's list of seized items in the case file for Ask the case file:**
+- Core `CaseFileController`: the `search` passage now ends with `| seized: E-01 <description>; E-02 ...` (the items seized under that memo, BNSS 103(5), in label order). A memo with no items reads as before. No migration, no screen change.
+- `CaseFileApiTest`: new test (items listed in label order, an item seized outside the memo and another case's items left out).
+- `askFile.eval.test.ts`: the search passage carries the list and one question was added; 20 questions now.
+- Bank replies as text: nothing new needed. A bank reply is an evidence item, and its description is already a passage; the money passages name it ("bank reply E-02").
+
+`scripts/test-all.sh` at the end: all 8 suites PASS. Coverage: core 98.79% lines / 95.49% branches, web 99.97 / 97.14 / 98.57, gateway 99%. Gates unchanged (less than 2 points of room).
+
+Skipped / risks:
+- No time for extra tests of older code; coverage is already near the top.
+- Item 17 left: embeddings (question 1 of session 92 still open), the "note in case diary" button.
+- Blocked: item 3 (question 1 of session 84), item 9 rest (question 1 of session 88).
+
+Next: item 14 A5 and A7 to A9, then items 15, 16, 18.
+
+Questions for Sumit:
+1. Same as sessions 92 to 95: may the AI gateway get a small open embedding model on the state's own server? (Decides the real RAG work of item 17.)
+2. Rupee amounts in the case file: lakh grouping (1,00,000) as officers write them? (still open from session 95)
+3. Still open from before: sessions 91 (1, 2), 88 (1), 84 (1, 2), 85 (1, 2), 86 (1).
 
 ## 12 Nov 2026, session 95 (02:05 IST scheduled run, last of the night, Sumit away)
 Started from `setup/seed` at 6ad2532 in a new container (Postgres role and databases made, gateway requirements, `npm ci`, psycopg). Baseline `scripts/test-all.sh`: all 8 suites PASS.

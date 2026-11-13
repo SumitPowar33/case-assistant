@@ -66,8 +66,9 @@ class CaseFileController {
                 from court_event where fir_id = ? order by on_date, id limit 100""").params(firId));
         add(rows, "search", db.sql("""
                 select 'Search and seizure memo, ' || to_char(ist_date(started_at), 'DD Mon YYYY') as title,
-                       place || ' | ' || grounds || coalesce(' | no witness: ' || no_witness_reason, '') as text
-                from search_seizure where fir_id = ? order by started_at, id limit 100""").params(firId));
+                       place || ' | ' || grounds || coalesce(' | no witness: ' || no_witness_reason, '')
+                       || coalesce(' | seized: ' || (select string_agg(e.label || ' ' || e.description, '; ' order by e.label) from evidence_item e where e.search_id = s.id), '') as text
+                from search_seizure s where fir_id = ? order by started_at, id limit 100""").params(firId));
         // session 94 (item 17): the money trail as typed from bank replies; a receiving accused is named by label only
         add(rows, "money", db.sql("""
                 select 'Transfer on ' || to_char(t.transferred_on, 'DD Mon YYYY') as title,

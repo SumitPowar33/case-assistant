@@ -151,6 +151,28 @@ class CaseFileApiTest {
     }
 
     @Test
+    void aSearchMemoListsTheItemsSeizedUnderItAndNotOtherItems() throws Exception {
+        // session 96 (item 17): BNSS 103(5) list of things seized; items seized elsewhere or in another case stay out
+        // the memo and its items go in one statement: a memo is frozen in the transaction that writes it
+        db.sql("""
+                with m as (insert into search_seizure (fir_id, place, grounds, started_at, ended_at, no_witness_reason, recorded_by)
+                           values (?, 'Fictional shop, Demo Road', 'Fictional grounds: phone believed kept here', now() - interval '3 hours', now() - interval '2 hours', 'Fictional: no resident agreed to witness', ?)
+                           returning id),
+                     r as (insert into search_recording (search_id, fir_id, sha256, seconds) select id, ?, ?, 600 from m)
+                insert into evidence_item (fir_id,label,description,kind,seized_at,seizure_memo,sha256,search_id)
+                select ?, v.label, v.d, 'physical', now(), 'SM-2', v.h, m.id
+                from m, (values ('E-02','Fictional laptop',?), ('E-01','Fictional phone',?)) as v(label,d,h)""")
+                .params(fir, ioId, fir, "c".repeat(64), fir, "e".repeat(64), "f".repeat(64)).update();
+        db.sql("insert into evidence_item (fir_id,label,description,kind,seized_at,seizure_memo,sha256) values (?,'E-03','Fictional bag elsewhere','physical','2026-10-02T10:00Z','SM-3',?)")
+                .params(fir, "a".repeat(64)).update();
+        JsonNode p = read(fir, io);
+        JsonNode search = null;
+        for (JsonNode x : p) if (x.get("kind").asText().equals("search")) search = x;
+        assertThat(search.get("text").asText()).isEqualTo("Fictional shop, Demo Road | Fictional grounds: phone believed kept here | no witness: Fictional: no resident agreed to witness | seized: E-01 Fictional phone; E-02 Fictional laptop");
+        assertThat(read(other, io).toString()).doesNotContain("Fictional laptop");
+    }
+
+    @Test
     void theMoneyTrailsTransfersAndHoldsArePassagesOfThisCaseOnly() throws Exception {
         // session 94 (item 17): amounts in rupees, a receiving accused by label, the bank reply named when linked
         UUID acc = db.sql("insert into person (fir_id, role, label, full_name) values (?, 'accused', 'A1', 'Fictional Accused Name') returning id").param(fir).query(UUID.class).single();
