@@ -530,6 +530,7 @@
  "aiFeature.chargesheet_draft": "Draft chargesheet paragraphs",
  "aiFeature.case_qa": "Answer questions about the case file",
  "aiFeature.victim_update": "Draft the 90-day victim update",
+ "aiFeature.law_explain": "Explain an old-to-new law section in plain words",
  "settings.caption": "Provider per feature",
  "settings.colFeature": "Feature",
  "settings.colProvider": "Provider",
@@ -1236,5 +1237,18 @@
  "vl.logged": "Your decision ({decision}) is logged. Send the letter by your own means, then record the update given in the form below.",
  "vl.use": "Use this letter",
  "vl.reject": "Do not use it",
- "vl.useNote": "Your decision is logged in the gateway. A letter you change counts as partly kept."
+ "vl.useNote": "Your decision is logged in the gateway. A letter you change counts as partly kept.",
+ "lx.open": "Explain in plain words",
+ "lx.title": "AI explanation of {old} → {new}",
+ "lx.language": "Language of the explanation",
+ "lx.ask": "Explain with AI",
+ "lx.writing": "Writing the explanation…",
+ "lx.sends": "Sends only the two section numbers and the table's short description to the AI gateway: nothing from any case.",
+ "lx.aiPanel": "AI draft · check it against the Act before relying on it",
+ "lx.empty": "The AI wrote no explanation. Nothing was shown; you can try again.",
+ "lx.opinion": "The AI's explanation gave an opinion on guilt or truthfulness and is not shown. You can try again.",
+ "lx.odd": "The explanation has numbers that are not in the table: {list}. Check them against the Act.",
+ "lx.helpful": "Helpful",
+ "lx.notHelpful": "Not helpful",
+ "lx.logged": "Your answer ({decision}) is logged."
 }

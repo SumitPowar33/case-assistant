@@ -26,6 +26,7 @@ import SectionSuggest from './SectionSuggest'
 import ActingPage from './ActingPage'
 import NarrativeDraft from './NarrativeDraft'
 import VictimLetter from './VictimLetter'
+import LawExplain from './LawExplain'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -139,6 +140,16 @@ test('the AI victim letter with a letter to use has no accessibility faults eith
   expect(await violations()).toEqual([])
   fireEvent.click(screen.getByRole('button', { name: 'Draft the letter with AI' }))
   await screen.findByLabelText('Letter to the victim or informant')
+  expect(await violations()).toEqual([])
+})
+
+test('the AI explanation of a law section, before and after the answer, has no accessibility faults either', async () => {
+  const answer = { request_id: 'r1', draft: 'BNS 318 took the place of IPC 420. Read the section in the Act.', provider: 'fake', model: 'm' }
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => answer })))
+  render(<LawExplain entry={{ law: 'IPC', newLaw: 'BNS', from: '420', to: '318', what: 'Cheating', partial: false }} />)
+  expect(await violations()).toEqual([])
+  fireEvent.click(screen.getByRole('button', { name: 'Explain with AI' }))
+  await screen.findByRole('button', { name: 'Helpful' })
   expect(await violations()).toEqual([])
 })
 

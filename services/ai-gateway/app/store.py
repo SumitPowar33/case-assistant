@@ -27,6 +27,7 @@ FEATURES = {
     "chargesheet_draft": "Draft chargesheet paragraphs",
     "case_qa": "Answer questions about the case file",
     "victim_update": "Draft the 90-day victim update",
+    "law_explain": "Explain an old-to-new law section in plain words",
 }
 PROVIDERS = {"claude", "gemini", "fake"}
 DEFAULT_MODELS = {"claude": "claude-sonnet-5-5", "gemini": "gemini-3.7-flash", "fake": "fake-1"}

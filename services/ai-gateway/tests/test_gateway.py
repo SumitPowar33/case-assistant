@@ -186,6 +186,18 @@ def test_fake_provider_works_offline():
     assert r.status_code == 200 and r.json()["draft"].startswith("[demo draft]")
 
 
+def test_the_law_explain_feature_is_known_and_logs_without_a_case_reference():
+    store = Store(":memory:")
+    c = client(store, {"claude": ClaudeProvider(""), "gemini": GeminiProvider(""), "fake": FakeProvider()})
+    assert "law_explain" in c.get("/v1/features").json()["features"]
+    c.put("/v1/settings/law_explain", json={"provider": "fake"})
+    r = c.post("/v1/generate", json={"feature": "law_explain", "prompt": "IPC section 420 to BNS section 318", "prompt_version": "law_explain/explain@1"})
+    assert r.status_code == 200
+    d = c.post("/v1/decisions", json={"request_id": r.json()["request_id"], "decision": "accepted", "feature": "law_explain"})
+    assert d.status_code == 200
+    assert [(a["action"], a["feature"], a["case_ref"]) for a in store.audit_rows()][:2] == [("accepted", "law_explain", None), ("ai_request", "law_explain", None)]
+
+
 def test_every_call_needs_a_valid_login_token():
     store = Store(":memory:")
     app = create_app(store, {"fake": FakeProvider()}, SECRET, core_says_active)

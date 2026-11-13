@@ -88,3 +88,22 @@ test('a table with no partial match has no note about them; a bad answer or a re
   page(async () => ({ ok: false, status: 403, json: async () => ({ message: 'Not allowed.' }) }))
   expect(await screen.findByRole('alert')).toBeTruthy()
 })
+
+test('a row with a new section has a button that opens the AI explanation of that row only; a row without one has none', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (url === '/api/law-finder') return { ok: true, status: 200, json: async () => table }
+    expect(JSON.parse(init!.body as string).prompt).toContain(url.endsWith('generate') ? 'IPC section 379' : '')
+    return { ok: true, status: 200, json: async () => ({ request_id: 'r1', draft: 'BNS 303 took the place of IPC 379.', provider: 'fake', model: 'echo' }) }
+  }))
+  render(<LawFinder />)
+  await screen.findByText('IPC 302')
+  expect(screen.getAllByRole('button', { name: 'Explain in plain words' })).toHaveLength(4)   // not the row without a new section
+  expect(screen.queryByLabelText('Language of the explanation')).toBeNull()
+  fireEvent.click(screen.getAllByRole('button', { name: 'Explain in plain words' })[1])
+  expect(screen.getByRole('heading', { name: 'AI explanation of IPC 379 → BNS 303' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Explain with AI' }))
+  expect(await screen.findByText('BNS 303 took the place of IPC 379.')).toBeTruthy()
+  fireEvent.click(screen.getAllByRole('button', { name: 'Explain in plain words' })[0])   // another row starts a fresh panel
+  expect(screen.getByRole('heading', { name: 'AI explanation of IPC 302 → BNS 103' })).toBeTruthy()
+  expect(screen.queryByText('BNS 303 took the place of IPC 379.')).toBeNull()
+})
