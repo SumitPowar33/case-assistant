@@ -141,12 +141,14 @@ test('the AI fact check and section suggestion are on the case details part for 
   expect(await screen.findByText('Fictional complaint words')).toBeTruthy()
   expect(screen.queryByRole('heading', { name: 'AI fact check' })).toBeNull()
   expect(screen.queryByRole('heading', { name: 'AI section suggestion' })).toBeNull()
+  expect(screen.queryByRole('heading', { name: /AI draft of the 90-day letter/ })).toBeNull()
   cleanup()
   stub({ ...sections, '/firs/f1': { ...fir, case_team: true, victim_protected: false } })
   render(<FirDetail id="f1" />)
   expect(await screen.findByRole('heading', { name: 'AI fact check' })).toBeTruthy()
   expect(await screen.findByRole('button', { name: 'Find facts with AI' })).toBeTruthy()
   expect(await screen.findByRole('button', { name: 'Suggest sections with AI' })).toBeTruthy()
+  expect(await screen.findByRole('heading', { name: /AI draft of the 90-day letter/ })).toBeTruthy()
   cleanup()
   stub({ ...sections, '/firs/f1': { ...fir, case_team: true, victim_protected: true } })
   render(<FirDetail id="f1" />)
@@ -154,6 +156,8 @@ test('the AI fact check and section suggestion are on the case details part for 
   // the fact check, the section suggestion and the final report's AI draft (A6) each say so
   expect(screen.getAllByText(/not offered on a case that protects the victim's identity/)).toHaveLength(3)
   expect(screen.getByText(/The AI draft is not offered/)).toBeTruthy()
+  // the letter carries no name and nothing from the file, so a protected victim is told too
+  expect(screen.getByRole('heading', { name: /AI draft of the 90-day letter/ })).toBeTruthy()
 })
 
 test('on a phone the FIR opens on Deadlines; a wide screen opens on Case details', async () => {

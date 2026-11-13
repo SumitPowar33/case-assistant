@@ -25,6 +25,7 @@ import Statements from './Statements'
 import SectionSuggest from './SectionSuggest'
 import ActingPage from './ActingPage'
 import NarrativeDraft from './NarrativeDraft'
+import VictimLetter from './VictimLetter'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -128,6 +129,16 @@ test('the AI draft of the final report narrative with sentences to tick has no a
   fireEvent.click(await screen.findByRole('button', { name: 'Draft with AI from the file' }))
   await screen.findByText('AI draft · tick the sentences to take')
   expect(screen.getAllByRole('checkbox')).toHaveLength(2)
+  expect(await violations()).toEqual([])
+})
+
+test('the AI victim letter with a letter to use has no accessibility faults either', async () => {
+  const answer = { request_id: 'r1', draft: 'FIR 9/2026 was registered. The inquiry continues.', provider: 'fake', model: 'm' }
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => answer })))
+  render(<VictimLetter firId="f1" firNo={9} firYear={2026} registeredAt="2026-11-02T04:30:00Z" />)
+  expect(await violations()).toEqual([])
+  fireEvent.click(screen.getByRole('button', { name: 'Draft the letter with AI' }))
+  await screen.findByLabelText('Letter to the victim or informant')
   expect(await violations()).toEqual([])
 })
 
