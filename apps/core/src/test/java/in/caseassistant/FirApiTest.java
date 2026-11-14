@@ -137,6 +137,9 @@ class FirApiTest {
         assign(TestAuth.bearer(tokens, io1), fir, to.formatted(io2, ",\"reason\":\"Fictional leave of IO\"")).andExpect(status().isForbidden());
         assign(sho, fir, to.formatted(io1, ",\"reason\":\"Fictional leave of IO\"")).andExpect(status().isConflict());
         assign(sho, fir, to.formatted(io2, "")).andExpect(status().isBadRequest()).andExpect(status().reason(org.hamcrest.Matchers.startsWith("Give the reason")));
+        // a blank reason counts as none; nine letters after trimming are too few
+        assign(sho, fir, to.formatted(io2, ",\"reason\":\"     \"")).andExpect(status().isBadRequest()).andExpect(status().reason(org.hamcrest.Matchers.startsWith("Give the reason")));
+        assign(sho, fir, to.formatted(io2, ",\"reason\":\"  Fictional  \"")).andExpect(status().isBadRequest()).andExpect(status().reason(org.hamcrest.Matchers.startsWith("Give the reason")));
         assign(sho, fir, to.formatted(io2, ",\"reason\":\"Fictional leave of IO\"")).andExpect(status().isNoContent());
         // the old IO is off the case team at once; the new one is on it
         mvc.perform(get("/api/firs/" + fir + "/io-candidates").header("Authorization", TestAuth.bearer(tokens, io1))).andExpect(status().isNotFound());
@@ -164,5 +167,20 @@ class FirApiTest {
         mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(b)))
                 .andExpect(status().isCreated());
         assertThat(db.sql("select count(*) from fir_io_assignment").query(Long.class).single()).isEqualTo(1);
+    }
+
+    /** Without a complaint the FIR itself must carry the information, its language and when it was received (session 101: each part was untested). */
+    @Test
+    void anFirWithoutAComplaintNeedsTheInformationItsLanguageAndTheTimeReceived() throws Exception {
+        int no = 40;
+        for (var gap : new Object[][] {{"informationReceivedAt", null}, {"contentsOriginal", null}, {"contentsOriginal", "   "},
+                                        {"contentsLanguage", null}, {"contentsLanguage", " "}}) {
+            var b = new java.util.HashMap<String, Object>(body(++no));
+            b.put((String) gap[0], gap[1]);
+            mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(b)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(status().reason("The information, its language and the time it was received are needed."));
+        }
+        assertThat(db.sql("select count(*) from fir").query(Long.class).single()).isZero();
     }
 }

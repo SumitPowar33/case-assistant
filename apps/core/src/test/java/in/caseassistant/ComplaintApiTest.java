@@ -312,4 +312,44 @@ class ComplaintApiTest {
         bare.remove("complaintId");
         send(clerk, "POST", "/api/firs", bare).andExpect(status().isBadRequest());
     }
+
+    /** Edges of signing and closing found untested by the coverage report (session 101). */
+    @Test
+    void phoneInformationNeedsItsReadBackLanguageALapsedOneCannotBeSignedAndOnlyUnsignedElectronicLapses() throws Exception {
+        UUID phone = take("phone", "other", Instant.now().minus(5, ChronoUnit.MINUTES));
+        send(clerk, "POST", "/api/complaints/" + phone + "/sign", Map.of()).andExpect(status().isBadRequest())
+                .andExpect(status().reason("Say in which language the text was read over to the informant."));
+        send(clerk, "POST", "/api/complaints/" + phone + "/sign", Map.of("readBackLanguage", "hi")).andExpect(status().isNoContent());
+        assertThat(db.sql("select read_back_language from complaint where id = ?").param(phone).query(String.class).single()).isEqualTo("hi");
+
+        UUID late = take("electronic", "other", Instant.now().minus(4, ChronoUnit.DAYS));
+        send(clerk, "POST", "/api/complaints/" + late + "/outcome", Map.of("outcome", "not_signed_in_time", "reason", "Fictional: informant never came to sign"))
+                .andExpect(status().isNoContent());
+        send(clerk, "POST", "/api/complaints/" + late + "/sign", Map.of()).andExpect(status().isConflict())
+                .andExpect(status().reason("This complaint is already signed or closed."));
+
+        UUID signed = take("electronic", "other", Instant.now().minus(1, ChronoUnit.DAYS));
+        send(clerk, "POST", "/api/complaints/" + signed + "/sign", Map.of()).andExpect(status().isNoContent());
+        send(clerk, "POST", "/api/complaints/" + signed + "/outcome", Map.of("outcome", "not_signed_in_time", "reason", "Fictional: not signed in time"))
+                .andExpect(status().isBadRequest()).andExpect(status().reason("Only unsigned electronic information can lapse."));
+        // a written text signed in the station: the enquiry's permission must name an officer, three letters at least
+        UUID written = take("written", "other", Instant.now());
+        send(clerk, "POST", "/api/complaints/" + written + "/sign", Map.of()).andExpect(status().isNoContent());
+        var enquiry = new HashMap<String, Object>(Map.of("outcome", "preliminary_enquiry", "reason", "Fictional: offence punishable 3 to 7 years"));
+        for (String who : new String[] {"DS", "  D  "}) {
+            enquiry.put("permittedBy", who);
+            send(clerk, "POST", "/api/complaints/" + written + "/outcome", enquiry).andExpect(status().isBadRequest())
+                    .andExpect(status().reason("Name the officer (DSP or above) who permitted the preliminary enquiry (BNSS 173(3))."));
+        }
+        enquiry.put("permittedBy", "DSP");
+        send(clerk, "POST", "/api/complaints/" + written + "/outcome", enquiry).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void anAccountWithoutAStationSeesNoComplaintList() throws Exception {
+        String noStation = TestAuth.bearer(tokens, db.sql("insert into app_user (full_name, rank, role) values ('Fictional Platform Admin','SP','state_admin') returning id")
+                .query(UUID.class).single());
+        mvc.perform(get("/api/complaints").header("Authorization", noStation)).andExpect(status().isForbidden())
+                .andExpect(status().reason("Only station staff who register FIRs see its complaints."));
+    }
 }

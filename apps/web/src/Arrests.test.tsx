@@ -157,6 +157,29 @@ test('a memo correction starts from the memo, sends place, grounds and informed 
     informedContact: null, reason: 'place was the bus stand' } }])
 })
 
+test('a memo correction with every ground cleared is refused before sending; an informed person never named starts empty', async () => {
+  const writes = stub({ '/firs/f1/arrests': [
+    { ...base, id: 'a1', informed_name: null, first_remand_on: null, chargesheet_last_day: null, released_on: null, release_basis: null, chargesheet_filed_on: null, corrected: false, memo_corrected: false },
+  ] })
+  render(<Arrests firId="f1" people={people} version={0} onSaved={() => {}} />)
+  const form = (await screen.findByText('Correct the place, grounds or informed person')).closest('details')!
+  expect((within(form).getByLabelText(/Relative or friend informed/) as HTMLInputElement).value).toBe('')
+  type(/Grounds of arrest told to the person/, '  \n  ', within(form))
+  type(/Relative or friend informed/, 'Fictional Neighbour', within(form))
+  type(/Why this is being corrected/, 'grounds were typed wrongly', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  expect((await within(form).findByRole('alert')).textContent).toContain('Write the grounds of arrest told to the person (BNSS 47).')
+  expect(writes).toEqual([])
+})
+
+test('a release recorded without its basis still says the limit has stopped', async () => {
+  stub({ '/firs/f1/arrests': [
+    { ...base, id: 'a1', first_remand_on: '2026-09-12', chargesheet_last_day: '2026-12-10', released_on: '2026-09-20', release_basis: null, chargesheet_filed_on: null, corrected: true, memo_corrected: false },
+  ] })
+  render(<Arrests firId="f1" people={people} version={0} onSaved={() => {}} />)
+  expect(await screen.findByText(/Released +on 2026-09-20: the custody limit no longer runs\./)).toBeTruthy()
+})
+
 test('a time correction sends the new time in IST with a reason and shows the history', async () => {
   const writes = stub({ '/firs/f1/arrests': [
     { ...base, id: 'a1', first_remand_on: null, chargesheet_last_day: null, released_on: null, release_basis: null, chargesheet_filed_on: null, corrected: false, time_corrected: true },
