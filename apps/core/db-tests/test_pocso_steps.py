@@ -57,6 +57,10 @@ def test_the_two_24_hour_steps_count_from_the_information_in_india_time(db):
     db.execute("UPDATE fir SET information_received_at = '2026-08-18 23:50+05:30', registered_at = '2026-08-18 23:55+05:30' WHERE id=%s", (fir,))
     due, text = kinds(db, fir)["pocso_cwc_court_report"]
     assert str(due) == "2026-08-19" and text.endswith("by 19 Aug 2026 23:50 IST")
+    # just after midnight in India: 24 hours end on the next day (23 hours would still be the same day)
+    db.execute("UPDATE fir SET information_received_at = '2026-08-18 00:30+05:30', registered_at = '2026-08-18 00:40+05:30' WHERE id=%s", (fir,))
+    due, text = kinds(db, fir)["pocso_medical_examination"]
+    assert str(due) == "2026-08-19" and text.endswith("by 19 Aug 2026 00:30 IST")
 
 
 def test_a_step_recorded_ends_only_its_own_deadline_and_steps_without_a_limit_end_none(db):

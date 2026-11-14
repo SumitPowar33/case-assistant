@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = ROOT / "apps/core/src/main/resources/db/migration"
 # the functions and the view that hold legal day counts and section rules
 LEGAL = ("chargesheet_last_day", "arrest_last_day", "earlier_custody_days", "sexual_offence_last_day", "ist_date",
-         "effective_policy_days", "bnss_193_2_applies", "section_no", "identity_protected_case", "case_deadline")
+         "effective_policy_days", "bnss_193_2_applies", "section_no", "identity_protected_case", "pocso_case", "case_deadline")
 # a whole number outside quotes, an interval such as '24 hours', or a comparison
 TOKEN = re.compile(r"'(\d+) (hours?|days?|months?)'|(?<![\w.'])(\d+)(?![\w.'])|<=|>=|(?<![<>=!])[<>](?![=>])")
 SWAP = {"<": "<=", "<=": "<", ">": ">=", ">=": ">"}
