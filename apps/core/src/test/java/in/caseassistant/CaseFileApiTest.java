@@ -221,4 +221,19 @@ class CaseFileApiTest {
         assertThat(p.toString()).doesNotContain("Fictional Signer").doesNotContain("Fictional Expert").doesNotContain("IMEI 000000000000001").doesNotContain("Fictional Other");
         assertThat(read(other, io).get(2).get("title").asText()).isEqualTo("BSA 63(4) certificate Part A for E-04, signed 05 Oct 2026");
     }
+
+    // weekly review 14 Nov: the statements of a person masked by hand do not go to Ask the case file, as A3 and A6 leave them out
+    @Test
+    void aPersonMaskedByHandIsLeftOutWithTheirStatementsAndTranslations() throws Exception {
+        UUID w = db.sql("insert into person (fir_id, role, label, full_name) values (?, 'witness', 'W3', 'Fictional Masked Name') returning id").param(fir).query(UUID.class).single();
+        UUID st = db.sql("insert into witness_statement (fir_id, person_id, recorded_by, language, medium, original_text) values (?,?,?,'mr','written','मी साक्षीदार आहे.') returning id")
+                .params(fir, w, ioId).query(UUID.class).single();
+        db.sql("insert into statement_translation (statement_id, translated_text, ai_text, ai_request_id, checked_by) values (?, 'I am a masked witness.', 'I am a masked witness.', gen_random_uuid(), ?)")
+                .params(st, ioId).update();
+        assertThat(read(fir, io)).hasSize(3);
+        db.sql("update person set identity_masked = true where id = ?").param(w).update();
+        JsonNode p = read(fir, io);
+        assertThat(p).hasSize(1);
+        assertThat(p.toString()).doesNotContain("W3").doesNotContain("masked witness").doesNotContain("साक्षीदार");
+    }
 }

@@ -37,16 +37,17 @@ class CaseFileController {
         team.requireTeam(me, firId);
         var rows = new ArrayList<Map<String, Object>>();
         add(rows, "complaint", db.sql("select 'FIR complaint' as title, contents_original as text from fir where id = ?").params(firId));
+        // a person masked by hand is left out with their statements and translations, as A3 and A6 leave them out (weekly review 14 Nov)
         add(rows, "statement", db.sql("""
                 select 'Statement of ' || p.label || ', recorded ' || to_char(ist_date(s.recorded_at), 'DD Mon YYYY') as title, s.original_text as text
-                from witness_statement s join person p on p.id = s.person_id where s.fir_id = ? order by s.recorded_at limit 100""").params(firId));
+                from witness_statement s join person p on p.id = s.person_id where s.fir_id = ? and not p.identity_masked order by s.recorded_at limit 100""").params(firId));
         // a statement's English translation that an officer checked (V52), so an English question finds a statement made in
         // another language; the original stays the statement
         add(rows, "translation", db.sql("""
                 select 'English translation of the statement of ' || p.label || ', recorded ' || to_char(ist_date(s.recorded_at), 'DD Mon YYYY') as title,
                        t.translated_text as text
                 from statement_translation t join witness_statement s on s.id = t.statement_id join person p on p.id = s.person_id
-                where s.fir_id = ? order by s.recorded_at limit 100""").params(firId));
+                where s.fir_id = ? and not p.identity_masked order by s.recorded_at limit 100""").params(firId));
         add(rows, "diary", db.sql("""
                 select 'Case diary, ' || to_char(diary_date, 'DD Mon YYYY') as title, text from case_diary_entry
                 where fir_id = ? order by at limit 100""").params(firId));

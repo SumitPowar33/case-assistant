@@ -61,7 +61,10 @@ class StatementController {
                 from witness_statement s join person p on p.id = s.person_id join app_user u on u.id = s.recorded_by
                 left join statement_translation t on t.statement_id = s.id left join app_user tu on tu.id = t.checked_by
                 where s.fir_id = ? order by s.recorded_at desc""").params(firId).query().listOfRows();
-        if (!witnesses.isEmpty() && team.identityProtected(firId)) reads.fir(me, firId, "statements");
+        // a protected case, or a person masked by hand on an ordinary case (their name and words are shown to the team)
+        if (!witnesses.isEmpty() && (team.identityProtected(firId)
+                || db.sql("select exists (select 1 from person where fir_id = ? and identity_masked)").param(firId).query(Boolean.class).single()))
+            reads.fir(me, firId, "statements");
         var out = new LinkedHashMap<String, Object>();
         out.put("witnesses", witnesses);
         out.put("statements", statements);

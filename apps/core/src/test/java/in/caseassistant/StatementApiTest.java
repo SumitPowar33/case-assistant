@@ -178,4 +178,17 @@ class StatementApiTest {
                 .content(json.writeValueAsString(Map.of("text", "Words", "aiText", "Words")))).andExpect(status().isBadRequest());
         assertThat(db.sql("select count(*) from statement_translation").query(Long.class).single()).isZero();
     }
+
+    // weekly review 14 Nov: a person masked by hand on an ordinary case is shown to the team by name, so the read is logged
+    @Test
+    void readingStatementsOfACaseWithAPersonMaskedByHandIsLogged() throws Exception {
+        UUID w = person(fir, "witness", "W1", "Fictional Witness");
+        record(io, fir, w, "Fictional account naming nobody.").andExpect(status().isCreated());
+        mvc.perform(get("/api/firs/" + fir + "/statements").header("Authorization", io)).andExpect(status().isOk());
+        assertThat(db.sql("select count(*) from protected_read where fir_id = ?").param(fir).query(Long.class).single()).isZero();
+        db.sql("update person set identity_masked = true where id = ?").param(w).update();
+        mvc.perform(get("/api/firs/" + fir + "/statements").header("Authorization", io)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.statements[0].masked").value(true));
+        assertThat(db.sql("select count(*) from protected_read where what = 'statements' and fir_id = ?").param(fir).query(Long.class).single()).isOne();
+    }
 }
