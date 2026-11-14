@@ -786,7 +786,7 @@ def test_a_protected_case_s_text_is_not_sent_for_the_features_that_carry_it(setu
     assert c.post("/v1/generate", json={"feature": feature, "prompt": "Fictional text", "prompt_version": "t@1", "case_ref": CASE}).status_code == 200
 
 
-@pytest.mark.parametrize("feature", ["case_qa", "victim_update", "notice_draft"])
+@pytest.mark.parametrize("feature", ["case_qa", "victim_update", "notice_draft", "supervisor_brief"])
 def test_features_without_victim_details_still_work_on_a_protected_case(setup, feature):
     c, _ = setup
     assert c.post("/v1/generate", json={"feature": feature, "prompt": "Fictional", "prompt_version": "t@1", "case_ref": PROTECTED}).status_code == 200
@@ -801,10 +801,17 @@ def test_a_case_feature_must_name_its_fir_by_id(setup, case_ref):
     assert store.audit_rows()[0]["action"] == "ai_refused"
 
 
-def test_a_case_outside_the_officers_case_team_is_refused_and_logged(setup):
+@pytest.mark.parametrize("feature", ["case_qa", "supervisor_brief"])
+def test_a_case_outside_the_officers_case_team_is_refused_and_logged(setup, feature):
     c, store = setup
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "When was it?", "prompt_version": "t@1", "case_ref": NOT_MINE})
+    r = c.post("/v1/generate", json={"feature": feature, "prompt": "When was it?", "prompt_version": "t@1", "case_ref": NOT_MINE})
     assert r.status_code == 404 and store.audit_rows()[0]["action"] == "ai_refused"
+
+
+def test_supervisor_brief_names_its_case(setup):
+    c, store = setup
+    assert c.post("/v1/generate", json={"feature": "supervisor_brief", "prompt": "Facts", "prompt_version": "t@1"}).status_code == 422
+    assert store.audit_rows()[0]["action"] == "ai_refused"
 
 
 def test_law_explain_reads_no_case_and_asks_the_core_nothing(setup):

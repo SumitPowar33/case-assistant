@@ -106,8 +106,8 @@ def refused_question(feature: str, prompt: str) -> str | None:
 # Weekly review of 14 Nov 2026: the screens did not offer these on a protected case, but the gateway took any text. Now every
 # feature that reads a case names the FIR (its id, as case_ref) and the core app says whether the officer is on its case team
 # and whether its victim's identity is protected (BNS 72, BNS 124). The features below send the FIR text or statements, so
-# they are refused on a protected case. case_qa is still allowed there (question 1 of session 92), victim_update and
-# notice_draft send no victim details; law_explain reads no case.
+# they are refused on a protected case. case_qa is still allowed there (question 1 of session 92), victim_update,
+# notice_draft and supervisor_brief send no victim details; law_explain reads no case.
 NO_CASE_FEATURES = {"law_explain"}
 NOT_ON_PROTECTED = {"fir_extract", "section_suggest", "statement_translate", "reply_check", "chargesheet_draft"}
 UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
