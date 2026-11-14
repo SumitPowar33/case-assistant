@@ -3,6 +3,7 @@ package in.caseassistant;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -269,6 +270,33 @@ class ActingChargeApiTest {
         db.sql("update app_user set station_id = ? where id = ?").params(near, ioId).update();
         assertThat(canOpen(io)).isFalse();
         assertThat(team.activeRoles(ioId)).containsExactly("io");
+    }
+
+    // weekly review 14 Nov: a charge used to come back when the officer was moved back or the account reopened
+    @Test
+    void aTransferByTheAdminEndsTheCharge_soMovingTheOfficerBackDoesNotBringItBack() throws Exception {
+        UUID id = give(sp, ioId, 20);
+        String move = "{\"role\":\"io\",\"rank\":\"SI\",\"stationId\":\"%s\",\"reason\":\"Transfer order of the district\"}";
+        call(put("/api/users/" + ioId), stateAdmin, move.formatted(near)).andExpect(status().isOk());
+        call(put("/api/users/" + ioId), stateAdmin, move.formatted(station)).andExpect(status().isOk());
+        assertThat(team.activeRoles(ioId)).containsExactly("io");
+        assertThat(db.sql("select ended_by from acting_charge_end where charge_id = ?").param(id).query(UUID.class).single()).isEqualTo(stateAdminId);
+        assertThat(db.sql("select count(*) from admin_action where action = 'acting_ended' and user_id = ?").param(ioId).query(Long.class).single()).isEqualTo(1);
+        call(get("/api/acting-charges?stationId=" + station), sp, null).andExpect(jsonPath("$[0].status").value("ended"));
+        // a change of rank only, at the same station, leaves a running charge alone
+        UUID again = give(sp, ioId, 5);
+        call(put("/api/users/" + ioId), stateAdmin, move.formatted(station).replace("\"SI\"", "\"Inspector\"")).andExpect(status().isOk());
+        assertThat(db.sql("select count(*) from acting_charge_end where charge_id = ?").param(again).query(Long.class).single()).isZero();
+    }
+
+    @Test
+    void closingTheAccountEndsTheCharge_soReopeningItDoesNotBringItBack() throws Exception {
+        UUID id = give(sp, ioId, 20);
+        call(post("/api/users/" + ioId + "/disable"), stateAdmin, "{\"reason\":\"Suspended pending enquiry\"}").andExpect(status().isNoContent());
+        call(post("/api/users/" + ioId + "/enable"), stateAdmin, "{\"reason\":\"Suspension revoked by order\"}").andExpect(status().isNoContent());
+        assertThat(team.activeRoles(ioId)).containsExactly("io");
+        assertThat(db.sql("select reason from acting_charge_end where charge_id = ?").param(id).query(String.class).single())
+                .startsWith("Account closed: ");
     }
 
     @Test

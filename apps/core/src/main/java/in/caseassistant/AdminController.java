@@ -121,6 +121,22 @@ class AdminController {
                 .params(actor, action, userId, stationId, reason == null ? null : reason.trim(), detail).update();
     }
 
+    /**
+     * A move to another station or a closed account ends the officer's running acting charges for good, with an end row
+     * and a line in the admin log; otherwise moving the officer back or reopening the account would bring a charge back
+     * that nobody gave again (ARCHITECTURE-TENANCY section 5, item 5).
+     */
+    private void endActingCharges(UUID actor, UUID user, String reason) {
+        var running = db.sql("""
+                select id, station_id, role from acting_charge ac where user_id = ? and ends_at > clock_timestamp()
+                  and not exists (select 1 from acting_charge_end ae where ae.charge_id = ac.id) for update""")
+                .param(user).query().listOfRows();
+        for (var c : running) {
+            db.sql("insert into acting_charge_end (charge_id, reason, ended_by) values (?,?,?)").params(c.get("id"), reason, actor).update();
+            log(actor, "acting_ended", user, (UUID) c.get("station_id"), reason, (String) c.get("role"));
+        }
+    }
+
     /** Every account with its station and whether it is locked now; never a password hash. */
     @GetMapping("/users")
     List<Map<String, Object>> users(@AuthenticationPrincipal Jwt jwt) {
@@ -170,6 +186,7 @@ class AdminController {
                 .param(id).update();
         if (n == 0) throw notFoundOr(id, "This account is already disabled.");
         log(me, "user_disabled", id, null, r.reason);
+        endActingCharges(me, id, "Account closed: " + r.reason.trim());
         return ResponseEntity.noContent().build();
     }
 
@@ -220,6 +237,7 @@ class AdminController {
         db.sql("update app_user set role = ?, rank = ?, station_id = ?, password_changed_at = clock_timestamp() where id = ?")
                 .params(c.role, c.rank.trim(), station, id).update();
         log(me, "user_changed", id, null, c.reason, String.join("; ", detail));
+        if (!java.util.Objects.equals(old.get("station_id"), station)) endActingCharges(me, id, "Officer moved: " + c.reason.trim());
         long firsAsIo = db.sql("select count(*) from fir where io_id = ?").param(id).query(Long.class).single();
         return Map.of("changed", String.join("; ", detail), "firsAsIo", firsAsIo);
     }
