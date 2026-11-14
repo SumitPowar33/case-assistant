@@ -47,7 +47,7 @@ export function letterPrompt(f: Facts, language: string): string {
 export type Letter = { kind: 'letter'; text: string; odd: string[] } | { kind: 'refused'; why: 'opinion' | 'promise' } | { kind: 'empty' }
 
 // words that promise an outcome the police cannot promise
-const PROMISE = /\b(will|shall|would) (definitely |certainly |surely )?(be |get )?(arrest\w*|punish\w*|caught|convict\w*|jail\w*|recover\w*|return\w*|refund\w*)\b|\b(guarantee\w*|assure\w*|promise\w*|certainly|definitely)\b/i
+const PROMISE = /\b(will|shall|would) (definitely |certainly |surely |soon |shortly )?(soon |shortly )?(be |get )?(arrest\w*|punish\w*|caught|convict\w*|jail\w*|recover\w*|return\w*|refund\w*)\b|\bget (all )?(your |the )?money back\b|\b(guarantee\w*|assure\w*|promise\w*|certainly|definitely)\b/i
 
 /** The answer checked: empty, an opinion or a promise (not shown), or the letter with the numbers that are not in the facts. */
 export function readLetter(answer: string, f: Facts): Letter {

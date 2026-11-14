@@ -20,7 +20,7 @@ const MAX_SENTENCE = 600
 const MAX_QUOTE = 500
 
 // Words that judge a person: guilt, innocence, truthfulness, or that the case is proved. A sentence with one is not shown.
-const OPINION = /\b(guilt\w*|innocen\w*|culprit\w*|convict\w*|credib\w*|truthful\w*|untruthful|lying|liars?|lied|believab\w*|unbelievab\w*|trustworth\w*|untrustworth\w*|honest\w*|dishonest\w*|reliab\w*|unreliab\w*)\b|\b(proved|proven|established|clear) beyond\b|\b(is|are|stands?|was|were|has been|have been) (clearly |fully |thus |therefore )?(proved|proven|established)\b|\bcommitted the (offence|crime)\b/i
+const OPINION = /\b(guilt\w*|innocen\w*|culprit\w*|convict\w*|credib\w*|truthful\w*|untruthful|lying|liars?|lied|believab\w*|unbelievab\w*|trustworth\w*|untrustworth\w*|honest\w*|dishonest\w*|reliab\w*|unreliab\w*)\b|\b(proved|proven|established|clear) beyond\b|\b(is|are|stands?|was|were|has been|have been) (clearly |fully |thus |therefore )?(proved|proven|established)\b|\bcommitted the (offence|crime|theft|fraud|cheating|murder|robbery|assault)\b|\bresponsible for the (offence|crime|theft|fraud|cheating)\b|\b(is|are|was|were) (false|untrue|fabricated|a lie)\b|\bcharges? (is|are|stands?) (made out|proved|proven)\b/i
 
 /** True when a sentence gives an opinion on guilt, on truthfulness or that the charge is proved. */
 export const judges = (sentence: string) => OPINION.test(sentence)

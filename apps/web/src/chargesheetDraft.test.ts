@@ -28,10 +28,12 @@ describe('judges', () => {
   it.each([
     'The accused is guilty of cheating.', 'The witness is credible.', 'W2 was lying about the time.', 'The charge is clearly proved.',
     'The offence is established beyond doubt.', 'A1 committed the offence.', 'Her account is reliable.', 'He is innocent.',
+    // weekly review 14 Nov: gaps found and closed
+    'The accused committed the theft.', 'The statement of W2 is false.', 'The accused is responsible for the fraud.', 'The charge is made out.',
   ])('drops %s', (s) => expect(judges(s)).toBe(true))
   it.each([
     'The complainant stated that a caller said he was from her bank.', 'Rs 40,000 went out of the account on 3 Nov.',
-    'W1 stated that he saw the accused at the ATM.',
+    'W1 stated that he saw the accused at the ATM.', 'The bank said the account was opened with a false address proof.',
   ])('keeps %s', (s) => expect(judges(s)).toBe(false))
 })
 

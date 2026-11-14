@@ -28,6 +28,9 @@ test('an empty or very long answer, an opinion and a promise are not shown', () 
   expect(readLetter('The person will be arrested soon.', facts)).toEqual({ kind: 'refused', why: 'promise' })
   expect(readLetter('We guarantee a result.', facts)).toEqual({ kind: 'refused', why: 'promise' })
   expect(readLetter('Your money will certainly come back.', facts)).toEqual({ kind: 'refused', why: 'promise' })
+  // weekly review 14 Nov: gaps found and closed
+  expect(readLetter('The person will soon be arrested.', facts)).toEqual({ kind: 'refused', why: 'promise' })
+  expect(readLetter('You will get your money back.', facts)).toEqual({ kind: 'refused', why: 'promise' })
 })
 
 test('a letter used as drafted is accepted, one the officer changed is edited', () => {
