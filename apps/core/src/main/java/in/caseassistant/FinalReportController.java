@@ -91,6 +91,7 @@ class FinalReportController {
     Map<String, Object> save(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody Words w) {
         UUID me = CaseTeam.user(jwt);
         team.requireTeam(me, firId);
+        if (w.aiRequestId != null && team.identityProtected(firId)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The AI is not used on a case whose victim's identity is protected, so its result is not taken.");
         var d = draft(firId);
         String facts = w.facts == null ? "" : w.facts.trim(), evidence = w.evidence == null ? "" : w.evidence.trim();
         if (d == null) {

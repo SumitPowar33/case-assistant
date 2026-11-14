@@ -57,6 +57,7 @@ class FactController {
     ResponseEntity<Map<String, Object>> confirm(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody Fact f) {
         UUID me = CaseTeam.user(jwt);
         team.requireTeam(me, firId);
+        if (team.identityProtected(firId)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The AI is not used on a case whose victim's identity is protected, so its result is not taken.");
         try {
             UUID id = db.sql("""
                     insert into fir_fact (fir_id, kind, value, ai_value, quote, ai_request_id, confirmed_by)

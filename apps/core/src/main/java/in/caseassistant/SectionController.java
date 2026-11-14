@@ -69,6 +69,7 @@ class SectionController {
     ResponseEntity<Map<String, Object>> add(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody Choice c) {
         UUID me = CaseTeam.user(jwt);
         team.requireTeam(me, firId);
+        if (team.identityProtected(firId)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The AI is not used on a case whose victim's identity is protected, so its result is not taken.");
         if (c.reason.trim().length() < 10) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Give a reason of at least 10 characters.");
         var charge = playbooks.get(c.playbookId).flatMap(pb -> pb.charges().stream().filter(x -> x.id().equals(c.chargeId)).findFirst())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "No such charge in the playbooks."));

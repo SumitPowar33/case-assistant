@@ -132,4 +132,16 @@ class SectionApiTest {
         mvc.perform(get("/api/firs/" + UUID.randomUUID() + "/sections").header("Authorization", io)).andExpect(status().isNotFound());
         assertThat(db.sql("select count(*) from fir_section").query(Long.class).single()).isOne();
     }
+
+    // weekly review 14 Nov: the AI is not used on a protected case, so the core does not take its suggestion there either
+    @Test
+    void onAProtectedCaseNoSuggestedSectionIsAdded_byTheApiOrTheDatabase() throws Exception {
+        db.sql("update fir set identity_protected = true where id = ?").param(fir).update();
+        add(io, choice("personation", REASON)).andExpect(status().isBadRequest());
+        assertThatThrownBy(() -> db.sql("insert into fir_section (fir_id, act, section, added_at, reason, ai_request_id, chosen_by) values (?, 'BNS', '319(2)', now(), ?, ?, (select io_id from fir where id = ?))")
+                .params(fir, REASON, UUID.fromString(REQ), fir).update()).hasMessageContaining("not taken on a case whose victim");
+        // a section of the FIR as registered is still written as before
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '64')").param(fir).update();
+        assertThat(db.sql("select count(*) from fir_section where fir_id = ?").param(fir).query(Long.class).single()).isEqualTo(2);
+    }
 }

@@ -119,7 +119,15 @@ class FactApiTest {
         // no facts yet: nothing of the text is shown, nothing logged
         mvc.perform(get("/api/firs/" + protectedFir + "/facts").header("Authorization", io)).andExpect(jsonPath("$.length()").value(0));
         assertThat(db.sql("select count(*) from protected_read").query(Long.class).single()).isZero();
-        confirm(protectedFir, io, fact("amount", "Rs 40,000", "Rs 40,000", "Rs 40,000")).andExpect(status().isCreated());
+        // the AI is not used on a protected case, so its facts are not taken (weekly review 14 Nov, V55)
+        confirm(protectedFir, io, fact("amount", "Rs 40,000", "Rs 40,000", "Rs 40,000")).andExpect(status().isBadRequest());
+        assertThat(db.sql("select count(*) from fir_fact where fir_id = ?").param(protectedFir).query(Long.class).single()).isZero();
+        // a fact confirmed before the case became protected stays, and reading it is logged
+        db.sql("alter table fir_fact disable trigger fir_fact_not_on_protected").update();
+        confirm(protectedFir, io, fact("amount", "Rs 40,000", "Rs 40,000", "Rs 40,000")).andExpect(status().isBadRequest());
+        db.sql("insert into fir_fact (fir_id, kind, value, ai_value, quote, ai_request_id, confirmed_by) values (?,'amount','Rs 40,000','Rs 40,000','Rs 40,000',?,?)")
+                .params(protectedFir, UUID.fromString(REQ), ioId).update();
+        db.sql("alter table fir_fact enable trigger fir_fact_not_on_protected").update();
         mvc.perform(get("/api/firs/" + protectedFir + "/facts").header("Authorization", sho)).andExpect(jsonPath("$.length()").value(1));
         assertThat(db.sql("select what from protected_read where fir_id = ?").param(protectedFir).query(String.class).list()).containsExactly("fir_text");
         mvc.perform(get("/api/firs/" + protectedFir).header("Authorization", io)).andExpect(jsonPath("$.victim_protected").value(true));

@@ -210,4 +210,17 @@ class FinalReportApiTest {
                 .andExpect(jsonPath("$.events[0].ai_request").value(req)).andExpect(jsonPath("$.events[1].ai_request").doesNotExist());
         call(put(url("")), desk, words(FACTS, EVIDENCE)).andExpect(status().isForbidden());   // the front desk is not on the case team
     }
+
+    // weekly review 14 Nov: A6 is not used on a protected case, so a save naming an AI request is refused there (V55)
+    @Test
+    void onAProtectedCaseASaveThatNamesAnAiRequestIsRefused_aPlainSaveIsTaken() throws Exception {
+        db.sql("update fir set identity_protected = true where id = ?").param(fir).update();
+        String req = "6f1c1d1e-0000-4000-8000-000000000055";
+        call(put(url("")), io, "{\"language\":\"en\",\"facts\":\"" + FACTS + "\",\"evidence\":\"\",\"aiRequestId\":\"" + req + "\"}").andExpect(status().isBadRequest());
+        call(put(url("")), io, words(FACTS, EVIDENCE)).andExpect(status().isOk());
+        UUID draft = db.sql("select id from final_report_draft where fir_id = ?").param(fir).query(UUID.class).single();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> db.sql("insert into final_report_event (draft_id, by_user, action, ai_request) values (?,?,'saved',?)")
+                .params(draft, ioId, UUID.fromString(req)).update()).hasMessageContaining("not taken on a case whose victim");
+        assertThat(db.sql("select count(*) from final_report_event where ai_request is not null").query(Long.class).single()).isZero();
+    }
 }
