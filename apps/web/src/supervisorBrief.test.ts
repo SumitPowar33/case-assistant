@@ -112,3 +112,40 @@ test('rating, blaming, disciplining and predicting words are caught; plain brief
     'A new IO must be assigned.'])
     expect(rates(s), s).toBe(false)
 })
+
+// Found by Stryker (session 100): every word stem is caught with its endings, and the edges of the checks hold.
+test('the rating words are caught in their other forms', () => {
+  for (const s of ['He acted negligently.', 'Carelessness was seen.', 'Incompetence of staff.', 'Inefficiency in the work.', 'It was done efficiently.',
+    'She worked diligently.', 'Slackness at the station.', 'He is blamed.', 'A faulty enquiry.', 'The IO is at fault.', 'Disciplinary action is due.', 'The IO was reprimanded.',
+    'The IO is suspended.', 'A punishment is needed.', 'Warn the IO.', 'His performance.', 'The case scored low.', 'An acquittal is likely.',
+    'It will probably fail.', 'The officers fail in their duty.', 'He failed his duty.'])
+    expect(rates(s), s).toBe(true)
+})
+
+test('a deadline needs its kind, its day and its count; exactly twelve gaps are all listed', () => {
+  const text = (r: Partial<CaseRow>) => briefFacts(row(r), [], false)[1].text
+  expect(text({ due_on: null })).toBe('no deadline is due')
+  expect(text({ deadline_kind: null })).toBe('no deadline is due')
+  expect(text({ days_left: null })).toBe('no deadline is due')
+  const twelve = Array.from({ length: 12 }, (_, i) => ({ key: `ingredient:c/i${i}`, message: `part ${i}` }))
+  expect(briefFacts(row(), twelve, false).some((f) => f.text.includes('more open readiness gaps'))).toBe(false)
+  const p = briefPrompt(briefFacts(row(), [], false), 'en').split('\n')
+  expect(p[1]).toMatch(/^at most 5 sentences/)
+  expect(p[2]).toMatch(/^Answer with only a JSON list/)
+  expect(p[3]).toBe('Rules: use only these facts and no other number or date. Do not name anyone.')
+})
+
+test('the edges of a sentence: spaces tidied, 400 characters kept, odd ids dropped, a fact id of two digits is not a number', () => {
+  const facts = briefFacts(row(), Array.from({ length: 12 }, (_, i) => ({ key: `ingredient:c/i${i}`, message: `No evidence linked for: part` })), false)
+  expect(facts.map((f) => f.id)).toContain('F12')
+  const read = readBrief(JSON.stringify([
+    { text: '  The report   waits.  ', facts: [' F15 '] },
+    { text: 'y'.repeat(400), facts: ['F1'] },
+    { text: 'A gap is open (F12).', facts: ['F12'] },
+    { text: 'Half known.', facts: ['F1', 'F99'] },
+    { text: 'A number id.', facts: [2] },
+    { text: 'No list.', facts: 'F1' },
+  ]), facts)
+  expect(read.kind === 'brief' && read.lines.map((l) => l.text)).toEqual(['The report waits.', 'y'.repeat(400), 'A gap is open (F12).'])
+  expect(read.kind === 'brief' && read.dropped).toBe(3)
+})
