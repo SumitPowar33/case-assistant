@@ -26,6 +26,7 @@ import SectionSuggest from './SectionSuggest'
 import ActingPage from './ActingPage'
 import NarrativeDraft from './NarrativeDraft'
 import VictimLetter from './VictimLetter'
+import PocsoSteps from './PocsoSteps'
 import LawExplain from './LawExplain'
 import SupervisorBrief from './SupervisorBrief'
 import { setSession } from './api'
@@ -141,6 +142,15 @@ test('the AI victim letter with a letter to use has no accessibility faults eith
   expect(await violations()).toEqual([])
   fireEvent.click(screen.getByRole('button', { name: 'Draft the letter with AI' }))
   await screen.findByLabelText('Letter to the victim or informant')
+  expect(await violations()).toEqual([])
+})
+
+test('the steps of a POCSO case, open and done, with the form open, have no accessibility faults either', async () => {
+  const step = (s: string, due: string | null, done: string | null) => ({ step: s, basis: 'POCSO 19(6)', limit_hours: due ? 24 : null, due_at: due, done_at: done, recorded_by_name: done ? 'SI Fictional' : null })
+  const body = { pocso: true, steps: [step('cwc_court_report', '2026-10-02T04:30:00Z', '2026-10-01T10:30:00Z'), step('medical_examination', '2026-10-02T04:30:00Z', null), step('support_person', null, null)] }
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => body })))
+  render(<PocsoSteps firId="f1" version={0} onSaved={() => {}} />)
+  fireEvent.click((await screen.findByText('Record a step done')))
   expect(await violations()).toEqual([])
 })
 
