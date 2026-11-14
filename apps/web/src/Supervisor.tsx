@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import SupervisorBrief from './SupervisorBrief'
 import { useLoad } from './useLoad'
 import { useT } from './i18n'
 
@@ -20,6 +22,7 @@ const STATUS_CHIP: Record<string, string> = { draft: 'c-neu', returned: 'c-warn'
 export default function Supervisor() {
   const t = useT()
   const { data, error } = useLoad<Queue>('/supervisor')
+  const [briefing, setBriefing] = useState<Row | null>(null)
   if (error) return <p role="alert">{error}</p>
   if (!data) return <p>{t('common.loading')}</p>
   const kind = (k: string) => k.startsWith('notice_reply:') ? t('deadline.noticeReply', { addressee: k.slice('notice_reply:'.length) }) : t.code('deadline', k)
@@ -48,11 +51,13 @@ export default function Supervisor() {
                 ? <>{kind(r.deadline_kind)}<div className="sub">{r.due_on} · {left(r.days_left)}</div></> : t('sup.noDeadline')}</td>
               <td>{r.open_gaps > 0 ? <span className="chip c-crit">{r.open_gaps}</span> : t('sup.noGaps')}</td>
               <td>{r.report_status ? <span className={`chip ${STATUS_CHIP[r.report_status] ?? 'c-neu'}`}>{t.code('frStatus', r.report_status)}</span> : t('sup.notStarted')}</td>
-              <td><a className="btn" href={`#/firs/${r.id}/finalReport`}>{t('sup.review')}</a></td>
+              <td><a className="btn" href={`#/firs/${r.id}/finalReport`}>{t('sup.review')}</a>{' '}
+                <button type="button" aria-pressed={briefing?.id === r.id} onClick={() => setBriefing(r)}>{t('sb.open')}</button></td>
             </tr>
           ))}</tbody>
         </table>
       )}
+      {briefing && <SupervisorBrief key={briefing.id} row={briefing} ioLeft={data.io_left.some((x) => x.id === briefing.id)} />}
       {data.io_left.length > 0 && (
         <section className="card">
           <h2>{t('sup.ioLeftTitle')}</h2>

@@ -27,6 +27,7 @@ import ActingPage from './ActingPage'
 import NarrativeDraft from './NarrativeDraft'
 import VictimLetter from './VictimLetter'
 import LawExplain from './LawExplain'
+import SupervisorBrief from './SupervisorBrief'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -150,6 +151,17 @@ test('the AI explanation of a law section, before and after the answer, has no a
   expect(await violations()).toEqual([])
   fireEvent.click(screen.getByRole('button', { name: 'Explain with AI' }))
   await screen.findByRole('button', { name: 'Helpful' })
+  expect(await violations()).toEqual([])
+})
+
+test('the AI briefing of the Supervisor review, before and after the answer, has no accessibility faults either', async () => {
+  const answer = { request_id: 'r1', draft: '[{"text":"The chargesheet is due in 6 days.","facts":["F2"]},{"text":"The IO is careless.","facts":["F5"]}]', provider: 'fake', model: 'm' }
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => (url.endsWith('/readiness') ? { gaps: [] } : answer) })))
+  render(<SupervisorBrief ioLeft={false} row={{ id: 'f1', fir_no: 7, fir_year: 2026, sections: 'BNS 318(4)', io_name: 'SI Fictional',
+    deadline_kind: 'chargesheet_custody', due_on: '2026-11-20', days_left: 6, report_status: null }} />)
+  expect(await violations()).toEqual([])
+  fireEvent.click(screen.getByRole('button', { name: 'Brief me with AI' }))
+  await screen.findByRole('button', { name: 'Useful' })
   expect(await violations()).toEqual([])
 })
 

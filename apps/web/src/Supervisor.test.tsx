@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, test, vi } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import Supervisor from './Supervisor'
 
 // Fictional data only.
@@ -88,4 +88,21 @@ test('no section for IOs who left when there are none', async () => {
   render(<Supervisor />)
   await screen.findByText('No open cases.')
   expect(screen.queryByText('Cases whose IO has left the station')).toBeNull()
+})
+
+test('the AI briefing opens under the table for the case chosen, one case at a time', async () => {
+  stub(200, {
+    waiting_approval: 0, due_in_21_days: 1, cases: [row({}), row({ id: 'f2', fir_no: 8 })],
+    io_left: [{ id: 'f2', fir_no: 8, fir_year: 2026, io_name: 'SI Fictional Asha', io_active: false, io_station_name: null }],
+  })
+  render(<Supervisor />)
+  const table = await screen.findByRole('table', { name: 'Open cases by nearest deadline' })
+  expect(screen.queryByRole('region', { name: /AI briefing on/ })).toBeNull()
+  const buttons = within(table).getAllByRole('button', { name: 'AI briefing' })
+  fireEvent.click(buttons[0])
+  expect(screen.getByRole('region', { name: 'AI briefing on FIR 7/2026' })).toBeTruthy()
+  expect(buttons[0].getAttribute('aria-pressed')).toBe('true')
+  fireEvent.click(buttons[1])
+  expect(screen.queryByRole('region', { name: 'AI briefing on FIR 7/2026' })).toBeNull()
+  expect(screen.getByRole('region', { name: 'AI briefing on FIR 8/2026' })).toBeTruthy()
 })
