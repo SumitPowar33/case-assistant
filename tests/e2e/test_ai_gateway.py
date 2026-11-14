@@ -45,7 +45,9 @@ def running_gateway(core_base, secret, path, log_name):
 
 
 def ask(gw, token):
-    status, body = gw.call("POST", "/v1/generate", {"feature": "case_qa", "prompt": "Fictional question", "prompt_version": "e2e@1",
+    # law_explain reads no case, so the platform admin may ask; the features that read a case name the FIR and the
+    # gateway asks the core about it (test_ai_case_check.py)
+    status, body = gw.call("POST", "/v1/generate", {"feature": "law_explain", "prompt": "Fictional IPC 420 to BNS 318", "prompt_version": "e2e@1",
                                                      "provider": "fake"}, token)
     assert status == 200, body
     return body
@@ -78,7 +80,7 @@ def test_the_core_keeps_the_gateways_chain_head_and_an_older_audit_file_fails_th
             assert anchored() == 1
             shutil.copy(audit_file, copy)   # someone keeps a copy of the file here
             draft = ask(gw, token)
-            assert gw.call("POST", "/v1/decisions", {"request_id": draft["request_id"], "decision": "rejected", "feature": "case_qa"}, token)[0] == 200
+            assert gw.call("POST", "/v1/decisions", {"request_id": draft["request_id"], "decision": "rejected", "feature": "law_explain"}, token)[0] == 200
             assert anchored() == 3
             status, audit = gw.call("GET", "/v1/audit", None, token)
             assert status == 200 and audit["chain_ok"] is True and audit["anchored_seq"] == 3

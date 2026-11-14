@@ -9,11 +9,12 @@ export type Source = { tag: string; title: string; quote: string; text: string }
 export type Refusal = 'guilt' | 'truth' | 'predict'
 
 // What the app will never answer (CLAUDE.md hard rules): guilt, who is telling the truth, what a person will do. The model's own
-// rules say the same; this refuses before any text leaves the screen. The patterns are English: a question in another script
-// reaches the model, whose safety text refuses the same things.
-const GUILT = /\b(guilty|guilt|innocent|innocence|culprit|criminal|convict\w*)\b|\b(who|whom) (did|committed|is behind|is responsible)\b|\bdid (he|she|they|it|[a-z]\d) (do|commit)\b/i
-const TRUTH = /\b(lying|liar|lies|lie|truthful|truthfully|credible|credibility|believable|trustworthy|honest|dishonest)\b|\b(is|are|was|were) (he|she|they|[a-z]\d|the (witness|victim|accused|complainant)) (telling|speaking)\b|\bcan (we|i) (trust|believe)\b/i
-const PREDICT = /\b(will|would|might|likely|going to|chance|probability|probable)\b.{0,40}\b(commit|reoffend|re-offend|offend|flee|abscond|escape|repeat)\b/i
+// rules say the same; this refuses before any text leaves the screen. The patterns are English with a short draft list of Hindi
+// and Marathi words (unreviewed); another question in an Indian script reaches the model, whose safety text refuses the same
+// things. Kept the same as the gateway's REFUSED_QUESTIONS (tests/repo_rules/test_question_guard_same.py).
+const GUILT = /\b(guilty|guilt|innocent|innocence|culprit|criminal|convict\w*|doshi|nirdosh|gunahgar)\b|\b(who|whom) (did|committed|is behind|is responsible)\b|\bdid (he|she|they|it|[a-z]\d) (do|commit)\b|\bdid (the )?\w+ (do it|do this|commit)\b|\b(is|are|was|were) (he|she|they|[a-z]\d|the (accused|suspect)) (really |actually )?responsible\b|दोषी|निर्दोष|गुन्हेगार|गुनहगार/i
+const TRUTH = /\b(lying|liar|lies|lie|truthful|truthfully|credible|credibility|believable|trustworthy|honest|dishonest|reliable|unreliable|reliability|jhooth|jhoot|jhuth)\b|\b(is|are|was|were) (he|she|they|[a-z]\d|the (witness|victim|accused|complainant)) (telling|speaking)\b|\btelling the truth\b|\b(can|could|should) (we|i) (trust|believe|rely on)\b|\b(is|are|was|were) (the |his |her |this |that )?(\w+ ){0,2}(true|false|untrue|fabricated)\b|झूठ|खोटं|खोटे बोल|सच बोल|खरं बोल/i
+const PREDICT = /\b(will|would|might|likely|going to|chance|probability|probable)\b.{0,40}\b(commit|reoffend|re-offend|offend|flee|abscond|escape|repeat|do it again|do this again|run away|tamper\w*|threaten\w*|harm)\b|\bflight risk\b|\b(is|are) (he|she|they|[a-z]\d|the (accused|suspect)) (\w+ )?dangerous\b/i
 
 /** The reason a question is not answered, or null when it may go on. */
 export function refusal(question: string): Refusal | null {

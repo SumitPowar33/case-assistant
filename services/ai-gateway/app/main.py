@@ -25,7 +25,7 @@ from collections import deque
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from .auth import ChainAnchor, CoreCheck, CoreUnavailable, TokenError, verify
+from .auth import CaseCheck, CaseNotOpen, ChainAnchor, CoreCheck, CoreUnavailable, TokenError, verify
 from .providers import ClaudeProvider, FakeProvider, GeminiProvider, Provider, ProviderError
 from .store import DEFAULT_MODELS, FEATURES, PROVIDERS, Store
 
@@ -72,22 +72,45 @@ class DraftLimit:
 
 # "Ask the case file" never answers guilt, truth or prediction questions (CLAUDE.md hard rules). The browser refuses them first
 # (apps/web/src/askFile.ts, same patterns); this is the second check, so a caller that skips the screen is refused and logged too.
-# Only the officer's question line is read, never the case pieces below it.
-QUESTION_LINE = re.compile(r"^Question from the investigating officer:(.*)$", re.M)
+# Only the officer's question is read, never the case pieces below it.
+# The question runs from its line to the case pieces (a question may have line breaks). A case_qa prompt without the line
+# is read whole: a caller that does not say which part is the question gets the strict reading (weekly review 14 Nov).
+QUESTION_LINE = re.compile(r"question from the investigating officer:(.*?)(?=\n\s*\n|\n\s*pieces of this case file|\Z)", re.I | re.S)
+# Kept the same as apps/web/src/askFile.ts (tests/repo_rules/test_question_guard_same.py). The Hindi and Marathi words are an
+# unreviewed draft list (decision 5 of 2 Nov: a Marathi-speaking prosecutor reviews legal words).
 REFUSED_QUESTIONS = {
-    "guilt": re.compile(r"\b(guilty|guilt|innocent|innocence|culprit|criminal|convict\w*)\b|\b(who|whom) (did|committed|is behind|is responsible)\b"
-                        r"|\bdid (he|she|they|it|[a-z]\d) (do|commit)\b", re.I),
-    "truth": re.compile(r"\b(lying|liar|lies|lie|truthful|truthfully|credible|credibility|believable|trustworthy|honest|dishonest)\b"
-                        r"|\b(is|are|was|were) (he|she|they|[a-z]\d|the (witness|victim|accused|complainant)) (telling|speaking)\b"
-                        r"|\bcan (we|i) (trust|believe)\b", re.I),
-    "predict": re.compile(r"\b(will|would|might|likely|going to|chance|probability|probable)\b.{0,40}\b(commit|reoffend|re-offend|offend|flee|abscond|escape|repeat)\b", re.I),
+    "guilt": re.compile(r"\b(guilty|guilt|innocent|innocence|culprit|criminal|convict\w*|doshi|nirdosh|gunahgar)\b|\b(who|whom) (did"
+                         r"|committed|is behind|is responsible)\b|\bdid (he|she|they|it|[a-z]\d) (do|commit)\b|\bdid (the )?\w+ (do it"
+                         r"|do this|commit)\b|\b(is|are|was|were) (he|she|they|[a-z]\d|the (accused|suspect)) (really "
+                         r"|actually )?responsible\b|दोषी|निर्दोष|गुन्हेगार|गुनहगार", re.I),
+    "truth": re.compile(r"\b(lying|liar|lies|lie|truthful|truthfully|credible|credibility|believable|trustworthy|honest|dishonest"
+                         r"|reliable|unreliable|reliability|jhooth|jhoot|jhuth)\b|\b(is|are|was|were) (he|she|they|[a-z]\d|the (witness"
+                         r"|victim|accused|complainant)) (telling|speaking)\b|\btelling the truth\b|\b(can|could|should) (we|i) (trust"
+                         r"|believe|rely on)\b|\b(is|are|was|were) (the |his |her |this |that )?(\w+ ){0,2}(true|false|untrue"
+                         r"|fabricated)\b|झूठ|खोटं|खोटे बोल|सच बोल|खरं बोल", re.I),
+    "predict": re.compile(r"\b(will|would|might|likely|going to|chance|probability|probable)\b.{0,40}\b(commit|reoffend|re-offend|offend"
+                           r"|flee|abscond|escape|repeat|do it again|do this again|run away|tamper\w*|threaten\w*|harm)\b|\bflight risk\b"
+                           r"|\b(is|are) (he|she|they|[a-z]\d|the (accused|suspect)) (\w+ )?dangerous\b", re.I),
 }
 
 
 def refused_question(feature: str, prompt: str) -> str | None:
     """'guilt', 'truth' or 'predict' when a case_qa question asks what the app never answers, else None."""
-    m = QUESTION_LINE.search(prompt) if feature == "case_qa" else None
-    return next((why for why, rx in REFUSED_QUESTIONS.items() if rx.search(m.group(1))), None) if m else None
+    if feature != "case_qa":
+        return None
+    m = QUESTION_LINE.search(prompt)
+    question = m.group(1) if m else prompt
+    return next((why for why, rx in REFUSED_QUESTIONS.items() if rx.search(question)), None)
+
+
+# Weekly review of 14 Nov 2026: the screens did not offer these on a protected case, but the gateway took any text. Now every
+# feature that reads a case names the FIR (its id, as case_ref) and the core app says whether the officer is on its case team
+# and whether its victim's identity is protected (BNS 72, BNS 124). The features below send the FIR text or statements, so
+# they are refused on a protected case. case_qa is still allowed there (question 1 of session 92), victim_update and
+# notice_draft send no victim details; law_explain reads no case.
+NO_CASE_FEATURES = {"law_explain"}
+NOT_ON_PROTECTED = {"fir_extract", "section_suggest", "statement_translate", "reply_check", "chargesheet_draft"}
+UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 
 class GenerateIn(BaseModel):
@@ -117,12 +140,14 @@ class SettingIn(BaseModel):
 
 
 def create_app(store: Store | None = None, providers: dict[str, Provider] | None = None,
-               auth_secret: str | None = None, core_check=None, anchor=None) -> FastAPI:
+               auth_secret: str | None = None, core_check=None, anchor=None, case_check=None) -> FastAPI:
     secret = auth_secret if auth_secret is not None else os.environ.get("AUTH_SECRET", "")
     if len(secret) < 32:
         raise RuntimeError("AUTH_SECRET must be set (at least 32 characters, the same value as the core app)")
     # Asks the core app if the user is still active and the password unchanged (see auth.CoreCheck).
     core_check = core_check or CoreCheck(os.environ.get("CORE_URL", "http://localhost:8080"))
+    # whether the officer may send this case's text (see NOT_ON_PROTECTED)
+    case_check = case_check or CaseCheck(os.environ.get("CORE_URL", "http://localhost:8080"))
     # the chain head is also kept in the core app's database (auth.ChainAnchor)
     anchor = anchor or ChainAnchor(os.environ.get("CORE_URL", "http://localhost:8080"), secret)
     store = store or Store(os.environ.get("AI_GATEWAY_DB", "ai-gateway.sqlite3"), os.environ.get("AI_AUDIT_KEY") or None)
@@ -227,6 +252,17 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         why = refused_question(body.feature, body.prompt)
         if why:
             refuse(422, f"This question asks about {why}, which the app does not answer. Ask what the file says.", question_refused=why)
+        if body.feature not in NO_CASE_FEATURES:
+            if not body.case_ref or not UUID_RE.match(body.case_ref):
+                refuse(422, "this feature reads a case: name the FIR (its id) in case_ref")
+            try:
+                case = case_check(u["token"], body.case_ref)
+            except CaseNotOpen:
+                refuse(404, "no case of your case team with that id")
+            except CoreUnavailable as e:
+                refuse(503, str(e))
+            if case["victim_protected"] and body.feature in NOT_ON_PROTECTED:
+                refuse(403, "The victim's identity in this case is protected, so its text is not sent to an AI model.", victim_protected=True)
         system = SAFETY_SYSTEM
         # The text itself is not kept (it may name people); its hash proves later which exact text was sent.
         versions = {"prompt_version": body.prompt_version, "safety_version": SAFETY_VERSION,

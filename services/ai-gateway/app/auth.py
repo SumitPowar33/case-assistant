@@ -132,3 +132,32 @@ class ChainAnchor:
         if not isinstance(head, dict):
             raise CoreUnavailable("core app gave an unreadable audit chain head")
         return head
+
+
+class CaseNotOpen(LookupError):
+    pass
+
+
+class CaseCheck:
+    """Asks the core app, with the officer's own token, whether they are on the FIR's case team and whether its victim's
+    identity is protected (GET /api/firs/{id}/ai-check). Not kept: a case can become protected at any time (an added
+    section), so every request asks again. Anything but a clear answer refuses (fails closed)."""
+
+    def __init__(self, base_url: str, client: httpx.Client | None = None):
+        self.base = base_url.rstrip("/")
+        self.client = client or httpx.Client(timeout=5.0)
+
+    def __call__(self, token: str, fir_id: str) -> dict:
+        try:
+            r = self.client.get(f"{self.base}/api/firs/{fir_id}/ai-check", headers={"Authorization": "Bearer " + token})
+        except httpx.HTTPError as e:
+            raise CoreUnavailable("cannot reach the core app to check the case") from e
+        if r.status_code in (403, 404):
+            raise CaseNotOpen("not a case of your case team")
+        try:
+            out = r.json() if r.status_code == 200 else None
+        except ValueError:
+            out = None
+        if not isinstance(out, dict) or not isinstance(out.get("victim_protected"), bool):
+            raise CoreUnavailable(f"core app gave no usable answer to the case check ({r.status_code})")
+        return out

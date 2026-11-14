@@ -58,6 +58,30 @@ class MemoryAnchor:
         return self.kept
 
 
+CASE = "0f6c1c9a-1111-4a2b-9c3d-000000000001"        # a case of the officer's case team, victim not protected
+PROTECTED = "0f6c1c9a-1111-4a2b-9c3d-000000000072"   # a case whose victim's identity is protected
+NOT_MINE = "0f6c1c9a-1111-4a2b-9c3d-000000000404"    # a case of another station
+
+
+class FakeCaseCheck:
+    """Stands in for the core app's GET /api/firs/{id}/ai-check."""
+    asked: list = []
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, token, fir_id):
+        FakeCaseCheck.asked.append(fir_id)
+        if fir_id == NOT_MINE:
+            raise gateway_main.CaseNotOpen("not on the team")
+        return {"victim_protected": fir_id == PROTECTED}
+
+
+@pytest.fixture(autouse=True)
+def no_core_for_the_case_check(monkeypatch):
+    monkeypatch.setattr(gateway_main, "CaseCheck", FakeCaseCheck)
+
+
 @pytest.fixture(autouse=True)
 def no_core_for_the_chain_head(monkeypatch):
     # tests that do not pass their own anchor get one in memory, never a real core app
@@ -105,33 +129,33 @@ def setup():
 
 def test_default_is_claude_and_logged(setup):
     c, store = setup
-    r = c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "Draft a BNSS 94 notice", "prompt_version": "test@1", "case_ref": "FIR 214/2026"})
+    r = c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "Draft a BNSS 94 notice", "prompt_version": "test@1", "case_ref": "c9bf0ed0-cb5e-5f17-94e8-0a1b7241b2a3"})
     assert r.status_code == 200, r.text
     j = r.json()
     assert j["draft"] == "claude draft" and j["provider"] == "claude" and j["label"].startswith("AI draft")
     rows = c.get("/v1/audit").json()
     assert rows["chain_ok"] is True
-    assert rows["rows"][0]["action"] == "ai_request" and rows["rows"][0]["case_ref"] == "FIR 214/2026"
+    assert rows["rows"][0]["action"] == "ai_request" and rows["rows"][0]["case_ref"] == "c9bf0ed0-cb5e-5f17-94e8-0a1b7241b2a3"
 
 
 def test_admin_switches_feature_to_gemini(setup):
     c, _ = setup
     r = c.put("/v1/settings/notice_draft", json={"provider": "gemini"})
     assert r.status_code == 200 and r.json()["provider"] == "gemini" and r.json()["model"] == "gemini-3.7-flash"
-    r = c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "test@1"})
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "notice_draft", "prompt": "x", "prompt_version": "test@1"})
     assert r.json()["draft"] == "gemini draft"
 
 
 def test_officer_override_allowed_and_blocked(setup):
     c, _ = setup
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "gemini"})
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "gemini"})
     assert r.status_code == 200 and r.json()["provider"] == "gemini"
     c.put("/v1/settings/case_qa", json={"provider": "claude", "officer_may_switch": False})
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "gemini"})
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "gemini"})
     assert r.status_code == 403
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "model": "another-model"})
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "model": "another-model"})
     assert r.status_code == 403  # a locked feature's model cannot be swapped either
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "claude"})
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "claude"})
     assert r.status_code == 200  # naming the admin's own choice is fine
 
 
@@ -139,14 +163,14 @@ def test_unknown_feature_and_provider(setup):
     c, _ = setup
     assert c.post("/v1/generate", json={"feature": "nope", "prompt": "x", "prompt_version": "test@1"}).status_code == 404
     assert c.put("/v1/settings/case_qa", json={"provider": "openai"}).status_code == 422
-    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "openai"}).status_code == 422
-    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "", "prompt_version": "test@1"}).status_code == 422
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "openai"}).status_code == 422
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "", "prompt_version": "test@1"}).status_code == 422
 
 
 def test_missing_key_is_502_and_logged():
     store = Store(":memory:")
     c = client(store, {"claude": ClaudeProvider(""), "gemini": GeminiProvider(""), "fake": FakeProvider()})
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1"})
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1"})
     assert r.status_code == 502 and "ANTHROPIC_API_KEY" in r.json()["detail"]
     assert store.audit_rows()[0]["action"] == "ai_error"
 
@@ -154,25 +178,25 @@ def test_missing_key_is_502_and_logged():
 def test_provider_http_error_is_502():
     bad = mock_client(lambda req: httpx.Response(529, text="overloaded"))
     c = client(Store(":memory:"), {"claude": ClaudeProvider("k", bad), "gemini": GeminiProvider("k", bad), "fake": FakeProvider()})
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1"})
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1"})
     assert r.status_code == 502 and "529" in r.json()["detail"]
 
 
 def test_decisions_logged_and_validated(setup):
     c, _ = setup
-    rid = c.post("/v1/generate", json={"feature": "chargesheet_draft", "prompt": "x", "prompt_version": "test@1"}).json()["request_id"]
-    assert c.post("/v1/decisions", json={"request_id": rid, "decision": "edited", "feature": "chargesheet_draft"}).status_code == 200
-    assert c.post("/v1/decisions", json={"request_id": rid, "decision": "maybe", "feature": "chargesheet_draft"}).status_code == 422
-    assert c.post("/v1/decisions", json={"request_id": "made-up", "decision": "accepted", "feature": "chargesheet_draft"}).status_code == 404
-    assert c.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "case_qa"}).status_code == 422
+    rid = c.post("/v1/generate", json={"case_ref": CASE, "feature": "chargesheet_draft", "prompt": "x", "prompt_version": "test@1"}).json()["request_id"]
+    assert c.post("/v1/decisions", json={"case_ref": CASE, "request_id": rid, "decision": "edited", "feature": "chargesheet_draft"}).status_code == 200
+    assert c.post("/v1/decisions", json={"case_ref": CASE, "request_id": rid, "decision": "maybe", "feature": "chargesheet_draft"}).status_code == 422
+    assert c.post("/v1/decisions", json={"case_ref": CASE, "request_id": "made-up", "decision": "accepted", "feature": "chargesheet_draft"}).status_code == 404
+    assert c.post("/v1/decisions", json={"case_ref": CASE, "request_id": rid, "decision": "accepted", "feature": "case_qa"}).status_code == 422
     actions = [r["action"] for r in c.get("/v1/audit").json()["rows"]]
     assert actions[:2] == ["edited", "ai_request"]
 
 
 def test_audit_chain_detects_tampering(setup):
     c, store = setup
-    c.post("/v1/generate", json={"feature": "case_qa", "prompt": "one", "prompt_version": "test@1"})
-    c.post("/v1/generate", json={"feature": "case_qa", "prompt": "two", "prompt_version": "test@1"})
+    c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "one", "prompt_version": "test@1"})
+    c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "two", "prompt_version": "test@1"})
     assert store.verify_chain()
     store.db.execute("UPDATE audit SET actor='someone-else' WHERE seq=1")
     assert not store.verify_chain()
@@ -182,7 +206,7 @@ def test_fake_provider_works_offline():
     store = Store(":memory:")
     c = client(store, {"claude": ClaudeProvider(""), "gemini": GeminiProvider(""), "fake": FakeProvider()})
     c.put("/v1/settings/victim_update", json={"provider": "fake"})
-    r = c.post("/v1/generate", json={"feature": "victim_update", "prompt": "Progress so far", "prompt_version": "test@1"})
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "victim_update", "prompt": "Progress so far", "prompt_version": "test@1"})
     assert r.status_code == 200 and r.json()["draft"].startswith("[demo draft]")
 
 
@@ -206,7 +230,7 @@ def test_every_call_needs_a_valid_login_token():
     for h in bad:
         c = TestClient(app, headers={"Authorization": h} if h else {})
         assert c.get("/v1/settings").status_code == 401, h
-        assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1"}).status_code == 401, h
+        assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1"}).status_code == 401, h
     assert store.audit_rows() == []
     assert TestClient(app).get("/health").status_code == 200
     with pytest.raises(RuntimeError):
@@ -220,20 +244,20 @@ def test_officer_cannot_change_settings_or_read_audit_and_actor_comes_from_token
     assert officer.put("/v1/settings/case_qa", json={"provider": "fake"}).status_code == 403
     assert officer.get("/v1/audit").status_code == 403
     assert officer.get("/v1/settings").status_code == 200
-    r = officer.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "actor": "someone-else"})
+    r = officer.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "actor": "someone-else"})
     assert r.status_code == 422   # an unknown field is refused, not ignored
-    r = officer.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1"})
+    r = officer.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1"})
     assert r.status_code == 200
-    officer.post("/v1/decisions", json={"request_id": r.json()["request_id"], "decision": "rejected", "feature": "case_qa", "actor": "x"})
+    officer.post("/v1/decisions", json={"case_ref": CASE, "request_id": r.json()["request_id"], "decision": "rejected", "feature": "case_qa", "actor": "x"})
     rows = store.audit_rows()
     assert [(row["action"], row["actor"]) for row in rows[:2]] == [("rejected", "user-io-7"), ("ai_request", "user-io-7")]
 
 
 def test_prompt_version_is_required_and_logged_with_a_hash_not_the_text(setup):
     c, store = setup
-    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x"}).status_code == 422
-    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "bad version!"}).status_code == 422
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "Who is witness W1?", "prompt_version": "case_qa/ask@2"})
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x"}).status_code == 422
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "bad version!"}).status_code == 422
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "Who is witness W1?", "prompt_version": "case_qa/ask@2"})
     assert r.status_code == 200
     d = store.audit_rows()[0]["detail"]
     assert d["prompt_version"] == "case_qa/ask@2" and d["safety_version"].startswith("safety-")
@@ -247,10 +271,17 @@ ASK = "Question from the investigating officer: {}\n\nPieces of this case file:\
     ("Is the accused guilty?", "guilt"), ("Who committed the theft?", "guilt"), ("Did he do it?", "guilt"),
     ("Is witness W2 lying?", "truth"), ("Can we trust the complainant?", "truth"), ("Was the victim telling the truth?", "truth"),
     ("Will A1 flee before the trial?", "predict"), ("Is he likely to reoffend?", "predict"),
+    # weekly review 14 Nov: gaps found and closed
+    ("Did the accused do it?", "guilt"), ("Did Ramesh commit the theft?", "guilt"), ("Is the accused responsible?", "guilt"),
+    ("क्या आरोपी दोषी है?", "guilt"), ("kya woh doshi hai", "guilt"),
+    ("Is Ramesh telling the truth?", "truth"), ("Is the statement false?", "truth"), ("Should we believe W2?", "truth"),
+    ("Is W2 reliable?", "truth"), ("साक्षीदार खोटं बोलतो का?", "truth"),
+    ("Will he do it again?", "predict"), ("Is he a flight risk?", "predict"), ("Will he run away?", "predict"),
+    ("Will he tamper with witnesses?", "predict"), ("Is he dangerous?", "predict"),
 ])
 def test_ask_the_case_file_refuses_guilt_truth_and_prediction_and_logs_it(setup, question, why):
     c, store = setup
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": ASK.format(question, "x"), "prompt_version": "case_qa/ask@1", "case_ref": "FIR-1"})
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": ASK.format(question, "x"), "prompt_version": "case_qa/ask@1", "case_ref": "36a3be51-b4e6-58f7-96b1-74cbf0beab90"})
     assert r.status_code == 422 and why in r.json()["detail"]
     row = store.audit_rows()[0]
     assert row["action"] == "ai_refused" and row["detail"]["question_refused"] == why
@@ -261,11 +292,24 @@ def test_ask_the_case_file_reads_only_the_question_and_only_for_case_qa(setup):
     c, store = setup
     # the words sit in the case text, not in the question: answered
     ok = ASK.format("When was the phone taken?", "The accused is guilty, said the neighbour who was lying.")
-    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": ok, "prompt_version": "case_qa/ask@1"}).status_code == 200
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": ok, "prompt_version": "case_qa/ask@1"}).status_code == 200
     # another feature is not a question
-    assert c.post("/v1/generate", json={"feature": "fir_extract", "prompt": ASK.format("Is he guilty?", "x"), "prompt_version": "t@1"}).status_code == 200
-    # a case_qa prompt with no question line (an old caller) goes on as before
-    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "Who is witness W1?", "prompt_version": "t@1"}).status_code == 200
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "fir_extract", "prompt": ASK.format("Is he guilty?", "x"), "prompt_version": "t@1"}).status_code == 200
+    # a case_qa prompt with no question line is read whole: an ordinary question goes on, a refused one is refused
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "Who is witness W1?", "prompt_version": "t@1"}).status_code == 200
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "Is the accused guilty?", "prompt_version": "t@1"}).status_code == 422
+
+
+@pytest.mark.parametrize("prompt", [
+    "question from the investigating officer: Is he guilty?\n\nPieces of this case file:\n[S1] FIR: x",   # lower case
+    "Question from the investigating officer: When was it?\nIs he guilty?\nPieces of this case file:\n[S1] FIR: x",   # on the next line
+    "Is he guilty?",                                                                   # no question line at all
+])
+def test_the_question_guard_is_not_skipped_by_case_or_line_breaks(setup, prompt):
+    # weekly review 14 Nov: these went past the gateway's check before
+    c, store = setup
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": prompt, "prompt_version": "case_qa/ask@1"})
+    assert r.status_code == 422 and store.audit_rows()[0]["detail"]["question_refused"] == "guilt"
 
 
 def core_app(answers):
@@ -286,7 +330,7 @@ def test_disabled_user_or_changed_password_is_refused_even_with_a_good_signature
     calls, handler = core_app([401])
     app = create_app(Store(":memory:"), {"fake": FakeProvider()}, SECRET, CoreCheck("http://core", mock_client(handler)))
     c = TestClient(app, headers={"Authorization": "Bearer " + token("user-io-7", "io")})
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1"})
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1"})
     assert r.status_code == 401 and "disabled" in r.json()["detail"]
     # a bad signature never reaches the core app
     bad = TestClient(app, headers={"Authorization": "Bearer " + token(secret="another-secret-another-secret-xx")})
@@ -330,13 +374,13 @@ def test_a_unit_that_keeps_text_on_state_servers_gets_no_cloud_provider():
     providers = {"claude": ClaudeProvider("k", mock_client(lambda r: calls.append(r) or claude_ok(r))), "fake": FakeProvider()}
     no_cloud = lambda tok, sub: {**core_says_active(tok, sub), "ai_cloud_allowed": False}
     c = TestClient(create_app(store, providers, SECRET, no_cloud), headers={"Authorization": "Bearer " + token("user-io-7", "io")})
-    r = c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "Draft a notice", "prompt_version": "test@1", "case_ref": "FIR 1/2026"})
+    r = c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "Draft a notice", "prompt_version": "test@1", "case_ref": "5dbea770-0c20-5bfe-84c2-16334925e5e1"})
     assert r.status_code == 403 and "state's servers" in r.json()["detail"]
     assert calls == []                                    # nothing left the building
     row = store.audit_rows()[0]
     assert row["action"] == "ai_refused" and row["detail"]["provider"] == "claude" and row["actor"] == "user-io-7"
-    assert c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "test@1", "provider": "gemini"}).status_code == 403
-    ok = c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "test@1", "provider": "fake"})
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "notice_draft", "prompt": "x", "prompt_version": "test@1", "provider": "gemini"}).status_code == 403
+    ok = c.post("/v1/generate", json={"case_ref": CASE, "feature": "notice_draft", "prompt": "x", "prompt_version": "test@1", "provider": "fake"})
     assert ok.status_code == 200 and ok.json()["provider"] == "fake"
 
 
@@ -345,7 +389,7 @@ def test_a_core_answer_without_the_ai_policy_counts_as_no_cloud():
     providers = {"claude": ClaudeProvider("k", mock_client(claude_ok)), "fake": FakeProvider()}
     app = create_app(Store(":memory:"), providers, SECRET, CoreCheck("http://core", mock_client(handler)))
     c = TestClient(app, headers={"Authorization": "Bearer " + token("user-x", "io")})
-    assert c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "test@1"}).status_code == 403
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "notice_draft", "prompt": "x", "prompt_version": "test@1"}).status_code == 403
 
 
 # ---- providers: refusals and odd answers (fictional prompts only) ----
@@ -408,24 +452,24 @@ def test_a_network_failure_of_the_provider_is_502_and_logged():
         raise httpx.ConnectTimeout("timed out", request=req)
     store = Store(":memory:")
     c = client(store, {"claude": ClaudeProvider("k", mock_client(timeout)), "gemini": GeminiProvider("k"), "fake": FakeProvider()})
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "case_ref": "FIR 9/2026"})
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "case_ref": "592eca7c-524a-5ed8-a5f2-6169b590c52f"})
     assert r.status_code == 502 and "ConnectTimeout" in r.json()["detail"]
     row = store.audit_rows()[0]
-    assert row["action"] == "ai_error" and row["case_ref"] == "FIR 9/2026" and "ConnectTimeout" in row["detail"]["error"]
+    assert row["action"] == "ai_error" and row["case_ref"] == "592eca7c-524a-5ed8-a5f2-6169b590c52f" and "ConnectTimeout" in row["detail"]["error"]
     assert store.verify_chain()
 
 
 def test_only_the_officer_who_asked_decides_on_a_draft_once_and_for_its_own_case(setup):
     # regression (weekly review 31 Oct): anyone could log a decision on someone else's draft, for any case, many times
     c, store = setup
-    rid = c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "test@1", "case_ref": "fir-1"}).json()["request_id"]
+    rid = c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "test@1", "case_ref": "8ff637e4-6ba7-5d9e-aafb-24b4613fc3bf"}).json()["request_id"]
     other = client(store, {"fake": FakeProvider()}, role="io", sub="user-other")
-    r = other.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "notice_draft", "case_ref": "fir-1"})
+    r = other.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "notice_draft", "case_ref": "8ff637e4-6ba7-5d9e-aafb-24b4613fc3bf"})
     assert r.status_code == 404
-    r = c.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "notice_draft", "case_ref": "fir-2"})
+    r = c.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "notice_draft", "case_ref": "b0b6c2f9-2fd0-51ce-9de4-6fc0f699052a"})
     assert r.status_code == 422
-    assert c.post("/v1/decisions", json={"request_id": rid, "decision": "rejected", "feature": "notice_draft", "case_ref": "fir-1"}).status_code == 200
-    assert c.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "notice_draft", "case_ref": "fir-1"}).status_code == 409
+    assert c.post("/v1/decisions", json={"request_id": rid, "decision": "rejected", "feature": "notice_draft", "case_ref": "8ff637e4-6ba7-5d9e-aafb-24b4613fc3bf"}).status_code == 200
+    assert c.post("/v1/decisions", json={"request_id": rid, "decision": "accepted", "feature": "notice_draft", "case_ref": "8ff637e4-6ba7-5d9e-aafb-24b4613fc3bf"}).status_code == 409
     assert [r["action"] for r in store.audit_rows()][:2] == ["rejected", "ai_request"]
 
 
@@ -445,10 +489,10 @@ def test_a_state_admin_sets_and_reads_only_their_own_states_ai_settings_and_audi
     assert mh.get("/v1/settings").json()["case_qa"]["provider"] == "fake"
     assert ka.get("/v1/settings").json()["case_qa"]["provider"] == "claude"          # KA keeps the installation default
     assert platform.get("/v1/settings").json()["case_qa"]["provider"] == "claude"
-    assert mh.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "case_ref": "mh-1"}).json()["provider"] == "fake"
-    assert ka.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "case_ref": "ka-1"}).json()["provider"] == "claude"
-    assert {r["case_ref"] for r in mh.get("/v1/audit").json()["rows"]} == {None, "mh-1"}
-    assert {r["case_ref"] for r in ka.get("/v1/audit").json()["rows"]} == {"ka-1"}
+    assert mh.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "case_ref": "b6b6793b-ba0c-577d-bdab-2682d293d169"}).json()["provider"] == "fake"
+    assert ka.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "case_ref": "3714b5cc-623f-57ee-9a53-4db5ea682690"}).json()["provider"] == "claude"
+    assert {r["case_ref"] for r in mh.get("/v1/audit").json()["rows"]} == {None, "b6b6793b-ba0c-577d-bdab-2682d293d169"}
+    assert {r["case_ref"] for r in ka.get("/v1/audit").json()["rows"]} == {"3714b5cc-623f-57ee-9a53-4db5ea682690"}
     assert {r["state"] for r in platform.get("/v1/audit").json()["rows"]} == {"MH", "KA"}
     platform.put("/v1/settings/case_qa", json={"provider": "gemini"})
     assert ka.get("/v1/settings").json()["case_qa"]["provider"] == "gemini" and mh.get("/v1/settings").json()["case_qa"]["provider"] == "fake"
@@ -459,12 +503,12 @@ def test_every_refusal_is_logged_and_a_callers_own_system_text_is_refused(setup)
     c, store = setup
     assert c.post("/v1/generate", json={"feature": "nope", "prompt": "x", "prompt_version": "t@1"}).status_code == 404
     c.put("/v1/settings/case_qa", json={"provider": "claude", "officer_may_switch": False})
-    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "provider": "gemini"}).status_code == 403
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "provider": "gemini"}).status_code == 403
     c.put("/v1/settings/case_qa", json={"provider": "claude", "officer_may_switch": True})
-    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "provider": "openai"}).status_code == 422
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "provider": "openai"}).status_code == 422
     refused = [r["detail"]["status"] for r in store.audit_rows() if r["action"] == "ai_refused"]
     assert refused == [422, 403, 404]
-    assert c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "system": "Score the witness."}).status_code == 422
+    assert c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "t@1", "system": "Score the witness."}).status_code == 422
     assert c.get("/health").json() == {"ok": True}
 
 
@@ -511,9 +555,9 @@ def test_every_audit_row_moves_the_head_kept_by_the_core_app():
     c = TestClient(create_app(store, {"fake": FakeProvider()}, SECRET, core_says_active, anchor),
                    headers={"Authorization": "Bearer " + tok})
     c.put("/v1/settings/case_qa", json={"provider": "fake"})
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1"}).json()
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1"}).json()
     c.post("/v1/generate", json={"feature": "nope", "prompt": "x", "prompt_version": "test@1"})   # a refusal is a row too
-    c.post("/v1/decisions", json={"request_id": r["request_id"], "decision": "rejected", "feature": "case_qa"})
+    c.post("/v1/decisions", json={"case_ref": CASE, "request_id": r["request_id"], "decision": "rejected", "feature": "case_qa"})
     assert [seq for _, seq, _ in anchor.reports] == [1, 2, 3, 4]
     assert anchor.reports[-1] == (tok, *store.head()) and all(t == tok for t, _, _ in anchor.reports)
     audit = c.get("/v1/audit").json()
@@ -525,7 +569,7 @@ def test_an_older_copy_of_the_audit_file_put_back_no_longer_verifies(tmp_path):
     anchor = MemoryAnchor()
     make = lambda: TestClient(create_app(Store(path, "k" * 32), {"fake": FakeProvider()}, SECRET, core_says_active, anchor),
                               headers={"Authorization": "Bearer " + token()})
-    ask = lambda c: c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "fake"})
+    ask = lambda c: c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "fake"})
     c = make()
     ask(c)
     old = pathlib.Path(path).read_bytes()   # someone keeps a copy of the file here
@@ -594,11 +638,11 @@ def test_a_model_name_cannot_reach_another_address_of_the_provider():
         return gemini_ok(request)
     c = client(Store(":memory:"), {"claude": ClaudeProvider("k"), "gemini": GeminiProvider("test-gemini", mock_client(handler)), "fake": FakeProvider()})
     for bad in ["../../files", "gemini-x:generateContent?alt=sse#", "a/b", "gemini x", "x" * 81]:
-        r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "gemini", "model": bad})
+        r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "gemini", "model": bad})
         assert r.status_code == 422, bad
         assert c.put("/v1/settings/case_qa", json={"provider": "gemini", "model": bad}).status_code == 422, bad
     assert seen == []
-    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "gemini", "model": "gemini-3.7-flash"})
+    r = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "provider": "gemini", "model": "gemini-3.7-flash"})
     assert r.status_code == 200 and seen == ["/v1beta/models/gemini-3.7-flash:generateContent"]
 
 
@@ -606,8 +650,8 @@ def test_free_text_fields_have_a_length_limit():
     store = Store(":memory:")
     c = client(store, {"claude": ClaudeProvider("k"), "gemini": GeminiProvider("k"), "fake": FakeProvider()}, role="io", sub="user-io")
     assert c.post("/v1/generate", json={"feature": "notice_draft", "prompt": "x", "prompt_version": "t@1", "case_ref": "F" * 201}).status_code == 422
-    assert c.post("/v1/decisions", json={"request_id": "r", "decision": "accepted", "feature": "notice_draft", "note": "n" * 2001}).status_code == 422
-    assert c.post("/v1/decisions", json={"request_id": "r" * 65, "decision": "accepted", "feature": "notice_draft"}).status_code == 422
+    assert c.post("/v1/decisions", json={"case_ref": CASE, "request_id": "r", "decision": "accepted", "feature": "notice_draft", "note": "n" * 2001}).status_code == 422
+    assert c.post("/v1/decisions", json={"case_ref": CASE, "request_id": "r" * 65, "decision": "accepted", "feature": "notice_draft"}).status_code == 422
 
 
 def test_one_officer_cannot_spend_the_ai_budget_in_a_burst():
@@ -622,7 +666,7 @@ def test_one_officer_cannot_spend_the_ai_budget_in_a_burst():
     app = create_app(store, providers, SECRET, core_says_active)
     io = TestClient(app, headers={"Authorization": "Bearer " + token("user-io", "io")})
     other = TestClient(app, headers={"Authorization": "Bearer " + token("user-io-2", "io")})
-    body = {"feature": "notice_draft", "prompt": "x", "prompt_version": "t@1"}
+    body = {"case_ref": CASE, "feature": "notice_draft", "prompt": "x", "prompt_version": "t@1"}
     for _ in range(gateway_main.DRAFTS_PER_WINDOW):
         assert io.post("/v1/generate", json=body).status_code == 200
     r = io.post("/v1/generate", json=body)
@@ -645,7 +689,7 @@ def test_the_draft_limit_holds_across_a_restart():
     """Counted from the audit log too, so restarting the gateway (or a second copy on the same file) gives no fresh 20."""
     store = Store(":memory:")
     providers = {"claude": ClaudeProvider("test-claude", mock_client(claude_ok)), "gemini": GeminiProvider("k"), "fake": FakeProvider()}
-    body = {"feature": "notice_draft", "prompt": "x", "prompt_version": "t@1"}
+    body = {"case_ref": CASE, "feature": "notice_draft", "prompt": "x", "prompt_version": "t@1"}
     first = TestClient(create_app(store, providers, SECRET, core_says_active), headers={"Authorization": "Bearer " + token("user-io", "io")})
     for _ in range(gateway_main.DRAFTS_PER_WINDOW - 1):
         assert first.post("/v1/generate", json=body).status_code == 200
@@ -727,5 +771,86 @@ def test_the_feature_list_the_settings_of_an_unknown_feature_and_a_model_switch_
     assert c.put("/v1/settings/no_such_feature", json={"provider": "fake"}).status_code == 404
     assert c.put("/v1/settings/case_qa", json={"provider": "no_such_provider"}).status_code == 422
     c.put("/v1/settings/case_qa", json={"provider": "fake", "officer_may_switch": True})
-    ok = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "model": "fictional-model-2"})
+    ok = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "model": "fictional-model-2"})
     assert ok.status_code == 200 and ok.json()["model"] == "fictional-model-2"
+
+
+# weekly review 14 Nov 2026: the gateway asks the core app about the case before any case text goes to a model
+@pytest.mark.parametrize("feature", sorted(gateway_main.NOT_ON_PROTECTED))
+def test_a_protected_case_s_text_is_not_sent_for_the_features_that_carry_it(setup, feature):
+    c, store = setup
+    r = c.post("/v1/generate", json={"feature": feature, "prompt": "Fictional text", "prompt_version": "t@1", "case_ref": PROTECTED})
+    assert r.status_code == 403 and "protected" in r.json()["detail"]
+    row = store.audit_rows()[0]
+    assert row["action"] == "ai_refused" and row["case_ref"] == PROTECTED and row["detail"]["victim_protected"] is True
+    assert c.post("/v1/generate", json={"feature": feature, "prompt": "Fictional text", "prompt_version": "t@1", "case_ref": CASE}).status_code == 200
+
+
+@pytest.mark.parametrize("feature", ["case_qa", "victim_update", "notice_draft"])
+def test_features_without_victim_details_still_work_on_a_protected_case(setup, feature):
+    c, _ = setup
+    assert c.post("/v1/generate", json={"feature": feature, "prompt": "Fictional", "prompt_version": "t@1", "case_ref": PROTECTED}).status_code == 200
+
+
+@pytest.mark.parametrize("case_ref", [None, "", "FIR 214/2026", "../../api/admin", "0f6c1c9a-1111-4a2b-9c3d-00000000000"])
+def test_a_case_feature_must_name_its_fir_by_id(setup, case_ref):
+    c, store = setup
+    body = {"feature": "fir_extract", "prompt": "Fictional text", "prompt_version": "t@1"} | ({} if case_ref is None else {"case_ref": case_ref})
+    r = c.post("/v1/generate", json=body)
+    assert r.status_code == 422 and "case_ref" in r.json()["detail"]
+    assert store.audit_rows()[0]["action"] == "ai_refused"
+
+
+def test_a_case_outside_the_officers_case_team_is_refused_and_logged(setup):
+    c, store = setup
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": "When was it?", "prompt_version": "t@1", "case_ref": NOT_MINE})
+    assert r.status_code == 404 and store.audit_rows()[0]["action"] == "ai_refused"
+
+
+def test_law_explain_reads_no_case_and_asks_the_core_nothing(setup):
+    c, _ = setup
+    FakeCaseCheck.asked.clear()
+    c.put("/v1/settings/law_explain", json={"provider": "fake"})
+    assert c.post("/v1/generate", json={"feature": "law_explain", "prompt": "IPC 420 to BNS 318", "prompt_version": "t@1"}).status_code == 200
+    assert FakeCaseCheck.asked == []
+
+
+def case_core(status, answer=None):
+    seen = []
+
+    def handler(request: httpx.Request):
+        seen.append(request)
+        if isinstance(status, Exception):
+            raise status
+        return httpx.Response(status, json=answer) if answer is not None else httpx.Response(status, text="not json")
+    return seen, handler
+
+
+def test_the_case_check_asks_the_core_app_with_the_officers_token():
+    from app import auth   # the real class (gateway_main.CaseCheck is the fake in these tests)
+    seen, handler = case_core(200, {"victim_protected": True})
+    assert auth.CaseCheck("http://core/", mock_client(handler))("tok-1", CASE) == {"victim_protected": True}
+    assert seen[0].url.path == f"/api/firs/{CASE}/ai-check" and seen[0].headers["authorization"] == "Bearer tok-1"
+
+
+@pytest.mark.parametrize("status,answer,error", [
+    (404, {"error": "x"}, "CaseNotOpen"), (403, {"error": "x"}, "CaseNotOpen"),
+    (500, {"error": "x"}, "CoreUnavailable"), (200, {"victim_protected": "no"}, "CoreUnavailable"), (200, ["x"], "CoreUnavailable"),
+    (200, None, "CoreUnavailable"), (httpx.ConnectError("down"), None, "CoreUnavailable"),
+])
+def test_the_case_check_fails_closed(status, answer, error):
+    from app import auth
+    _, handler = case_core(status, answer)
+    with pytest.raises(getattr(auth, error)):
+        auth.CaseCheck("http://core", mock_client(handler))("tok", CASE)
+
+
+def test_the_core_app_down_during_the_case_check_is_503_and_logged():
+    store = Store(":memory:")
+
+    def down(token, fir_id):
+        raise gateway_main.CoreUnavailable("cannot reach the core app to check the case")
+    c = TestClient(create_app(store, {"fake": FakeProvider()}, SECRET, core_says_active, case_check=down),
+                   headers={"Authorization": "Bearer " + token("user-io-7", "io")})
+    r = c.post("/v1/generate", json={"feature": "fir_extract", "prompt": "x", "prompt_version": "t@1", "case_ref": CASE})
+    assert r.status_code == 503 and store.audit_rows()[0]["detail"]["status"] == 503

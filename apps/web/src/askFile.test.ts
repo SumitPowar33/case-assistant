@@ -12,8 +12,16 @@ describe('refusal', () => {
     ['Is A3 guilty?', 'guilt'], ['Who committed the transfer?', 'guilt'], ['Did he do it', 'guilt'], ['Is the accused innocent', 'guilt'],
     ['Is the witness lying?', 'truth'], ['Is she telling the truth', 'truth'], ['Can we trust W1', 'truth'], ['how credible is the statement', 'truth'],
     ['Will he commit it again?', 'predict'], ['Is the accused likely to abscond', 'predict'], ['what is the chance A1 will flee', 'predict'],
+    // weekly review 14 Nov: gaps found and closed (the gateway's test has the same list)
+    ['Did the accused do it?', 'guilt'], ['Did Ramesh commit the theft?', 'guilt'], ['Is the accused responsible?', 'guilt'],
+    ['क्या आरोपी दोषी है?', 'guilt'], ['kya woh doshi hai', 'guilt'],
+    ['Is Ramesh telling the truth?', 'truth'], ['Is the statement false?', 'truth'], ['Should we believe W2?', 'truth'], ['Is W2 reliable?', 'truth'],
+    ['साक्षीदार खोटं बोलतो का?', 'truth'],
+    ['Will he do it again?', 'predict'], ['Is he a flight risk?', 'predict'], ['Will he run away?', 'predict'],
+    ['Will he tamper with witnesses?', 'predict'], ['Is he dangerous?', 'predict'],
   ])('%s is refused as %s', (q, why) => expect(refusal(q)).toBe(why))
-  it.each(['When was the largest transfer?', 'What did W1 say about 22 August?', 'Which accounts received money', 'What is the description of item E-01'])(
+  it.each(['When was the largest transfer?', 'What did W1 say about 22 August?', 'Which accounts received money', 'What is the description of item E-01',
+    'Who is the officer responsible for the malkhana?', 'Is the currency fake?', 'When will the bank reply?', 'Is the phone with the lab?'])(
     '%s may go on', (q) => expect(refusal(q)).toBeNull())
 })
 
