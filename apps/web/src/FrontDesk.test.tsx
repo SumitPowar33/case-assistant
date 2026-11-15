@@ -217,6 +217,15 @@ test('the Save button of a form follows the screen language', async () => {
   expect(within(sign).queryByLabelText('किस भाषा में पढ़कर सुनाई')).toBeNull()   // written information is not read over
 })
 
+test('written information is signed without a read-over language', async () => {
+  const writes = stub({ '/complaints/c1': { ...base, mode: 'written' } }, { status: 204, body: null })
+  render(<ComplaintPage id="c1" />)
+  const sign = (await screen.findByText('Signed by the informant')).closest('details')!
+  fireEvent.click(within(sign).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0]).toEqual({ url: '/api/complaints/c1/sign', body: { readBackLanguage: null } })
+})
+
 test('on a protected case the complaint, its informant and the printable copy are withheld outside the case team', async () => {
   const withheld = { ...base, withheld: true, informant_name: null, text_original: null, signed_at: '2026-10-30T04:50:00Z', signed_by_name: 'HC Fictional', outcome: 'fir', fir_id: 'f1', fir_no: 4, fir_year: 2026, steps: [] }
   stub({ '/complaints/c1': withheld, '/complaints?open=true': [{ id: 'c1', received_at: base.received_at, mode: 'oral', informant_name: null, withheld: true, kind: 'other', signed_at: null, outcome: null, steps_overdue: 0 }], '/complaint-kinds': kinds })

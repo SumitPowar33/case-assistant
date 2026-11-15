@@ -143,6 +143,20 @@ test('a discarded draft is logged as rejected and never saved; a draft used unch
   expect(writes[4].body).toMatchObject({ request_id: 'r2', decision: 'accepted' })
 })
 
+test('a draft the officer used is not logged as rejected when another draft is asked for', async () => {
+  const writes = stubWithAi()
+  render(<Notices firId="f1" fir={fir} />)
+  await screen.findByText('None yet.')
+  type('To', 'Nodal Officer, Fictional Telecom')
+  type(/Items to produce/, 'CDR')
+  fireEvent.click(screen.getByRole('button', { name: 'Draft the text with AI' }))
+  fireEvent.click(within(await screen.findByRole('region', { name: 'AI draft' })).getByRole('button', { name: 'Use this draft' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Draft the text with AI' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(2))
+  await screen.findByText(AI_TEXT + ' v2')
+  expect(writes.map((w) => w.url)).toEqual(['/ai/v1/generate', '/ai/v1/generate'])   // r1 was used: no rejection logged for it
+})
+
 const SHA = 'b'.repeat(64)
 const certA = { id: 'c1', part: 'A', signer_name: 'Fictional Signer', device_type: 'phone', device_ids: null, hash_algo: 'SHA256',
   hash_value: 'c'.repeat(64), signed_at: '2026-10-03T04:30:00Z', place: 'Testpur', supersedes: null, correction_reason: null, replaced_by: null }

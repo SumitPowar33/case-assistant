@@ -109,7 +109,13 @@ class AuthApiTest {
         auth.ensureAdmin("admin.one", "a-different-long-password");
         assertThat(db.sql("select password_hash from app_user").query(String.class).single()).isEqualTo(before);
         auth.ensureAdmin("", "");
+        auth.ensureAdmin("admin.three", "");   // a name without a password, or a password without a name: nobody is made
+        auth.ensureAdmin("", "a-long-enough-password");
         assertThat(db.sql("select count(*) from app_user").query(Long.class).single()).isEqualTo(1);
+        // bcrypt reads only 72 bytes: a longer first password would let a shorter one in, so it stops the start
+        assertThatThrownBy(() -> auth.ensureAdmin("admin.four", "ठ".repeat(25))).hasMessageContaining("at most 72 bytes");
+        auth.ensureAdmin("admin.five", "a".repeat(72));
+        assertThat(db.sql("select count(*) from app_user").query(Long.class).single()).isEqualTo(2);
     }
 
     @Test

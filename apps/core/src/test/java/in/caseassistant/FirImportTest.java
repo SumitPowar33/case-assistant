@@ -88,6 +88,23 @@ class FirImportTest {
     }
 
     @Test
+    void theYearFromARegistrationBefore2000IsRefusedAndNothingIsComparedWithAnUnreadableRegistration() {
+        var old = check("registered_at", "05/03/1999 14:30");
+        assertThat(has(old, "error", "fir_year")).as("the year taken from the registration is checked too").isTrue();
+        assertThat(old.parsed().get("firYear")).isNull();
+        var noReg = check("registered_at", "", "fir_year", "2023", "information_received_at", "01/03/2024 10:00");
+        assertThat(has(noReg, "error", "registered_at")).isTrue();
+        assertThat(has(noReg, "warning", "fir_year")).as("no registration year to differ from").isFalse();
+        assertThat(has(noReg, "error", "information_received_at")).as("no registration to be after").isFalse();
+    }
+
+    @Test
+    void theSourceKeyOfTheOldRecordIsKeptAndAnEmptyOneIsNone() {
+        assertThat(check("source_key", "CCTNS-FICT-0012").parsed().get("sourceKey")).isEqualTo("CCTNS-FICT-0012");
+        assertThat(check().parsed().get("sourceKey")).isNull();
+    }
+
+    @Test
     void aSectionWithClausesOfAStateLawIsRead() {
         // the MH module's MCOC Act: "3(1)(ii)" is one section, and a second law of the same state is read beside the first
         var acts = Map.of("MPID Act", "MH", "MCOC Act", "MH");
