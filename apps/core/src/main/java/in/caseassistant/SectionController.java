@@ -51,7 +51,7 @@ class SectionController {
                 from fir_section s left join app_user u on u.id = s.chosen_by
                 where s.fir_id = ? order by s.added_at nulls first, s.act, s.section""").param(firId).query().listOfRows();
         var inFir = sections.stream().map(s -> s.get("act") + " " + s.get("section")).toList();
-        var charges = playbooks.all().stream().flatMap(pb -> pb.charges().stream().map(c -> {
+        var charges = playbooks.forState(team.stateOfFir(firId)).stream().flatMap(pb -> pb.charges().stream().map(c -> {
             var m = new LinkedHashMap<String, Object>();
             m.put("playbook_id", pb.id());
             m.put("charge_id", c.id());
@@ -71,7 +71,7 @@ class SectionController {
         team.requireTeam(me, firId);
         if (team.identityProtected(firId)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The AI is not used on a case whose victim's identity is protected, so its result is not taken.");
         if (c.reason.trim().length() < 10) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Give a reason of at least 10 characters.");
-        var charge = playbooks.get(c.playbookId).flatMap(pb -> pb.charges().stream().filter(x -> x.id().equals(c.chargeId)).findFirst())
+        var charge = playbooks.get(c.playbookId).filter(pb -> playbooks.holdsFor(pb, team.stateOfFir(firId))).flatMap(pb -> pb.charges().stream().filter(x -> x.id().equals(c.chargeId)).findFirst())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "No such charge in the playbooks."));
         if (charge.act().equals("BNS") && law(firId).equals("old"))
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,

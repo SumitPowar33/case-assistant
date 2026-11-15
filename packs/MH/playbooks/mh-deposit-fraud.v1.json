@@ -1,0 +1,145 @@
+{
+  "id": "mh-deposit-fraud",
+  "version": "1.0.0-draft",
+  "status": "draft",
+  "review_note": "Unreviewed draft of the Maharashtra module (decision 5 of 2 Nov 2026), drafted from the text of the MPID Act 1999 and Alka Agrawal v State of Maharashtra (Supreme Court, 15 May 2026, 2026 INSC 489). Must be checked by a Marathi-speaking public prosecutor of Maharashtra before use.",
+  "applies_to": "Maharashtra only: deposits or investment schemes that did not pay back (chit, 'double your money', private loans taken as deposits), under the Maharashtra Protection of Interest of Depositors (in Financial Establishments) Act 1999",
+  "charges": [
+    {
+      "id": "mpid_default",
+      "law": "MPID Act 3",
+      "label": "Fraudulent default by a financial establishment (MPID Act 3)",
+      "ingredients": [
+        {
+          "id": "financial_establishment",
+          "text": "The money was taken by a financial establishment: a person, firm, company or association accepting deposits under a scheme or arrangement (MPID 2(d)); a private individual can be one",
+          "proof": [
+            "scheme_documents",
+            "complainant_statement"
+          ]
+        },
+        {
+          "id": "deposit",
+          "text": "The money was received as a deposit, to be returned in money or kind or with a service, with or without interest, bonus or profit (MPID 2(c)); a loan can be a deposit",
+          "proof": [
+            "deposit_receipts",
+            "bank_statement_certified"
+          ]
+        },
+        {
+          "id": "fraudulent_default",
+          "text": "The establishment fraudulently did not repay the deposit or the promised benefit when due, or fraudulently did not give the service promised",
+          "proof": [
+            "complainant_statement",
+            "bank_statement_certified"
+          ]
+        },
+        {
+          "id": "management",
+          "text": "The accused was a promoter, partner, director, manager or other person or employee responsible for running the establishment",
+          "proof": [
+            "company_records_certified",
+            "own_statement"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cheating",
+      "law": "BNS 318(4)",
+      "label": "Cheating and dishonestly inducing delivery of property",
+      "ingredients": [
+        {
+          "id": "deception",
+          "text": "The victim was deceived",
+          "proof": [
+            "complainant_statement",
+            "call_or_chat_record"
+          ]
+        },
+        {
+          "id": "inducement",
+          "text": "The deception induced the victim to hand over money or property",
+          "proof": [
+            "complainant_statement"
+          ]
+        },
+        {
+          "id": "delivery",
+          "text": "Money or property was actually delivered",
+          "proof": [
+            "bank_statement_certified"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "conspiracy",
+      "law": "BNS 61(2)",
+      "label": "Criminal conspiracy",
+      "ingredients": [
+        {
+          "id": "agreement",
+          "text": "Two or more people agreed to commit the offence",
+          "proof": [
+            "link_evidence_per_accused"
+          ]
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "depositor_list",
+      "severity": "high",
+      "text": "List every depositor with the amount, the date and the promised return, from the establishment's records and the complaints; each amount with a certified bank record.",
+      "source": "MPID Act 3"
+    },
+    {
+      "id": "competent_authority_report",
+      "severity": "high",
+      "text": "Send the facts and the property believed to be bought with the deposits to the State Government and its Competent Authority, so that attachment can be ordered (MPID 4 and 5).",
+      "source": "MPID Act 4"
+    },
+    {
+      "id": "electronic_record_certificate",
+      "severity": "critical",
+      "text": "Every electronic record relied on needs a BSA 63(4) certificate with Part A and Part B and a matching hash.",
+      "source": "BSA 63(4)"
+    },
+    {
+      "id": "seizure_recorded",
+      "severity": "high",
+      "text": "Every search and seizure must be recorded by audio-video (eSakshya) with the recording linked to the seizure memo.",
+      "source": "BNSS 105"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "notice_banks",
+      "stage": "notices",
+      "text": "BNSS 94 notices to banks for the establishment's and the accused's statements, KYC and BSA 63(4) certificates",
+      "notice_kind": "BNSS_94"
+    },
+    {
+      "id": "company_records",
+      "stage": "notices",
+      "text": "Ask the Registrar of Companies or the registrar of firms and societies for the establishment's registration and the names of those running it"
+    },
+    {
+      "id": "statements_depositors",
+      "stage": "statements",
+      "text": "Record the depositors' statements (BNSS 180), one per depositor"
+    },
+    {
+      "id": "competent_authority",
+      "stage": "property",
+      "text": "Report to the Competent Authority with the property found, for attachment (MPID 4)"
+    },
+    {
+      "id": "special_court",
+      "stage": "after_filing",
+      "text": "File the final report before the Designated Court under the MPID Act (MPID 6)"
+    }
+  ]
+}

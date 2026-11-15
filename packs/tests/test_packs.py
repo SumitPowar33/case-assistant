@@ -11,7 +11,18 @@ ID = re.compile(r"^[a-z][a-z0-9_]*$|^[a-z][a-z0-9-]*$")
 NOTICE_KINDS = {"BNSS_94", "BNSS_35_3", "BNSS_179", "follow_up"}  # must match V1__core.sql
 SEVERITIES = {"critical", "high", "medium"}
 # a charge is a section the officer can add to an FIR: an act fir_section takes (V1__core.sql) and a section (Playbooks.check)
+NATIONAL_ACTS = ["BNS", "IPC", "IT Act", "NDPS Act", "POCSO Act", "Arms Act", "SC/ST Act", "Other"]
 CHARGE_LAW = re.compile(r"^(BNS|IPC|IT Act|NDPS Act|POCSO Act|Arms Act|SC/ST Act|Other) [0-9][0-9A-Za-z()/.-]*$")
+STATE_ACT = re.compile(r"^[A-Z][A-Za-z/-]*( [A-Za-z/-]+)* Act$")   # V57 state_act, Modules.ACT
+
+
+def own_acts(module):
+    return json.loads((ROOT / module / "module.json").read_text(encoding="utf-8")).get("acts", [])
+
+
+def charge_law_ok(law, acts):
+    """Playbooks.check: one of these acts, a space, a section."""
+    return any(law.startswith(a + " ") and re.fullmatch(r"[0-9][0-9A-Za-z()/.-]*", law[len(a) + 1:]) for a in acts)
 
 
 def test_there_is_at_least_one_playbook():
@@ -30,7 +41,7 @@ def test_playbook_shape(path):
     for ch in pb["charges"]:
         assert ID.match(ch["id"]) and ch["id"] not in seen
         seen.add(ch["id"])
-        assert CHARGE_LAW.match(ch["law"]), ch["law"]
+        assert charge_law_ok(ch["law"], NATIONAL_ACTS + own_acts(path.parents[1].name)), ch["law"]
         assert ch["ingredients"], ch["id"]
         ing_ids = [i["id"] for i in ch["ingredients"]]
         assert len(ing_ids) == len(set(ing_ids))
@@ -323,3 +334,44 @@ def test_acting_charge_is_given_by_the_roles_that_reach_a_station_and_held_by_a_
     assert all(roles[c]["case_scope"] == "station" and "case.lead" in roles[c]["permissions"] for c in held)
     assert all(roles[c]["case_scope"] == "district" or "admin.manage" in roles[c]["permissions"] for c in givers)
     assert not givers & held
+
+
+def test_state_laws_are_named_by_state_modules_only_once_and_never_a_national_act():
+    # Modules.java refuses the same at start-up; V57 refuses it in the database
+    seen = {}
+    for path in sorted(ROOT.glob("*/module.json")):
+        acts = own_acts(path.parent.name)
+        if path.parent.name == "IN":
+            assert not acts, "the national acts are fixed in V1"
+        for act in acts:
+            assert STATE_ACT.match(act) and len(act) <= 40 and act not in NATIONAL_ACTS, act
+            assert act not in seen, f"{act} is a law of {seen.get(act)} already"
+            seen[act] = path.parent.name
+
+
+@pytest.mark.parametrize("law,acts,ok", [
+    ("MPID Act 3", NATIONAL_ACTS + ["MPID Act"], True), ("MPID Act 3", NATIONAL_ACTS, False),
+    ("BNS 318(4)", NATIONAL_ACTS + ["MPID Act"], True), ("MPID Act", NATIONAL_ACTS + ["MPID Act"], False),
+])
+def test_a_state_playbook_may_name_its_own_state_laws(law, acts, ok):
+    assert charge_law_ok(law, acts) is ok
+
+
+def test_a_state_playbook_only_adds_to_a_national_charge():
+    # Playbooks.java: a charge of a law a national playbook covers keeps every national ingredient unchanged
+    national = {}
+    for path in sorted((ROOT / "IN" / "playbooks").glob("*.json")):
+        for ch in json.loads(path.read_text(encoding="utf-8"))["charges"]:
+            national.setdefault(ch["law"], ch)
+    for path in PLAYBOOKS:
+        if path.parents[1].name == "IN":
+            continue
+        for ch in json.loads(path.read_text(encoding="utf-8"))["charges"]:
+            for ing in national.get(ch["law"], {}).get("ingredients", []):
+                assert any(i["id"] == ing["id"] and i["text"] == ing["text"] and set(ing["proof"]) <= set(i["proof"])
+                           for i in ch["ingredients"]), (path.name, ch["id"], ing["id"])
+
+
+def test_playbook_ids_are_unique_across_modules():
+    ids = [json.loads(p.read_text(encoding="utf-8"))["id"] for p in PLAYBOOKS]
+    assert len(ids) == len(set(ids))

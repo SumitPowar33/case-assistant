@@ -49,10 +49,11 @@ class ReadinessController {
         this.playbooks = playbooks;
     }
 
+    /** The playbooks of the user's state: the national ones and the user's state module's (all of them for the platform admin). */
     @GetMapping("/api/playbooks")
-    List<Map<String, String>> list() {
-        return playbooks.all().stream().map(p -> Map.of("id", p.id(), "version", p.version(), "status", p.status(),
-                "appliesTo", p.appliesTo())).toList();
+    List<Map<String, String>> list(@AuthenticationPrincipal Jwt jwt) {
+        return playbooks.forState(team.stateOfUser(CaseTeam.user(jwt))).stream().map(p -> Map.of("id", p.id(), "version", p.version(),
+                "status", p.status(), "appliesTo", p.appliesTo(), "module", playbooks.module(p.id()))).toList();
     }
 
     @PutMapping("/api/firs/{firId}/playbook")
@@ -60,6 +61,8 @@ class ReadinessController {
         UUID user = CaseTeam.user(jwt);
         team.requireTeam(user, firId);
         var pb = playbooks.get(c.playbookId).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "No such playbook."));
+        if (!playbooks.holdsFor(pb, team.stateOfFir(firId)))
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "That playbook is of another state's module; it does not hold for this FIR.");
         db.sql("""
                 insert into case_playbook (fir_id, playbook_id, playbook_version, chosen_by) values (?,?,?,?)
                 on conflict (fir_id) do update set playbook_id = excluded.playbook_id, playbook_version = excluded.playbook_version,
