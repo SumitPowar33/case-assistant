@@ -11,6 +11,7 @@
     "IN"
   ],
   "acts": [
-    "MPID Act"
+    "MPID Act",
+    "MCOC Act"
   ]
 }

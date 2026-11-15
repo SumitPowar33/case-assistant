@@ -375,3 +375,21 @@ def test_a_state_playbook_only_adds_to_a_national_charge():
 def test_playbook_ids_are_unique_across_modules():
     ids = [json.loads(p.read_text(encoding="utf-8"))["id"] for p in PLAYBOOKS]
     assert len(ids) == len(set(ids))
+
+
+def test_the_mcoc_playbook_keeps_the_approvals_the_act_requires():
+    # MCOC Act 23: no information recorded without a DIG's prior approval, an investigating officer of DySP/ACP rank,
+    # no cognizance without an Additional DGP's sanction; 21(2): 90 days, extended only by the Special Court to 180.
+    pb = json.loads((ROOT / "MH" / "playbooks" / "mh-organised-crime.v1.json").read_text(encoding="utf-8"))
+    rules = {r["source"]: r for r in pb["rules"]}
+    for source in ("MCOC Act 23(1)(a)", "MCOC Act 23(1)(b)", "MCOC Act 23(2)"):
+        assert rules[source]["severity"] == "critical", source
+    assert "Deputy Inspector General" in rules["MCOC Act 23(1)(a)"]["text"]
+    assert "Additional Director General" in rules["MCOC Act 23(2)"]["text"]
+    assert "180 days" in rules["MCOC Act 21(2)"]["text"] and "Special Court" in rules["MCOC Act 21(2)"]["text"]
+    assert "MCOC Act" in own_acts("MH")
+    assert all(c["law"].startswith("MCOC Act ") for c in pb["charges"])
+    main = next(c for c in pb["charges"] if c["law"] == "MCOC Act 3(1)(ii)")
+    cua = next(i for i in main["ingredients"] if i["id"] == "continuing_unlawful_activity")
+    assert "more than one charge-sheet" in cua["text"] and "ten years" in cua["text"]
+    assert "earlier_chargesheets_certified" in cua["proof"]

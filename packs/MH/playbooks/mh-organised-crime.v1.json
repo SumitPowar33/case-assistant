@@ -1,0 +1,174 @@
+{
+  "id": "mh-organised-crime",
+  "version": "1.0.0-draft",
+  "status": "draft",
+  "review_note": "Unreviewed draft of the Maharashtra module (decision 5 of 2 Nov 2026), drafted from the text of the Maharashtra Control of Organised Crime Act 1999 (sections 2(1)(d), (e), (f), 3, 21 and 23) and Zakir Abdul Mirajkar v State of Maharashtra (Supreme Court, 2022) on earlier charge-sheets. Must be checked by a Marathi-speaking public prosecutor of Maharashtra before use.",
+  "applies_to": "Maharashtra only: organised crime by a gang or syndicate (extortion, contract killing, land grabbing, matka or other rackets run by threats) under the Maharashtra Control of Organised Crime Act 1999",
+  "charges": [
+    {
+      "id": "mcoc_organised_crime",
+      "law": "MCOC Act 3(1)(ii)",
+      "label": "Organised crime, not resulting in death (MCOC Act 3(1)(ii))",
+      "ingredients": [
+        {
+          "id": "continuing_unlawful_activity",
+          "text": "A continuing unlawful activity: a cognizable offence punishable with three years or more, done singly or jointly as a member of the syndicate or on its behalf, for which more than one charge-sheet was filed before a competent court in the ten years before, and the court took cognizance (MCOC 2(1)(d)); the earlier charge-sheets may be against other members of the syndicate",
+          "proof": [
+            "earlier_chargesheets_certified",
+            "cognizance_orders_certified"
+          ]
+        },
+        {
+          "id": "syndicate",
+          "text": "An organised crime syndicate: two or more persons who, singly or together, as a syndicate or gang, carry on organised crime (MCOC 2(1)(f))",
+          "proof": [
+            "link_evidence_per_accused",
+            "earlier_chargesheets_certified"
+          ]
+        },
+        {
+          "id": "violence_or_coercion",
+          "text": "The activity was carried on by violence, threat of violence, intimidation, coercion or other unlawful means (MCOC 2(1)(e))",
+          "proof": [
+            "complainant_statement",
+            "witness_statements"
+          ]
+        },
+        {
+          "id": "pecuniary_benefit",
+          "text": "Its object was money or an undue economic or other advantage for the accused or another person, or promoting insurgency (MCOC 2(1)(e))",
+          "proof": [
+            "bank_statement_certified",
+            "property_records_certified"
+          ]
+        },
+        {
+          "id": "accused_part",
+          "text": "The accused took part in this offence as a member of the syndicate or on its behalf",
+          "proof": [
+            "link_evidence_per_accused",
+            "own_statement"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mcoc_abetment",
+      "law": "MCOC Act 3(2)",
+      "label": "Conspiring, attempting, abetting or knowingly facilitating organised crime (MCOC Act 3(2))",
+      "ingredients": [
+        {
+          "id": "organised_crime",
+          "text": "Organised crime as in MCOC 2(1)(e) was committed or attempted",
+          "proof": [
+            "earlier_chargesheets_certified",
+            "complainant_statement"
+          ]
+        },
+        {
+          "id": "act_of_help",
+          "text": "The accused conspired, attempted, advocated, abetted or knowingly facilitated it, or an act preparatory to it",
+          "proof": [
+            "link_evidence_per_accused",
+            "call_or_chat_record"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mcoc_member",
+      "law": "MCOC Act 3(4)",
+      "label": "Member of an organised crime syndicate (MCOC Act 3(4))",
+      "ingredients": [
+        {
+          "id": "syndicate",
+          "text": "An organised crime syndicate: two or more persons who, singly or together, as a syndicate or gang, carry on organised crime (MCOC 2(1)(f))",
+          "proof": [
+            "link_evidence_per_accused",
+            "earlier_chargesheets_certified"
+          ]
+        },
+        {
+          "id": "membership",
+          "text": "The accused is a member of that syndicate",
+          "proof": [
+            "link_evidence_per_accused",
+            "witness_statements"
+          ]
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "prior_approval",
+      "severity": "critical",
+      "text": "No information about organised crime may be recorded under the MCOC Act without the prior approval of a police officer not below the rank of Deputy Inspector General; keep the approval with its date in the case file.",
+      "source": "MCOC Act 23(1)(a)"
+    },
+    {
+      "id": "investigating_officer_rank",
+      "severity": "critical",
+      "text": "The investigation must be done by a police officer not below the rank of Deputy Superintendent (Assistant Commissioner in a commissionerate).",
+      "source": "MCOC Act 23(1)(b)"
+    },
+    {
+      "id": "sanction",
+      "severity": "critical",
+      "text": "The Special Court takes cognizance only with the previous sanction of a police officer not below the rank of Additional Director General; get it before the final report is filed.",
+      "source": "MCOC Act 23(2)"
+    },
+    {
+      "id": "custody_periods",
+      "severity": "high",
+      "text": "The final report is due within 90 days of the first remand; only the Special Court can extend this to 180 days, on the Public Prosecutor's report of the progress and the reasons, asked for before the 90 days end. Police custody may be asked for up to 30 days.",
+      "source": "MCOC Act 21(2)"
+    },
+    {
+      "id": "earlier_chargesheets",
+      "severity": "high",
+      "text": "Get certified copies of the earlier charge-sheets of the syndicate (more than one, filed in the ten years before this offence) and of the courts' orders taking cognizance.",
+      "source": "MCOC Act 2(1)(d)"
+    },
+    {
+      "id": "electronic_record_certificate",
+      "severity": "critical",
+      "text": "Every electronic record relied on needs a BSA 63(4) certificate with Part A and Part B and a matching hash.",
+      "source": "BSA 63(4)"
+    },
+    {
+      "id": "seizure_recorded",
+      "severity": "high",
+      "text": "Every search and seizure must be recorded by audio-video (eSakshya) with the recording linked to the seizure memo.",
+      "source": "BNSS 105"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "approval_request",
+      "stage": "verification",
+      "text": "Ask the DIG (or the Additional Commissioner in a commissionerate) for prior approval under MCOC 23(1)(a), with the earlier charge-sheets"
+    },
+    {
+      "id": "earlier_cases",
+      "stage": "verification",
+      "text": "Ask the courts for certified copies of the earlier charge-sheets and cognizance orders of the syndicate"
+    },
+    {
+      "id": "notice_banks",
+      "stage": "notices",
+      "text": "BNSS 94 notices to banks for the accused's statements, KYC and BSA 63(4) certificates",
+      "notice_kind": "BNSS_94"
+    },
+    {
+      "id": "statements_victims",
+      "stage": "statements",
+      "text": "Record the statements of the victims and witnesses (BNSS 180)"
+    },
+    {
+      "id": "sanction_request",
+      "stage": "final_report",
+      "text": "Ask the Additional DGP for sanction under MCOC 23(2) before the final report goes to the Special Court"
+    }
+  ]
+}

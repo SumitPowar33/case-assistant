@@ -1,5 +1,6 @@
 package in.caseassistant;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -47,7 +48,7 @@ class StatePlaybookApiTest {
     void setUp() {
         db.sql("truncate fir, police_station, state_pack, app_user cascade").update();
         db.sql("insert into state_pack (code, name, version, languages) values ('IN','National','1',array['en']), ('MH','Maharashtra','1',array['mr'])").update();
-        db.sql("insert into state_act (act, state_code) values ('MPID Act','MH')").update();   // as Modules writes it at start-up
+        db.sql("insert into state_act (act, state_code) values ('MPID Act','MH'), ('MCOC Act','MH')").update();   // as Modules writes it at start-up
         UUID mh = db.sql("insert into police_station (state_code, district_id, name) values ('MH',district_id_of('MH','Fictional Pune'),'Fictional Pune PS') returning id").query(UUID.class).single();
         UUID in = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','North'),'Fictional North PS') returning id").query(UUID.class).single();
         UUID a = user(mh, "io"), b = user(in, "io");
@@ -61,13 +62,13 @@ class StatePlaybookApiTest {
     @Test
     void eachOfficerIsOfferedTheNationalPlaybooksAndOnlyTheirOwnStates() throws Exception {
         mvc.perform(get("/api/playbooks").header("Authorization", mhIo)).andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "mh-deposit-fraud")))
+                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "mh-deposit-fraud", "mh-organised-crime")))
                 .andExpect(jsonPath("$[?(@.id == 'mh-deposit-fraud')].module").value("MH"))
                 .andExpect(jsonPath("$[?(@.id == 'cyber-fraud')].module").value("IN"));
         mvc.perform(get("/api/playbooks").header("Authorization", inIo))
                 .andExpect(jsonPath("$[*].id").value(Matchers.contains("cyber-fraud")));
         mvc.perform(get("/api/playbooks").header("Authorization", platform))   // no station: every module's
-                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "mh-deposit-fraud")));
+                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "mh-deposit-fraud", "mh-organised-crime")));
     }
 
     @Test
@@ -114,5 +115,27 @@ class StatePlaybookApiTest {
                 .andExpect(status().is4xxClientError());
         mvc.perform(post("/api/firs").header("Authorization", mhIo).contentType(MediaType.APPLICATION_JSON).content(fir.formatted(mhStation)))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void theOrganisedCrimePlaybookHoldsOnlyInMaharashtraAndAsksForTheApprovalsOfTheAct() throws Exception {
+        mvc.perform(put("/api/firs/" + inFir + "/playbook").header("Authorization", inIo).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"playbookId\":\"mh-organised-crime\"}")).andExpect(status().isUnprocessableEntity());
+        mvc.perform(put("/api/firs/" + mhFir + "/playbook").header("Authorization", mhIo).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"playbookId\":\"mh-organised-crime\"}")).andExpect(status().isNoContent());
+        // an MCOC section is taken only on an FIR of Maharashtra (V57 trigger)
+        assertThatThrownBy(() -> db.sql("insert into fir_section (fir_id, act, section) values (?, 'MCOC Act', '3(1)(ii)')").param(inFir).update())
+                .hasMessageContaining("not a law of the state");
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'MCOC Act', '3(1)(ii)')").param(mhFir).update();
+        mvc.perform(get("/api/firs/" + mhFir + "/readiness").header("Authorization", mhIo)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.charges[*].law").value(Matchers.contains("MCOC Act 3(1)(ii)")))
+                .andExpect(jsonPath("$.gaps[?(@.key == 'ingredient:mcoc_organised_crime/continuing_unlawful_activity')].severity").value("critical"))
+                .andExpect(jsonPath("$.checksToConfirm[?(@.source == 'MCOC Act 23(1)(a)')].severity").value("critical"))
+                .andExpect(jsonPath("$.checksToConfirm[?(@.source == 'MCOC Act 23(2)')].severity").value("critical"));
+        mvc.perform(get("/api/firs/" + mhFir + "/sections").header("Authorization", mhIo))
+                .andExpect(jsonPath("$.charges[?(@.charge_id == 'mcoc_member')].act").value("MCOC Act"))
+                .andExpect(jsonPath("$.charges[?(@.charge_id == 'mcoc_member')].law").value("MCOC Act 3(4)"));
+        mvc.perform(get("/api/firs/" + inFir + "/sections").header("Authorization", inIo))
+                .andExpect(jsonPath("$.charges[?(@.playbook_id == 'mh-organised-crime')]").isEmpty());
     }
 }
