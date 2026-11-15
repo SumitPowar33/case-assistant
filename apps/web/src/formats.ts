@@ -1,15 +1,16 @@
 // Plain helpers for the record forms (kept apart so Forms.tsx exports only components).
 
-/** Acts the core app accepts in fir_section (V1 schema). */
+/** National acts the core app accepts in fir_section (V1 schema); a state module adds its own laws (GET /api/me `acts`, V57). */
 export const ACTS = ['BNS', 'IPC', 'IT Act', 'NDPS Act', 'POCSO Act', 'Arms Act', 'SC/ST Act', 'Other'] as const
 
 /**
  * "BNS 318(4), IT Act 66D" -> [{act:'BNS',section:'318(4)'}, {act:'IT Act',section:'66D'}].
- * Separated by commas or semicolons; the act must be one of ACTS (any letter case). Throws with the bad part.
+ * Separated by commas or semicolons; the act must be one of `acts` (any letter case): the national ACTS, or those the
+ * server gives for the officer's state. Throws with the bad part.
  */
-export function parseSections(text: string): { act: string; section: string }[] {
+export function parseSections(text: string, acts: readonly string[] = ACTS): { act: string; section: string }[] {
   return text.split(/[,;]/).map((s) => s.trim()).filter(Boolean).map((part) => {
-    const act = [...ACTS].sort((a, b) => b.length - a.length).find((a) => part.toLowerCase().startsWith(a.toLowerCase() + ' '))
+    const act = [...acts].sort((a, b) => b.length - a.length).find((a) => part.toLowerCase().startsWith(a.toLowerCase() + ' '))
     const section = act ? part.slice(act.length).trim().replace(/^(section|sec\.?|s\.)\s*/i, '') : ''
     if (!act || !/^[0-9][0-9A-Za-z()/.-]*$/.test(section)) throw new Error(`Not understood: "${part}". Write it like "BNS 318(4)" or "IT Act 66D".`)
     return { act, section }

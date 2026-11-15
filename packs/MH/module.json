@@ -2,6 +2,15 @@
   "id": "MH",
   "name": "Maharashtra",
   "version": "1",
-  "languages": ["mr", "en", "hi"],
-  "depends": ["IN"]
+  "languages": [
+    "mr",
+    "en",
+    "hi"
+  ],
+  "depends": [
+    "IN"
+  ],
+  "acts": [
+    "MPID Act"
+  ]
 }

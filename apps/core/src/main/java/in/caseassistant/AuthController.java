@@ -135,6 +135,8 @@ class AuthController implements ApplicationRunner {
         user.put("acting", db.sql("""
                 select ac.role, ac.ends_at from acting_charge ac where ac.user_id = ? and ac.starts_at <= clock_timestamp() and ac.ends_at > clock_timestamp()
                   and not exists (select 1 from acting_charge_end ae where ae.charge_id = ac.id) order by ac.ends_at""").param(id).query().listOfRows());
+        // the acts a section of an FIR of the user's state may name (national ones and the state module's laws, V57)
+        user.put("acts", modules.acts(team.stateOfUser(id)));
         user.put("can_import", team.can(id, "import.run"));
         user.put("can_set_policy", team.can(id, "policy.set") || team.can(id, "admin.manage"));
     }

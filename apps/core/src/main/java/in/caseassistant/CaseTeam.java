@@ -207,4 +207,15 @@ class CaseTeam {
     boolean identityProtected(UUID firId) {
         return db.sql("select identity_protected_case(?)").param(firId).query(Boolean.class).single();
     }
+
+    /** The state of the FIR's police station (state modules' playbooks and laws hold only there). */
+    String stateOfFir(UUID firId) {
+        return db.sql("select s.state_code from fir f join police_station s on s.id = f.station_id where f.id = ?").param(firId).query(String.class).single();
+    }
+
+    /** The state of the user's police station; null for the platform admin (no station). */
+    String stateOfUser(UUID userId) {
+        return db.sql("select s.state_code from app_user u left join police_station s on s.id = u.station_id where u.id = ?")
+                .param(userId).query(String.class).list().get(0);   // a list: single() refuses the platform admin's null
+    }
 }

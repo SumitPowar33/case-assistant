@@ -8,6 +8,10 @@ test('sections are read with commas or semicolons, any letter case, a "section" 
   expect(parseSections('')).toEqual([])
   expect(parseSections('Arms Act s. 25')).toEqual([{ act: 'Arms Act', section: '25' }])
   expect(parseSections('SC/ST Act 3(1)(r)')).toEqual([{ act: 'SC/ST Act', section: '3(1)(r)' }])
+  // a state law only when the server names it for the officer's state
+  expect(() => parseSections('MPID Act 3')).toThrow('Not understood: "MPID Act 3"')
+  expect(parseSections('mpid act 3, BNS 318(4)', ['BNS', 'MPID Act'])).toEqual([{ act: 'MPID Act', section: '3' }, { act: 'BNS', section: '318(4)' }])
+  expect(() => parseSections('IT Act 66D', ['BNS', 'MPID Act'])).toThrow()
 })
 
 test('a section that is not understood is refused by name: no act, no section, a section not starting with a digit, a space inside', () => {

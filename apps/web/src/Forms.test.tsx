@@ -47,6 +47,19 @@ test('registering an FIR sends the station, India times and sections, then opens
     sections: [{ act: 'BNS', section: '318(4)' }, { act: 'BNS', section: '319(2)' }] } })
 })
 
+test('a state law is taken in the sections only when the server names it for the officer\'s state (GET /api/me acts)', async () => {
+  const calls = stub()
+  setSession({ token: 't', user: { ...io, acts: ['BNS', 'IPC', 'MPID Act'] } })
+  render(<NewFirForm />)
+  type('FIR number', '42'); type('General diary entry', 'GD-4')
+  type(/Information received/, '2026-10-01T09:00'); type(/^Registered/, '2026-10-01T10:00')
+  type("Information as given (in the informant's words)", 'A fictional scheme kept the deposits')
+  type('Sections', 'mpid act 3, BNS 318(4)')
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(window.location.hash).toBe('#/firs/new1'))
+  expect(calls[0]).toMatchObject({ body: { sections: [{ act: 'MPID Act', section: '3' }, { act: 'BNS', section: '318(4)' }] } })
+})
+
 test('"I am the IO" follows the permission case.lead: ticked for an officer of their own cases, offered unticked to a supervisor, absent without it', () => {
   const box = () => screen.queryByLabelText<HTMLInputElement>('I am the investigating officer')
   const { unmount } = render(<NewFirForm />)

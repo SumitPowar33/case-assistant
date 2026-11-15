@@ -55,4 +55,31 @@ class ModulesTest {
         assertThatThrownBy(() -> of(Map.of("IN", m("IN"), "MH", m("MH", "IN", "KA")))).hasMessageContaining("unknown module KA");
         assertThatThrownBy(() -> of(Map.of("IN", m("IN", "IN")))).hasMessageContaining("unknown module IN");
     }
+
+    static Modules.Manifest withActs(String id, String... acts) {
+        return new Modules.Manifest(id, "Fictional " + id, "1", List.of("en"), id.equals("IN") ? List.of() : List.of("IN"), Arrays.asList(acts));
+    }
+
+    @Test
+    void aStateModuleNamesLawsOfItsOwnStateOnly() {
+        var mods = of(Map.of("IN", m("IN"), "MH", withActs("MH", "MPID Act"), "KA", m("KA", "IN")));
+        org.assertj.core.api.Assertions.assertThat(mods.acts("MH")).contains("BNS", "IT Act", "MPID Act");
+        org.assertj.core.api.Assertions.assertThat(mods.acts("KA")).doesNotContain("MPID Act").contains("POCSO Act");
+        org.assertj.core.api.Assertions.assertThat(mods.acts(null)).isEqualTo(Playbooks.ACTS);
+        org.assertj.core.api.Assertions.assertThat(mods.acts("ZZ")).isEqualTo(Playbooks.ACTS);
+        org.assertj.core.api.Assertions.assertThat(mods.exists("MH")).isTrue();
+        org.assertj.core.api.Assertions.assertThat(mods.exists("ZZ")).isFalse();
+    }
+
+    @Test
+    void aStateLawIsNeverANationalActNorTwoStatesLawsNorNamedByTheNationalModule() {
+        assertThatThrownBy(() -> of(Map.of("IN", withActs("IN", "MPID Act")))).hasMessageContaining("national acts are fixed");
+        for (String bad : new String[] {"BNS", "IT Act", "MPID", "mpid Act", "MPID  Act", "MPID Act 1999", "A".repeat(37) + " Act"})
+            assertThatThrownBy(() -> of(Map.of("IN", m("IN"), "MH", withActs("MH", bad)))).as(bad).hasMessageContaining("is not a state law");
+        assertThatThrownBy(() -> of(Map.of("IN", m("IN"), "MH", withActs("MH", (String) null)))).hasMessageContaining("is not a state law");
+        assertThatThrownBy(() -> of(new java.util.LinkedHashMap<>(java.util.Map.of("IN", m("IN"))) {{
+            put("MH", withActs("MH", "MPID Act"));
+            put("KA", withActs("KA", "MPID Act"));
+        }})).hasMessageContaining("KA: MPID Act is already a law of MH");
+    }
 }

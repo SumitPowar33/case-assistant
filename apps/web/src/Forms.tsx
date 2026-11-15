@@ -71,7 +71,7 @@ export function NewFirForm({ complaintId }: { complaintId?: string } = {}) {
         registeredAt: istIso(String(f.get('registered'))),
         ...(complaintId ? { complaintId } : { informationReceivedAt: istIso(String(f.get('received'))), contentsOriginal: contents.trim(), contentsLanguage: lang }),
         ioId: f.get('iAmIo') === 'on' ? me!.id : null, actionTaken: f.get('action'), actionReason: text(f, 'reason'),
-        sexualOffence: f.get('sexual') === 'on', sections: parseSections(String(f.get('sections') ?? '')),
+        sexualOffence: f.get('sexual') === 'on', sections: parseSections(String(f.get('sections') ?? ''), me?.acts),
         })
       }}>
       <label>{t('firForm.year')} <input name="year" type="number" min={2024} max={2100} defaultValue={new Date().getFullYear()} required /></label>
