@@ -23,7 +23,15 @@ class FirImportTest {
     FirImport.Result check(String... kv) {
         var m = new HashMap<String, String>(Map.of("fir_no", "12", "registered_at", "05/03/2024 14:30"));
         for (int i = 0; i < kv.length; i += 2) m.put(kv[i], kv[i + 1]);
-        return rules.check(m, u -> u.equals("io.one") ? IO : null, NOW);
+        return rules.check(m, u -> u.equals("io.one") ? IO : null, NOW, "MH", STATE_ACTS);
+    }
+
+    /** Fictional second state law, so the longest name and another state's law are both tested. */
+    static final Map<String, String> STATE_ACTS = Map.of("MPID Act", "MH", "MPID Schemes Act", "MH", "KA Deposit-Protection Act", "KA");
+
+    FirImport.Result atStation(String state, String sections) {
+        return rules.check(new HashMap<>(Map.of("fir_no", "12", "registered_at", "05/08/2024 14:30", "sections", sections)),
+                u -> null, NOW, state, STATE_ACTS);
     }
 
     @SuppressWarnings("unchecked")
@@ -77,6 +85,36 @@ class FirImportTest {
         assertThat(has(r, "warning", "registered_at")).isTrue();
         assertThat(r.parsed()).containsEntry("registeredAt", "2024-03-04T18:30:00Z");
         assertThat(has(check("registered_at", "05/03/2024", "fir_year", "2023"), "warning", "fir_year")).isTrue();
+    }
+
+    @Test
+    void aStateLawIsReadOnlyAtAStationOfItsState() {
+        // before session 103 "MPID Act 3" was kept as Other even in Maharashtra
+        var mh = atStation("MH", "MPID Act 3; mpid 3/4, BNS 61(2)");
+        assertThat(secs(mh)).containsExactly(Map.of("act", "MPID Act", "section", "3"), Map.of("act", "MPID Act", "section", "3"),
+                Map.of("act", "MPID Act", "section", "4"), Map.of("act", "BNS", "section", "61(2)"));
+        assertThat(has(mh, "warning", "sections")).isFalse();
+        assertThat(secs(atStation("KA", "KA Deposit-Protection Act 5"))).containsExactly(
+                Map.of("act", "KA Deposit-Protection Act", "section", "5"));
+
+        var ka = atStation("KA", "MPID Act 3; BNS 318(4)");
+        assertThat(secs(ka)).containsExactly(Map.of("act", "Other", "section", "MPID Act 3"), Map.of("act", "BNS", "section", "318(4)"));
+        assertThat(has(ka, "warning", "sections")).isTrue();
+        assertThat(ka.messages()).anyMatch(m -> m.field().equals("sections") && m.text().contains("law of MH"));
+        assertThat(secs(atStation("MH", "KA Deposit-Protection 5"))).containsExactly(
+                Map.of("act", "Other", "section", "KA Deposit-Protection 5"));
+        assertThat(secs(atStation("MH", "MPIDX 3")).get(0)).containsEntry("act", "Other");
+        assertThat(secs(atStation("MH", "12MPID")).get(0)).as("a name inside a longer word is no law").containsEntry("act", "Other");
+        assertThat(secs(atStation("MH", "MPID Schemes Act 2"))).as("the longer name wins")
+                .containsExactly(Map.of("act", "MPID Schemes Act", "section", "2"));
+        assertThat(secs(atStation("GJ", "MPID 3")).get(0)).containsEntry("act", "Other");
+    }
+
+    @Test
+    void aStateLawNamedLikeANationalActNeverTakesItsPlace() {
+        var r = rules.check(new HashMap<>(Map.of("fir_no", "12", "registered_at", "05/08/2024 14:30", "sections", "IPC 420; IT Act 66D")),
+                u -> null, NOW, "MH", Map.of("IPC Act", "MH", "IT Act Amendment Act", "MH"));
+        assertThat(secs(r)).containsExactly(Map.of("act", "IPC", "section", "420"), Map.of("act", "IT Act", "section", "66D"));
     }
 
     @Test

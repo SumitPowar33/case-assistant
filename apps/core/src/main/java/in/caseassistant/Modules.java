@@ -101,6 +101,13 @@ public class Modules {
         return out;
     }
 
+    /** Every state law of the installation and the state whose module names it. */
+    Map<String, String> stateActs() {
+        var out = new LinkedHashMap<String, String>();
+        modules.values().forEach(m -> m.ownActs().forEach(act -> out.put(act, m.id())));
+        return out;
+    }
+
     /** Every language some module offers (screen language choices). */
     Set<String> languages() {
         return modules.values().stream().flatMap(m -> m.languages().stream()).collect(Collectors.toCollection(java.util.TreeSet::new));

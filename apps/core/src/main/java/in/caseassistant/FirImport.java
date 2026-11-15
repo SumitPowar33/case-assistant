@@ -43,7 +43,6 @@ class FirImport {
     private static final DateTimeFormatter[] DATES = {
             fmt("dd/MM/uuuu[ HH:mm[:ss]]"), fmt("dd-MM-uuuu[ HH:mm[:ss]]"), fmt("uuuu-MM-dd[['T'][ ]HH:mm[:ss]]")};
     private static final Pattern SECTION = Pattern.compile("\\d{1,3}[A-Z]{0,2}(\\([0-9A-Za-z]+\\))*");
-    private static final Pattern ACT = Pattern.compile("\\b(IPC|BNS|POCSO|NDPS|IT ACT|ARMS|SC/ST)\\b( ACT)?");
     private static final Map<String, String> ACT_NAMES = Map.of("IPC", "IPC", "BNS", "BNS", "POCSO", "POCSO Act", "NDPS", "NDPS Act",
             "IT ACT", "IT Act", "ARMS", "Arms Act", "SC/ST", "SC/ST Act");
 
@@ -142,7 +141,12 @@ class FirImport {
         return null;
     }
 
-    Result check(Map<String, String> v, Function<String, UUID> ioByUsername, Instant now) {
+    /**
+     * One row of an FIR file of a police station of {@code state}. {@code stateActs} is every state law of the installation
+     * with the state whose module names it (V57): a section of the station's own state law is read as that law, one of another
+     * state's law is kept as Other with a warning, since the database takes a state law only on an FIR of its state.
+     */
+    Result check(Map<String, String> v, Function<String, UUID> ioByUsername, Instant now, String state, Map<String, String> stateActs) {
         var msgs = new ArrayList<Message>();
         var p = new LinkedHashMap<String, Object>();
         Function<String, String> get = k -> v.getOrDefault(k, "").trim();
@@ -199,7 +203,7 @@ class FirImport {
                     "No active IO of this station has this username; the FIR is left without an IO."));
         }
 
-        var sections = sections(get.apply("sections"), reg, msgs);
+        var sections = sections(get.apply("sections"), reg, state, stateActs, msgs);
         boolean zero = get.apply("zero_fir").toLowerCase(Locale.ROOT).matches("y|yes|true|1");
         if (zero && get.apply("outside_limits_place").isEmpty())
             msgs.add(new Message("error", "outside_limits_place", "A Zero FIR needs the place outside the station's limits."));
@@ -255,25 +259,50 @@ class FirImport {
         return m;
     }
 
+    /** The acts a file may name: the short names of the national acts, then each state law by its name without "Act" (never in place of a national one). */
+    private static Map<String, String> actNames(Map<String, String> stateActs) {
+        var names = new LinkedHashMap<>(ACT_NAMES);
+        stateActs.keySet().forEach(act -> names.putIfAbsent(act.toUpperCase(Locale.ROOT).replaceFirst(" ACT$", ""), act));
+        return names;
+    }
+
+    /** The longest name first, so "MPID" is not read as a shorter law; a name is a whole word, with or without "Act" after it. */
+    private static Pattern actPattern(Map<String, String> names) {
+        var keys = new ArrayList<>(names.keySet());
+        keys.sort((a, b) -> b.length() - a.length());
+        var alt = new StringBuilder();
+        for (String k : keys) alt.append(alt.isEmpty() ? "" : "|").append(Pattern.quote(k));
+        return Pattern.compile("(?<![A-Z0-9_])(" + alt + ")(?![A-Z0-9_])( ACT)?");
+    }
+
     /** "IPC 420/34; 376(2)(n)" -> [{IPC,420},{IPC,34},{IPC,376(2)(n)}]. A missing act is guessed from the date, with a warning. */
-    private List<Map<String, String>> sections(String text, Instant reg, List<Message> msgs) {
+    private List<Map<String, String>> sections(String text, Instant reg, String state, Map<String, String> stateActs, List<Message> msgs) {
+        var names = actNames(stateActs);
+        var actPattern = actPattern(names);
         var out = new ArrayList<Map<String, String>>();
         for (String raw : text.split("[;,|]")) {
             String token = raw.trim().toUpperCase(Locale.ROOT).replaceAll("\\s+", " ");
             if (token.isEmpty()) continue;
-            var m = ACT.matcher(token);
+            var m = actPattern.matcher(token);
             String act = null;
             String rest = token;
             if (m.find()) {
-                act = ACT_NAMES.get(m.group(1));
+                act = names.get(m.group(1));
                 rest = (token.substring(0, m.start()) + " " + token.substring(m.end())).trim();
             }
             var numbers = new ArrayList<String>();
             for (String n : rest.split("\\s*(/|&|R/W|AND)\\s*")) numbers.add(n.trim());
             boolean readable = numbers.stream().allMatch(n -> SECTION.matcher(n).matches());
+            String other = raw.trim().substring(0, Math.min(raw.trim().length(), 60));
             if (!readable) {
-                out.add(section("Other", raw.trim().substring(0, Math.min(raw.trim().length(), 60))));
+                out.add(section("Other", other));
                 msgs.add(new Message("warning", "sections", "'" + raw.trim() + "' could not be read as act and section; kept as Other."));
+                continue;
+            }
+            if (act != null && stateActs.containsKey(act) && !stateActs.get(act).equals(state)) {
+                out.add(section("Other", other));
+                msgs.add(new Message("warning", "sections", "'" + raw.trim() + "': the " + act + " is a law of " + stateActs.get(act)
+                        + " and holds only for FIRs of that state; kept as Other. Check the file's police station."));
                 continue;
             }
             if (act == null) {

@@ -59,11 +59,13 @@ class ImportController {
     private final NoticeImport notices;
     private final Policies policies;
     private final ObjectMapper json;
+    private final Modules modules;
     private List<String[]> childLinks;
 
     ImportController(JdbcClient db, CaseTeam team, FirImport rules, ArrestImport arrests, ChargesheetImport chargesheets, EvidenceImport evidence,
-                     NoticeImport notices, Policies policies, ObjectMapper json) {
+                     NoticeImport notices, Policies policies, ObjectMapper json, Modules modules) {
         this.db = db;
+        this.modules = modules;
         this.notices = notices;
         this.evidence = evidence;
         this.chargesheets = chargesheets;
@@ -153,13 +155,15 @@ class ImportController {
         var ios = new HashMap<String, UUID>();
         var seen = new HashMap<String, Integer>();
         Instant now = Instant.now();
+        String state = db.sql("select state_code from police_station where id = ?").param(s.stationId).query(String.class).single();
+        var stateActs = modules.stateActs();
         for (int i = 1; i < rows.size(); i++) {
             var cells = rows.get(i);
             var raw = rawOf(headers, cells);
             var fields = fieldsOf(map, raw);
             var r = rules.check(fields, u -> ios.computeIfAbsent(u, k -> db.sql(
                     "select u.id from app_user u where u.username = ? and u.active and u.station_id = ? and " + team.caseLead("u"))
-                    .params(k, s.stationId).query(UUID.class).optional().orElse(null)), now);
+                    .params(k, s.stationId).query(UUID.class).optional().orElse(null)), now, state, stateActs);
             var msgs = new ArrayList<>(r.messages());
             String status = r.status();
             if (cells.size() > headers.size()) {

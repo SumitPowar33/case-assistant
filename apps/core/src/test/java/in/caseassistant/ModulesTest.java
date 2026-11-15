@@ -69,6 +69,8 @@ class ModulesTest {
         org.assertj.core.api.Assertions.assertThat(mods.acts("ZZ")).isEqualTo(Playbooks.ACTS);
         org.assertj.core.api.Assertions.assertThat(mods.exists("MH")).isTrue();
         org.assertj.core.api.Assertions.assertThat(mods.exists("ZZ")).isFalse();
+        org.assertj.core.api.Assertions.assertThat(mods.stateActs()).isEqualTo(Map.of("MPID Act", "MH"));
+        org.assertj.core.api.Assertions.assertThat(of(Map.of("IN", m("IN"))).stateActs()).isEmpty();
     }
 
     @Test

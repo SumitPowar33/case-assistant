@@ -502,6 +502,29 @@ class ImportApiTest {
         commit(sho1, other).andExpect(status().isOk());
     }
 
+    /** A state law in an old FIR file (item 3, V57): read as that law in its own state, kept as Other elsewhere. */
+    @Test
+    void aStateLawInAnOldFirFileIsReadOnlyForAStationOfItsState() throws Exception {
+        modules.sync();
+        UUID mh = station("MH", "Fictional Pune Rural", "Fictional Pune PS");
+        String shoMh = bearer(user("sho", mh, "Fictional SHO Pune", "sho.pune"));
+        String spMh = bearer(user("sp", mh, "Fictional SP Pune", "sp.pune"));
+        String row = "1,10/03/2025 10:00,MPID Act 3; BNS 318(4),Fictional deposit scheme,,,,Fictional Accused One,GD-5,open\n";
+        UUID b = stage(shoMh, mh, HEAD + row);
+        mvc.perform(get("/api/imports/" + b).header("Authorization", shoMh)).andExpect(jsonPath("$.rows_ok").value(1));
+        commit(spMh, b).andExpect(status().isOk());
+        assertThat(db.sql("select s.act || ' ' || s.section from fir_section s join fir f on f.id = s.fir_id where f.station_id = ? order by 1")
+                .param(mh).query(String.class).list()).containsExactly("BNS 318(4)", "MPID Act 3");
+
+        UUID other = stage(sho1, s1, HEAD + row);
+        mvc.perform(get("/api/imports/" + other + "/rows?status=warning").header("Authorization", sho1))
+                .andExpect(jsonPath("$[0].messages[?(@.field=='sections')].text").value(org.hamcrest.Matchers.hasItem(
+                        org.hamcrest.Matchers.containsString("MPID Act is a law of MH"))));
+        commit(sho1, other).andExpect(status().isOk());
+        assertThat(db.sql("select s.act || ' ' || s.section from fir_section s join fir f on f.id = s.fir_id where f.station_id = ? order by 1")
+                .param(s1).query(String.class).list()).containsExactly("BNS 318(4)", "Other MPID Act 3");
+    }
+
     @Test
     void aStationThatAsksForASecondApproverRefusesSelfApproval() throws Exception {
         UUID b = stage(sho1, s1, GOOD);
