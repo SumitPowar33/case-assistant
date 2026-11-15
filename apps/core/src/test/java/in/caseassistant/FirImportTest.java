@@ -88,6 +88,32 @@ class FirImportTest {
     }
 
     @Test
+    void aSectionWithClausesOfAStateLawIsRead() {
+        // the MH module's MCOC Act: "3(1)(ii)" is one section, and a second law of the same state is read beside the first
+        var acts = Map.of("MPID Act", "MH", "MCOC Act", "MH");
+        var r = rules.check(new HashMap<>(Map.of("fir_no", "12", "registered_at", "05/08/2024 14:30", "sections", "MCOC Act 3(1)(ii); MCOC 3(4), MPID 3")),
+                u -> null, NOW, "MH", acts);
+        assertThat(secs(r)).containsExactly(Map.of("act", "MCOC Act", "section", "3(1)(ii)"), Map.of("act", "MCOC Act", "section", "3(4)"),
+                Map.of("act", "MPID Act", "section", "3"));
+        var ka = rules.check(new HashMap<>(Map.of("fir_no", "12", "registered_at", "05/08/2024 14:30", "sections", "MCOC 3(1)(ii)")), u -> null, NOW, "KA", acts);
+        assertThat(secs(ka)).containsExactly(Map.of("act", "Other", "section", "MCOC 3(1)(ii)"));
+        // the way FIRs of Maharashtra write it: "MCOCA", "MPIDA"
+        var mcoca = rules.check(new HashMap<>(Map.of("fir_no", "12", "registered_at", "05/08/2024 14:30", "sections", "MCOCA 3(1)(ii)/3(4); mpida 3; MPIDA Act 4")),
+                u -> null, NOW, "MH", acts);
+        assertThat(secs(mcoca)).containsExactly(Map.of("act", "MCOC Act", "section", "3(1)(ii)"),
+                Map.of("act", "MCOC Act", "section", "3(4)"), Map.of("act", "MPID Act", "section", "3"), Map.of("act", "MPID Act", "section", "4"));
+        var kaMcoca = rules.check(new HashMap<>(Map.of("fir_no", "12", "registered_at", "05/08/2024 14:30", "sections", "MCOCA 3(4)")), u -> null, NOW, "KA", acts);
+        assertThat(secs(kaMcoca)).containsExactly(Map.of("act", "Other", "section", "MCOCA 3(4)"));
+        // a name of more than one word gets no such short form
+        assertThat(secs(atStation("KA", "KA Deposit-ProtectionA 2")).get(0)).containsEntry("act", "Other");
+        assertThat(secs(atStation("KA", "KA Deposit-Protection 2")).get(0)).containsEntry("act", "KA Deposit-Protection Act");
+        // whatever the file's letter case: section letters in capitals, clauses in small letters
+        assertThat(secs(atStation("MH", "sc/st act 3(1)(R); IT Act 66d; BNS 64(2)(M)"))).containsExactly(Map.of("act", "SC/ST Act", "section", "3(1)(r)"),
+                Map.of("act", "IT Act", "section", "66D"), Map.of("act", "BNS", "section", "64(2)(m)"));
+        assertThat(FirImport.clausesInSmallLetters("376AB(2))(N")).isEqualTo("376AB(2))(n");
+    }
+
+    @Test
     void aStateLawIsReadOnlyAtAStationOfItsState() {
         // before session 103 "MPID Act 3" was kept as Other even in Maharashtra
         var mh = atStation("MH", "MPID Act 3; mpid 3/4, BNS 61(2)");
@@ -122,7 +148,7 @@ class FirImportTest {
         var r = check("sections", "IPC 420/34; 376(2)(n); POCSO 4; SC/ST 3; Excise Act 34", "registered_at", "05/03/2024 10:00");
         assertThat(secs(r)).containsExactly(
                 Map.of("act", "IPC", "section", "420"), Map.of("act", "IPC", "section", "34"),
-                Map.of("act", "IPC", "section", "376(2)(N)"), Map.of("act", "POCSO Act", "section", "4"),
+                Map.of("act", "IPC", "section", "376(2)(n)"), Map.of("act", "POCSO Act", "section", "4"),
                 Map.of("act", "SC/ST Act", "section", "3"), Map.of("act", "Other", "section", "Excise Act 34"));
         assertThat(r.status()).isEqualTo("warning");
         var newer = check("sections", "318(4)", "registered_at", "05/08/2024 10:00");

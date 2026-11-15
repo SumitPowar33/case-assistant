@@ -259,10 +259,17 @@ class FirImport {
         return m;
     }
 
-    /** The acts a file may name: the short names of the national acts, then each state law by its name without "Act" (never in place of a national one). */
+    /**
+     * The acts a file may name: the short names of the national acts, then each state law by its name without "Act" and
+     * with an "A" for "Act" ("MCOC", "MCOCA" for the MCOC Act), never in place of a national one or another law's name.
+     */
     private static Map<String, String> actNames(Map<String, String> stateActs) {
         var names = new LinkedHashMap<>(ACT_NAMES);
         stateActs.keySet().forEach(act -> names.putIfAbsent(act.toUpperCase(Locale.ROOT).replaceFirst(" ACT$", ""), act));
+        stateActs.keySet().forEach(act -> {
+            String name = act.toUpperCase(Locale.ROOT).replaceFirst(" ACT$", "");
+            if (!name.contains(" ")) names.putIfAbsent(name + "A", act);
+        });
         return names;
     }
 
@@ -273,6 +280,21 @@ class FirImport {
         var alt = new StringBuilder();
         for (String k : keys) alt.append(alt.isEmpty() ? "" : "|").append(Pattern.quote(k));
         return Pattern.compile("(?<![A-Z0-9_])(" + alt + ")(?![A-Z0-9_])( ACT)?");
+    }
+
+    /**
+     * A section as the Acts write it: a letter of the section itself in capitals ("66D", "376AB"), a clause in brackets
+     * in small letters ("376(2)(n)", "3(1)(ii)"), as the playbooks and the FIR form name them.
+     */
+    static String clausesInSmallLetters(String n) {
+        var out = new StringBuilder(n.length());
+        int depth = 0;
+        for (char c : n.toCharArray()) {
+            if (c == '(') depth++;
+            else if (c == ')') depth = Math.max(depth - 1, 0);
+            out.append(depth > 0 ? Character.toLowerCase(c) : c);
+        }
+        return out.toString();
     }
 
     /** "IPC 420/34; 376(2)(n)" -> [{IPC,420},{IPC,34},{IPC,376(2)(n)}]. A missing act is guessed from the date, with a warning. */
@@ -291,7 +313,7 @@ class FirImport {
                 rest = (token.substring(0, m.start()) + " " + token.substring(m.end())).trim();
             }
             var numbers = new ArrayList<String>();
-            for (String n : rest.split("\\s*(/|&|R/W|AND)\\s*")) numbers.add(n.trim());
+            for (String n : rest.split("\\s*(/|&|R/W|AND)\\s*")) numbers.add(clausesInSmallLetters(n.trim()));
             boolean readable = numbers.stream().allMatch(n -> SECTION.matcher(n).matches());
             String other = raw.trim().substring(0, Math.min(raw.trim().length(), 60));
             if (!readable) {
