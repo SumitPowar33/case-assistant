@@ -97,6 +97,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 102 (15 Nov, Sunday 21:05 IST scheduled run): item 3, first part: state laws and state playbooks, the first MH playbook (MPID Act, V57).
 Done in session 101 (15 Nov, 02:05 IST scheduled run, last of the night): item 15, first part: POCSO case mode, the legal steps and their 24-hour deadlines (V56).
 Done in session 100 (14 Nov, Saturday 23:37 IST scheduled run): item 14, A9: AI briefing per case on the Supervisor review (no migration, no core change).
 Done in session 99 (14 Nov, Saturday 21:05 IST weekly review): weekly review and test audit (6 fixes, see the entry); the AI gateway asks the core about the case before sending its text (V55).
@@ -123,9 +124,8 @@ Done in session 70 (5 Nov, scheduled run): item 13h, Forensic and medical reques
 Done in session 69 (5 Nov, 02:10 IST scheduled run): item 13g, Case property register (without QR); two red tests of the baseline fixed; more tests for older code (gateway 96 to 99%, Dashboard, FrontDesk, Notices).
 Done in session 66 (3 Nov, scheduled run): item 13d, the final report (draft, approve, sign; V41), without the AI drafting.
 Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens plan (docs/AI-AND-SCREENS-PLAN.md, items 14 to 18), centred sign-in, the court print format with the informant's copy.
-In progress: item 3 (session 102, started 21:21 IST): state playbooks and state laws, first MH playbook (MPID Act, draft).
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
-3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3).
+3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3). First part DONE (session 102, V57): state laws in `module.json` `acts` (MPID Act), state playbooks that hold only in their state and may only add to a national charge, the first MH playbook (deposit fraud under the MPID Act, draft). Left for 3: MH roles (if any: question 1 of session 102), more MH playbooks, Marathi labels of the playbook texts (playbooks are English only today, national ones too), the CSV import reading a state law (today it keeps an unknown act as Other), the MPID Act 3 punishment class (question 2).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
@@ -161,6 +161,33 @@ Real-time screens (plan section 10) after these, in that order.
 - Session 100 (23:37 IST): item 14, A9, the AI briefing per case on the Supervisor review (facts only, no names, never rating an officer).
 - Session 101 (02:05 IST): item 15, first part, POCSO case mode (V56), below.
 - `scripts/test-all.sh` at the end of each session: all 8 suites PASS. Coverage at the end of the night: core 98.85% lines / 96.15% branches, web 99.97 / 97.50 / 98.70 (statements / branches / functions), gateway 99%.
+
+## 15 Nov 2026, session 102 (Sunday 21:05 IST scheduled run, Sumit away)
+Started from `setup/seed` at 4ccae6a in a new container (Postgres started, role `caseapp` and both databases made, gateway requirements, `psycopg`, `httpx`, `npm ci`). The weekly review was done yesterday (session 99), so none tonight. Baseline `scripts/test-all.sh`: all 8 suites PASS. The "In progress" line was pushed first and is removed now.
+
+**Item 3, first part: state laws and state playbooks (the Maharashtra module), V57:**
+- Until now every playbook held for every FIR, so a state module's playbook (and with it its charges in the AI section suggestion) would have reached FIRs of every state, and a state playbook could have listed a national charge with fewer ingredients (a looser readiness check). Both closed before the first state playbook went in.
+- **State laws**: a state module names its own laws in `module.json` (`"acts": ["MPID Act"]`); never a national act, never one another module names, never in `IN` (refused at start-up, `Modules`). At start-up they go to `state_act` (V57; kept as written; a row recorded for another state stops the start). The V1 list of acts on `fir_section` is now a trigger: a national act on any FIR, a state law only on an FIR of a police station of that state. `GET /api/me` (and the sign-in answer) gives `acts` for the user's state, and the FIR form reads typed sections with them (`parseSections(text, acts)`).
+- **State playbooks** (`Playbooks`): a playbook in `packs/XX/playbooks` holds only for FIRs of state XX (`holdsFor`, `forState`): `GET /api/playbooks` lists the national ones and the user's state's (all for the platform admin, with each one's `module`); choosing one for an FIR of another state is refused (422); the section charges sent to the AI section suggestion are those of the FIR's state, and adding a charge of another state's playbook is refused. A folder with playbooks but no `module.json` stops the start. A state playbook's charge of a law that a national playbook covers must keep every national ingredient (same id, same text, every proof) and may add more (refused at start-up and in `packs/tests`).
+- **First MH playbook** `mh-deposit-fraud` (draft, unreviewed, decision 5): the MPID Act 1999 section 3 (financial establishment, deposit, fraudulent default, a person responsible for running it; MPID 2(c) and 2(d), read with Alka Agrawal v State of Maharashtra, Supreme Court, 15 May 2026: a loan can be a deposit and a private individual a financial establishment), with the national cheating and conspiracy charges unchanged; rules for the depositor list, the report to the Competent Authority for attachment (MPID 4 and 5), the 63(4) certificate and the recorded seizure; tasks to the Designated Court (MPID 6). Marked for a Marathi-speaking public prosecutor of Maharashtra.
+- Tests: `apps/core/db-tests/test_state_acts.py` (22: every national act on an FIR of any state, a state law only in its state, unknown and badly named acts, one state per law, kept as written), `StatePlaybookApiTest` (4: playbook list per state and for the platform admin, choosing, readiness of the MPID charge, section charges and adding per state, `acts` in `/api/me`, an FIR registered with the MPID Act refused in another state and taken in MH), `ModulesSyncApiTest` (start-up writes the law once, a row of another state stops it), `PlaybooksTest` (state law split and taken only in its own state, holds-for, tighten-only with five ways of loosening), `ModulesTest` (acts per state, every refusal), `packs/tests` (7 new), web `formats.test.ts` and `Forms.test.tsx` (a state law only when the server names it). `MigrationTest` to 57.
+- No screen changed (the playbook choice and the section suggestion read the new lists), so no screenshot or board check was needed.
+
+`scripts/test-all.sh` at the end: all 8 suites PASS (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e browser). Coverage: core 98.90% lines / 96.35% branches, web 99.97 / 97.50 / 98.70 (statements / branches / functions), gateway 99%. Gates unchanged (less than 2 points of room).
+
+Skipped / risks:
+- The CSV import (`FirImport`) still keeps a section of an act it does not know as `Other` with a warning, so an imported "MPID Act 3" becomes `Other`; reading the state's laws there is left for later.
+- No punishment class for MPID Act 3 (Next item 3 says no MH punishments, decision 3), so the 60/90-day hint says "unknown" for it and the officer chooses (the Act's limit is six years, so it would be the 60-day class; question 2).
+- The playbook texts, national and MH, are English only; the MH playbook is not in Marathi yet.
+- No new browser test: no screen changed. Not checked by hand in a browser.
+- A case moved to a station of another state (case transfer, not built) would keep its state-law sections; the check is on adding only.
+
+Next: item 3 rest (above), item 15 rest (POCSO), items 16 (duty roster) and 18 (court-format papers).
+
+Questions for Sumit:
+1. Does the Maharashtra module need roles of its own? In the commissionerates (Mumbai, Pune and others) a DCP of a zone supervises stations as an SP does in a district; today an account there would be given the SP role. Should MH add a "DCP" role with the same reach, or keep SP?
+2. May the MH module give MPID Act 3 a punishment class (up to six years, so the 60-day class)? It is a state law, not a change to a national section, but item 3 says "no punishments of its own".
+3. Still open from before: session 101 (1, 2), 100 (1, 2), 99 (1, 2), 98 (1, 2), 97 (2), 96 (2), 95 (2), 92 (1), 91 (1, 2), 88 (1), 84 (1, 2), 85 (1, 2), 86 (1).
 
 ## 15 Nov 2026, session 101 (02:05 IST scheduled run, last of the night, Sumit away)
 Started from `setup/seed` at 2874360 in a new container (Postgres started, role `caseapp` and both databases made, gateway requirements, `psycopg`, `httpx`, `npm ci`, Maven dependencies). Baseline `scripts/test-all.sh`: 6 suites PASS; database rules and core FAIL only because of this session's own work started while the baseline ran (a database test run of the new file at the same moment collided on `CREATE EXTENSION pgcrypto`; `MigrationTest` saw the new V56 and expected 55). Both green once run alone. Lesson for later sessions: do not write migrations while the baseline runs.
