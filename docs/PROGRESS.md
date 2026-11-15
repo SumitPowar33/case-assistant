@@ -56,7 +56,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 3, the CSV import reading a state law (session 103, started 23:40 IST)
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
 Done in session 28: evidence import file (ef845fb), notices import file (a792dea), `ai_cloud_allowed` policy (ef1e2bb).
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
@@ -98,6 +97,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 103 (15 Nov, Sunday 23:35 IST scheduled run): item 3, second part: the FIR import reads a section of the station's own state law (no migration).
 Done in session 102 (15 Nov, Sunday 21:05 IST scheduled run): item 3, first part: state laws and state playbooks, the first MH playbook (MPID Act, V57).
 Done in session 101 (15 Nov, 02:05 IST scheduled run, last of the night): item 15, first part: POCSO case mode, the legal steps and their 24-hour deadlines (V56).
 Done in session 100 (14 Nov, Saturday 23:37 IST scheduled run): item 14, A9: AI briefing per case on the Supervisor review (no migration, no core change).
@@ -126,7 +126,7 @@ Done in session 69 (5 Nov, 02:10 IST scheduled run): item 13g, Case property reg
 Done in session 66 (3 Nov, scheduled run): item 13d, the final report (draft, approve, sign; V41), without the AI drafting.
 Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens plan (docs/AI-AND-SCREENS-PLAN.md, items 14 to 18), centred sign-in, the court print format with the informant's copy.
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
-3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3). First part DONE (session 102, V57): state laws in `module.json` `acts` (MPID Act), state playbooks that hold only in their state and may only add to a national charge, the first MH playbook (deposit fraud under the MPID Act, draft). Left for 3: MH roles (if any: question 1 of session 102), more MH playbooks, Marathi labels of the playbook texts (playbooks are English only today, national ones too), the CSV import reading a state law (today it keeps an unknown act as Other), the MPID Act 3 punishment class (question 2).
+3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3). First part DONE (session 102, V57): state laws in `module.json` `acts` (MPID Act), state playbooks that hold only in their state and may only add to a national charge, the first MH playbook (deposit fraud under the MPID Act, draft). Second part DONE (session 103): the FIR import reads a section of the station's own state law. Left for 3: MH roles (if any: question 1 of session 102), more MH playbooks, Marathi labels of the playbook texts (playbooks are English only today, national ones too), the MPID Act 3 punishment class (question 2).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
@@ -162,6 +162,30 @@ Real-time screens (plan section 10) after these, in that order.
 - Session 100 (23:37 IST): item 14, A9, the AI briefing per case on the Supervisor review (facts only, no names, never rating an officer).
 - Session 101 (02:05 IST): item 15, first part, POCSO case mode (V56), below.
 - `scripts/test-all.sh` at the end of each session: all 8 suites PASS. Coverage at the end of the night: core 98.85% lines / 96.15% branches, web 99.97 / 97.50 / 98.70 (statements / branches / functions), gateway 99%.
+
+## 15 Nov 2026, session 103 (Sunday 23:35 IST scheduled run, Sumit away)
+Started from `setup/seed` at 9d21168 in a new container (Postgres started, role `caseapp` and both databases made, gateway requirements, `psycopg`, `httpx`, `npm ci`). Baseline `scripts/test-all.sh`: all 8 suites PASS. The "In progress" line was pushed first and is removed now.
+
+**Item 3, second part: the FIR import reads a state law (no migration):**
+- Until now an old FIR file's "MPID Act 3" was kept as `Other` with a warning even at a Maharashtra station, so the MH playbook and the readiness check never saw it on imported FIRs.
+- `FirImport` now reads, besides the national acts, every state law of the installation by its name with or without "Act" ("MPID Act 3", "mpid 3/4"); the longest name is tried first, and a name inside a longer word is no law ("12MPID", "MPIDX 3"). A state law never takes the place of a national short name (a state "IPC Act" would still read "IPC 420" as IPC).
+- At a station of its own state the section is that law (the V57 trigger takes it); at a station of another state it is kept as `Other` with the warning "the MPID Act is a law of MH and holds only for FIRs of that state; ... Check the file's police station.", so the database never has to refuse the approval.
+- `Modules.stateActs()` gives every state law with its state; `ImportController` passes the station's state to `FirImport.check`.
+- Tests: `FirImportTest` (2 new: own state, other state, a second fictional state law, longest name, word edges, a state law named like a national act), `ImportApiTest` (an MH station's file approved with `MPID Act 3` in `fir_section`; the same row at a national station staged as a warning and loaded as `Other MPID Act 3`), `ModulesTest` (`stateActs`). Checked by hand that each new test notices a change: four changes made to the new code (shortest name first, no word edge before the name, a state law in place of a national one, another state's law taken) were each caught.
+- No screen changed (the Load data screen shows the row messages as before), so no screenshot or board check.
+
+`scripts/test-all.sh` at the end: all 8 suites PASS (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e browser). Coverage: core 98.91% lines / 96.36% branches, web 99.97 / 97.50 / 98.70 (statements / branches / functions), gateway 99%. Gates unchanged (less than 2 points of room).
+
+Skipped / risks:
+- A file imported before tonight with "MPID Act 3" (kept then as `Other`) would now fingerprint differently, so loading the same file again shows its rows as "already exists and differs; skipped", not "same content". Nothing is overwritten.
+- The arrest, chargesheet, evidence and notice imports name no sections, so nothing to change there.
+- No new browser test (no screen changed); not checked by hand in a browser.
+
+Next: item 3 rest (MH roles: question 1 of session 102; more MH playbooks; Marathi labels of the playbook texts; MPID punishment class: question 2 of session 102), item 15 rest (POCSO), items 16 (duty roster) and 18 (court-format papers).
+
+Questions for Sumit:
+1. An old FIR file at a station of one state that names another state's law (for example the MPID Act in a Karnataka file): is a warning and `Other` right, or should the row be an error so it cannot be loaded until the file is checked?
+2. Still open from before: session 102 (1, 2), 101 (1, 2), 100 (1, 2), 99 (1, 2), 98 (1, 2), 97 (2), 96 (2), 95 (2), 92 (1), 91 (1, 2), 88 (1), 84 (1, 2), 85 (1, 2), 86 (1).
 
 ## 15 Nov 2026, session 102 (Sunday 21:05 IST scheduled run, Sumit away)
 Started from `setup/seed` at 4ccae6a in a new container (Postgres started, role `caseapp` and both databases made, gateway requirements, `psycopg`, `httpx`, `npm ci`). The weekly review was done yesterday (session 99), so none tonight. Baseline `scripts/test-all.sh`: all 8 suites PASS. The "In progress" line was pushed first and is removed now.
