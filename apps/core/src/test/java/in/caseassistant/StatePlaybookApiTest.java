@@ -48,7 +48,7 @@ class StatePlaybookApiTest {
     void setUp() {
         db.sql("truncate fir, police_station, state_pack, app_user cascade").update();
         db.sql("insert into state_pack (code, name, version, languages) values ('IN','National','1',array['en']), ('MH','Maharashtra','1',array['mr'])").update();
-        db.sql("insert into state_act (act, state_code) values ('MPID Act','MH'), ('MCOC Act','MH')").update();   // as Modules writes it at start-up
+        db.sql("insert into state_act (act, state_code) values ('MPID Act','MH'), ('MCOC Act','MH'), ('Maharashtra Prohibition Act','MH')").update();   // as Modules writes it at start-up
         UUID mh = db.sql("insert into police_station (state_code, district_id, name) values ('MH',district_id_of('MH','Fictional Pune'),'Fictional Pune PS') returning id").query(UUID.class).single();
         UUID in = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','North'),'Fictional North PS') returning id").query(UUID.class).single();
         UUID a = user(mh, "io"), b = user(in, "io");
@@ -62,13 +62,13 @@ class StatePlaybookApiTest {
     @Test
     void eachOfficerIsOfferedTheNationalPlaybooksAndOnlyTheirOwnStates() throws Exception {
         mvc.perform(get("/api/playbooks").header("Authorization", mhIo)).andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "mh-deposit-fraud", "mh-organised-crime")))
+                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "mh-deposit-fraud", "mh-organised-crime", "mh-prohibition")))
                 .andExpect(jsonPath("$[?(@.id == 'mh-deposit-fraud')].module").value("MH"))
                 .andExpect(jsonPath("$[?(@.id == 'cyber-fraud')].module").value("IN"));
         mvc.perform(get("/api/playbooks").header("Authorization", inIo))
                 .andExpect(jsonPath("$[*].id").value(Matchers.contains("cyber-fraud")));
         mvc.perform(get("/api/playbooks").header("Authorization", platform))   // no station: every module's
-                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "mh-deposit-fraud", "mh-organised-crime")));
+                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "mh-deposit-fraud", "mh-organised-crime", "mh-prohibition")));
     }
 
     @Test
@@ -137,5 +137,24 @@ class StatePlaybookApiTest {
                 .andExpect(jsonPath("$.charges[?(@.charge_id == 'mcoc_member')].law").value("MCOC Act 3(4)"));
         mvc.perform(get("/api/firs/" + inFir + "/sections").header("Authorization", inIo))
                 .andExpect(jsonPath("$.charges[?(@.playbook_id == 'mh-organised-crime')]").isEmpty());
+    }
+
+    @Test
+    void theProhibitionPlaybookHoldsOnlyInMaharashtraAndNeedsTheSealedSampleAndTheLicenceCheck() throws Exception {
+        mvc.perform(put("/api/firs/" + inFir + "/playbook").header("Authorization", inIo).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"playbookId\":\"mh-prohibition\"}")).andExpect(status().isUnprocessableEntity());
+        mvc.perform(put("/api/firs/" + mhFir + "/playbook").header("Authorization", mhIo).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"playbookId\":\"mh-prohibition\"}")).andExpect(status().isNoContent());
+        assertThatThrownBy(() -> db.sql("insert into fir_section (fir_id, act, section) values (?, 'Maharashtra Prohibition Act', '65')").param(inFir).update())
+                .hasMessageContaining("not a law of the state");
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'Maharashtra Prohibition Act', '65')").param(mhFir).update();
+        mvc.perform(get("/api/firs/" + mhFir + "/readiness").header("Authorization", mhIo)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.charges[*].law").value(Matchers.contains("Maharashtra Prohibition Act 65")))
+                .andExpect(jsonPath("$.gaps[?(@.key == 'ingredient:mpa_illicit_liquor/intoxicant')].severity").value("critical"))
+                .andExpect(jsonPath("$.checksToConfirm[?(@.source == 'Maharashtra Prohibition Act 65')].severity").value(Matchers.hasItem("critical")));
+        mvc.perform(get("/api/firs/" + mhFir + "/sections").header("Authorization", mhIo))
+                .andExpect(jsonPath("$.charges[?(@.charge_id == 'mpa_illicit_liquor')].act").value("Maharashtra Prohibition Act"));
+        mvc.perform(get("/api/firs/" + inFir + "/sections").header("Authorization", inIo))
+                .andExpect(jsonPath("$.charges[?(@.playbook_id == 'mh-prohibition')]").isEmpty());
     }
 }

@@ -97,6 +97,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 105 (16 Nov, scheduled run, Sumit away): item 3, fourth part: the third MH playbook (illicit liquor, Maharashtra Prohibition Act, draft; no migration).
 Done in session 104 (16 Nov, 02:05 IST scheduled run, last of the night): item 3, third part: the second MH playbook (organised crime, MCOC Act); bug fixed: the FIR import wrote clauses in capitals ("376(2)(N)").
 Done in session 103 (15 Nov, Sunday 23:35 IST scheduled run): item 3, second part: the FIR import reads a section of the station's own state law (no migration).
 Done in session 102 (15 Nov, Sunday 21:05 IST scheduled run): item 3, first part: state laws and state playbooks, the first MH playbook (MPID Act, V57).
@@ -127,7 +128,7 @@ Done in session 69 (5 Nov, 02:10 IST scheduled run): item 13g, Case property reg
 Done in session 66 (3 Nov, scheduled run): item 13d, the final report (draft, approve, sign; V41), without the AI drafting.
 Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens plan (docs/AI-AND-SCREENS-PLAN.md, items 14 to 18), centred sign-in, the court print format with the informant's copy.
 1. Still open from the weekly review: after a Magistrate orders further investigation on a closure report no limit comes back (the BNSS has none for that stage, see session 42; nothing to build unless a prosecutor says otherwise).
-3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3). First part DONE (session 102, V57): state laws in `module.json` `acts` (MPID Act), state playbooks that hold only in their state and may only add to a national charge, the first MH playbook (deposit fraud under the MPID Act, draft). Second part DONE (session 103): the FIR import reads a section of the station's own state law. Third part DONE (session 104): the MCOC Act and the MH organised-crime playbook (draft). Left for 3: MH roles (if any: question 1 of session 102), more MH playbooks (for example the Maharashtra Prohibition Act), Marathi labels of the playbook texts (playbooks are English only today, national ones too), the MPID Act 3 punishment class (question 2).
+3. Rest of the Maharashtra pack: roles, playbooks, Marathi labels, demo stations in MH, built now as unreviewed drafts (decision 5 of 2 Nov); no punishments of its own (decision 3). First part DONE (session 102, V57): state laws in `module.json` `acts` (MPID Act), state playbooks that hold only in their state and may only add to a national charge, the first MH playbook (deposit fraud under the MPID Act, draft). Second part DONE (session 103): the FIR import reads a section of the station's own state law. Third part DONE (session 104): the MCOC Act and the MH organised-crime playbook (draft). Fourth part DONE (session 105): the Maharashtra Prohibition Act and a draft playbook for section 65 (no clause letters, no punishments). Left for 3: MH roles (if any: question 1 of session 102), more MH playbooks, Marathi labels of the playbook texts (playbooks are English only today, national ones too), the MPID Act 3 punishment class (question 2).
 6. Legal glossary: done (draft, 29 terms). Next for it: a reviewer; more `screen_keys` links (only labels that are exactly the term); a state module's own terms.
 7. Done (sessions 46, 48 and 49): nothing left of it.
 8. Demo: done (`docs/DEMO.md`, `scripts/demo_case.py`; names kept, Sumit 1 Nov). Next for it: an AI draft step once a demo uses the gateway.
@@ -157,6 +158,31 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests). First part DONE (session 92): BM25 ranking in the browser over this case's pieces (passage names searched too, "call" finds "caller"), each piece named by its lines (flaw 3, no pages: the documents are typed text), checked English translations of statements in the case file, and the evaluation set `askFile.eval.test.ts` (flaws 4, 6, 8: 12 questions with known answer pieces, a disagreement, 3 questions the file has no words for). Left: embeddings kept on state servers (needs an on-premises embedding model and where the index lives, question 1 of session 92), more documents (bank replies as text and 63(4) certificates; money trail DONE in session 94; 63(4) certificates DONE in session 95; searches, lab/hospital requests and court events DONE in session 93), opening a source on click, the AI's own answers judged on the set (needs a provider), questions in Indian languages beyond word matching, the "note in case diary" button.
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 16 Nov 2026, session 105 (scheduled run, Sumit away)
+Started from `setup/seed` at the tip of origin/setup/seed in a new container (Postgres started, role `caseapp` and both databases made, gateway requirements, `npm ci`). Baseline `scripts/test-all.sh`: all 8 suites PASS.
+
+**Item 3, fourth part: a third Maharashtra playbook, illicit liquor (no migration):**
+- `packs/MH/module.json` names a third state law, `Maharashtra Prohibition Act` (goes to `state_act` at start-up like the other two, so a section of it is taken only on an FIR of a Maharashtra station).
+- New playbook `packs/MH/playbooks/mh-prohibition.v1.json` (draft, unreviewed, decision 5): one charge, section 65 (illegal making, carrying, keeping or selling of liquor or another intoxicant) with three ingredients (the thing is an intoxicant, shown by the Chemical Analyser's report on a sealed sample; no licence or permit; the accused's act); rules: sealed sample sent to the Chemical Analyser (critical), audio-video of the seizure, BSA 63(4) certificates (critical), add the national sections if anyone died or was hurt; tasks for seizing and sealing, the analysis, the licence check, BNSS 94 notices and statements.
+- Left out on purpose, because I could not cite them with certainty: the clause letters of sections 65 and 66, the punishments, consumption without a permit (section 66), district rules. The review note says so; a prosecutor or State Excise officer must add them.
+- Tests: `packs/tests` (the playbook is a draft that says what is missing, its law, the critical sample and certificate rules, the analyser's report as proof), `StatePlaybookApiTest` (offered to MH and platform only, refused for an FIR of another state, a section of the Act refused by the trigger on a non-MH FIR, the readiness check shows the charge, its critical gap and critical check, the section list offers the charge only in MH), `ModulesSyncApiTest` (three laws written).
+- No screen changed, so no screenshot or board check.
+
+`scripts/test-all.sh` at the end: all 8 suites PASS (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e browser). Coverage: core 99.00% lines / 96.67% branches, gateway 99%; web unchanged from session 104 (no web change; 99.98 / 97.58 / 98.70). No gate raised (no coverage change). No extra tests for older code this session: the runs take about 18 minutes each and the lowest-covered files already sit at the gates' limit.
+
+Skipped / risks:
+- The playbook's legal content is thin on purpose (see above); do not rely on it.
+- The readiness check cannot see whether the Chemical Analyser's report is on file; it lists the rule as a check to confirm (no record kind for it; the expert request register of item 13h could feed it later).
+- The FIR import reads "Maharashtra Prohibition Act 65" only in full (a multi-word law gets no short form); "MPA" is not read.
+- Not checked by hand in a browser.
+
+Next: item 3 rest (MH roles: question 1 of session 102; Marathi labels of playbook texts; state-law punishment classes), item 15 rest (POCSO), items 16 (duty roster) and 18 (court-format papers).
+
+Questions for Sumit:
+1. Which Maharashtra Prohibition Act sections and clauses should the playbook cover (65, 66, 68 and the clause letters)? I can only add them from a reviewer's text.
+2. Should the readiness check read a lab report in the expert request register (item 13h) as the proof of "what the thing was" (liquor, drugs, a poison)?
+3. Still open from before: session 104 (1, 2), 103 (1), 102 (1, 2), 101 (1, 2), 100 (1, 2), 99 (1, 2), 98 (1, 2), 97 (2), 96 (2), 95 (2), 92 (1), 91 (1, 2), 88 (1), 84 (1, 2), 85 (1, 2), 86 (1).
 
 ## Tonight in short (15 Nov 21:05 IST to 16 Nov 04:00 IST: sessions 102, 103 and 104)
 - Session 102 (21:05 IST): item 3, first part: state laws and state playbooks, the first MH playbook (deposit fraud, MPID Act, V57).

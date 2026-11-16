@@ -1,0 +1,94 @@
+{
+  "id": "mh-prohibition",
+  "version": "1.0.0-draft",
+  "status": "draft",
+  "review_note": "Unreviewed draft of the Maharashtra module (decision 5 of 2 Nov 2026), drafted from the general scheme of the Maharashtra Prohibition Act 1949 (illegal manufacture, transport, possession and sale of liquor and other intoxicants, section 65, and consumption without a permit, section 66). The clause letters of sections 65 and 66, the punishments and the district-level rules are NOT included and must be added by a Marathi-speaking public prosecutor or an officer of the State Excise department before use.",
+  "applies_to": "Maharashtra only: illicit liquor made, kept, carried or sold without a licence or permit (hooch, country liquor, liquor from another state), under the Maharashtra Prohibition Act 1949",
+  "charges": [
+    {
+      "id": "mpa_illicit_liquor",
+      "law": "Maharashtra Prohibition Act 65",
+      "label": "Illegal making, carrying, keeping or selling of liquor or another intoxicant (Maharashtra Prohibition Act 65)",
+      "ingredients": [
+        {
+          "id": "intoxicant",
+          "text": "The thing seized is liquor or another intoxicant as the Act defines it, shown by the Chemical Analyser's report on a sealed sample",
+          "proof": [
+            "chemical_analysis_report",
+            "seizure_memo_with_recording"
+          ]
+        },
+        {
+          "id": "no_licence",
+          "text": "The accused had no licence, permit or pass for it; the excise or licensing record is checked",
+          "proof": [
+            "agency_verification_letter",
+            "own_statement"
+          ]
+        },
+        {
+          "id": "act_of_accused",
+          "text": "The accused made, carried, kept or sold it (the act of the accused as found by the seizure, the witnesses or the records)",
+          "proof": [
+            "link_evidence_per_accused",
+            "witness_statements"
+          ]
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "sample_sealed",
+      "severity": "critical",
+      "text": "Draw the sample at the place of seizure in front of two independent witnesses, seal it, note the seal on the seizure memo and send it to the Chemical Analyser without delay with the chain of custody kept; the sample report is the proof of what the liquor was.",
+      "source": "Maharashtra Prohibition Act 65"
+    },
+    {
+      "id": "seizure_recorded",
+      "severity": "high",
+      "text": "Every search and seizure must be recorded by audio-video (eSakshya) with the recording linked to the seizure memo.",
+      "source": "BNSS 105"
+    },
+    {
+      "id": "electronic_record_certificate",
+      "severity": "critical",
+      "text": "Every electronic record relied on (call or chat records of the supply chain, payment records) needs a BSA 63(4) certificate with Part A and Part B and a matching hash.",
+      "source": "BSA 63(4)"
+    },
+    {
+      "id": "deaths_or_injury",
+      "severity": "high",
+      "text": "If anyone has died or been hurt by the liquor, add the national sections for it (BNS) to the FIR with the medical and post-mortem reports; this playbook does not replace them.",
+      "source": "Maharashtra Prohibition Act 65"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "seize_and_seal",
+      "stage": "verification",
+      "text": "Seize the liquor with the containers in front of two independent witnesses, count and seal it, and draw a sample"
+    },
+    {
+      "id": "chemical_analysis",
+      "stage": "verification",
+      "text": "Send the sealed sample to the Chemical Analyser; keep the request and the receipt"
+    },
+    {
+      "id": "licence_check",
+      "stage": "notices",
+      "text": "Ask the State Excise office whether the accused or the place has any licence or permit"
+    },
+    {
+      "id": "supply_chain",
+      "stage": "notices",
+      "text": "BNSS 94 notices for the call and payment records of the accused, to trace the supplier and the buyers",
+      "notice_kind": "BNSS_94"
+    },
+    {
+      "id": "statements",
+      "stage": "statements",
+      "text": "Record the statements (BNSS 180) of the seizure witnesses and of the buyers found"
+    }
+  ]
+}

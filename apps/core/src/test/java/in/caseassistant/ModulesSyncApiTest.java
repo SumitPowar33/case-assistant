@@ -20,7 +20,7 @@ class ModulesSyncApiTest {
         modules.sync();
         modules.sync();   // a second start changes nothing
         assertThat(db.sql("select state_code from state_act where act = 'MPID Act'").query(String.class).list()).containsExactly("MH");
-        assertThat(db.sql("select act from state_act where state_code = 'MH' order by act").query(String.class).list()).containsExactly("MCOC Act", "MPID Act");
+        assertThat(db.sql("select act from state_act where state_code = 'MH' order by act").query(String.class).list()).containsExactly("MCOC Act", "MPID Act", "Maharashtra Prohibition Act");
         db.sql("truncate state_pack cascade").update();
         db.sql("insert into state_pack (code, name, version, languages) values ('KA','Fictional KA','1',array['kn'])").update();
         db.sql("insert into state_act (act, state_code) values ('MPID Act','KA')").update();

@@ -393,3 +393,16 @@ def test_the_mcoc_playbook_keeps_the_approvals_the_act_requires():
     cua = next(i for i in main["ingredients"] if i["id"] == "continuing_unlawful_activity")
     assert "more than one charge-sheet" in cua["text"] and "ten years" in cua["text"]
     assert "earlier_chargesheets_certified" in cua["proof"]
+
+
+def test_the_prohibition_playbook_is_a_draft_that_leaves_out_what_it_cannot_cite():
+    # clause letters and punishments of sections 65 and 66 are not in it until a reviewer adds them
+    pb = json.loads((ROOT / "MH" / "playbooks" / "mh-prohibition.v1.json").read_text(encoding="utf-8"))
+    assert pb["status"] == "draft" and "NOT included" in pb["review_note"]
+    assert "Maharashtra Prohibition Act" in own_acts("MH")
+    assert [c["law"] for c in pb["charges"]] == ["Maharashtra Prohibition Act 65"]
+    rules = {r["id"]: r for r in pb["rules"]}
+    assert rules["sample_sealed"]["severity"] == "critical" and "Chemical Analyser" in rules["sample_sealed"]["text"]
+    assert rules["electronic_record_certificate"]["severity"] == "critical"
+    ing = {i["id"]: i for i in pb["charges"][0]["ingredients"]}
+    assert "chemical_analysis_report" in ing["intoxicant"]["proof"]
