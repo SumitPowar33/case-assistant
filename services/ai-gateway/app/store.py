@@ -32,7 +32,7 @@ FEATURES = {
 }
 PROVIDERS = {"claude", "gemini", "fake"}
 DEFAULT_MODELS = {"claude": "claude-sonnet-5-5", "gemini": "gemini-3.7-flash", "fake": "fake-1"}
-AUDIT_ACTIONS = {"ai_request", "ai_error", "ai_refused", "accepted", "edited", "rejected", "settings_changed"}
+AUDIT_ACTIONS = {"ai_request", "ai_embed", "ai_error", "ai_refused", "accepted", "edited", "rejected", "settings_changed"}
 GENESIS = "0" * 64
 
 

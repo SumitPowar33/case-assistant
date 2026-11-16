@@ -26,6 +26,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from .auth import CaseCheck, CaseNotOpen, ChainAnchor, CoreCheck, CoreUnavailable, TokenError, verify
+from .embedder import EmbedderError, from_env as embedder_from_env
 from .providers import ClaudeProvider, FakeProvider, GeminiProvider, Provider, ProviderError
 from .store import DEFAULT_MODELS, FEATURES, PROVIDERS, Store
 
@@ -125,6 +126,17 @@ class GenerateIn(BaseModel):
     max_tokens: int = Field(default=1024, ge=1, le=8192)
 
 
+class EmbedIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    texts: list[str] = Field(min_length=1, max_length=64)
+    kind: str = Field(default="passage", pattern=r"^(passage|query)$")
+    case_ref: str = Field(max_length=200)
+
+
+MAX_EMBED_CHARS = 2000      # a piece of the case file is at most 500 characters; a question at most 500
+EMBEDS_PER_WINDOW = 120     # calls per officer in DRAFT_WINDOW_SECONDS (a case file of 500 pieces is 8 calls)
+
+
 class DecisionIn(BaseModel):
     request_id: str = Field(max_length=64)
     decision: str = Field(max_length=10)  # accepted | edited | rejected
@@ -140,7 +152,7 @@ class SettingIn(BaseModel):
 
 
 def create_app(store: Store | None = None, providers: dict[str, Provider] | None = None,
-               auth_secret: str | None = None, core_check=None, anchor=None, case_check=None) -> FastAPI:
+               auth_secret: str | None = None, core_check=None, anchor=None, case_check=None, embedder=None) -> FastAPI:
     secret = auth_secret if auth_secret is not None else os.environ.get("AUTH_SECRET", "")
     if len(secret) < 32:
         raise RuntimeError("AUTH_SECRET must be set (at least 32 characters, the same value as the core app)")
@@ -155,6 +167,8 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
     # no published API description: it answered anyone without sign-in (pentest round 2)
     app = FastAPI(title="Case Assistant AI gateway", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None)
     drafts = DraftLimit(DRAFTS_PER_WINDOW, DRAFT_WINDOW_SECONDS)
+    embeds = DraftLimit(EMBEDS_PER_WINDOW, DRAFT_WINDOW_SECONDS)
+    embedder = embedder or embedder_from_env()
 
     def user(authorization: str = Header(default="")) -> dict:
         scheme, _, token = authorization.partition(" ")
@@ -280,6 +294,36 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             "input_tokens": out.input_tokens, "output_tokens": out.output_tokens})
         return {"request_id": request_id, "draft": out.text, "provider": out.provider, "model": out.model,
                 "label": "AI draft - check before use"}
+
+    @app.post("/v1/embed")
+    def embed(body: EmbedIn, u: dict = Depends(user)):
+        """Vectors for pieces of one case or for a question, made on this server (item 17). Never a cloud provider, so the
+        unit's "no cloud" policy does not stop it; the case check and the log are the same as for a draft. The text is not kept."""
+        def refuse(status: int, message: str, headers: dict | None = None):
+            log(u, "ai_refused", "embed", body.case_ref, {"status": status, "reason": message})
+            raise HTTPException(status, message, headers=headers)
+
+        if not UUID_RE.match(body.case_ref):
+            refuse(422, "name the FIR (its id) in case_ref")
+        if any(len(t) > MAX_EMBED_CHARS or not t.strip() for t in body.texts):
+            refuse(422, f"each text must have words and at most {MAX_EMBED_CHARS} characters")
+        wait = embeds.wait(str(u["sub"]))
+        if wait:
+            refuse(429, f"Too many requests in a short time. Try again in {wait} seconds.", headers={"Retry-After": str(wait)})
+        try:
+            case_check(u["token"], body.case_ref)
+        except CaseNotOpen:
+            refuse(404, "no case of your case team with that id")
+        except CoreUnavailable as e:
+            refuse(503, str(e))
+        try:
+            vectors = embedder.embed(body.texts, body.kind)
+        except EmbedderError as e:
+            refuse(503, str(e))
+        log(u, "ai_embed", "embed", body.case_ref, {"model": embedder.name, "kind": body.kind, "texts": len(body.texts),
+                                                  "chars": sum(len(t) for t in body.texts),
+                                                  "texts_sha256": hashlib.sha256("\n".join(body.texts).encode()).hexdigest()})
+        return {"model": embedder.name, "dim": len(vectors[0]), "min_similarity": embedder.min_similarity, "vectors": vectors}
 
     @app.post("/v1/decisions")
     def decision(body: DecisionIn, u: dict = Depends(user)):
