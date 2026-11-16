@@ -181,3 +181,19 @@ test('a part named in the address wins over the phone default', async () => {
   expect(((await screen.findByRole('combobox', { name: 'Show' })) as HTMLSelectElement).value).toBe('people')
   delete (window as unknown as { matchMedia?: unknown }).matchMedia
 })
+
+test('the AI use of the case is counted on the case diary part only, and read again each time the part is opened', async () => {
+  const asked: string[] = []
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    asked.push(url)
+    const body = url.startsWith('/ai/v1/ai-use') ? { features: [] } : url === '/api/firs/f1' ? fir : url === '/api/firs/f1/diary' ? { date: '2026-11-02', today: true, page: null, entries: [], events: [], days: [] } : []
+    return { ok: true, status: 200, json: async () => body }
+  }))
+  const { unmount } = render(<FirDetail id="f1" only="case" />)
+  await screen.findByText('Fictional complaint words')
+  expect(asked.some((u) => u.startsWith('/ai/v1/ai-use'))).toBe(false)
+  unmount()
+  render(<FirDetail id="f1" only="diary" />)
+  expect(await screen.findByText('The AI has not been used in this case.')).toBeTruthy()
+  expect(asked).toContain('/ai/v1/ai-use?case_ref=f1')
+})

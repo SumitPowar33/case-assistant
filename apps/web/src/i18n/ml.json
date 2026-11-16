@@ -1296,5 +1296,19 @@
  "ask.noteCancel": "റദ്ദാക്കുക",
  "ask.noteSaved": "കേസ് ഡയറിയുടെ ഇന്നത്തെ പേജിൽ സേവ് ചെയ്തു.",
  "ask.noteQuestion": "ചോദ്യം",
- "ask.noteAnswer": "ഉത്തരം (AI കരട്, സ്രോതസ്സുകളുമായി പരിശോധിച്ചത്)"
+ "ask.noteAnswer": "ഉത്തരം (AI കരട്, സ്രോതസ്സുകളുമായി പരിശോധിച്ചത്)",
+ "aiuse.caseTitle": "ഈ കേസിലെ AI ഉപയോഗം",
+ "aiuse.caseIntro": "ഈ കേസിൽ AI യോട് എന്തു ചോദിച്ചു, ആളുകൾ അതുമായി എന്തു ചെയ്തു. ഇവിടെ എണ്ണം മാത്രം കാണിക്കുന്നു; ചോദ്യങ്ങളുടെയും ഉത്തരങ്ങളുടെയും പാഠം ഇവിടെ സൂക്ഷിക്കുന്നില്ല.",
+ "aiuse.none": "ഈ കേസിൽ AI ഉപയോഗിച്ചിട്ടില്ല.",
+ "aiuse.caption": "AI ഉപയോഗം, സൗകര്യം അനുസരിച്ച്",
+ "aiuse.colFeature": "സൗകര്യം",
+ "aiuse.colAsked": "ആവശ്യപ്പെട്ട കരടുകൾ",
+ "aiuse.colKept": "സൂക്ഷിച്ചവ",
+ "aiuse.colEdited": "തിരുത്തിയവ",
+ "aiuse.colRejected": "നിരസിച്ചവ",
+ "aiuse.colRefused": "നിഷേധിച്ചവ",
+ "aiuse.colFailed": "പരാജയപ്പെട്ടവ",
+ "aiuse.colEmbedded": "അർത്ഥാധിഷ്ഠിത തിരയൽ",
+ "aiuse.stateTitle": "സംസ്ഥാനത്തെ AI ഉപയോഗം, കഴിഞ്ഞ {days} ദിവസം",
+ "aiuse.stateNone": "കഴിഞ്ഞ {days} ദിവസത്തിൽ AI ഉപയോഗിച്ചിട്ടില്ല."
 }

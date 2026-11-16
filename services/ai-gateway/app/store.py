@@ -33,6 +33,9 @@ FEATURES = {
 PROVIDERS = {"claude", "gemini", "fake"}
 DEFAULT_MODELS = {"claude": "claude-sonnet-5-5", "gemini": "gemini-3.7-flash", "fake": "fake-1"}
 AUDIT_ACTIONS = {"ai_request", "ai_embed", "ai_error", "ai_refused", "accepted", "edited", "rejected", "settings_changed"}
+# audit action -> the column of the "AI use" counts
+USE_COLUMNS = {"ai_request": "asked", "accepted": "accepted", "edited": "edited", "rejected": "rejected", "ai_refused": "refused",
+               "ai_error": "failed", "ai_embed": "embedded"}
 GENESIS = "0" * 64
 
 
@@ -160,6 +163,24 @@ class Store:
                                "ORDER BY seq DESC LIMIT ?", (state, state, limit)).fetchall()
         return [{"seq": s, "at": a, "actor": ac, "action": act, "feature": f, "case_ref": c, "detail": json.loads(d), "hash": h, "state": st}
                 for s, a, ac, act, f, c, d, h, st in rows]
+
+    def ai_use(self, case_ref: str | None = None, state: str | None = None, since: str | None = None) -> list[dict]:
+        """Counts of what the AI was asked and what people did with it, per feature, from the log (no text is in it):
+        drafts asked, kept (accepted), edited, rejected, refused, failed, and embedding calls. One case, or one state's."""
+        counts: dict[str, dict[str, int]] = {}
+        for feature, action, n in self.db.execute(
+                "SELECT feature, action, count(*) FROM audit WHERE action IN ('ai_request','ai_embed','ai_error','ai_refused','accepted','edited','rejected') "
+                "AND (? IS NULL OR case_ref = ?) AND (? IS NULL OR state = ?) AND (? IS NULL OR at >= ?) GROUP BY feature, action",
+                (case_ref, case_ref, state, state, since, since)):
+            row = counts.setdefault(feature or "", dict.fromkeys(USE_COLUMNS.values(), 0))
+            row[USE_COLUMNS[action]] += n
+        return [{"feature": f, "label": FEATURES.get(f, "Search the case file by meaning"), **row} for f, row in sorted(counts.items())]
+
+    def case_events(self, case_ref: str, limit: int = 50) -> list[dict]:
+        """The newest AI drafts and decisions of one case (not the embedding calls), without any text."""
+        return [{"at": at, "feature": f, "label": FEATURES.get(f, f), "action": a} for at, f, a in self.db.execute(
+            "SELECT at, feature, action FROM audit WHERE case_ref = ? AND action IN ('ai_request','ai_error','ai_refused','accepted','edited','rejected') "
+            "ORDER BY seq DESC LIMIT ?", (case_ref, limit))]
 
     def head(self) -> tuple[int, str] | None:
         """The last row's sequence number and hash (None before the first row)."""

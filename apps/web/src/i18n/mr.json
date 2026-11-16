@@ -1296,5 +1296,19 @@
  "ask.noteCancel": "रद्द करा",
  "ask.noteSaved": "केस डायरीच्या आजच्या पानावर जतन केले.",
  "ask.noteQuestion": "प्रश्न",
- "ask.noteAnswer": "उत्तर (AI मसुदा, स्रोतांशी तपासलेले)"
+ "ask.noteAnswer": "उत्तर (AI मसुदा, स्रोतांशी तपासलेले)",
+ "aiuse.caseTitle": "या प्रकरणात AI चा वापर",
+ "aiuse.caseIntro": "या प्रकरणात AI ला काय विचारले गेले आणि लोकांनी त्याचे काय केले. येथे फक्त संख्या दिसतात; प्रश्न आणि उत्तरांचा मजकूर येथे ठेवला जात नाही.",
+ "aiuse.none": "या प्रकरणात AI वापरले गेले नाही.",
+ "aiuse.caption": "AI चा वापर, सुविधेनुसार",
+ "aiuse.colFeature": "सुविधा",
+ "aiuse.colAsked": "मागितलेले मसुदे",
+ "aiuse.colKept": "ठेवलेले",
+ "aiuse.colEdited": "बदललेले",
+ "aiuse.colRejected": "अमान्य केलेले",
+ "aiuse.colRefused": "नाकारलेल्या विनंत्या",
+ "aiuse.colFailed": "अयशस्वी",
+ "aiuse.colEmbedded": "अर्थावर आधारित शोध",
+ "aiuse.stateTitle": "राज्यातील AI चा वापर, गेले {days} दिवस",
+ "aiuse.stateNone": "गेल्या {days} दिवसांत AI वापरले गेले नाही."
 }

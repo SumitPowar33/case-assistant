@@ -79,3 +79,13 @@ test('an account without a station starts on the first station; no station at al
   render(<AuditPage />)
   expect((await screen.findByRole('alert')).textContent).toContain('403')
 })
+
+test('the AI counts of the state are on the same screen, under the log', async () => {
+  stub((url) => url.startsWith('/ai/v1/ai-use/summary')
+    ? { status: 200, body: { days: 30, features: [{ feature: 'case_qa', label: 'Answer questions about the case file', asked: 4, accepted: 2, edited: 0, rejected: 1, refused: 1, failed: 0, embedded: 0 }] } }
+    : { status: 200, body: [] })
+  render(<AuditPage />)
+  const table = await screen.findByRole('table', { name: 'AI use, by feature' })
+  expect(table.textContent).toContain('Answer questions about the case file')
+  expect(screen.getByText('Nothing in the audit log of this police station.')).toBeTruthy()
+})

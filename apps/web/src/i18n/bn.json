@@ -1296,5 +1296,19 @@
  "ask.noteCancel": "বাতিল",
  "ask.noteSaved": "কেস ডায়েরির আজকের পাতায় সংরক্ষিত।",
  "ask.noteQuestion": "প্রশ্ন",
- "ask.noteAnswer": "উত্তর (AI খসড়া, সূত্রের সঙ্গে মিলিয়ে দেখা)"
+ "ask.noteAnswer": "উত্তর (AI খসড়া, সূত্রের সঙ্গে মিলিয়ে দেখা)",
+ "aiuse.caseTitle": "এই মামলায় AI-এর ব্যবহার",
+ "aiuse.caseIntro": "এই মামলায় AI-কে কী জিজ্ঞাসা করা হয়েছে এবং মানুষ তা নিয়ে কী করেছে। এখানে শুধু সংখ্যা দেখানো হয়; প্রশ্ন ও উত্তরের লেখা এখানে রাখা হয় না।",
+ "aiuse.none": "এই মামলায় AI ব্যবহার করা হয়নি।",
+ "aiuse.caption": "AI-এর ব্যবহার, সুবিধা অনুযায়ী",
+ "aiuse.colFeature": "সুবিধা",
+ "aiuse.colAsked": "চাওয়া খসড়া",
+ "aiuse.colKept": "রাখা হয়েছে",
+ "aiuse.colEdited": "সম্পাদিত",
+ "aiuse.colRejected": "প্রত্যাখ্যাত",
+ "aiuse.colRefused": "অস্বীকৃত",
+ "aiuse.colFailed": "ব্যর্থ",
+ "aiuse.colEmbedded": "অর্থভিত্তিক অনুসন্ধান",
+ "aiuse.stateTitle": "রাজ্যে AI-এর ব্যবহার, গত {days} দিন",
+ "aiuse.stateNone": "গত {days} দিনে AI ব্যবহার করা হয়নি।"
 }

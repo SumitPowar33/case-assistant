@@ -1296,5 +1296,19 @@
  "ask.noteCancel": "ବାତିଲ୍",
  "ask.noteSaved": "କେସ୍ ଡାଏରୀର ଆଜିର ପୃଷ୍ଠାରେ ସେଭ୍ ହେଲା।",
  "ask.noteQuestion": "ପ୍ରଶ୍ନ",
- "ask.noteAnswer": "ଉତ୍ତର (AI ଖସଡ଼ା, ଉତ୍ସ ସହ ଯାଞ୍ଚ)"
+ "ask.noteAnswer": "ଉତ୍ତର (AI ଖସଡ଼ା, ଉତ୍ସ ସହ ଯାଞ୍ଚ)",
+ "aiuse.caseTitle": "ଏହି ମାମଲାରେ AI ର ବ୍ୟବହାର",
+ "aiuse.caseIntro": "ଏହି ମାମଲାରେ AI କୁ କ'ଣ ପଚରାଗଲା ଏବଂ ଲୋକମାନେ ତାହା ସହ କ'ଣ କଲେ। ଏଠାରେ କେବଳ ସଂଖ୍ୟା ଦେଖାଯାଏ; ପ୍ରଶ୍ନ ଓ ଉତ୍ତରର ଲେଖା ଏଠାରେ ରଖାଯାଏ ନାହିଁ।",
+ "aiuse.none": "ଏହି ମାମଲାରେ AI ବ୍ୟବହାର ହୋଇନାହିଁ।",
+ "aiuse.caption": "AI ର ବ୍ୟବହାର, ସୁବିଧା ଅନୁସାରେ",
+ "aiuse.colFeature": "ସୁବିଧା",
+ "aiuse.colAsked": "ମାଗିଥିବା ଖସଡ଼ା",
+ "aiuse.colKept": "ରଖାଯାଇଛି",
+ "aiuse.colEdited": "ସମ୍ପାଦିତ",
+ "aiuse.colRejected": "ପ୍ରତ୍ୟାଖ୍ୟାତ",
+ "aiuse.colRefused": "ମନା କରାଯାଇଛି",
+ "aiuse.colFailed": "ବିଫଳ",
+ "aiuse.colEmbedded": "ଅର୍ଥ ଆଧାରିତ ସନ୍ଧାନ",
+ "aiuse.stateTitle": "ରାଜ୍ୟରେ AI ର ବ୍ୟବହାର, ଗତ {days} ଦିନ",
+ "aiuse.stateNone": "ଗତ {days} ଦିନରେ AI ବ୍ୟବହାର ହୋଇନାହିଁ।"
 }

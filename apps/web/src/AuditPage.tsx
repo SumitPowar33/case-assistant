@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { currentSession } from './api'
+import { AiUseState } from './AiUse'
 import { fmt } from './formats'
 import { useT } from './i18n'
 import { useLoad } from './useLoad'
@@ -29,6 +30,7 @@ export default function AuditPage() {
         {stations.data.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.district})</option>)}
       </select></label>
       {station ? <Log key={station} station={station} /> : <p>{t('audit.none')}</p>}
+      <AiUseState />
     </>
   )
 }

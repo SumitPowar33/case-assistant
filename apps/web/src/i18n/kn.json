@@ -1296,5 +1296,19 @@
  "ask.noteCancel": "ರದ್ದು",
  "ask.noteSaved": "ಪ್ರಕರಣ ದಿನಚರಿಯ ಇಂದಿನ ಪುಟದಲ್ಲಿ ಉಳಿಸಲಾಗಿದೆ.",
  "ask.noteQuestion": "ಪ್ರಶ್ನೆ",
- "ask.noteAnswer": "ಉತ್ತರ (AI ಕರಡು, ಮೂಲಗಳೊಂದಿಗೆ ಪರಿಶೀಲಿಸಿದ್ದು)"
+ "ask.noteAnswer": "ಉತ್ತರ (AI ಕರಡು, ಮೂಲಗಳೊಂದಿಗೆ ಪರಿಶೀಲಿಸಿದ್ದು)",
+ "aiuse.caseTitle": "ಈ ಪ್ರಕರಣದಲ್ಲಿ AI ಬಳಕೆ",
+ "aiuse.caseIntro": "ಈ ಪ್ರಕರಣದಲ್ಲಿ AI ಗೆ ಏನು ಕೇಳಲಾಯಿತು ಮತ್ತು ಜನರು ಅದರೊಂದಿಗೆ ಏನು ಮಾಡಿದರು. ಇಲ್ಲಿ ಸಂಖ್ಯೆಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗುತ್ತದೆ; ಪ್ರಶ್ನೆ ಮತ್ತು ಉತ್ತರಗಳ ಪಠ್ಯವನ್ನು ಇಲ್ಲಿ ಇಡುವುದಿಲ್ಲ.",
+ "aiuse.none": "ಈ ಪ್ರಕರಣದಲ್ಲಿ AI ಬಳಸಿಲ್ಲ.",
+ "aiuse.caption": "AI ಬಳಕೆ, ಸೌಲಭ್ಯದ ಪ್ರಕಾರ",
+ "aiuse.colFeature": "ಸೌಲಭ್ಯ",
+ "aiuse.colAsked": "ಕೇಳಿದ ಕರಡುಗಳು",
+ "aiuse.colKept": "ಉಳಿಸಿಕೊಂಡದ್ದು",
+ "aiuse.colEdited": "ಬದಲಿಸಿದ್ದು",
+ "aiuse.colRejected": "ತಿರಸ್ಕರಿಸಿದ್ದು",
+ "aiuse.colRefused": "ನಿರಾಕರಿಸಿದ್ದು",
+ "aiuse.colFailed": "ವಿಫಲವಾದದ್ದು",
+ "aiuse.colEmbedded": "ಅರ್ಥ ಆಧಾರಿತ ಹುಡುಕಾಟ",
+ "aiuse.stateTitle": "ರಾಜ್ಯದಲ್ಲಿ AI ಬಳಕೆ, ಕಳೆದ {days} ದಿನಗಳು",
+ "aiuse.stateNone": "ಕಳೆದ {days} ದಿನಗಳಲ್ಲಿ AI ಬಳಸಿಲ್ಲ."
 }

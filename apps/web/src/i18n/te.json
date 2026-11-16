@@ -1296,5 +1296,19 @@
  "ask.noteCancel": "రద్దు",
  "ask.noteSaved": "కేసు డైరీ నేటి పేజీలో సేవ్ అయింది.",
  "ask.noteQuestion": "ప్రశ్న",
- "ask.noteAnswer": "సమాధానం (AI ముసాయిదా, మూలాలతో సరిచూసినది)"
+ "ask.noteAnswer": "సమాధానం (AI ముసాయిదా, మూలాలతో సరిచూసినది)",
+ "aiuse.caseTitle": "ఈ కేసులో AI వినియోగం",
+ "aiuse.caseIntro": "ఈ కేసులో AI ని ఏమి అడిగారు, ప్రజలు దానితో ఏమి చేశారు. ఇక్కడ లెక్కలు మాత్రమే చూపబడతాయి; ప్రశ్నలు, సమాధానాల పాఠం ఇక్కడ ఉంచబడదు.",
+ "aiuse.none": "ఈ కేసులో AI వాడలేదు.",
+ "aiuse.caption": "AI వినియోగం, సౌకర్యం ప్రకారం",
+ "aiuse.colFeature": "సౌకర్యం",
+ "aiuse.colAsked": "అడిగిన ముసాయిదాలు",
+ "aiuse.colKept": "ఉంచినవి",
+ "aiuse.colEdited": "మార్చినవి",
+ "aiuse.colRejected": "తిరస్కరించినవి",
+ "aiuse.colRefused": "నిరాకరించినవి",
+ "aiuse.colFailed": "విఫలమైనవి",
+ "aiuse.colEmbedded": "అర్థ ఆధారిత శోధన",
+ "aiuse.stateTitle": "రాష్ట్రంలో AI వినియోగం, గత {days} రోజులు",
+ "aiuse.stateNone": "గత {days} రోజుల్లో AI వాడలేదు."
 }

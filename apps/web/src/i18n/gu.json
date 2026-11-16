@@ -1296,5 +1296,19 @@
  "ask.noteCancel": "રદ કરો",
  "ask.noteSaved": "કેસ ડાયરીના આજના પાના પર સાચવ્યું.",
  "ask.noteQuestion": "પ્રશ્ન",
- "ask.noteAnswer": "જવાબ (AI ડ્રાફ્ટ, સ્રોત સાથે તપાસેલો)"
+ "ask.noteAnswer": "જવાબ (AI ડ્રાફ્ટ, સ્રોત સાથે તપાસેલો)",
+ "aiuse.caseTitle": "આ કેસમાં AI નો ઉપયોગ",
+ "aiuse.caseIntro": "આ કેસમાં AI ને શું પૂછવામાં આવ્યું અને લોકોએ તેનું શું કર્યું. અહીં માત્ર સંખ્યાઓ બતાવાય છે; પ્રશ્નો અને જવાબોનું લખાણ અહીં રાખવામાં આવતું નથી.",
+ "aiuse.none": "આ કેસમાં AI નો ઉપયોગ થયો નથી.",
+ "aiuse.caption": "AI નો ઉપયોગ, સુવિધા મુજબ",
+ "aiuse.colFeature": "સુવિધા",
+ "aiuse.colAsked": "માગેલા મુસદ્દા",
+ "aiuse.colKept": "રાખેલા",
+ "aiuse.colEdited": "સુધારેલા",
+ "aiuse.colRejected": "નામંજૂર",
+ "aiuse.colRefused": "ઇનકાર કરાયેલા",
+ "aiuse.colFailed": "નિષ્ફળ",
+ "aiuse.colEmbedded": "અર્થ આધારિત શોધ",
+ "aiuse.stateTitle": "રાજ્યમાં AI નો ઉપયોગ, છેલ્લા {days} દિવસ",
+ "aiuse.stateNone": "છેલ્લા {days} દિવસમાં AI નો ઉપયોગ થયો નથી."
 }

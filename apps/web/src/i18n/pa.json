@@ -1296,5 +1296,19 @@
  "ask.noteCancel": "ਰੱਦ ਕਰੋ",
  "ask.noteSaved": "ਕੇਸ ਡਾਇਰੀ ਦੇ ਅੱਜ ਦੇ ਪੰਨੇ 'ਤੇ ਸੰਭਾਲਿਆ ਗਿਆ।",
  "ask.noteQuestion": "ਸਵਾਲ",
- "ask.noteAnswer": "ਜਵਾਬ (AI ਖਰੜਾ, ਸਰੋਤਾਂ ਨਾਲ ਜਾਂਚਿਆ)"
+ "ask.noteAnswer": "ਜਵਾਬ (AI ਖਰੜਾ, ਸਰੋਤਾਂ ਨਾਲ ਜਾਂਚਿਆ)",
+ "aiuse.caseTitle": "ਇਸ ਮਾਮਲੇ ਵਿੱਚ AI ਦੀ ਵਰਤੋਂ",
+ "aiuse.caseIntro": "ਇਸ ਮਾਮਲੇ ਵਿੱਚ AI ਤੋਂ ਕੀ ਪੁੱਛਿਆ ਗਿਆ ਅਤੇ ਲੋਕਾਂ ਨੇ ਉਸ ਨਾਲ ਕੀ ਕੀਤਾ। ਇੱਥੇ ਸਿਰਫ਼ ਗਿਣਤੀ ਦਿਖਾਈ ਜਾਂਦੀ ਹੈ; ਸਵਾਲਾਂ ਅਤੇ ਜਵਾਬਾਂ ਦਾ ਪਾਠ ਇੱਥੇ ਨਹੀਂ ਰੱਖਿਆ ਜਾਂਦਾ।",
+ "aiuse.none": "ਇਸ ਮਾਮਲੇ ਵਿੱਚ AI ਦੀ ਵਰਤੋਂ ਨਹੀਂ ਹੋਈ।",
+ "aiuse.caption": "AI ਦੀ ਵਰਤੋਂ, ਸਹੂਲਤ ਅਨੁਸਾਰ",
+ "aiuse.colFeature": "ਸਹੂਲਤ",
+ "aiuse.colAsked": "ਮੰਗੇ ਖਰੜੇ",
+ "aiuse.colKept": "ਰੱਖੇ ਗਏ",
+ "aiuse.colEdited": "ਬਦਲੇ ਗਏ",
+ "aiuse.colRejected": "ਰੱਦ ਕੀਤੇ",
+ "aiuse.colRefused": "ਇਨਕਾਰ ਕੀਤੇ",
+ "aiuse.colFailed": "ਅਸਫਲ",
+ "aiuse.colEmbedded": "ਅਰਥ ਆਧਾਰਿਤ ਖੋਜ",
+ "aiuse.stateTitle": "ਰਾਜ ਵਿੱਚ AI ਦੀ ਵਰਤੋਂ, ਪਿਛਲੇ {days} ਦਿਨ",
+ "aiuse.stateNone": "ਪਿਛਲੇ {days} ਦਿਨਾਂ ਵਿੱਚ AI ਦੀ ਵਰਤੋਂ ਨਹੀਂ ਹੋਈ।"
 }

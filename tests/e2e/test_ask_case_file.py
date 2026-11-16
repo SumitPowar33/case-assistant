@@ -2,7 +2,7 @@
 The admin sets the feature to `fake`; the IO opens the demo case's Ask part: a question about guilt is refused and nothing is
 sent, a question the file has no words for says "not in the file" and nothing is sent, and a question the complaint answers
 reaches the gateway with the matching passage, shows the passage as the source, and the verdict is written to the audit log.
-The meaning search runs too, with the gateway's offline embedder: the question and the pieces are embedded, the core keeps the
+The case diary part then counts the AI use of the case. The meaning search runs too, with the gateway's offline embedder: the question and the pieces are embedded, the core keeps the
 vectors, and the next question embeds only itself. Fictional data only."""
 from playwright.sync_api import expect, sync_playwright
 
@@ -56,4 +56,11 @@ def test_an_officer_asks_the_case_file(admin_web):  # noqa: F811
         page.get_by_role("button", name="Useful").click()
         expect(page.get_by_text("Your verdict (useful) is logged.")).to_be_visible()
         assert "decisions" in sent
+        # the case diary part counts it: one draft asked, one kept, and the meaning searches (A9, board 20)
+        page.evaluate(f"location.hash = '#/firs/{demo['fir_id']}/diary'")
+        expect(page.get_by_role("heading", name="AI use in this case")).to_be_visible()
+        row = page.get_by_role("row").filter(has_text="Answer questions about the case file")
+        expect(row.locator("td").nth(1)).to_have_text("1")   # asked
+        expect(row.locator("td").nth(2)).to_have_text("1")   # kept
+        expect(page.get_by_role("row").filter(has_text="Search the case file by meaning").locator("td").nth(7)).to_have_text("3")
         browser.close()
