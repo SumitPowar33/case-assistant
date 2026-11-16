@@ -64,8 +64,8 @@ Next (replaces the "Next" list of session 25; a session finishing an item remove
 **SUMIT'S PRIORITY (16 Nov 2026; replaces "the first item under Next"): AI features and RAG first, then the rest of the Next list.** Build the first unfinished item of this order, keeping every rule of CLAUDE.md and the five AI rules of docs/AI-AND-SCREENS-PLAN.md section 2:
 1. Item 17, Ask the case file as real RAG: embeddings behind the gateway on the state's own server, vectors in PostgreSQL, hybrid with BM25 (DONE in session 106, see its entry and "Decisions taken for Sumit"); open a source on click, "note in case diary", questions in Hindi and Marathi, the answers scored on the evaluation set (DONE, session 106). Left of item 17: bank replies as searchable text (waits for A4's left-for part, decision 3), the real model's download and tuning (deployment step), a monthly run of the set with a real model.
 2. A8: the AI explanation in the Old law to new law finder (board 18) (already DONE in session 98; check only that it is on the board's screen).
-3. The AI's suggestions and decisions in the Audit log (a gateway read route, board 20), and the "AI use in this case" counts (A9).
-4. Hindi and Marathi guards for the guilt, truth, prediction, opinion and rating refusals (A5, A6, A9), not only English.
+3. DONE (session 107, counts only; see its entry): the AI's drafts and decisions in the Audit log (gateway read routes, board 20), and the "AI use in this case" counts (A9). Left: the list of events with who and which case on the Audit screen (needs the station's case list from the core), the export for one case, readable labels.
+4. DONE (session 107, draft word lists): Hindi and Marathi guards for the guilt, truth, prediction, opinion and rating refusals (A5, A6, A9). Left: a Marathi-speaking prosecutor's review of the words; other Indian scripts still rely on the model's safety text.
 5. The rest of A3: "differences to clarify" between a statement, the FIR and other statements (board 6), then audio transcription with an on-premises speech model (same rule as embeddings: an offline stand-in in tests).
 6. The rest of A6: drafting from the evidence register, bank replies, 63(4) certificates, seizure memos and expert reports, and one paragraph per charge ingredient linked to the readiness check.
 7. The "Left for" parts of A1, A2, A4 and A7 in item 14.
@@ -112,6 +112,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 107 (17 Nov, 02:05 IST scheduled run, last of the night): priority 3 (AI use counts: gateway `GET /v1/ai-use` and `/v1/ai-use/summary`, the Audit log screen and the diary part) and priority 4 (Hindi and Marathi refusal guards), no migration.
 Done in session 106 (16 Nov, scheduled run, Sumit away): item 17, hybrid RAG for Ask the case file: embedding route in the gateway, vectors in PostgreSQL (V58), BM25 + vectors, source on click, note in case diary.
 Done in session 105 (16 Nov, scheduled run, Sumit away): item 3, fourth part: the third MH playbook (illicit liquor, Maharashtra Prohibition Act, draft; no migration).
 Done in session 104 (16 Nov, 02:05 IST scheduled run, last of the night): item 3, third part: the second MH playbook (organised crime, MCOC Act); bug fixed: the FIR import wrote clauses in capitals ("376(2)(N)").
@@ -175,6 +176,39 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    **Session 106 (hybrid RAG, V58):** gateway `POST /v1/embed` (local embedder only, `ai_embed` audit rows, 120 calls per officer per 10 minutes; `EMBED_BACKEND=fake` offline stand-in; the real model is a deployment step), vectors kept in PostgreSQL per case, model and text hash (`case_passage_vector`, `CaseVectorController`), BM25 and cosine fused by reciprocal rank in `askFile.ts`, a source opens as its whole passage with the piece marked, "Note in case diary" (editable, saved on the officer's click), Hindi and Marathi questions in the evaluation set, the answers scored on the set with a stand-in provider (the gateway's fake provider only echoes the prompt). Left: bank replies as text (decision 3), the real model (download, `EMBED_MIN_SIMILARITY` tuning, scoring with a real provider), Hindi and Marathi refusal guards beyond the draft word list (priority 4).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 17 Nov 2026, session 107 (02:05 IST scheduled run, last of the night, Sumit away)
+Started from `setup/seed` at 6825ee6 in a new container (Postgres started, `caseapp` role and the two databases made, gateway requirements, `npm ci`). The `add_repo` tool was not offered in this run, but the clone already pointed at the repository and `git fetch` worked. Baseline: the first seven suites PASS; the e2e suite failed only because the new diary check was written while the baseline ran against the older build (fixed by the final run below). Sumit's priority list: items 1 and 2 were already done, so this session built items 3 and 4.
+
+**Priority 3, AI use in the Audit log and in the case (A9, board 20), no migration:**
+- Gateway: `GET /v1/ai-use?case_ref=` (case team only, the same case check as a draft; counts per feature of drafts asked, kept, edited, rejected, refused, failed and embedding calls, plus the newest events: time, feature, action, no text, no officer) and `GET /v1/ai-use/summary?days=30` (the user's state only; needs the `audit.read_protected` permission from the packs; counts only: no case, no officer, no text). Both read the audit log the gateway already keeps; `Store.ai_use` and `Store.case_events`.
+- Web: `AiUse.tsx`. The diary part of the FIR screen ends with "AI use in this case"; the Audit log screen ends with "AI use in the state, last 30 days". 14 new screen texts in all 11 languages (the ten others are unreviewed drafts, like all screen translations).
+- Tests: gateway `test_ai_use.py` (6: counts for one case, no text, other cases and other states not counted, outsider 404, bad id 422, no sign-in 401, core down 503, permission 403, window and days bounds), web `AiUse.test.tsx` (4) and `AuditPage.test.tsx` (+1), the browser test `test_ask_case_file.py` now also opens the diary part and checks the counts.
+
+**Priority 4, Hindi and Marathi guards:** the guilt, truth and prediction patterns of `askFile.ts` and the gateway (kept the same by `test_question_guard_same.py`) now hold a longer draft list of Hindi and Marathi words and phrases (e.g. who did it, responsible, is the statement true, can the witness be trusted, will he flee or do it again, chance of fleeing); the opinion words of `chargesheetDraft.ts` (A6, A3 letters) and the rating words of `supervisorBrief.ts` (A9) got Hindi and Marathi words too. Tests in `askFile.test.ts` (23 refused, 6 ordinary questions that go on), `test_gateway.py` (same lists, the refusal is logged), `chargesheetDraft.test.ts`, `supervisorBrief.test.ts`. The word lists are drafts: substring matching, so some ordinary sentences may be refused (the safe direction); a Marathi-speaking prosecutor should review them (decision 5 of 2 Nov).
+
+`scripts/test-all.sh` at the end: all 8 suites PASS (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e browser). Coverage: core 99.01% lines / 96.51% branches (gates 98 / 96, not raised), web 99.97% statements / 97.37% branches / 98.74% functions (gates 99 / 96 / 97, not raised), gateway 99.34% with branches (gate 98). The new files `AiUse.tsx` and `AuditPage.tsx` are at 100%.
+
+Found by the first full runs and fixed: the AI-use block was mounted while hidden, so it showed the counts from when the FIR opened; it is now mounted only when the diary part is shown, so each visit reads fresh counts (test in `FirDetail.test.tsx`). The baseline run overlapped my edits, so its e2e failure was a test of mine against an older build, not a regression.
+
+Skipped / not checked / risks:
+- The Audit screen shows **counts per feature for the state**, not a list of events with the officer and the case: the gateway keeps no station for a case, and a station head must not see other stations' cases. A per-event list needs the core to give the station's case ids (priority 3, left).
+- The case block does not show who did what (the gateway log holds the officer's id; names would need the core). Counts and times only.
+- The new screen text was not compared with board 20 and not screenshotted; nothing was checked by hand in a browser besides the Playwright test.
+- Hindi and Marathi guards are substring lists: ordinary sentences containing e.g. a word for "reliable" are refused or dropped (the safe direction). They need the prosecutor's review. Gujarati, Bengali, Tamil and the other scripts are still guarded only by the model's safety text.
+- No time was left for tests of older code; "Not covered yet" in docs/TESTING.md is unchanged.
+
+Next: priority item 5 (A3: "differences to clarify" between a statement, the FIR and other statements, then audio transcription with an on-premises speech model and an offline stand-in), then 6, 7 and 8 as listed at the top of Next.
+
+Questions for Sumit:
+1. Should the Audit log screen also list each AI event (time, officer, feature, which case) for the station? It needs the core to tell the gateway which cases belong to the station, so a station head sees no other station's cases. Until you say yes it shows counts only.
+2. Same as before for the guards: may a Marathi-speaking prosecutor and a Hindi speaker review the new word lists in `askFile.ts`? Until then they are drafts.
+3. Still open: session 106 (1), 105 (1, 2), 104 (1, 2), 103 (1), 102 (1, 2), 101 (1, 2), 100 (1, 2), 99 (1, 2), 98 (1, 2), 97 (2), 96 (2), 95 (2), 91 (1, 2), 88 (1), 84 (1, 2), 85 (1, 2), 86 (1).
+
+## Tonight in short (16 Nov scheduled runs: sessions 106 and 107)
+- Session 106: item 17, hybrid RAG for Ask the case file (embedding route, vectors in PostgreSQL, BM25 + vectors, source on click, note in case diary, Hindi and Marathi questions in the evaluation set; V58).
+- Session 107 (02:05 IST): AI use counts (gateway read routes, Audit log screen, "AI use in this case") and Hindi and Marathi refusal guards; no migration.
+- `scripts/test-all.sh` at the end of session 107: all 8 suites PASS. Coverage: core 99.01 / 96.51, web 99.97 / 97.37 / 98.74, gateway 99.34.
 
 ## 16 Nov 2026, session 106 (scheduled run, Sumit away)
 Started from `setup/seed` at 749344e in a new container (Postgres started and `postgresql-16-pgvector` installed from apt to check it, role `caseapp` and `caseapp_test` made, gateway requirements, `psycopg`, `playwright`, `npm ci`). Sumit's priority list of 16 Nov (now at the top of Next) makes item 17 first: this session built it.
