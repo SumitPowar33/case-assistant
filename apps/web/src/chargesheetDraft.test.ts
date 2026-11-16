@@ -94,3 +94,9 @@ describe('appendTo and decisionFor', () => {
     expect(decisionFor({ kind: 'unreadable' }, 0)).toBe('rejected')
   })
 })
+
+// Hindi and Marathi (session 107, unreviewed draft word lists)
+describe('judges in Hindi and Marathi', () => {
+  it.each(['आरोपी दोषी है।', 'साक्षीदार विश्वासार्ह आहे.', 'गवाह झूठ बोल रहा था।', 'आरोपीने गुन्हेगार असल्याचे सिद्ध झाले.', 'आरोप संदेह से परे सिद्ध हो गया।', 'तो खोटं बोलत होता.'])('drops %s', (s) => expect(judges(s)).toBe(true))
+  it.each(['शिकायतकर्ता ने बताया कि फोन करने वाले ने बैंक का नाम लिया।', 'खात्यातून ३ नोव्हेंबरला ४०,००० रुपये गेले.'])('keeps %s', (s) => expect(judges(s)).toBe(false))
+})

@@ -149,3 +149,10 @@ test('the edges of a sentence: spaces tidied, 400 characters kept, odd ids dropp
   expect(read.kind === 'brief' && read.lines.map((l) => l.text)).toEqual(['The report waits.', 'y'.repeat(400), 'A gap is open (F12).'])
   expect(read.kind === 'brief' && read.dropped).toBe(3)
 })
+
+test('rating, blaming and predicting words are caught in Hindi and Marathi; plain briefing words are not (session 107)', () => {
+  for (const s of ['जांच अधिकारी लापरवाह था।', 'तपास अधिकारी निष्काळजी होता.', 'यह खराब काम है।', 'आरोपी बरी होईल.', 'सजा होगी।', 'अधिकारी निलंबित किया जाए।'])
+    expect(rates(s), s).toBe(true)
+  for (const s of ['आरोपपत्र ६ दिन में देय है।', 'आरोपपत्र ६ दिवसांत द्यायचे आहे.', 'नया जांच अधिकारी नियुक्त करना है।'])
+    expect(rates(s), s).toBe(false)
+})

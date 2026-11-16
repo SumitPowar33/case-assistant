@@ -21,6 +21,7 @@ import threading
 import time
 import uuid
 from collections import deque
+from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
@@ -83,15 +84,18 @@ REFUSED_QUESTIONS = {
     "guilt": re.compile(r"\b(guilty|guilt|innocent|innocence|culprit|criminal|convict\w*|doshi|nirdosh|gunahgar)\b|\b(who|whom) (did"
                          r"|committed|is behind|is responsible)\b|\bdid (he|she|they|it|[a-z]\d) (do|commit)\b|\bdid (the )?\w+ (do it"
                          r"|do this|commit)\b|\b(is|are|was|were) (he|she|they|[a-z]\d|the (accused|suspect)) (really "
-                         r"|actually )?responsible\b|दोषी|निर्दोष|गुन्हेगार|गुनहगार", re.I),
+                         r"|actually )?responsible\b|दोषी|निर्दोष|गुन्हेगार|गुनहगार"
+                         r"|अपराधी|मुजरिम|गुनाहगार|किसने (यह |ये |वह )?(किया|की|किए)|कौन (है )?(ज़िम्मेदार|जिम्मेदार|जिम्मेवार)|(ज़िम्मेदार|जिम्मेदार|जबाबदार|जबाबदारी) (है|हैं|था|थी|आहे|होता|होती)|(उसने|उन्होंने|आरोपी ने) (ही )?अपराध किया|(त्याने|तिने|त्यांनी|आरोपीने) (हा |ही )?गुन्हा केला|कोणी (हे |ते |हा )?(केले|केलं|केला)|(कोणाचा|किसका) दोष", re.I),
     "truth": re.compile(r"\b(lying|liar|lies|lie|truthful|truthfully|credible|credibility|believable|trustworthy|honest|dishonest"
                          r"|reliable|unreliable|reliability|jhooth|jhoot|jhuth)\b|\b(is|are|was|were) (he|she|they|[a-z]\d|the (witness"
                          r"|victim|accused|complainant)) (telling|speaking)\b|\btelling the truth\b|\b(can|could|should) (we|i) (trust"
                          r"|believe|rely on)\b|\b(is|are|was|were) (the |his |her |this |that )?(\w+ ){0,2}(true|false|untrue"
-                         r"|fabricated)\b|झूठ|खोटं|खोटे बोल|सच बोल|खरं बोल", re.I),
+                         r"|fabricated)\b|झूठ|खोटं|खोटे बोल|सच बोल|खरं बोल"
+                         r"|झूठा|झूठी|झूठे|सच (बोल|कह|है|हैं|था|थी)|सच्चा|सच्ची|सत्य बोल|विश्वसनीय|भरोसेमंद|भरोसा कर|विश्वास कर|विश्वासार्ह|विश्वास ठेव|खरे आहे|खरं आहे|खोटे आहे|खोटं आहे|खोटा आहे|खोटी आहे|खोटे बोलत|खोटं बोलत|खरे बोलत|खरं बोलत", re.I),
     "predict": re.compile(r"\b(will|would|might|likely|going to|chance|probability|probable)\b.{0,40}\b(commit|reoffend|re-offend|offend"
                            r"|flee|abscond|escape|repeat|do it again|do this again|run away|tamper\w*|threaten\w*|harm)\b|\bflight risk\b"
-                           r"|\b(is|are) (he|she|they|[a-z]\d|the (accused|suspect)) (\w+ )?dangerous\b", re.I),
+                           r"|\b(is|are) (he|she|they|[a-z]\d|the (accused|suspect)) (\w+ )?dangerous\b"
+                           r"|(फरार|फ़रार) (हो|होगा|होगी|होने)|भाग (जाएगा|जाएगी|सकता|सकती|जाने)|भागने की (संभावना|आशंका)|(दोबारा|फिर से|पुन्हा|परत) (अपराध|गुन्हा)|गुन्हा करेल|अपराध करेगा|अपराध करेगी|पळून (जाईल|जाण्याची|जाऊ शकतो|जाऊ शकते)|फरार होण्याची|(खतरनाक|धोकादायक) (है|होगा|होगी|आहे|ठरेल)|(संभावना|आशंका).{0,30}(भाग|फरार|अपराध|धमकी|सबूत)|(शक्यता|भीती).{0,30}(पळ|फरार|गुन्हा|धमक|पुरावा)|(धमक|पळून|फरार|गुन्हा)[^ ]*( [^ ]+){0,3} (शक्यता|भीती)", re.I),
 }
 
 
@@ -341,6 +345,30 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             raise HTTPException(409, "a decision on this AI draft is already logged")
         seq = log(u, body.decision, body.feature, body.case_ref, {"request_id": body.request_id, "note": body.note})
         return {"logged": seq}
+
+    @app.get("/v1/ai-use")
+    def ai_use(case_ref: str, u: dict = Depends(user)):
+        """What the AI was asked in one case and what the officers did with it (A9, board 20): counts per feature and the
+        newest events, from the log, without any text. Only the case team (the same check as a draft)."""
+        if not UUID_RE.match(case_ref):
+            raise HTTPException(422, "name the FIR (its id) in case_ref")
+        try:
+            case_check(u["token"], case_ref)
+        except CaseNotOpen:
+            raise HTTPException(404, "no case of your case team with that id")
+        except CoreUnavailable as e:
+            raise HTTPException(503, str(e))
+        return {"case_ref": case_ref, "features": store.ai_use(case_ref), "events": store.case_events(case_ref)}
+
+    @app.get("/v1/ai-use/summary")
+    def ai_use_summary(days: int = 30, u: dict = Depends(user)):
+        """Counts per feature for the user's state over the last `days` days (board 20's monthly counts). No case, no officer, no text.
+        Whoever may read the audit log of protected details (a permission from the packs) may read it."""
+        if "audit.read_protected" not in u["permissions"]:
+            raise HTTPException(403, "your role cannot read the audit log")
+        days = min(max(days, 1), 366)
+        since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
+        return {"days": days, "features": store.ai_use(None, u["state"], since)}
 
     @app.get("/v1/audit")
     def audit(limit: int = 100, u: dict = Depends(admin)):

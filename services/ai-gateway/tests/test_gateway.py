@@ -861,3 +861,43 @@ def test_the_core_app_down_during_the_case_check_is_503_and_logged():
                    headers={"Authorization": "Bearer " + token("user-io-7", "io")})
     r = c.post("/v1/generate", json={"feature": "fir_extract", "prompt": "x", "prompt_version": "t@1", "case_ref": CASE})
     assert r.status_code == 503 and store.audit_rows()[0]["detail"]["status"] == 503
+
+
+# Hindi and Marathi guards (session 107, unreviewed draft word lists); apps/web/src/askFile.test.ts has the same lists
+@pytest.mark.parametrize("question,why", [
+    ("क्या आरोपी अपराधी है?", "guilt"),
+    ("किसने किया यह अपराध?", "guilt"),
+    ("कौन जिम्मेदार है?", "guilt"),
+    ("आरोपी जिम्मेदार है क्या?", "guilt"),
+    ("क्या उसने अपराध किया?", "guilt"),
+    ("आरोपीने गुन्हा केला का?", "guilt"),
+    ("हे कोणी केले?", "guilt"),
+    ("आरोपी जबाबदार आहे का?", "guilt"),
+    ("क्या गवाह झूठा है?", "truth"),
+    ("क्या यह बयान सच है?", "truth"),
+    ("क्या शिकायतकर्ता सच बोल रहा है?", "truth"),
+    ("क्या गवाह विश्वसनीय है?", "truth"),
+    ("पीड़ित पर भरोसा करें?", "truth"),
+    ("साक्षीदार विश्वासार्ह आहे का?", "truth"),
+    ("हे विधान खरे आहे का?", "truth"),
+    ("तो खरं बोलतो का?", "truth"),
+    ("क्या वह फरार होगा?", "predict"),
+    ("क्या वह दोबारा अपराध करेगा?", "predict"),
+    ("भागने की संभावना कितनी है?", "predict"),
+    ("आरोपी धोकादायक आहे का?", "predict"),
+    ("तो पळून जाईल का?", "predict"),
+    ("पुन्हा गुन्हा करेल का?", "predict"),
+    ("साक्षीदारांना धमकावण्याची शक्यता आहे का?", "predict"),
+])
+def test_hindi_and_marathi_questions_are_refused_and_logged(setup, question, why):
+    c, store = setup
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": ASK.format(question, "x"), "prompt_version": "case_qa/ask@1", "case_ref": "36a3be51-b4e6-58f7-96b1-74cbf0beab90"})
+    assert r.status_code == 422 and why in r.json()["detail"]
+    assert store.audit_rows()[0]["detail"]["question_refused"] == why
+
+
+@pytest.mark.parametrize("question", ["बैंक ने पैसे कब भेजे?", "साक्षीदाराने २२ ऑगस्टबद्दल काय सांगितले?", "रकमेचे हस्तांतरण कधी झाले?", "मालखान्याचा प्रभारी कोण आहे?", "फोन लैब में कब भेजा गया?", "आरोपी का पता क्या है?"])
+def test_ordinary_hindi_and_marathi_questions_go_on(setup, question):
+    c, store = setup
+    r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": ASK.format(question, "x"), "prompt_version": "case_qa/ask@1", "case_ref": "36a3be51-b4e6-58f7-96b1-74cbf0beab90"})
+    assert r.status_code == 200

@@ -75,7 +75,7 @@ export function briefPrompt(facts: Fact[], language: string): string {
 }
 
 // Words that rate, blame or discipline an officer, or predict the outcome. A sentence with one is not shown.
-const RATES = /\b(negligen\w*|lazy|laziness|careless\w*|incompeten\w*|inefficien\w*|efficien\w*|diligen\w*|sloppy|slack\w*|lax|blam\w*|fault\w*|dereliction|disciplin\w*|reprimand\w*|suspen(d|sion)\w*|punish\w*|warn(ed|ing)? the|perform\w*|scor(e|es|ed|ing)|rating|rated|acquit\w*|likely to|chances?|probab\w*)\b|\b(good|bad|poor|weak|strong|excellent) (officer|work|job|case)\b|\bfail(ed|s|ing)? (in |to do )?(his|her|their) duty\b/i
+const RATES = /\b(negligen\w*|lazy|laziness|careless\w*|incompeten\w*|inefficien\w*|efficien\w*|diligen\w*|sloppy|slack\w*|lax|blam\w*|fault\w*|dereliction|disciplin\w*|reprimand\w*|suspen(d|sion)\w*|punish\w*|warn(ed|ing)? the|perform\w*|scor(e|es|ed|ing)|rating|rated|acquit\w*|likely to|chances?|probab\w*)\b|\b(good|bad|poor|weak|strong|excellent) (officer|work|job|case)\b|\bfail(ed|s|ing)? (in |to do )?(his|her|their) duty\b|लापरवाह|लापरवाही|निकम्मा|आलसी|सुस्त|दोष (है|दिया)|निलंबित|निलंबन|दंडित|फटकार|चूक (की|केली)|(अच्छा|बुरा|खराब|कमजोर|कमज़ोर|उत्कृष्ट|चांगला|वाईट|कमकुवत) (अधिकारी|काम|काम|तपास|केस)|रेटिंग|अंक दिए|निष्काळजी|निष्काळजीपणा|आळशी|हलगर्जी|शिक्षा होण|बरी होण|बरी होईल|बरखास्त|दोषमुक्त होगा|छूट जाएगा|सजा होगी|शिक्षा होईल|बरी होईल|संभावना|शक्यता/i
 
 /** True when a sentence rates or blames an officer, or predicts the outcome of the case. */
 export const rates = (sentence: string) => RATES.test(sentence)

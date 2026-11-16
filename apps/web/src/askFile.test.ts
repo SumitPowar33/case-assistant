@@ -116,3 +116,33 @@ describe('prompt and answer check', () => {
     expect(c).toEqual({ kind: 'notInFile', text: 'not in the file', sources: [] })
   })
 })
+
+// Hindi and Marathi guards (session 107, unreviewed draft word lists); the gateway's test has the same lists.
+describe('refusal in Hindi and Marathi', () => {
+  it.each([
+    ['क्या आरोपी अपराधी है?', 'guilt'],
+    ['किसने किया यह अपराध?', 'guilt'],
+    ['कौन जिम्मेदार है?', 'guilt'],
+    ['आरोपी जिम्मेदार है क्या?', 'guilt'],
+    ['क्या उसने अपराध किया?', 'guilt'],
+    ['आरोपीने गुन्हा केला का?', 'guilt'],
+    ['हे कोणी केले?', 'guilt'],
+    ['आरोपी जबाबदार आहे का?', 'guilt'],
+    ['क्या गवाह झूठा है?', 'truth'],
+    ['क्या यह बयान सच है?', 'truth'],
+    ['क्या शिकायतकर्ता सच बोल रहा है?', 'truth'],
+    ['क्या गवाह विश्वसनीय है?', 'truth'],
+    ['पीड़ित पर भरोसा करें?', 'truth'],
+    ['साक्षीदार विश्वासार्ह आहे का?', 'truth'],
+    ['हे विधान खरे आहे का?', 'truth'],
+    ['तो खरं बोलतो का?', 'truth'],
+    ['क्या वह फरार होगा?', 'predict'],
+    ['क्या वह दोबारा अपराध करेगा?', 'predict'],
+    ['भागने की संभावना कितनी है?', 'predict'],
+    ['आरोपी धोकादायक आहे का?', 'predict'],
+    ['तो पळून जाईल का?', 'predict'],
+    ['पुन्हा गुन्हा करेल का?', 'predict'],
+    ['साक्षीदारांना धमकावण्याची शक्यता आहे का?', 'predict'],
+  ])('%s is refused as %s', (q, why) => expect(refusal(q)).toBe(why))
+  it.each(['बैंक ने पैसे कब भेजे?', 'साक्षीदाराने २२ ऑगस्टबद्दल काय सांगितले?', 'रकमेचे हस्तांतरण कधी झाले?', 'मालखान्याचा प्रभारी कोण आहे?', 'फोन लैब में कब भेजा गया?', 'आरोपी का पता क्या है?'])('%s may go on', (q) => expect(refusal(q)).toBeNull())
+})
