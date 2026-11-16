@@ -5,7 +5,7 @@ export const ASK_PROMPT_VERSION = 'case_qa/ask@1'   // the prompt is unchanged; 
 export const NOT_IN_FILE = 'NOT IN THE FILE'
 
 export type Passage = { id: string; kind: string; title: string; text: string }
-export type Source = { tag: string; title: string; quote: string; text: string }
+export type Source = { tag: string; title: string; quote: string; text: string; passageId: string }
 export type Refusal = 'guilt' | 'truth' | 'predict'
 
 // What the app will never answer (CLAUDE.md hard rules): guilt, who is telling the truth, what a person will do. The model's own
@@ -55,24 +55,50 @@ export const chunks = (text: string, max = 500) => pieces(text, max).map((p) => 
 // a word repeated in a piece counts less each time, and a long piece does not win just by being long.
 const K1 = 1.2, B = 0.75
 
-/**
- * The pieces of this case that share words with the question (in their text or their passage's name), best first (BM25). A
- * match is a whole word, a longer word that starts with a question word of 4+ letters (call / caller), or the same first five
- * letters of a long word (theft / thefts). Numbers count double. Each piece is named by its passage and, for a passage
- * of several lines, the lines it spans (or its part, for one long line), so the officer can find the words.
- */
-export function retrieve(question: string, passages: Passage[], limit = 6): Source[] {
-  const q = [...new Set(words(question))]
-  if (!q.length) return []
-  const all = passages.flatMap((p) => {
+/** A short stable hash of a text (cyrb53, 14 hex digits): names a piece so its vector can be found again; not for security. */
+export function pieceHash(text: string): string {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i)
+    h1 = Math.imul(h1 ^ c, 2654435761)
+    h2 = Math.imul(h2 ^ c, 1597334677)
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, '0')
+}
+
+/** Every piece of every passage, named by its passage and lines, with the words it holds and the hash of the text that is embedded. */
+export function candidates(passages: Passage[]) {
+  return passages.flatMap((p) => {
     const parts = pieces(p.text)
     const lines = p.text.split('\n').length > 1
-    return parts.map((piece, i) => ({
-      title: lines ? `${p.title}, ${piece.from === piece.to ? `line ${piece.from}` : `lines ${piece.from}-${piece.to}`}`
-        : parts.length > 1 ? `${p.title}, part ${i + 1} of ${parts.length}` : p.title,
-      text: piece.text, have: words(`${p.title} ${piece.text}`),   // the passage's name counts too ("the notice", "W1")
-    }))
+    return parts.map((piece, i) => {
+      const title = lines ? `${p.title}, ${piece.from === piece.to ? `line ${piece.from}` : `lines ${piece.from}-${piece.to}`}`
+        : parts.length > 1 ? `${p.title}, part ${i + 1} of ${parts.length}` : p.title
+      const embedText = `${p.title}: ${piece.text}`.slice(0, 1900)   // the gateway takes at most 2000 characters
+      return { title, text: piece.text, passageId: p.id, have: words(`${p.title} ${piece.text}`), embedText, hash: pieceHash(embedText) }   // the passage's name counts too ("the notice", "W1")
+    })
   })
+}
+
+/** What the embedding model gave: the question's vector, the vector of each piece by its hash, and the lowest cosine that counts as a match for this model. */
+export type Vectors = { query: number[]; byHash: Map<string, number[]>; minSimilarity: number }
+const cosine = (a: number[], b: number[]) => a.length === b.length ? a.reduce((n, x, i) => n + x * b[i], 0) : 0   // unit vectors
+const RRF = 60   // reciprocal rank fusion: a piece's score is the sum of 1 / (60 + its place) in each list it is in
+
+/**
+ * The pieces of this case that answer the question, best first. Two lists are made and fused (hybrid): BM25 over the words, and,
+ * when the embedding model gave vectors, the pieces whose meaning is close to the question's (cosine above the model's own
+ * minimum), so a question in Hindi or Marathi, or with other words than the file, still finds its piece. Without vectors it is
+ * BM25 alone. BM25: a word found in few pieces of this case counts more than one found in most, a word repeated in a piece counts
+ * less each time, and a long piece does not win by length. A match is a whole word, a longer word that starts with a question word of 4+
+ * letters (call / caller), or the same first five letters of a long word (theft / thefts). Numbers count double. Each piece
+ * is named by its passage and, for a passage of several lines, the lines it spans.
+ */
+export function retrieve(question: string, passages: Passage[], limit = 6, vectors?: Vectors): Source[] {
+  const q = [...new Set(words(question))]
+  const all = candidates(passages)
   if (!all.length) return []
   // the same word, a longer word starting with a word of 4+ letters (call / caller), or the same first five letters (theft / thefts)
   const tf = (w: string, have: string[]) => have.filter((h) => h === w || (w.length >= 4 && !/\d/.test(w) && h.startsWith(w))
@@ -80,16 +106,23 @@ export function retrieve(question: string, passages: Passage[], limit = 6): Sour
   const counts = all.map((c) => q.map((w) => tf(w, c.have)))
   const df = q.map((_, j) => counts.filter((c) => c[j] > 0).length)
   const avg = all.reduce((n, c) => n + c.have.length, 0) / all.length || 1
-  const scored = all.map((c, i) => ({
-    c, i, score: q.reduce((sum, w, j) => {
+  const bm25 = all.map((c, i) => ({
+    i, score: q.reduce((sum, w, j) => {
       const f = counts[i][j]
       if (!f) return sum
       const idf = Math.log(1 + (all.length - df[j] + 0.5) / (df[j] + 0.5))
       return sum + (/\d/.test(w) ? 2 : 1) * idf * (f * (K1 + 1)) / (f + K1 * (1 - B + B * c.have.length / avg))
     }, 0),
   })).filter((x) => x.score > 0)
-  scored.sort((a, b) => b.score - a.score || a.i - b.i)
-  return scored.slice(0, limit).map((x, n) => ({ tag: `S${n + 1}`, title: x.c.title, quote: x.c.text, text: x.c.text }))
+  bm25.sort((a, b) => b.score - a.score || a.i - b.i)
+  const meaning = vectors ? all.map((c, i) => ({ i, sim: vectors.byHash.has(c.hash) ? cosine(vectors.query, vectors.byHash.get(c.hash)!) : 0 }))
+    .filter((x) => x.sim >= vectors.minSimilarity && x.sim > 0).sort((a, b) => b.sim - a.sim || a.i - b.i) : []
+  const fused = new Map<number, number>()
+  bm25.forEach((x, rank) => fused.set(x.i, 1 / (RRF + rank + 1)))
+  meaning.forEach((x, rank) => fused.set(x.i, (fused.get(x.i) ?? 0) + 1 / (RRF + rank + 1)))
+  const order = new Map(bm25.map((x, rank) => [x.i, rank]))   // a tie goes to the better word match, then to the earlier piece
+  const best = [...fused].sort((a, b) => b[1] - a[1] || (order.get(a[0]) ?? Infinity) - (order.get(b[0]) ?? Infinity) || a[0] - b[0])
+  return best.slice(0, limit).map(([i], n) => ({ tag: `S${n + 1}`, title: all[i].title, quote: all[i].text, text: all[i].text, passageId: all[i].passageId }))
 }
 
 /** The text sent to the gateway: the question, only the found pieces, and the rules for the answer. Written in English whatever the screen language. */

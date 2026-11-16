@@ -4,7 +4,9 @@
 // sends nothing, so the screen says "not in the file" without an AI call (flaw 4). A change to the ranking that loses an
 // answer fails here. The AI's own answers are not judged here (that needs a provider; see PROGRESS.md). Fictional data only.
 import { describe, expect, it } from 'vitest'
-import { retrieve, type Passage } from './askFile'
+// @ts-expect-error the web app has no Node type definitions; vitest runs on Node, which has this module
+import { createHash } from 'node:crypto'
+import { askPrompt, candidates, checkAnswer, NOT_IN_FILE, refusal, retrieve, type Passage, type Vectors } from './askFile'
 
 const FILE: Passage[] = [
   { id: 'P1', kind: 'complaint', title: 'FIR complaint', text: [
@@ -87,4 +89,95 @@ describe('the evaluation set of Ask the case file', () => {
     const top = retrieve('Which phone number did the caller use?', FILE)
     expect(top.map((s) => s.title)).toContain('FIR complaint, lines 1-4')
   })
+})
+
+// ---- hybrid (words + vectors), questions in Hindi and Marathi, and the answers scored (item 17) ----
+
+/** The gateway's offline embedder (services/ai-gateway/app/embedder.py FakeEmbedder), in TypeScript: words and word starts hashed into 256 slots. */
+const STOP_WORDS = new Set('the a an of to in on at is was were are be by for and or with what when where who which how many much did does do it this that from as about case file there any me tell say said says'.split(' '))
+function fakeEmbed(text: string): number[] {
+  const v = new Array<number>(256).fill(0)
+  for (const w of text.toLowerCase().match(/[\p{L}\p{M}\p{N}_]+/gu) ?? []) {
+    if (STOP_WORDS.has(w)) continue
+    for (const [feature, weight] of (w.length > 5 ? [[w, 1], [w.slice(0, 5), 0.5]] : [[w, 1]]) as [string, number][]) {
+      const h = createHash('sha256').update(feature).digest().readBigUInt64BE(0)
+      v[Number(h % 256n)] += (h >> 40n) & 1n ? weight : -weight
+    }
+  }
+  const n = Math.sqrt(v.reduce((a, x) => a + x * x, 0))
+  return n ? v.map((x) => x / n) : v
+}
+const vectorsFor = (question: string, passages: Passage[]): Vectors =>
+  ({ query: fakeEmbed(question), byHash: new Map(candidates(passages).map((c) => [c.hash, fakeEmbed(c.embedText)])), minSimilarity: 0.25 })
+
+describe('hybrid retrieval over the same file', () => {
+  it.each(FOUND)('%s: adding the vectors never loses the answer piece', (question, expected) => {
+    const sent = retrieve(question, FILE, 6, vectorsFor(question, FILE)).slice(0, 3).map((s) => s.title)
+    for (const id of expected) {
+      const title = FILE.find((p) => p.id === id)!.title
+      expect(sent.some((t) => t === title || t.startsWith(`${title}, `)), `${question} -> ${sent.join(' | ')}`).toBe(true)
+    }
+  })
+
+  it.each(['Who owns the red motorcycle?', 'What did the doctor write in the medical report?'])('%s: still nothing is sent when nothing in the file is close', (question) => {
+    expect(retrieve(question, FILE, 6, vectorsFor(question, FILE))).toEqual([])
+  })
+})
+
+// question, the piece that must come first; the file's statement of W2 is in Marathi
+const INDIAN: [string, string, string][] = [
+  ['मराठी', 'रोखपाल काय म्हणाला?', 'P3'],
+  ['मराठी', 'खात्यातून किती पैसे गेले?', 'P3'],
+  ['हिंदी', 'पैसे कहाँ गए?', 'P3'],
+]
+
+describe('questions in Marathi and Hindi', () => {
+  it.each(INDIAN)('%s: %s finds the Marathi statement', (_lang, question, id) => {
+    const title = FILE.find((p) => p.id === id)!.title
+    expect(retrieve(question, FILE)[0].title).toBe(title)
+    expect(retrieve(question, FILE, 6, vectorsFor(question, FILE))[0].title).toBe(title)
+  })
+
+  it.each([['खरं बोलतो का?', 'truth'], ['तो दोषी आहे का?', 'guilt'], ['वह झूठ बोल रहा है?', 'truth'], ['गुनहगार कौन है?', 'guilt']] as const)(
+    '%s is refused as a question about %s', (question, why) => expect(refusal(question)).toBe(why))
+})
+
+// The answers scored: the pipeline (retrieve, prompt, a provider's answer, the check of the answer against its sources) with a
+// stand-in provider that follows the prompt's rules (the gateway's own fake provider only echoes the prompt, so it cannot answer).
+// The same scoring is the one to run with a real model at deployment (docs/DEPLOY-EMBEDDINGS.md).
+const standIn = (prompt: string) => (/\[S1\]/.test(prompt) ? 'The first piece answers it [S1].' : NOT_IN_FILE)
+
+function score(provider: (prompt: string) => string) {
+  const rows = FOUND.map(([q, expected]) => {
+    const sent = retrieve(q, FILE, 6, vectorsFor(q, FILE))
+    const checked = checkAnswer(provider(askPrompt(q, sent)), sent)
+    return { q, expected, ok: sent.slice(0, 3).some((s) => expected.some((id) => s.title.startsWith(FILE.find((p) => p.id === id)!.title))) && checked.kind === 'found' }
+  })
+  const absent = ['Who owns the red motorcycle?', 'What did the doctor write in the medical report?', 'Was a lookout circular prepared?']
+    .map((q) => ({ q, ok: (() => { const sent = retrieve(q, FILE, 6, vectorsFor(q, FILE)); return !sent.length || checkAnswer(provider(askPrompt(q, [])), sent).kind === 'notInFile' })() }))
+  return { found: rows.filter((r) => r.ok).length / rows.length, absent: absent.filter((r) => r.ok).length / absent.length, rows }
+}
+
+describe('the answers scored on the set', () => {
+  it('a provider that follows the rules answers every question of the set from a cited piece, and the absent ones with "not in the file"', () => {
+    const s = score(standIn)
+    expect(s.rows.filter((r) => !r.ok).map((r) => r.q)).toEqual([])
+    expect(s.found).toBe(1)
+    expect(s.absent).toBe(1)
+  })
+
+  it('a provider that answers without citing a piece scores zero, so the set catches it', () => {
+    expect(score(() => 'It was 21 August.').found).toBe(0)
+  })
+
+  it('a provider that cites a piece that was not sent scores zero too', () => {
+    expect(score(() => 'It was 21 August [S9].').found).toBe(0)
+  })
+})
+
+// the same text gives the same vector here and in the gateway (tests/test_embed.py has the same numbers)
+it('the stand-in embedder here equals the gateway\'s FakeEmbedder', () => {
+  const v = fakeEmbed('The caller asked for the code; money went out of the bank account XXXX4471. मी बँकेत रोखपाल आहे.')
+  const nz = v.map((x, i) => [i, Math.round(x * 1e6) / 1e6]).filter(([, x]) => x !== 0)
+  expect(nz).toEqual([[16, 0.267261], [22, -0.267261], [46, 0.267261], [55, 0.267261], [68, -0.267261], [70, -0.267261], [91, 0.267261], [137, -0.133631], [159, 0.267261], [170, 0.267261], [176, -0.133631], [181, 0.267261], [196, 0.267261], [202, -0.267261], [213, 0.133631], [236, -0.133631], [255, 0.267261]])
 })

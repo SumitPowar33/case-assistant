@@ -1287,5 +1287,14 @@
  "pocso.doneAt": "पूरा होने का समय",
  "server.pocsoNotCase": "यह एफआईआर पॉक्सो मामला नहीं है।",
  "server.pocsoBeforeInfo": "कोई कदम सूचना मिलने से पहले का नहीं हो सकता।",
- "server.pocsoFuture": "कदम पूरा होने का समय भविष्य का नहीं हो सकता।"
+ "server.pocsoFuture": "कदम पूरा होने का समय भविष्य का नहीं हो सकता।",
+ "ask.wordsOnly": "केवल शब्दों से मिला",
+ "ask.fullPassage": "पूरा अंश",
+ "ask.noteDiary": "केस डायरी में दर्ज करें",
+ "ask.noteLabel": "डायरी प्रविष्टि (सहेजने से पहले बदल सकते हैं)",
+ "ask.noteSave": "आज के डायरी पृष्ठ पर सहेजें",
+ "ask.noteCancel": "रद्द करें",
+ "ask.noteSaved": "केस डायरी के आज के पृष्ठ पर सहेजा गया।",
+ "ask.noteQuestion": "प्रश्न",
+ "ask.noteAnswer": "उत्तर (AI मसौदा, स्रोतों से जाँचा गया)"
 }

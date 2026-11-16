@@ -1287,5 +1287,14 @@
  "pocso.doneAt": "সম্পন্নের সময়",
  "server.pocsoNotCase": "এই এফআইআর পকসো মামলা নয়।",
  "server.pocsoBeforeInfo": "কোনো পদক্ষেপ তথ্য পাওয়ার আগের হতে পারে না।",
- "server.pocsoFuture": "পদক্ষেপ সম্পন্নের সময় ভবিষ্যতের হতে পারে না।"
+ "server.pocsoFuture": "পদক্ষেপ সম্পন্নের সময় ভবিষ্যতের হতে পারে না।",
+ "ask.wordsOnly": "শুধু শব্দ দিয়ে পাওয়া",
+ "ask.fullPassage": "পুরো অংশ",
+ "ask.noteDiary": "কেস ডায়েরিতে লিখুন",
+ "ask.noteLabel": "ডায়েরির এন্ট্রি (সংরক্ষণের আগে বদলানো যাবে)",
+ "ask.noteSave": "আজকের ডায়েরির পাতায় সংরক্ষণ করুন",
+ "ask.noteCancel": "বাতিল",
+ "ask.noteSaved": "কেস ডায়েরির আজকের পাতায় সংরক্ষিত।",
+ "ask.noteQuestion": "প্রশ্ন",
+ "ask.noteAnswer": "উত্তর (AI খসড়া, সূত্রের সঙ্গে মিলিয়ে দেখা)"
 }

@@ -1287,5 +1287,14 @@
  "pocso.doneAt": "పూర్తయిన సమయం",
  "server.pocsoNotCase": "ఈ ఎఫ్ఐఆర్ పోక్సో కేసు కాదు.",
  "server.pocsoBeforeInfo": "ఏ చర్యా సమాచారం అందక ముందుది కాకూడదు.",
- "server.pocsoFuture": "చర్య పూర్తయిన సమయం భవిష్యత్తులో ఉండకూడదు."
+ "server.pocsoFuture": "చర్య పూర్తయిన సమయం భవిష్యత్తులో ఉండకూడదు.",
+ "ask.wordsOnly": "పదాలతో మాత్రమే దొరికింది",
+ "ask.fullPassage": "పూర్తి భాగం",
+ "ask.noteDiary": "కేసు డైరీలో నమోదు చేయండి",
+ "ask.noteLabel": "డైరీ నమోదు (సేవ్ చేసే ముందు మార్చవచ్చు)",
+ "ask.noteSave": "నేటి డైరీ పేజీలో సేవ్ చేయండి",
+ "ask.noteCancel": "రద్దు",
+ "ask.noteSaved": "కేసు డైరీ నేటి పేజీలో సేవ్ అయింది.",
+ "ask.noteQuestion": "ప్రశ్న",
+ "ask.noteAnswer": "సమాధానం (AI ముసాయిదా, మూలాలతో సరిచూసినది)"
 }

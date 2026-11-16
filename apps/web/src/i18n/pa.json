@@ -1287,5 +1287,14 @@
  "pocso.doneAt": "ਪੂਰਾ ਹੋਣ ਦਾ ਸਮਾਂ",
  "server.pocsoNotCase": "ਇਹ ਐਫਆਈਆਰ ਪੋਕਸੋ ਕੇਸ ਨਹੀਂ ਹੈ।",
  "server.pocsoBeforeInfo": "ਕੋਈ ਕਦਮ ਸੂਚਨਾ ਮਿਲਣ ਤੋਂ ਪਹਿਲਾਂ ਦਾ ਨਹੀਂ ਹੋ ਸਕਦਾ।",
- "server.pocsoFuture": "ਕਦਮ ਪੂਰਾ ਹੋਣ ਦਾ ਸਮਾਂ ਭਵਿੱਖ ਦਾ ਨਹੀਂ ਹੋ ਸਕਦਾ।"
+ "server.pocsoFuture": "ਕਦਮ ਪੂਰਾ ਹੋਣ ਦਾ ਸਮਾਂ ਭਵਿੱਖ ਦਾ ਨਹੀਂ ਹੋ ਸਕਦਾ।",
+ "ask.wordsOnly": "ਸਿਰਫ਼ ਸ਼ਬਦਾਂ ਨਾਲ ਮਿਲਿਆ",
+ "ask.fullPassage": "ਪੂਰਾ ਹਿੱਸਾ",
+ "ask.noteDiary": "ਕੇਸ ਡਾਇਰੀ ਵਿੱਚ ਦਰਜ ਕਰੋ",
+ "ask.noteLabel": "ਡਾਇਰੀ ਇੰਦਰਾਜ਼ (ਸੰਭਾਲਣ ਤੋਂ ਪਹਿਲਾਂ ਬਦਲ ਸਕਦੇ ਹੋ)",
+ "ask.noteSave": "ਅੱਜ ਦੇ ਡਾਇਰੀ ਪੰਨੇ 'ਤੇ ਸੰਭਾਲੋ",
+ "ask.noteCancel": "ਰੱਦ ਕਰੋ",
+ "ask.noteSaved": "ਕੇਸ ਡਾਇਰੀ ਦੇ ਅੱਜ ਦੇ ਪੰਨੇ 'ਤੇ ਸੰਭਾਲਿਆ ਗਿਆ।",
+ "ask.noteQuestion": "ਸਵਾਲ",
+ "ask.noteAnswer": "ਜਵਾਬ (AI ਖਰੜਾ, ਸਰੋਤਾਂ ਨਾਲ ਜਾਂਚਿਆ)"
 }

@@ -1287,5 +1287,14 @@
  "pocso.doneAt": "Done at",
  "server.pocsoNotCase": "This FIR is not a POCSO case.",
  "server.pocsoBeforeInfo": "A step cannot be before the information was received.",
- "server.pocsoFuture": "The time a step was done cannot be in the future."
+ "server.pocsoFuture": "The time a step was done cannot be in the future.",
+ "ask.wordsOnly": "Found by words only",
+ "ask.fullPassage": "Whole passage",
+ "ask.noteDiary": "Note in case diary",
+ "ask.noteLabel": "Diary entry (you may change it before saving)",
+ "ask.noteSave": "Save on today's diary page",
+ "ask.noteCancel": "Cancel",
+ "ask.noteSaved": "Saved on today's page of the case diary.",
+ "ask.noteQuestion": "Question",
+ "ask.noteAnswer": "Answer (AI draft, checked against the sources)"
 }

@@ -18,6 +18,8 @@ type Reply = { status: number; body: unknown }
 function stub(opts: { file?: Reply; generate?: Reply; decision?: Reply } = {}) {
   const calls: { url: string; body: { prompt?: string; decision?: string; [k: string]: unknown } }[] = []
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    // no embedding model on this server: the passages are found by words alone (the meaning search has its own tests below)
+    if (url === '/ai/v1/embed') return { ok: false, status: 503, json: async () => ({ detail: 'the embedding model is not installed' }) }
     if (url.startsWith('/ai')) {
       calls.push({ url, body: JSON.parse(init!.body as string) })
       const r = (url.endsWith('generate') ? opts.generate : opts.decision) ?? { status: 200, body: {} }
@@ -133,6 +135,7 @@ test('while the AI answers the button says so and a second question is not sent'
   const calls: unknown[] = []
   vi.stubGlobal('fetch', vi.fn((url: string) => {
     if (!url.startsWith('/ai')) return Promise.resolve({ ok: true, status: 200, json: async () => ({ passages }) })
+    if (url === '/ai/v1/embed') return Promise.resolve({ ok: false, status: 503, json: async () => ({}) })
     calls.push(url)
     return new Promise((res) => { release = res })
   }))
@@ -155,4 +158,147 @@ test('a verdict marks only its own answer when several questions are on the scre
   fireEvent.click(screen.getAllByRole('button', { name: 'Useful' })[1])   // the older answer is lower
   expect(await screen.findByText('Your verdict (useful) is logged.')).toBeTruthy()
   expect(screen.getAllByRole('button', { name: 'Useful' })).toHaveLength(1)
+})
+
+// ---- the meaning search (item 17): vectors from the gateway's embedding model, kept in the core app ----
+
+const wired = [
+  { id: 'P1', kind: 'complaint', title: 'FIR complaint', text: `Fictional complaint. ${'A filler sentence of no use. '.repeat(20)}The wire of Rs 9,80,000 was made on 21 August 2026.` },
+  { id: 'P2', kind: 'diary', title: 'Case diary, 05 Nov 2026', text: 'Nothing about the case here, only the weather.\nA second line.' },
+]
+
+/** The embedding model puts a text with "wire" at [1,0] and a question at [1,0]; any other text at [0,1]. The core keeps what it is sent. */
+function meaningStub(opts: { embedFails?: boolean; stored?: { hash: string; vec: number[] }[]; saveFails?: boolean } = {}) {
+  const log: { url: string; method: string; body?: Record<string, unknown> }[] = []
+  let stored = opts.stored ?? []
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    const body = init?.body ? JSON.parse(init.body as string) : undefined
+    const method = init?.method ?? 'GET'
+    const reply = (b: unknown, status = 200) => ({ ok: status < 300, status, json: async () => b })
+    if (url === '/ai/v1/embed') {
+      log.push({ url, method, body })
+      if (opts.embedFails) return reply({ detail: 'the embedding model is not installed' }, 503)
+      return reply({ model: 'test-model', dim: 2, min_similarity: 0.5,
+        vectors: body.texts.map((t: string) => (body.kind === 'query' || t.includes('wire') ? [1, 0] : [0, 1])) })
+    }
+    if (url.startsWith('/api/firs/f1/case-file/vectors')) {
+      log.push({ url, method, body })
+      if (method === 'PUT') {
+        if (opts.saveFails) return reply({}, 500)
+        stored = [...stored.filter((x) => body.keep.includes(x.hash) && !body.items.some((i: { hash: string }) => i.hash === x.hash)), ...body.items]
+        return reply({ saved: body.items.length, removed: 0 })
+      }
+      return reply({ model: 'test-model', items: stored })
+    }
+    if (url === '/ai/v1/generate') { log.push({ url, method, body }); return reply({ request_id: 'r1', draft: 'The wire was made on 21 August [S1].', provider: 'fake', model: 'm' }) }
+    if (url === '/api/firs/f1/diary') { log.push({ url, method, body }); return reply({ at: 'now' }, opts.saveFails ? 409 : 201) }
+    return reply({ passages: wired })
+  }))
+  return log
+}
+
+test('a question with none of the file\'s words is answered from the piece whose meaning is close, and the vectors are kept in the core', async () => {
+  const log = meaningStub()
+  render(<AskCaseFile firId="f1" />)
+  await ask('Where did the funds go?')
+  expect(await screen.findByText(/The wire was made on 21 August/)).toBeTruthy()
+  const gen = log.find((c) => c.url === '/ai/v1/generate')!
+  expect(String(gen.body!.prompt)).toContain('[S1] FIR complaint, part 2 of 2: ')
+  expect(String(gen.body!.prompt)).not.toContain('weather')
+  const embeds = log.filter((c) => c.url === '/ai/v1/embed')
+  expect(embeds.map((c) => c.body!.kind)).toEqual(['query', 'passage'])
+  expect(embeds[1].body).toMatchObject({ case_ref: 'f1' })
+  const texts = embeds[1].body!.texts as string[]   // every piece: the complaint cut in two, and the diary line
+  expect(texts).toHaveLength(3)
+  expect(texts[0]).toMatch(/^FIR complaint: Fictional complaint\./)
+  const save = log.find((c) => c.method === 'PUT')!
+  expect(save.body).toMatchObject({ model: 'test-model' })
+  expect((save.body!.items as unknown[])).toHaveLength(3)
+  expect((save.body!.keep as unknown[])).toHaveLength(3)
+  expect(screen.queryByText('Found by words only')).toBeNull()
+})
+
+test('a piece that already has its vector is not embedded again, and a vector of a piece that is gone is removed', async () => {
+  const first = meaningStub()
+  render(<AskCaseFile firId="f1" />)
+  await ask('Where did the funds go?')
+  await screen.findByText(/The wire was made/)
+  const items = (first.find((c) => c.method === 'PUT')!.body!.items as { hash: string; vec: number[] }[])
+  cleanup()
+  const second = meaningStub({ stored: items })
+  render(<AskCaseFile firId="f1" />)
+  await ask('Where did the funds go?')
+  await screen.findByText(/The wire was made/)
+  expect(second.filter((c) => c.url === '/ai/v1/embed').map((c) => c.body!.kind)).toEqual(['query'])
+  expect(second.some((c) => c.method === 'PUT')).toBe(false)
+  cleanup()
+  const third = meaningStub({ stored: [...items, { hash: '0123456789abcd', vec: [0, 1] }] })
+  render(<AskCaseFile firId="f1" />)
+  await ask('Where did the funds go?')
+  await screen.findByText(/The wire was made/)
+  expect(third.find((c) => c.method === 'PUT')!.body).toMatchObject({ items: [], keep: items.map((i) => i.hash) })
+})
+
+test('with no embedding model the answer says it was found by words only', async () => {
+  meaningStub({ embedFails: true })
+  render(<AskCaseFile firId="f1" />)
+  await ask('When was the wire made?')
+  expect(await screen.findByText(/The wire was made/)).toBeTruthy()
+  expect(screen.getByText('Found by words only')).toBeTruthy()
+})
+
+test('when the vectors cannot be kept the question is still answered, by words only', async () => {
+  meaningStub({ saveFails: true })
+  render(<AskCaseFile firId="f1" />)
+  await ask('When was the wire made?')
+  expect(await screen.findByText(/The wire was made/)).toBeTruthy()
+  expect(screen.getByText('Found by words only')).toBeTruthy()
+})
+
+test('a source opens on click as its whole passage with the piece marked', async () => {
+  meaningStub({ embedFails: true })
+  render(<AskCaseFile firId="f1" />)
+  await ask('When was the wire made?')
+  await screen.findByText(/The wire was made/)
+  fireEvent.click(screen.getByText('Whole passage'))
+  const mark = document.querySelector('details pre mark')!
+  expect(mark.textContent).toMatch(/wire of Rs 9,80,000 was made on 21 August 2026\.$/)
+  expect(mark.parentElement!.textContent!.startsWith('Fictional complaint. A filler sentence')).toBe(true)   // the rest of the passage is around it
+  expect(mark.parentElement!.textContent!.length).toBeGreaterThan(mark.textContent!.length)
+})
+
+test('the officer notes an answer in the case diary: the text is theirs to change, and only then is it saved', async () => {
+  const log = meaningStub({ embedFails: true })
+  render(<AskCaseFile firId="f1" />)
+  await ask('When was the wire made?')
+  await screen.findByText(/The wire was made/)
+  fireEvent.click(screen.getByRole('button', { name: 'Note in case diary' }))
+  const box = screen.getByLabelText(/Diary entry/) as HTMLTextAreaElement
+  expect(box.value).toContain('Question: When was the wire made?')
+  expect(box.value).toContain('Answer (AI draft, checked against the sources): The wire was made on 21 August [S1].')
+  expect(box.value).toContain('Where this comes from: S1 FIR complaint')
+  expect(log.some((c) => c.url === '/api/firs/f1/diary')).toBe(false)
+  fireEvent.change(box, { target: { value: 'Checked: the wire was on 21 August.' } })
+  fireEvent.click(screen.getByRole('button', { name: "Save on today's diary page" }))
+  expect(await screen.findByText("Saved on today's page of the case diary.")).toBeTruthy()
+  expect(log.find((c) => c.url === '/api/firs/f1/diary')).toMatchObject({ method: 'POST', body: { text: 'Checked: the wire was on 21 August.' } })
+})
+
+test('a closed diary page is said so and the note can be cancelled; no note button on an answer without a source', async () => {
+  meaningStub({ embedFails: true, saveFails: true })
+  render(<AskCaseFile firId="f1" />)
+  await ask('When was the wire made?')
+  await screen.findByText(/The wire was made/)
+  fireEvent.click(screen.getByRole('button', { name: 'Note in case diary' }))
+  fireEvent.click(screen.getByRole('button', { name: "Save on today's diary page" }))
+  expect((await screen.findByRole('alert')).textContent).toContain('409')
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(screen.getByRole('button', { name: 'Note in case diary' })).toBeTruthy()
+  cleanup()
+  const calls = stub({ generate: draft('NOT IN THE FILE') })
+  render(<AskCaseFile firId="f1" />)
+  await ask('When was the transfer?')
+  await screen.findByText('NOT IN THE FILE')
+  expect(screen.queryByRole('button', { name: 'Note in case diary' })).toBeNull()
+  expect(calls).toHaveLength(1)
 })
