@@ -61,13 +61,12 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: priority 5, audio transcription (session 109, started 17 Nov)
 **SUMIT'S PRIORITY (16 Nov 2026; replaces "the first item under Next"): AI features and RAG first, then the rest of the Next list.** Build the first unfinished item of this order, keeping every rule of CLAUDE.md and the five AI rules of docs/AI-AND-SCREENS-PLAN.md section 2:
 1. Item 17, Ask the case file as real RAG: embeddings behind the gateway on the state's own server, vectors in PostgreSQL, hybrid with BM25 (DONE in session 106, see its entry and "Decisions taken for Sumit"); open a source on click, "note in case diary", questions in Hindi and Marathi, the answers scored on the evaluation set (DONE, session 106). Left of item 17: bank replies as searchable text (waits for A4's left-for part, decision 3), the real model's download and tuning (deployment step), a monthly run of the set with a real model.
 2. A8: the AI explanation in the Old law to new law finder (board 18) (already DONE in session 98; check only that it is on the board's screen).
 3. DONE (session 107, counts only; see its entry): the AI's drafts and decisions in the Audit log (gateway read routes, board 20), and the "AI use in this case" counts (A9). Left: the list of events with who and which case on the Audit screen (needs the station's case list from the core), the export for one case, readable labels.
 4. DONE (session 107, draft word lists): Hindi and Marathi guards for the guilt, truth, prediction, opinion and rating refusals (A5, A6, A9). Left: a Marathi-speaking prosecutor's review of the words; other Indian scripts still rely on the model's safety text.
-5. The rest of A3: "differences to clarify" (DONE, session 108); left: audio transcription with an on-premises speech model (same rule as embeddings: an offline stand-in in tests).
+5. DONE: the rest of A3: "differences to clarify" (session 108) and audio transcription with an on-premises speech model with an offline stand-in (session 109). Left: the real model's download and word-error check (`docs/DEPLOY-TRANSCRIPTION.md`), keeping which statements came from a recording.
 6. The rest of A6: drafting from the evidence register, bank replies, 63(4) certificates, seizure memos and expert reports, and one paragraph per charge ingredient linked to the readiness check.
 7. The "Left for" parts of A1, A2, A4 and A7 in item 14.
 8. Then the rest of the Next list in its order: item 3 rest, item 15 rest (POCSO), item 16 (duty roster), item 18 (court-format papers), then the real-time screens.
@@ -113,6 +112,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 109 (17 Nov, scheduled run, Sumit away): priority 5, second half: recorded statements written down by an on-premises speech model (gateway `/v1/transcribe`, Statements part, no migration).
 Done in session 108 (17 Nov, scheduled run, Sumit away): priority 5, first half: AI "differences to clarify" on the Statements part (A3, no migration).
 Done in session 107 (17 Nov, 02:05 IST scheduled run, last of the night): priority 3 (AI use counts: gateway `GET /v1/ai-use` and `/v1/ai-use/summary`, the Audit log screen and the diary part) and priority 4 (Hindi and Marathi refusal guards), no migration.
 Done in session 106 (16 Nov, scheduled run, Sumit away): item 17, hybrid RAG for Ask the case file: embedding route in the gateway, vectors in PostgreSQL (V58), BM25 + vectors, source on click, note in case diary.
@@ -178,6 +178,29 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    **Session 106 (hybrid RAG, V58):** gateway `POST /v1/embed` (local embedder only, `ai_embed` audit rows, 120 calls per officer per 10 minutes; `EMBED_BACKEND=fake` offline stand-in; the real model is a deployment step), vectors kept in PostgreSQL per case, model and text hash (`case_passage_vector`, `CaseVectorController`), BM25 and cosine fused by reciprocal rank in `askFile.ts`, a source opens as its whole passage with the piece marked, "Note in case diary" (editable, saved on the officer's click), Hindi and Marathi questions in the evaluation set, the answers scored on the set with a stand-in provider (the gateway's fake provider only echoes the prompt). Left: bank replies as text (decision 3), the real model (download, `EMBED_MIN_SIMILARITY` tuning, scoring with a real provider), Hindi and Marathi refusal guards beyond the draft word list (priority 4).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 17 Nov 2026, session 109 (scheduled run, Sumit away)
+Started from `setup/seed` (session 108) in a new container (Postgres started, role `caseapp` and both databases made, gateway requirements, `npm ci`). Baseline without the database suites: all PASS; the full run at the end is below. Priorities 1 to 4 and the first half of 5 were done, so this session built priority 5's second half.
+
+**Priority 5, A3: recorded statements written down (no migration):**
+- Gateway: `POST /v1/transcribe?case_ref=&language=` (body = the recording, at most 15 MB, read in pieces), `app/transcriber.py`: `local` = faster-whisper (deployment step, `docs/DEPLOY-TRANSCRIPTION.md`; `TRANSCRIBE_MODEL`, `TRANSCRIBE_OFFLINE`), `fake` = offline stand-in (a recording whose bytes are text "says" that text). Same sign-in and case-team check as a draft, never a cloud provider (so also on a protected case: nothing leaves the server), 12 recordings per officer in 10 minutes, every refusal logged. The log (`ai_transcribe`, feature `statement_transcribe`) holds the recording's SHA-256, size, model and the length of the text, never the text; the officer's decision (`accepted`/`edited`/`rejected`) is logged through the existing `/v1/decisions`; the counts on the AI-use screens include it ("Write down a recording"). It does not use up the 20-drafts limit.
+- Web: on the Statements part, when "How it was recorded" is audio, a file field "Write down a recording (AI draft)"; the draft fills the statement box with a note to listen again and correct; saving logs accepted or edited, "Discard the draft" logs rejected. The saved statement is the officer's text, kept as said. 5 new texts in all 11 languages (machine drafts). `aiUpload` in `api.ts` sends the file as it is; the contract test (`test_web_gateway_contract.py`) now also reads async routes and checks `aiUpload` reaches a POST route.
+- `deploy/nginx.conf`: the gateway's read timeout is 300 s (was 90 s) for long recordings.
+- Tests: `tests/test_transcribe.py` (16, gateway), 2 web tests in `Statements.test.tsx`, contract test, `tests/e2e/test_statement_transcribe.py` (real browser, real core and gateway with the stand-in; the e2e gateway now runs with `TRANSCRIBE_BACKEND=fake`). `CLAUDE.md` layout line added.
+
+`scripts/test-all.sh` at the end: all 8 suites PASS (the e2e suite was re-run after fixing a timing check in the new e2e test: 43 passed, 3 skipped). Gateway coverage 99%, gates unchanged.
+
+Skipped / not checked / risks:
+- **The real speech model has not been run** (no model download here). Hindi and Marathi accuracy is unknown until `docs/DEPLOY-TRANSCRIPTION.md` step 5 (word error rate on fictional recordings) is done. A transcript is only a draft the officer must listen to and correct.
+- The saved statement does not say it started as an AI draft (the statement table is frozen by V40; a new column needs a migration and trigger changes). The gateway's log and the AI-use counts do show it.
+- No audio is stored anywhere in the app; the recording stays where the station keeps it. No in-browser recording (microphone) yet, only a file; no axe test or board-6 screenshot of the new field.
+- Not built this session: "bank replies as searchable text" (waits for A4's left-for part), priorities 6 to 8.
+
+Next: priority 6 (A6: drafting from the evidence register, bank replies, 63(4) certificates, seizure memos and expert reports; one paragraph per charge ingredient linked to the readiness check), then 7 and 8 as listed at the top of Next.
+
+Questions for Sumit:
+1. Should a statement saved from a recording be marked "from a recording, AI draft corrected by the officer" on the statement itself (needs a migration on the frozen statement table), or is the gateway's log enough?
+2. Which speech model size does the pilot server have the CPU for (small is the default; medium is better for Marathi)? Until you say, `small` stays.
 
 ## 17 Nov 2026, session 108 (scheduled run, Sumit away)
 Started from `setup/seed` (session 107) in a new container (Postgres started, `caseapp` role and both databases made, gateway requirements, `npm ci`). Priorities 1 to 4 were already done by sessions 98, 106 and 107, so this session took priority 5, first half.
