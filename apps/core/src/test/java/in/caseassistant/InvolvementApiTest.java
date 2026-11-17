@@ -102,6 +102,14 @@ class InvolvementApiTest {
     }
 
     @Test
+    void aSuspectIsCheckedTooAndAtMostAHundredRecordsAreShownSayingSo() throws Exception {
+        UUID suspect = person(fir, "suspect", "S1", "Fictional Suspect", null, "9000044444");
+        for (int i = 0; i < 101; i++) person(fir(station, null), "accused", "A1", "Other Fictional", null, "9000044444");
+        mvc.perform(get("/api/firs/" + fir + "/people/" + suspect + "/involvement").header("Authorization", TestAuth.bearer(tokens, io)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.records.length()").value(100)).andExpect(jsonPath("$.truncated").value(true));
+    }
+
+    @Test
     void onlyTheCaseTeamChecksAndOnlyAnAccusedOrSuspect() throws Exception {
         UUID victim = person(fir, "victim", "V1", "Fictional Victim", null, "9000033333");
         mvc.perform(get("/api/firs/" + fir + "/people/" + victim + "/involvement").header("Authorization", TestAuth.bearer(tokens, io)))
