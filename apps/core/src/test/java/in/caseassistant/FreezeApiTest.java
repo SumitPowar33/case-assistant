@@ -98,6 +98,25 @@ class FreezeApiTest {
     }
 
     @Test
+    void aStepIsNotInTheFutureNorOnACancelledNoticeAndARepeatedReleaseIsRefused() throws Exception {
+        UUID n = freezeNotice(true);
+        postJson("/freezes/" + n + "/steps", Map.of("kind", "reported", "onDate", today.plusDays(1).toString(), "reference", "Fictional JMFC Court"))
+                .andExpect(status().isBadRequest());
+        postJson("/freezes/" + n + "/steps", Map.of("kind", "reported", "onDate", today.toString(), "reference", "Fictional JMFC Court", "reason", " "))
+                .andExpect(status().isCreated());
+        postJson("/freezes/" + n + "/steps", Map.of("kind", "released", "onDate", today.toString(), "reference", "Order 12/2026", "reason", "   "))
+                .andExpect(status().isBadRequest());
+        postJson("/freezes/" + n + "/steps", Map.of("kind", "released", "onDate", today.toString(), "reference", "Order 12/2026", "reason", "Fictional court order to release"))
+                .andExpect(status().isCreated());
+        postJson("/freezes/" + n + "/steps", Map.of("kind", "released", "onDate", today.toString(), "reference", "Order 12/2026", "reason", "Fictional court order to release"))
+                .andExpect(status().isBadRequest()).andExpect(status().reason("The release is already recorded."));
+        UUID gone = freezeNotice(true);
+        db.sql("update notice set status = 'cancelled' where id = ?").param(gone).update();
+        postJson("/freezes/" + gone + "/steps", Map.of("kind", "reported", "onDate", today.toString(), "reference", "Fictional JMFC Court"))
+                .andExpect(status().isBadRequest()).andExpect(status().reason("Sign and send the freeze notice to the bank first."));
+    }
+
+    @Test
     void aStationMayAskForTheReportOnTheDayTheNoticeWasIssued() throws Exception {
         db.sql("insert into policy_setting (level, state_code, station_id, key, value, reason, set_by) values ('station','IN',?,'freeze_report_days','0','Fictional station order',?)")
                 .params(station, io).update();
