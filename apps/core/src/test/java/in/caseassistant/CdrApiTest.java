@@ -89,6 +89,29 @@ class CdrApiTest {
     }
 
     @Test
+    void aFileWithoutRecordsOrColumnsIsRefusedAndEachUnreadableLineSaysWhy() throws Exception {
+        String head = "Target No,B Party No,Date,Time,Duration,Call Type\n";
+        String[][] refused = {
+                {head, "no records"},
+                {"Target No,B Party No,Duration,Call Type\n9000011111,9000022222,30,MOC\n", "not found: date"},
+                {"Target No,Date,Time,Duration,Call Type\n9000011111,03/09/2026,21:10:00,30,MOC\n", "not found: other"},
+                {head + "9000011111,,03/09/2026,21:10:00,30,MOC\n", "No record of the file could be read. Line 2: no other number"}};
+        int n = 0;
+        for (String[] f : refused)
+            load(item("R" + ++n, "electronic", f[0]), "9000011111", f[0], bearer).andExpect(status().isBadRequest())
+                    .andExpect(status().reason(Matchers.containsString(f[1])));
+        StringBuilder many = new StringBuilder(head).append("9000011111,9000022222,03/09/2026,21:10:00,30,MOC\n,,,,,\n")
+                .append("9000011111,9000022222,03/09/2026,21:10:00,30,FAX\n").append("9000011111,9000022222,03/09/2026,21:10:00,long,MOC\n");
+        for (int i = 0; i < 20; i++) many.append("9000011111,,03/09/2026,21:10:00,30,MOC\n");
+        String file = many.toString();
+        load(item("M1", "electronic", file), "9000011111", file, bearer).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.lines").value(1)).andExpect(jsonPath("$.skipped").value(22))
+                .andExpect(jsonPath("$.problems.length()").value(20))
+                .andExpect(jsonPath("$.problems[0]").value("Line 3: unknown call type “FAX”"))
+                .andExpect(jsonPath("$.problems[1]").value("Line 4: duration not readable"));
+    }
+
+    @Test
     void onlyTheExactSeizedFileOfAnElectronicItemOfThisCaseByTheCaseTeam() throws Exception {
         UUID e1 = item("E1", "electronic", ONE);
         load(e1, "9000011111", ONE + "9000011111,9000077777,04/09/2026,11:00:00,5,MOC,,\n", bearer).andExpect(status().isBadRequest())
