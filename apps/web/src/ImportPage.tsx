@@ -109,9 +109,12 @@ export default function ImportPage() {
   const importable = batch ? batch.rows_ok + batch.rows_warning : 0
   const things = (b: Batch) => t.code('import.things', b.entity)
   return (
+    <>
+    <div>
+      <h1 id="import-h">{t('import.title')}</h1>
+      <p className="lede">{t('import.intro')}</p>
+    </div>
     <section aria-labelledby="import-h">
-      <h2 id="import-h">{t('import.title')}</h2>
-      <p>{t('import.intro')}</p>
       {error && <p role="alert">{error}</p>}
       {done && <p role="status">{done}</p>}
 
@@ -185,5 +188,6 @@ export default function ImportPage() {
         </tbody></table>
       )}
     </section>
+    </>
   )
 }

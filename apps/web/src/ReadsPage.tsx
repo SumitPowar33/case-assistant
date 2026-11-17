@@ -24,7 +24,7 @@ export default function ReadsPage() {
   return (
     <>
       <h1>{t('reads.title')}</h1>
-      <p>{t('reads.intro')}</p>
+      <p className="lede">{t('reads.intro')}</p>
       <label>{t('common.policeStation')} <select value={station ?? ''} onChange={(e) => setChosen(e.target.value)}>
         {stations.data.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.district})</option>)}
       </select></label>

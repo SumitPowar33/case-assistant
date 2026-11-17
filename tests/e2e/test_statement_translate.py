@@ -5,6 +5,7 @@ through the API, as the screen would). The IO asks for an English translation: t
 that differs from the original. The screen lists the number of the original the draft lacks; the IO corrects it and saves
 the translation as checked (the decision reaches the gateway's log). After a reload the translation is read back from the
 core under the original, which is unchanged, and no AI button is left. Fictional data only."""
+from conftest import no_tour
 import sys
 from pathlib import Path
 
@@ -30,7 +31,7 @@ def test_an_officer_checks_and_saves_the_ai_translation_of_a_statement(admin_web
     sent = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = no_tour(browser.new_page(viewport={"width": 1280, "height": 900}))
         page.set_default_timeout(15000)
         page.on("request", lambda r: sent.append(r.url.rsplit("/", 1)[-1]) if "/ai/v1/" in r.url else None)
         page.goto(web)

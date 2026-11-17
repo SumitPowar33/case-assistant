@@ -38,9 +38,12 @@ export function FrontDeskPage() {
   if (error) return <p role="alert">{error}</p>
   if (!data || !kinds) return <p>{t('common.loading')}</p>
   return (
+    <>
+    <div>
+      <h1 id="desk-h">{t('nav.frontDesk')}</h1>
+      <p className="lede">{t('desk.intro')}</p>
+    </div>
     <section aria-labelledby="desk-h">
-      <h2 id="desk-h">{t('nav.frontDesk')}</h2>
-      <p>{t('desk.intro')}</p>
       <Form title={t('desk.take')} onSaved={(r) => { setWords(''); setVersion(version + 1); window.location.hash = `#/complaints/${(r as { id: string }).id}` }}
         submit={(f) => {
           if (!words.trim()) throw new Error(t('desk.needWords'))
@@ -69,6 +72,7 @@ export function FrontDeskPage() {
         ))}</tbody>
       </table>}
     </section>
+    </>
   )
 }
 

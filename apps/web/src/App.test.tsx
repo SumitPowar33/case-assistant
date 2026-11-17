@@ -350,3 +350,32 @@ test('the Acting charge link shows only to a holder of the acting.grant permissi
   await screen.findByRole('link', { name: '7/2026' })
   expect(screen.queryByRole('link', { name: 'Acting charge' })).toBeNull()
 })
+
+test('the tour starts by itself once per user on this browser; the top bar starts it again and opens the help chat', async () => {
+  mockApi()
+  const kept = new Map<string, string>()
+  vi.stubGlobal('localStorage', { getItem: (k: string) => kept.get(k) ?? null, setItem: (k: string, v: string) => { kept.set(k, v) } })
+  const { unmount } = render(<App />)
+  expect(await screen.findByRole('dialog', { name: 'Welcome to Case Assistant' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'End the tour' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  unmount()
+  render(<App />)
+  await screen.findByRole('link', { name: '7/2026' })
+  expect(screen.queryByRole('dialog')).toBeNull()   // seen: not again by itself
+  fireEvent.click(screen.getByRole('button', { name: 'Help' }))
+  expect(screen.getByRole('dialog', { name: 'Ask how to use the app' })).toBeTruthy()
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Take the tour' }))
+  expect(screen.getByRole('dialog', { name: 'Welcome to Case Assistant' })).toBeTruthy()
+})
+
+test('without browser storage the tour is only offered, never forced', async () => {
+  mockApi()
+  vi.stubGlobal('localStorage', { getItem: () => { throw new Error('blocked') }, setItem: () => { throw new Error('blocked') } })
+  render(<App />)
+  await screen.findByRole('link', { name: '7/2026' })
+  expect(screen.queryByRole('dialog')).toBeNull()
+  fireEvent.click(screen.getAllByRole('button', { name: 'Take the tour' })[0])
+  fireEvent.click(screen.getByRole('button', { name: 'End the tour' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+})

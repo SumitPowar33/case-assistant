@@ -8,7 +8,7 @@ import sys
 
 from playwright.sync_api import expect, sync_playwright
 
-from conftest import ROOT
+from conftest import ROOT, no_tour
 from test_admin_scripts import admin_web  # noqa: F401  (the fixture: core with the demo case, gateway, web app)
 from test_answer_fields_live import missing_fields, url_pattern
 from test_load_data import sign_in
@@ -30,7 +30,7 @@ def test_every_field_a_screen_expects_is_in_the_gateways_real_answer(admin_web):
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = no_tour(browser.new_page(viewport={"width": 1280, "height": 900}))
         page.set_default_timeout(15000)
         page.on("response", keep)
         page.goto(web)

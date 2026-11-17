@@ -4,6 +4,7 @@ IO pastes the bank's reply and asks the AI: the request goes through the real ga
 echoes the prompt, so the test puts a model's answer in its draft, one item with words that are in the reply and one with words
 that are not. Only the first is pre-ticked. The IO ticks the second by hand and saves; the reply is recorded with both items,
 the notice becomes complete, and the decision reaches the gateway's log. Fictional data only."""
+from conftest import no_tour
 import json
 import sys
 from pathlib import Path
@@ -30,7 +31,7 @@ def test_an_officer_reads_a_banks_reply_with_the_ai_and_decides_each_item(admin_
     sent = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = no_tour(browser.new_page(viewport={"width": 1280, "height": 900}))
         page.set_default_timeout(15000)
         page.on("request", lambda r: sent.append(r.url.rsplit("/", 1)[-1]) if "/ai/v1/" in r.url else None)
         page.goto(web)
