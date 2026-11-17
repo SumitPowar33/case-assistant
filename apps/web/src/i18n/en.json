@@ -1323,5 +1323,10 @@
  "aiuse.colFailed": "Failed",
  "aiuse.colEmbedded": "Meaning searches",
  "aiuse.stateTitle": "AI use in the state, last {days} days",
- "aiuse.stateNone": "The AI has not been used in the last {days} days."
+ "aiuse.stateNone": "The AI has not been used in the last {days} days.",
+ "transcribe.label": "Write down a recording (AI draft)",
+ "transcribe.sends": "The recording goes only to the speech model on this state's own server; nothing is sent to a cloud service. Listen to it again and correct the text before you save.",
+ "transcribe.working": "Writing down…",
+ "transcribe.done": "A draft was written down from the recording. Listen again and correct it before you save.",
+ "transcribe.discard": "Discard the draft"
 }

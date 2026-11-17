@@ -56,8 +56,9 @@ export async function login(username: string, password: string) {
 
 async function call(url: string, init: { method?: string; body?: unknown } = {}) {
   const headers: Record<string, string> = session ? { authorization: `Bearer ${session.token}` } : {}
-  if (init.body !== undefined) headers['content-type'] = 'application/json'
-  const res = await fetch(url, { method: init.method ?? 'GET', headers, body: init.body === undefined ? undefined : JSON.stringify(init.body) })
+  const raw = init.body instanceof Blob   // a recording goes as it is, not as JSON
+  if (init.body !== undefined) headers['content-type'] = raw ? 'application/octet-stream' : 'application/json'
+  const res = await fetch(url, { method: init.method ?? 'GET', headers, body: init.body === undefined ? undefined : raw ? (init.body as Blob) : JSON.stringify(init.body) })
   if (res.status === 401) {
     setSession(null)
     throw failure('Your sign-in has ended. Please sign in again.')
@@ -90,7 +91,7 @@ export async function send<T>(path: string, method: 'POST' | 'PUT', body: unknow
 }
 
 // The AI gateway (services/ai-gateway) is served under /ai.
-export async function ai<T>(path: string, init?: { method: string; body: unknown }): Promise<T> {
+async function gateway<T>(path: string, init: { method: string; body: unknown } | undefined): Promise<T> {
   const res = await call(`/ai${path}`, init)
   if (!res.ok) {
     // the gateway's own reason, e.g. "ANTHROPIC_API_KEY is not set" or "only the state admin can do this"
@@ -98,6 +99,15 @@ export async function ai<T>(path: string, init?: { method: string; body: unknown
     throw new Error(`The AI gateway answered ${res.status}${typeof detail === 'string' ? `: ${detail}` : ` for ${path}`}`)
   }
   return res.json() as Promise<T>
+}
+
+export async function ai<T>(path: string, init?: { method: string; body: unknown }): Promise<T> {
+  return gateway<T>(path, init)
+}
+
+/** A recording sent to the gateway as it is (POST, not JSON); the answers and errors are those of {@link ai}. */
+export async function aiUpload<T>(path: string, file: Blob): Promise<T> {
+  return gateway<T>(path, { method: 'POST', body: file })
 }
 
 // Changing the password ends every older token (here and in other tabs); the new token replaces this tab's one.

@@ -203,3 +203,63 @@ test('differences to clarify are offered with the FIR text and a masked person\'
   await screen.findByText('Witness tracker')
   expect(screen.queryByRole('button', { name: 'Compare the statements with the FIR using AI' })).toBeNull()
 })
+
+test('a recording is written down as a draft, corrected, saved, and the decision is logged; a discarded draft is logged as rejected', async () => {
+  const calls: { url: string; method: string; body?: unknown }[] = []
+  let transcribed = 0
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    const body = init?.body instanceof Blob ? 'RECORDING' : init?.body ? JSON.parse(init.body as string) : undefined
+    calls.push({ url, method: init?.method ?? 'GET', body })
+    if (url.startsWith('/ai/v1/transcribe')) return { ok: true, status: 200, json: async () => ({ request_id: `r${++transcribed}`, text: 'I was at home at nine.' }) }
+    if (init?.method === 'POST') return { ok: true, status: 201, json: async () => ({}) }
+    return { ok: true, status: 200, json: async () => data }
+  }))
+  render(<Statements firId="f1" />)
+  await screen.findByText('बाबा व्हिडिओ कॉलवर होते.')
+  expect(screen.queryByLabelText(/Write down a recording/)).toBeNull()   // only for a recording
+  fireEvent.change(screen.getByLabelText('How it was recorded'), { target: { value: 'audio' } })
+  expect(screen.getByText(/nothing is sent to a cloud service/)).toBeTruthy()
+  fireEvent.change(screen.getByLabelText(/Write down a recording/), { target: { files: [new File(['x'], 'a.m4a', { type: 'audio/mp4' })] } })
+  await screen.findByText(/A draft was written down/)
+  expect(calls.find((c) => c.url.startsWith('/ai/v1/transcribe'))).toMatchObject({ url: '/ai/v1/transcribe?case_ref=f1&language=en', method: 'POST', body: 'RECORDING' })
+  const field = screen.getByLabelText('The statement, in the words and language spoken') as HTMLTextAreaElement
+  expect(field.value).toBe('I was at home at nine.')
+  fireEvent.change(field, { target: { value: 'I was at home at nine in the evening.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save statement' }))
+  await vi.waitFor(() => expect(calls.some((c) => c.url === '/ai/v1/decisions')).toBe(true))
+  expect(calls.find((c) => c.url === '/api/firs/f1/statements' && c.method === 'POST')).toMatchObject({ body: { medium: 'audio', text: 'I was at home at nine in the evening.' } })
+  expect(calls.find((c) => c.url === '/ai/v1/decisions')).toMatchObject({ body: { request_id: 'r1', decision: 'edited', feature: 'statement_transcribe', case_ref: 'f1' } })
+  // a second recording, discarded
+  fireEvent.change(screen.getByLabelText(/Write down a recording/), { target: { files: [new File(['y'], 'b.m4a')] } })
+  fireEvent.click(await screen.findByRole('button', { name: 'Discard the draft' }))
+  await vi.waitFor(() => expect(calls.filter((c) => c.url === '/ai/v1/decisions')).toHaveLength(2))
+  expect(calls.filter((c) => c.url === '/ai/v1/decisions')[1]).toMatchObject({ body: { request_id: 'r2', decision: 'rejected' } })
+  expect((screen.getByLabelText('The statement, in the words and language spoken') as HTMLTextAreaElement).value).toBe('')
+})
+
+test('a draft saved as it was written is accepted; no file, or a refusal by the speech model, changes nothing and shows the reason', async () => {
+  const calls: { url: string; body?: unknown }[] = []
+  let fail = false
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    calls.push({ url, body: init?.body instanceof Blob || !init?.body ? undefined : JSON.parse(init.body as string) })
+    if (url.startsWith('/ai/v1/transcribe')) return fail
+      ? { ok: false, status: 503, json: async () => ({ detail: 'the speech model small is not installed on this server' }) }
+      : { ok: true, status: 200, json: async () => ({ request_id: 'r9', text: 'Spoken words.' }) }
+    if (init?.method === 'POST') return { ok: true, status: 201, json: async () => ({}) }
+    return { ok: true, status: 200, json: async () => data }
+  }))
+  render(<Statements firId="f1" />)
+  await screen.findByText('बाबा व्हिडिओ कॉलवर होते.')
+  fireEvent.change(screen.getByLabelText('How it was recorded'), { target: { value: 'audio' } })
+  fireEvent.change(screen.getByLabelText(/Write down a recording/), { target: { files: [] } })
+  expect(calls.some((c) => c.url.startsWith('/ai/v1/transcribe'))).toBe(false)
+  fail = true
+  fireEvent.change(screen.getByLabelText(/Write down a recording/), { target: { files: [new File(['x'], 'a.m4a')] } })
+  expect((await screen.findByRole('alert')).textContent).toContain('not installed on this server')
+  fail = false
+  fireEvent.change(screen.getByLabelText(/Write down a recording/), { target: { files: [new File(['x'], 'a.m4a')] } })
+  await screen.findByText(/A draft was written down/)
+  fireEvent.click(screen.getByRole('button', { name: 'Save statement' }))
+  await vi.waitFor(() => expect(calls.some((c) => c.url === '/ai/v1/decisions')).toBe(true))
+  expect(calls.find((c) => c.url === '/ai/v1/decisions')?.body).toMatchObject({ request_id: 'r9', decision: 'accepted' })
+})

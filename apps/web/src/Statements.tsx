@@ -1,6 +1,6 @@
 import { useContext, useState } from 'react'
 import TypingField from './TypingField'
-import { ai, send } from './api'
+import { ai, aiUpload, send } from './api'
 import { fmt } from './formats'
 import { useLoad } from './useLoad'
 import { useT } from './i18n'
@@ -123,15 +123,35 @@ export default function Statements({ firId, firText = '', victimProtected = fals
   const [medium, setMedium] = useState('written')
   const [text, setText] = useState('')
   const [error, setError] = useState('')
+  const [heard, setHeard] = useState<{ id: string; text: string } | null>(null)   // the speech model's draft of a recording
+  const [hearing, setHearing] = useState(false)
   const { data, error: loadError } = useLoad<Data>(`/firs/${firId}/statements`, version)
   if (loadError) return <section><h2>{t('statement.part')}</h2><p role="alert">{loadError}</p></section>
   if (!data) return <section><h2>{t('statement.part')}</h2><p>{t('common.loading')}</p></section>
   const witnesses = Array.isArray(data.witnesses) ? data.witnesses : [], statements = Array.isArray(data.statements) ? data.statements : []
+  /** Logs what the officer did with the speech model's draft; the statement itself is already saved or cleared. */
+  async function decide(decision: string, note: string) {
+    if (!heard) return
+    await ai('/v1/decisions', { method: 'POST', body: { request_id: heard.id, decision, feature: 'statement_transcribe', case_ref: firId, note } }).catch(() => undefined)
+    setHeard(null)
+  }
+  async function hear(file: File | undefined) {
+    if (!file) return
+    setError('')
+    setHearing(true)
+    try {
+      const out = await aiUpload<{ request_id: string; text: string }>(`/v1/transcribe?case_ref=${encodeURIComponent(firId)}&language=${encodeURIComponent(lang)}`, file)
+      setHeard({ id: out.request_id, text: out.text })
+      setText(out.text)
+    } catch (err) { setError((err as Error).message) }
+    setHearing(false)
+  }
   async function save(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     try {
       await send(`/firs/${firId}/statements`, 'POST', { personId: person || witnesses[0].person_id, language: lang, medium, text })
+      await decide(text.trim() === heard?.text.trim() ? 'accepted' : 'edited', 'recording written down and saved')
       setText('')
       setVersion((v) => v + 1)
     } catch (err) { setError((err as Error).message) }
@@ -149,6 +169,11 @@ export default function Statements({ firId, firText = '', victimProtected = fals
           <label>{t('statement.medium')} <select value={medium} onChange={(e) => setMedium(e.target.value)}>
             {['written', 'audio', 'video'].map((m) => <option key={m} value={m}>{t.code('statementMedium', m)}</option>)}
           </select></label>
+          {medium === 'audio' && <div>
+            <label>{t('transcribe.label')} <input type="file" accept="audio/*" disabled={hearing} onChange={(e) => void hear(e.target.files?.[0])} /></label>
+            <p className="note"><small>{hearing ? t('transcribe.working') : heard ? t('transcribe.done') : t('transcribe.sends')}</small></p>
+            {heard && <button type="button" className="btn" onClick={() => { setText(''); void decide('rejected', 'draft of the recording discarded') }}>{t('transcribe.discard')}</button>}
+          </div>}
           <TypingField label={t('statement.text')} value={text} onChange={setText} multiline speech />
           {error && <p role="alert">{error}</p>}
           <button type="submit">{t('statement.save')}</button>
