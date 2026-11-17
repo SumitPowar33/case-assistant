@@ -797,6 +797,15 @@ def test_the_feature_list_the_settings_of_an_unknown_feature_and_a_model_switch_
     assert ok.status_code == 200 and ok.json()["model"] == "fictional-model-2"
 
 
+def test_settings_rows_of_a_feature_this_build_does_not_have_are_skipped():
+    # the settings file outlives a version change: a newer gateway may have written a feature this one does not know
+    store = Store(":memory:")
+    store.db.execute("INSERT INTO feature_settings (feature, provider, model, officer_may_switch) VALUES ('from_another_version', 'fake', 'fake-1', 0)")
+    store.db.execute("INSERT INTO state_settings (state, feature, provider, model, officer_may_switch) VALUES ('MH', 'from_another_version', 'fake', 'fake-1', 0)")
+    got = store.get_settings("MH")
+    assert "from_another_version" not in got and "case_qa" in got
+
+
 # weekly review 14 Nov 2026: the gateway asks the core app about the case before any case text goes to a model
 @pytest.mark.parametrize("feature", sorted(gateway_main.NOT_ON_PROTECTED))
 def test_a_protected_case_s_text_is_not_sent_for_the_features_that_carry_it(setup, feature):
