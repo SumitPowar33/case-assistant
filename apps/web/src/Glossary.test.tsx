@@ -27,7 +27,7 @@ const ok = (body: unknown) => async () => ({ ok: true, status: 200, json: async 
 test('the glossary shows each term in the chosen language, says it is a draft, and adds a word to the text', async () => {
   page(ok(glossary))
   expect(await screen.findByRole('heading', { name: 'Legal glossary' })).toBeTruthy()
-  expect(screen.getByText(/^Draft: these terms have not been checked/)).toBeTruthy()
+  expect(await screen.findByText(/^Draft: these terms have not been checked/)).toBeTruthy()
   // neither the typing nor the screen language is an Indian one: Hindi first
   expect((screen.getByLabelText('Language') as HTMLSelectElement).value).toBe('hi')
   expect(screen.getByText('रिमांड').getAttribute('lang')).toBe('hi')
