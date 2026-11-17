@@ -93,10 +93,12 @@ class Store:
     def get_settings(self, state: str | None = None) -> dict:
         """The installation's defaults, with the state's own choices on top (a state admin sets only their state's)."""
         out = {f: {"label": FEATURES[f], "provider": p, "model": m, "officer_may_switch": bool(sw)}
-               for f, p, m, sw in self.db.execute("SELECT feature, provider, model, officer_may_switch FROM feature_settings")}
+               for f, p, m, sw in self.db.execute("SELECT feature, provider, model, officer_may_switch FROM feature_settings") if f in FEATURES}
         if state:
+            # a row of a feature this build does not have (written by another version of the gateway) is skipped, not an error
             for f, p, m, sw in self.db.execute("SELECT feature, provider, model, officer_may_switch FROM state_settings WHERE state=?", (state,)):
-                out[f] = {"label": FEATURES[f], "provider": p, "model": m, "officer_may_switch": bool(sw)}
+                if f in FEATURES:
+                    out[f] = {"label": FEATURES[f], "provider": p, "model": m, "officer_may_switch": bool(sw)}
         return out
 
     def set_setting(self, feature: str, provider: str, model: str | None, officer_may_switch: bool, actor: str,

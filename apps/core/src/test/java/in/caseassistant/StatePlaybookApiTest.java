@@ -62,13 +62,13 @@ class StatePlaybookApiTest {
     @Test
     void eachOfficerIsOfferedTheNationalPlaybooksAndOnlyTheirOwnStates() throws Exception {
         mvc.perform(get("/api/playbooks").header("Authorization", mhIo)).andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "mh-deposit-fraud", "mh-organised-crime", "mh-prohibition")))
+                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "murder", "mh-deposit-fraud", "mh-organised-crime", "mh-prohibition")))
                 .andExpect(jsonPath("$[?(@.id == 'mh-deposit-fraud')].module").value("MH"))
                 .andExpect(jsonPath("$[?(@.id == 'cyber-fraud')].module").value("IN"));
         mvc.perform(get("/api/playbooks").header("Authorization", inIo))
-                .andExpect(jsonPath("$[*].id").value(Matchers.contains("cyber-fraud")));
+                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "murder")));
         mvc.perform(get("/api/playbooks").header("Authorization", platform))   // no station: every module's
-                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "mh-deposit-fraud", "mh-organised-crime", "mh-prohibition")));
+                .andExpect(jsonPath("$[*].id").value(Matchers.containsInAnyOrder("cyber-fraud", "murder", "mh-deposit-fraud", "mh-organised-crime", "mh-prohibition")));
     }
 
     @Test

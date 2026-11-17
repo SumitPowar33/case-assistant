@@ -1,0 +1,69 @@
+{
+  "id": "murder",
+  "version": "1.0.0-draft",
+  "status": "draft",
+  "review_note": "Drafted from public law and court practice. Must be reviewed and approved by the Directorate of Prosecution before use.",
+  "applies_to": "Murder: death caused by an act done with the intention of causing death or an injury sufficient to cause death",
+  "charges": [
+    {
+      "id": "murder",
+      "law": "BNS 103(1)",
+      "label": "Murder",
+      "ingredients": [
+        {"id": "death", "text": "The victim died", "proof": ["inquest_report", "postmortem_report"]},
+        {"id": "cause_of_death", "text": "The death was caused by the injury the act produced (homicidal, not natural or accidental)", "proof": ["postmortem_report", "medical_officer_statement"]},
+        {"id": "act_of_accused", "text": "The act that caused the death was done by the accused", "proof": ["eyewitness_statement", "weapon_recovery_memo", "forensic_report"]},
+        {"id": "intention", "text": "The act was done with the intention of causing death, or an injury the accused knew was likely to cause death or sufficient in the ordinary course of nature to cause death (BNS 101)", "proof": ["postmortem_report", "eyewitness_statement", "weapon_recovery_memo"]}
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "forensic_scene_visit",
+      "severity": "critical",
+      "text": "For an offence punishable with seven years or more, a forensic expert visits the scene to collect evidence and the process is recorded on video (BNSS 176(3)).",
+      "source": "BNSS 176(3)"
+    },
+    {
+      "id": "inquest_on_file",
+      "severity": "high",
+      "text": "The inquest report on the body, with the witnesses who attended it, is on file and sent to the Magistrate.",
+      "source": "BNSS 194"
+    },
+    {
+      "id": "seizure_recorded",
+      "severity": "high",
+      "text": "Every search and seizure, including the recovery of the weapon, is recorded by audio-video (eSakshya) with the recording linked to the seizure memo.",
+      "source": "BNSS 105"
+    },
+    {
+      "id": "recovery_on_disclosure",
+      "severity": "high",
+      "text": "A recovery made on the accused's information needs the disclosure statement, the recovery memo and two independent witnesses; only the part of the information that leads to the fact is admissible.",
+      "source": "BSA 23"
+    },
+    {
+      "id": "chain_of_custody",
+      "severity": "high",
+      "text": "The weapon and the blood-stained articles stay sealed from seizure to the forensic lab and to court; every hand-over is in the property register.",
+      "source": "BNSS 106"
+    },
+    {
+      "id": "electronic_record_certificate",
+      "severity": "critical",
+      "text": "Every electronic record relied on (CCTV, call records, phone data) needs a BSA 63(4) certificate with Part A and Part B and a matching hash.",
+      "source": "BSA 63(4)"
+    }
+  ],
+  "tasks": [
+    {"id": "scene_secured", "stage": "scene", "text": "Secure the scene, call the forensic team and record the scene on video (BNSS 176(3))", "within_hours": 24},
+    {"id": "inquest", "stage": "scene", "text": "Hold the inquest on the body with two witnesses and send the report to the Magistrate (BNSS 194)", "within_hours": 24},
+    {"id": "postmortem", "stage": "scene", "text": "Send the body for post-mortem with the inquest report and the questions for the doctor"},
+    {"id": "seize_articles", "stage": "evidence", "text": "Seize the weapon, blood-stained articles and samples from the scene with eSakshya recording (BNSS 105)"},
+    {"id": "fsl_articles", "stage": "evidence", "text": "Send the weapon, articles and samples to the forensic lab, with the questions to answer"},
+    {"id": "statement_eyewitnesses", "stage": "statements", "text": "Record the statements of the eyewitnesses and the complainant (BNSS 180)"},
+    {"id": "statement_doctor", "stage": "statements", "text": "Record the statement of the doctor who did the post-mortem (BNSS 180)"},
+    {"id": "statement_magistrate", "stage": "statements", "text": "Ask the Magistrate to record the statement of a key eyewitness (BNSS 183) where needed"},
+    {"id": "victim_update", "stage": "after_filing", "text": "Inform the victim's family of progress within 90 days (BNSS 193(3)(ii))"}
+  ]
+}

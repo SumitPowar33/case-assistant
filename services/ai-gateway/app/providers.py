@@ -63,15 +63,17 @@ class GeminiProvider(Provider):
     name = "gemini"
     base = "https://generativelanguage.googleapis.com/v1beta/models"
 
-    def __init__(self, api_key: str | None = None, client: httpx.Client | None = None):
+    def __init__(self, api_key: str | None = None, client: httpx.Client | None = None, thinking_tokens: int | None = None):
         self.api_key = api_key if api_key is not None else os.environ.get("GEMINI_API_KEY", "")
         self.client = client or httpx.Client(timeout=60)
+        # Gemini counts its thinking in maxOutputTokens (825 of 1024 in a fact check): the installation sets the room
+        self.thinking_tokens = thinking_tokens if thinking_tokens is not None else int(os.environ.get("GEMINI_THINKING_TOKENS") or 0)
 
     def complete(self, *, model, system, prompt, max_tokens):
         if not self.api_key:
             raise ProviderError("GEMINI_API_KEY is not set")
         body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                "generationConfig": {"maxOutputTokens": max_tokens}}
+                "generationConfig": {"maxOutputTokens": max_tokens + self.thinking_tokens}}
         if system:
             body["systemInstruction"] = {"parts": [{"text": system}]}
         r = self.client.post(f"{self.base}/{model}:generateContent", json=body,
@@ -84,6 +86,8 @@ class GeminiProvider(Provider):
         text = "".join(p.get("text", "") for p in parts)
         if not text:
             raise ProviderError("Gemini returned no text")
+        if cands[0].get("finishReason") == "MAX_TOKENS":
+            raise ProviderError("Gemini's answer was cut off at the token limit; raise GEMINI_THINKING_TOKENS")
         usage = data.get("usageMetadata", {})
         return Completion(text, self.name, model, usage.get("promptTokenCount"), usage.get("candidatesTokenCount"))
 

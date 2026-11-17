@@ -433,6 +433,28 @@ def test_gemini_error_status_empty_candidates_and_system_text():
     assert seen[0]["systemInstruction"]["parts"][0]["text"] == "be brief"
 
 
+def test_gemini_thinking_room_comes_from_the_environment_and_a_cut_off_answer_is_an_error(monkeypatch):
+    """Gemini counts its thinking in maxOutputTokens: with 1024 a Gemini 3 model thought for 825 tokens and the fact
+    list came back cut off mid-JSON. The room for thinking is the installation's GEMINI_THINKING_TOKENS (none if unset),
+    on top of the answer's max_tokens, and a cut-off answer is never passed on: the error names the variable."""
+    seen = []
+
+    def ok(r):
+        seen.append(json.loads(r.content))
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "Fictional answer"}]}, "finishReason": "STOP"}]})
+    monkeypatch.setenv("GEMINI_THINKING_TOKENS", "3000")
+    call(GeminiProvider("k", mock_client(ok)))
+    monkeypatch.delenv("GEMINI_THINKING_TOKENS")
+    call(GeminiProvider("k", mock_client(ok)))
+    assert [s["generationConfig"]["maxOutputTokens"] for s in seen] == [50 + 3000, 50]
+    monkeypatch.setenv("GEMINI_THINKING_TOKENS", "lots")
+    with pytest.raises(ValueError):
+        GeminiProvider("k")
+    cut = {"candidates": [{"content": {"parts": [{"text": "[{\"kind\": \"ti"}]}, "finishReason": "MAX_TOKENS"}]}
+    with pytest.raises(ProviderError, match="cut off.*GEMINI_THINKING_TOKENS"):
+        call(GeminiProvider("k", mock_client(lambda r: httpx.Response(200, json=cut)), thinking_tokens=0))
+
+
 def test_admin_settings_follow_the_permission_from_the_core_never_the_role_name():
     store = Store(":memory:")
     put = lambda me: TestClient(create_app(store, {"fake": FakeProvider()}, SECRET, lambda tok, sub: {**me, "id": sub}),
@@ -773,6 +795,15 @@ def test_the_feature_list_the_settings_of_an_unknown_feature_and_a_model_switch_
     c.put("/v1/settings/case_qa", json={"provider": "fake", "officer_may_switch": True})
     ok = c.post("/v1/generate", json={"case_ref": CASE, "feature": "case_qa", "prompt": "x", "prompt_version": "test@1", "model": "fictional-model-2"})
     assert ok.status_code == 200 and ok.json()["model"] == "fictional-model-2"
+
+
+def test_settings_rows_of_a_feature_this_build_does_not_have_are_skipped():
+    # the settings file outlives a version change: a newer gateway may have written a feature this one does not know
+    store = Store(":memory:")
+    store.db.execute("INSERT INTO feature_settings (feature, provider, model, officer_may_switch) VALUES ('from_another_version', 'fake', 'fake-1', 0)")
+    store.db.execute("INSERT INTO state_settings (state, feature, provider, model, officer_may_switch) VALUES ('MH', 'from_another_version', 'fake', 'fake-1', 0)")
+    got = store.get_settings("MH")
+    assert "from_another_version" not in got and "case_qa" in got
 
 
 # weekly review 14 Nov 2026: the gateway asks the core app about the case before any case text goes to a model
