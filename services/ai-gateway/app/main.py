@@ -23,11 +23,12 @@ import uuid
 from collections import deque
 from datetime import datetime, timedelta, timezone
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from .auth import CaseCheck, CaseNotOpen, ChainAnchor, CoreCheck, CoreUnavailable, TokenError, verify
 from .embedder import EmbedderError, from_env as embedder_from_env
+from .transcriber import TranscriberError, from_env as transcriber_from_env
 from .providers import ClaudeProvider, FakeProvider, GeminiProvider, Provider, ProviderError
 from .store import DEFAULT_MODELS, FEATURES, PROVIDERS, Store
 
@@ -141,6 +142,11 @@ MAX_EMBED_CHARS = 2000      # a piece of the case file is at most 500 characters
 EMBEDS_PER_WINDOW = 120     # calls per officer in DRAFT_WINDOW_SECONDS (a case file of 500 pieces is 8 calls)
 
 
+MAX_AUDIO_BYTES = 15 * 1024 * 1024   # under the web server's 16 MB; about 15 minutes of a phone recording
+TRANSCRIBES_PER_WINDOW = 12          # recordings per officer in DRAFT_WINDOW_SECONDS (each one keeps the server's CPU busy)
+LANGUAGE_RE = re.compile(r"^[a-z]{2,3}$")
+
+
 class DecisionIn(BaseModel):
     request_id: str = Field(max_length=64)
     decision: str = Field(max_length=10)  # accepted | edited | rejected
@@ -156,7 +162,7 @@ class SettingIn(BaseModel):
 
 
 def create_app(store: Store | None = None, providers: dict[str, Provider] | None = None,
-               auth_secret: str | None = None, core_check=None, anchor=None, case_check=None, embedder=None) -> FastAPI:
+               auth_secret: str | None = None, core_check=None, anchor=None, case_check=None, embedder=None, transcriber=None) -> FastAPI:
     secret = auth_secret if auth_secret is not None else os.environ.get("AUTH_SECRET", "")
     if len(secret) < 32:
         raise RuntimeError("AUTH_SECRET must be set (at least 32 characters, the same value as the core app)")
@@ -173,6 +179,8 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
     drafts = DraftLimit(DRAFTS_PER_WINDOW, DRAFT_WINDOW_SECONDS)
     embeds = DraftLimit(EMBEDS_PER_WINDOW, DRAFT_WINDOW_SECONDS)
     embedder = embedder or embedder_from_env()
+    transcriber = transcriber or transcriber_from_env()
+    transcribes = DraftLimit(TRANSCRIBES_PER_WINDOW, DRAFT_WINDOW_SECONDS)
 
     def user(authorization: str = Header(default="")) -> dict:
         scheme, _, token = authorization.partition(" ")
@@ -328,6 +336,51 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
                                                   "chars": sum(len(t) for t in body.texts),
                                                   "texts_sha256": hashlib.sha256("\n".join(body.texts).encode()).hexdigest()})
         return {"model": embedder.name, "dim": len(vectors[0]), "min_similarity": embedder.min_similarity, "vectors": vectors}
+
+    @app.post("/v1/transcribe")
+    async def transcribe(request: Request, case_ref: str = "", language: str = "", u: dict = Depends(user)):
+        """The words of one recorded statement, written down by the speech model on this server (A3). The body is the recording
+        itself. Never a cloud provider, so the unit's "no cloud" policy does not stop it and a protected case's recording may
+        be written down (it stays on this server); the case check and the log are the same as for a draft. The recording and
+        the text are not kept here (the log holds the recording's hash and sizes); the answer is a draft for the officer to
+        listen to and correct."""
+        request_id = str(uuid.uuid4())
+
+        def refuse(status: int, message: str, headers: dict | None = None):
+            log(u, "ai_refused", "statement_transcribe", case_ref, {"request_id": request_id, "status": status, "reason": message})
+            raise HTTPException(status, message, headers=headers)
+
+        if not UUID_RE.match(case_ref):
+            refuse(422, "name the FIR (its id) in case_ref")
+        if language and not LANGUAGE_RE.match(language):
+            refuse(422, "language is a two or three letter code such as hi or mr")
+        declared = request.headers.get("content-length", "")
+        if declared.isdigit() and int(declared) > MAX_AUDIO_BYTES:
+            refuse(413, f"the recording is longer than {MAX_AUDIO_BYTES // (1024 * 1024)} MB")
+        wait = transcribes.wait(str(u["sub"]))
+        if wait:
+            refuse(429, f"Too many recordings in a short time. Try again in {wait} seconds.", headers={"Retry-After": str(wait)})
+        try:
+            case_check(u["token"], case_ref)
+        except CaseNotOpen:
+            refuse(404, "no case of your case team with that id")
+        except CoreUnavailable as e:
+            refuse(503, str(e))
+        audio = b""
+        async for chunk in request.stream():   # read in pieces so a body with no length cannot fill the memory
+            audio += chunk
+            if len(audio) > MAX_AUDIO_BYTES:
+                refuse(413, f"the recording is longer than {MAX_AUDIO_BYTES // (1024 * 1024)} MB")
+        if not audio:
+            refuse(422, "no recording was sent")
+        try:
+            text = transcriber.transcribe(audio, language or None)
+        except TranscriberError as e:
+            refuse(503, str(e))
+        log(u, "ai_transcribe", "statement_transcribe", case_ref, {
+            "request_id": request_id, "model": transcriber.name, "language": language or None, "audio_bytes": len(audio),
+            "audio_sha256": hashlib.sha256(audio).hexdigest(), "output_chars": len(text)})
+        return {"request_id": request_id, "model": transcriber.name, "text": text, "label": "AI draft - listen and correct before use"}
 
     @app.post("/v1/decisions")
     def decision(body: DecisionIn, u: dict = Depends(user)):

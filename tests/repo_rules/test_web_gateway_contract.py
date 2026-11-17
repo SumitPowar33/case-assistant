@@ -38,7 +38,7 @@ def gateway_routes():
     known = models(tree)
     routes = {}
     for node in ast.walk(tree):
-        if not isinstance(node, ast.FunctionDef):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
         for d in node.decorator_list:
             if isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute) and d.func.attr in METHODS and d.args:
@@ -95,6 +95,16 @@ def test_every_ai_call_reaches_a_gateway_route_and_sends_exactly_the_fields_its_
         if required - keys:
             problems.append(f"{f}: {method} {url} leaves out required {sorted(required - keys)} of {model}")
     assert not problems, "\n".join(problems)
+
+
+def test_a_recording_goes_to_a_gateway_post_route_that_reads_it_from_the_request():
+    # aiUpload(path, file) sends a recording as it is, so it has no body keys to check: the route must exist and read the stream
+    routes, _ = gateway_routes()
+    uploads = [url for path in WEB for url in re.findall(r"aiUpload\s*(?:<[^()]*?>)?\(\s*`([^`]*)`", path.read_text(encoding="utf-8"))]
+    assert uploads, "no aiUpload call found"
+    for url in uploads:
+        assert any(m == "POST" and rx.match(shape(url.split("?")[0])) for (m, rx) in routes), f"aiUpload {url} has no POST route in the AI gateway"
+    assert "request.stream()" in GATEWAY.read_text(encoding="utf-8")
 
 
 def test_the_model_reader_knows_defaults_and_required_fields():

@@ -33,10 +33,12 @@ FEATURES = {
 }
 PROVIDERS = {"claude", "gemini", "fake"}
 DEFAULT_MODELS = {"claude": "claude-sonnet-5-5", "gemini": "gemini-3.7-flash", "fake": "fake-1"}
-AUDIT_ACTIONS = {"ai_request", "ai_embed", "ai_error", "ai_refused", "accepted", "edited", "rejected", "settings_changed"}
+AUDIT_ACTIONS = {"ai_request", "ai_embed", "ai_transcribe", "ai_error", "ai_refused", "accepted", "edited", "rejected", "settings_changed"}
 # audit action -> the column of the "AI use" counts
-USE_COLUMNS = {"ai_request": "asked", "accepted": "accepted", "edited": "edited", "rejected": "rejected", "ai_refused": "refused",
+USE_COLUMNS = {"ai_request": "asked", "ai_transcribe": "asked", "accepted": "accepted", "edited": "edited", "rejected": "rejected", "ai_refused": "refused",
                "ai_error": "failed", "ai_embed": "embedded"}
+# on-premises helpers that are not providers' features (no settings row): label for the AI use counts
+LOCAL_LABELS = {"embed": "Search the case file by meaning", "statement_transcribe": "Write down a recording (speech model on this server)"}
 GENESIS = "0" * 64
 
 
@@ -144,7 +146,7 @@ class Store:
 
     def find_request(self, request_id: str) -> dict | None:
         """The audit row of a successful AI request, so decisions can only refer to real drafts."""
-        row = self.db.execute("SELECT feature, case_ref, actor FROM audit WHERE action='ai_request' "
+        row = self.db.execute("SELECT feature, case_ref, actor FROM audit WHERE action IN ('ai_request','ai_transcribe') "
                               "AND json_extract(detail, '$.request_id') = ?", (request_id,)).fetchone()
         return {"feature": row[0], "case_ref": row[1], "actor": row[2]} if row else None
 
@@ -170,17 +172,17 @@ class Store:
         drafts asked, kept (accepted), edited, rejected, refused, failed, and embedding calls. One case, or one state's."""
         counts: dict[str, dict[str, int]] = {}
         for feature, action, n in self.db.execute(
-                "SELECT feature, action, count(*) FROM audit WHERE action IN ('ai_request','ai_embed','ai_error','ai_refused','accepted','edited','rejected') "
+                "SELECT feature, action, count(*) FROM audit WHERE action IN ('ai_request','ai_transcribe','ai_embed','ai_error','ai_refused','accepted','edited','rejected') "
                 "AND (? IS NULL OR case_ref = ?) AND (? IS NULL OR state = ?) AND (? IS NULL OR at >= ?) GROUP BY feature, action",
                 (case_ref, case_ref, state, state, since, since)):
             row = counts.setdefault(feature or "", dict.fromkeys(USE_COLUMNS.values(), 0))
             row[USE_COLUMNS[action]] += n
-        return [{"feature": f, "label": FEATURES.get(f, "Search the case file by meaning"), **row} for f, row in sorted(counts.items())]
+        return [{"feature": f, "label": FEATURES.get(f) or LOCAL_LABELS.get(f, f), **row} for f, row in sorted(counts.items())]
 
     def case_events(self, case_ref: str, limit: int = 50) -> list[dict]:
         """The newest AI drafts and decisions of one case (not the embedding calls), without any text."""
-        return [{"at": at, "feature": f, "label": FEATURES.get(f, f), "action": a} for at, f, a in self.db.execute(
-            "SELECT at, feature, action FROM audit WHERE case_ref = ? AND action IN ('ai_request','ai_error','ai_refused','accepted','edited','rejected') "
+        return [{"at": at, "feature": f, "label": FEATURES.get(f) or LOCAL_LABELS.get(f, f), "action": a} for at, f, a in self.db.execute(
+            "SELECT at, feature, action FROM audit WHERE case_ref = ? AND action IN ('ai_request','ai_transcribe','ai_error','ai_refused','accepted','edited','rejected') "
             "ORDER BY seq DESC LIMIT ?", (case_ref, limit))]
 
     def head(self) -> tuple[int, str] | None:
