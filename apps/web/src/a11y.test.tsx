@@ -101,7 +101,7 @@ test.each([
   render(screenOf())
   await screen.findAllByText(new RegExp(ready.replace(/[()/.]/g, '\\$&')))
   expect(await violations()).toEqual([])
-})
+}, 20000)   // the FIR screen mounts every part: about 2 s alone, over 5 s when all test files run at once
 
 test('the AI fact check with confirmed facts and an AI draft to check has no accessibility faults either', async () => {
   render(<FactCheck firId="f1" text="Fictional words" victimProtected={false} />)
