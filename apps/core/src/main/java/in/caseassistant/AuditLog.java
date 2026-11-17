@@ -15,7 +15,8 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * One audit screen (board 20): for a police station, newest first, the reads of protected victim details, the
  * readiness gaps a person accepted with a reason (and their withdrawals), the checks of an accused's earlier records
- * (InvolvementController; what: the person's label and the number of records found) and the admin's changes to accounts and the
+ * (InvolvementController; what: the person's label and the number of records found), the reads of call records
+ * (CdrController; what: the number of files) and the admin's changes to accounts and the
  * station. Only reads of the existing append-only tables; nothing is written here. Same permission as the reads log.
  * The AI suggestions and decisions are kept by the AI gateway and are not in this list.
  */
@@ -49,6 +50,9 @@ class AuditLog {
                   union all
                   select 'involvement_search', i.at, u.full_name, u.rank, p.label || ': ' || i.matches, null, f.id, f.fir_year || '/' || f.fir_no
                   from involvement_search i join fir f on f.id = i.fir_id join person p on p.id = i.person_id join app_user u on u.id = i.searcher where f.station_id = :st
+                  union all
+                  select 'cdr_read', c.at, u.full_name, u.rank, c.files::text, null, f.id, f.fir_year || '/' || f.fir_no
+                  from cdr_read c join fir f on f.id = c.fir_id join app_user u on u.id = c.reader where f.station_id = :st
                   union all
                   select 'admin_action', a.at, u.full_name, u.rank, a.action, a.reason, null::uuid, null::text
                   from admin_action a join app_user u on u.id = a.actor_id left join app_user t on t.id = a.user_id

@@ -406,3 +406,19 @@ def test_the_prohibition_playbook_is_a_draft_that_leaves_out_what_it_cannot_cite
     assert rules["electronic_record_certificate"]["severity"] == "critical"
     ing = {i["id"]: i for i in pb["charges"][0]["ingredients"]}
     assert "chemical_analysis_report" in ing["intoxicant"]["proof"]
+
+
+def test_cdr_layouts_are_a_draft_whose_column_names_and_call_types_each_mean_one_thing():
+    # CdrController finds the columns of an operator's call records file by these names: one name must not feed two fields
+    files = sorted(ROOT.glob("*/cdr-layouts.json"))
+    assert files, "the national module names the CDR columns"
+    for path in files:
+        layout = json.loads(path.read_text(encoding="utf-8"))
+        assert layout["status"] == "draft" and "made-up" in layout["note"].lower()
+        norm = lambda s: re.sub(r"[\s_\-()]+", "", s.lower())
+        names = [norm(a) for f in layout["fields"].values() for a in f["aliases"]]
+        assert len(names) == len(set(names)), f"{path}: a column name feeds two fields"
+        assert {"other", "duration", "type"} <= {k for k, f in layout["fields"].items() if f.get("required")}
+        assert set(layout["types"]) == {"call_out", "call_in", "sms_out", "sms_in"}
+        words = [norm(w) for ws in layout["types"].values() for w in ws]
+        assert len(words) == len(set(words)), f"{path}: a call type word means two things"

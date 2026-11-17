@@ -29,6 +29,7 @@ FEATURES = {
     "victim_update": "Draft the 90-day victim update",
     "law_explain": "Explain an old-to-new law section in plain words",
     "supervisor_brief": "Brief the supervisor on a case near its deadline",
+    "cdr_summary": "Summarise call records",   # the analysis tables only: numbers, counts, dates, cells, labels (apps/web/src/cdrSummary.ts)
     "app_help": "Help with using the app",   # the screens and their texts only, never case data (apps/web/src/appHelp.ts)
 }
 PROVIDERS = {"claude", "gemini", "fake"}

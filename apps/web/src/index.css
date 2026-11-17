@@ -159,6 +159,7 @@ form.inline { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: cent
 .guide { position: fixed; right: 24px; bottom: 24px; z-index: 2; width: 400px; max-width: calc(100vw - 32px); max-height: calc(100vh - 48px);
   overflow-y: auto; box-sizing: border-box; box-shadow: 0 8px 24px rgba(22, 32, 42, .08); }
 .earlier { margin: 6px 0 12px; }
+.cdr-days { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .earlier .chip { margin-right: 6px; }
 .guide-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .guide form, .guide .ai-draft { margin-top: 12px; }

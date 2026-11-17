@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Caps the size of a request body before anything reads it: 1 MiB, or 16 MiB for loading a file (an import holds up
+ * Caps the size of a request body before anything reads it: 1 MiB, or 16 MiB for loading a file (an import or a call records file; an import holds up
  * to 5 million characters, 3 bytes each in an Indian script). Security review, 2 Nov 2026: a signed-in user could
  * store a 15 MB name on a case, which every case screen then loads. A body without a declared length is counted as it
  * is read and stops at the cap.
@@ -24,9 +24,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 class BodyLimit extends OncePerRequestFilter {
     static final long LIMIT = 1L << 20;
     static final long IMPORT_LIMIT = 16L << 20;
+    static final java.util.regex.Pattern CDR_LOAD = java.util.regex.Pattern.compile("/api/firs/[^/]+/cdr");   // a call records file (CdrController)
 
     static long limitFor(String path) {
-        return path.equals("/api/imports") || path.equals("/api/imports/inspect") ? IMPORT_LIMIT : LIMIT;
+        return path.equals("/api/imports") || path.equals("/api/imports/inspect") || CDR_LOAD.matcher(path).matches() ? IMPORT_LIMIT : LIMIT;
     }
 
     @Override
