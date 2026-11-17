@@ -127,7 +127,7 @@ test('the statements with a checked translation and an AI translation draft to c
 test('the AI draft of the final report narrative with sentences to tick has no accessibility faults either', async () => {
   const answer = { request_id: 'r1', draft: '[{"part":"facts","text":"A caller rang.","source":"FIR","quote":"Fictional"},{"part":"evidence","text":"W1 saw it.","source":"S1","quote":"saw"}]', provider: 'fake', model: 'm' }
   const list = { witnesses: [], statements: [{ id: 's1', label: 'W1', name: null, masked: false, recorded_at: '2026-11-02T04:30:00Z', original_text: 'I saw it.', translated_text: null }] }
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => (url.endsWith('generate') ? answer : list) })))
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => (url.endsWith('generate') ? answer : url.endsWith('case-file') ? { passages: [] } : url.endsWith('readiness') ? { charges: [] } : list) })))
   render(<NarrativeDraft firId="f1" text="Fictional words" victimProtected={false} sections="" language="en" written={{ facts: '', evidence: '' }} onTake={() => undefined} />)
   fireEvent.click(await screen.findByRole('button', { name: 'Draft with AI from the file' }))
   await screen.findByText('AI draft · tick the sentences to take')

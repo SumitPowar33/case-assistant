@@ -1328,5 +1328,7 @@
  "transcribe.sends": "The recording goes only to the speech model on this state's own server; nothing is sent to a cloud service. Listen to it again and correct the text before you save.",
  "transcribe.working": "Writing down…",
  "transcribe.done": "A draft was written down from the recording. Listen again and correct it before you save.",
- "transcribe.discard": "Discard the draft"
+ "transcribe.discard": "Discard the draft",
+ "csd.left": "{n} documents of the file were too long to send and were left out.",
+ "csd.openIngredients": "Nothing linked yet in the readiness check, so no paragraph was drafted for"
 }

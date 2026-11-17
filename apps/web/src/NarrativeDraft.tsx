@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { ai, get } from './api'
-import { DRAFT_PROMPT_VERSION, PARTS, appendTo, decisionFor, draftPrompt, readDraft, type DraftRead, type Sentence, type Source } from './chargesheetDraft'
+import { DOCUMENT_KINDS, DRAFT_PROMPT_VERSION, PARTS, appendTo, decisionFor, draftPrompt, fitSources, readDraft, type DraftRead, type Ingredient, type Sentence, type Source } from './chargesheetDraft'
 import { useT } from './i18n'
 
 type Statement = { id: string; label: string | null; name: string | null; masked: boolean; recorded_at: string; original_text: string; translated_text: string | null }
 type Request = { request_id: string; draft: string; provider: string; model: string }
-type Asked = { request: Request; read: DraftRead; ticked: boolean[]; logged?: string; taken?: number }
+type Asked = { request: Request; read: DraftRead; ticked: boolean[]; logged?: string; taken?: number; left: number; open: string[] }
+type Readiness = { charges: { label: string; ingredients: { text: string; evidence: { label: string }[] }[] }[] }
+type Passage = { kind: string; title: string; text: string }
 
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' })
 
@@ -27,6 +29,7 @@ export default function NarrativeDraft({ firId, text, victimProtected, sections,
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
   const cite = (s: Source) => (s.kind === 'fir' ? t('csd.cite.fir')
+    : s.kind === 'document' ? s.who ?? '—'
     : t(s.kind === 'statement' ? 'csd.cite.statement' : 'csd.cite.translation', { who: s.who ?? '—', date: day(s.date!) }))
 
   if (victimProtected) return <p role="note">{t('csd.notOnProtected')}</p>
@@ -42,10 +45,21 @@ export default function NarrativeDraft({ firId, text, victimProtected, sections,
         sources.push({ id: `S${i + 1}`, kind: 'statement', who, date: s.recorded_at, text: s.original_text })
         if (s.translated_text) sources.push({ id: `T${i + 1}`, kind: 'translation', who, date: s.recorded_at, text: s.translated_text })
       })
+      // the evidence register, notices and replies, 63(4) certificates, memos and expert requests; the charges' ingredients
+      // with the evidence linked to them come from the readiness check (an ingredient with nothing linked gets no paragraph)
+      const [{ passages }, report] = await Promise.all([get<{ passages: Passage[] }>(`/firs/${firId}/case-file`), get<Readiness>(`/firs/${firId}/readiness`)])
+      passages.filter((p) => (DOCUMENT_KINDS as readonly string[]).includes(p.kind))
+        .forEach((p, i) => sources.push({ id: `D${i + 1}`, kind: 'document', who: p.title, date: null, text: p.text }))
+      const fit = fitSources(sources)
+      const ingredients: Ingredient[] = [], open: string[] = []
+      for (const c of report.charges ?? []) for (const i of c.ingredients) {
+        if (i.evidence.length) ingredients.push({ id: `I${ingredients.length + 1}`, charge: c.label, text: i.text, linked: i.evidence.map((e) => e.label) })
+        else open.push(`${c.label}, ${i.text}`)
+      }
       const request = await ai<Request>('/v1/generate', { method: 'POST', body: {
-        feature: 'chargesheet_draft', prompt_version: DRAFT_PROMPT_VERSION, prompt: draftPrompt(sources, sections, language), case_ref: firId, max_tokens: 4000 } })
-      const read = readDraft(request.draft, sources)
-      setAsked({ request, read, ticked: Array<boolean>(read.kind === 'sentences' ? read.sentences.length : 0).fill(false) })
+        feature: 'chargesheet_draft', prompt_version: DRAFT_PROMPT_VERSION, prompt: draftPrompt(fit.kept, sections, language, ingredients), case_ref: firId, max_tokens: 4000 } })
+      const read = readDraft(request.draft, fit.kept, ingredients)
+      setAsked({ request, read, left: fit.left, open, ticked: Array<boolean>(read.kind === 'sentences' ? read.sentences.length : 0).fill(false) })
     } catch (err) {
       setNote((err as Error).message)
     }
@@ -81,12 +95,14 @@ export default function NarrativeDraft({ firId, text, victimProtected, sections,
             return <>
               <p><small>{t('csd.caution')}</small></p>
               {!read.sentences.length && <p>{t('csd.noneFound')}</p>}
+              {asked.left > 0 && <p><small>{t('csd.left', { n: asked.left })}</small></p>}
+              {asked.open.length > 0 && <p><small>{t('csd.openIngredients')}: {asked.open.join('; ')}</small></p>}
               {read.dropped > 0 && <p><small>{t('csd.dropped', { n: read.dropped })}</small></p>}
               {read.opinions > 0 && <p><small>{t('csd.opinions', { n: read.opinions })}</small></p>}
               {PARTS.filter((part) => read.sentences.some((s) => s.part === part)).map((part) => (
                 <fieldset key={part}><legend>{t(part === 'facts' ? 'fr.facts' : 'fr.evidence')}</legend>
                   <ul className="plain">{read.sentences.map((s, i) => s.part !== part ? null : (
-                    <li key={i}><label><input type="checkbox" checked={asked.ticked[i]} disabled={!!asked.logged}
+                    <li key={i}>{s.ingredient && <small>{s.ingredient.charge}, {s.ingredient.text}<br /></small>}<label><input type="checkbox" checked={asked.ticked[i]} disabled={!!asked.logged}
                       onChange={(e) => setAsked({ ...asked, ticked: asked.ticked.map((x, j) => (j === i ? e.target.checked : x)) })} /> <span lang={language}>{s.text}</span></label>
                       <br /><small>{t('csd.from', { source: cite(s.source) })} <q><mark className="c-ai">{s.quote}</mark></q></small></li>
                   ))}</ul>

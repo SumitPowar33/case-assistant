@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DRAFT_PROMPT_VERSION, appendTo, decisionFor, draftPrompt, judges, readDraft, type Source } from './chargesheetDraft'
+import { DRAFT_PROMPT_VERSION, appendTo, decisionFor, draftPrompt, fitSources, judges, readDraft, type Source } from './chargesheetDraft'
 
 const FIR: Source = { id: 'FIR', kind: 'fir', who: null, date: null, text: 'On 3 Nov a caller said he was from my bank and Rs 40,000 went out of my account.' }
 const S1: Source = { id: 'S1', kind: 'statement', who: 'W1', date: '2026-11-05T10:00:00Z', text: 'I saw the  accused\nat the ATM near the market.' }
@@ -99,4 +99,33 @@ describe('appendTo and decisionFor', () => {
 describe('judges in Hindi and Marathi', () => {
   it.each(['आरोपी दोषी है।', 'साक्षीदार विश्वासार्ह आहे.', 'गवाह झूठ बोल रहा था।', 'आरोपीने गुन्हेगार असल्याचे सिद्ध झाले.', 'आरोप संदेह से परे सिद्ध हो गया।', 'तो खोटं बोलत होता.'])('drops %s', (s) => expect(judges(s)).toBe(true))
   it.each(['शिकायतकर्ता ने बताया कि फोन करने वाले ने बैंक का नाम लिया।', 'खात्यातून ३ नोव्हेंबरला ४०,००० रुपये गेले.'])('keeps %s', (s) => expect(judges(s)).toBe(false))
+})
+
+describe('documents and ingredients', () => {
+  const D1: Source = { id: 'D1', kind: 'document', who: 'Evidence E1', date: null, text: 'Bank statement printed on 4 Nov.' }
+  const I1 = { id: 'I1', charge: 'BNS 318(4)', text: 'dishonest inducement', linked: ['E1'] }
+  it('names a document by its title and lists the ingredients with their linked evidence', () => {
+    const p = draftPrompt([FIR, D1], '', 'en', [I1])
+    expect(p).toContain('Piece D1 (document: Evidence E1):')
+    expect(p).toContain('Ingredient I1: BNS 318(4), dishonest inducement (linked: E1)')
+  })
+  it('keeps a known ingredient on an evidence sentence only', () => {
+    const r = readDraft(JSON.stringify([
+      { part: 'evidence', text: 'A.', source: 'D1', quote: 'printed on 4 Nov', ingredient: 'I1' },
+      { part: 'facts', text: 'B.', source: 'D1', quote: 'Bank statement', ingredient: 'I1' },
+      { part: 'evidence', text: 'C.', source: 'D1', quote: 'Bank statement', ingredient: 'I7' }]), [FIR, D1], [I1])
+    expect(r.kind === 'sentences' && r.sentences.map((s) => s.ingredient?.id)).toEqual(['I1', undefined, undefined])
+  })
+  it('writes one paragraph per ingredient after the plain sentences', () => {
+    const r = readDraft(JSON.stringify([
+      { part: 'evidence', text: 'A.', source: 'D1', quote: 'printed on 4 Nov', ingredient: 'I1' },
+      { part: 'evidence', text: 'B.', source: 'FIR', quote: 'Rs 40,000' }]), [FIR, D1], [I1])
+    if (r.kind !== 'sentences') throw new Error('unreadable')
+    expect(appendTo('Mine.', r.sentences, 'evidence', (s) => s.id)).toBe('Mine.\n\nB. (FIR)\n\nBNS 318(4), dishonest inducement: A. (D1)')
+    expect(appendTo('', r.sentences, 'facts', (s) => s.id)).toBe('')
+  })
+  it('leaves out documents that do not fit, never the FIR or the statements', () => {
+    const big = { ...D1, text: 'x'.repeat(30) }
+    expect(fitSources([FIR, S1, big, { ...big, id: 'D2' }], FIR.text.length + S1.text.length + 30)).toEqual({ kept: [FIR, S1, big], left: 1 })
+  })
 })

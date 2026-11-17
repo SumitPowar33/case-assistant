@@ -21,11 +21,21 @@ const ANSWER = [
   { part: 'facts', text: 'A made-up sentence.', source: 'FIR', quote: 'not in the text' },
 ]
 
+const PASSAGES = [
+  { id: 'P1', kind: 'complaint', title: 'FIR complaint', text: FIR },
+  { id: 'P2', kind: 'certificate', title: 'BSA 63(4) certificate for the bank statement', text: 'The statement was printed from the bank server by the branch manager.' },
+  { id: 'P3', kind: 'diary', title: 'Case diary, 5 Nov 2026', text: 'Visited the ATM.' },
+]
+const READINESS = { charges: [{ id: 'c1', label: 'BNS 318(4)', ingredients: [
+  { id: 'i1', text: 'dishonest inducement', evidence: [{ label: 'E1 bank statement' }] }, { id: 'i2', text: 'delivery of property', evidence: [] }] }] }
+
 function stub(answer: unknown = ANSWER, fail?: string) {
   const calls: { url: string; method: string; body?: Record<string, unknown> }[] = []
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     calls.push({ url, method: init?.method ?? 'GET', body: init?.body ? JSON.parse(init.body as string) : undefined })
     if (url.endsWith('/statements')) return { ok: true, status: 200, json: async () => ({ witnesses: [], statements }) }
+    if (url.endsWith('/case-file')) return { ok: true, status: 200, json: async () => ({ passages: PASSAGES }) }
+    if (url.endsWith('/readiness')) return { ok: true, status: 200, json: async () => READINESS }
     if (url.endsWith('/v1/generate')) {
       if (fail) return { ok: false, status: 403, json: async () => ({ detail: fail }) }
       return { ok: true, status: 200, json: async () => ({ request_id: 'r1', draft: typeof answer === 'string' ? answer : JSON.stringify(answer), provider: 'fake', model: 'echo' }) }
@@ -49,7 +59,7 @@ test('the officer ticks drafted sentences, they go into the draft with their sou
   expect(prompt).toContain('Piece S1 (statement):\n<<<\nमी आरोपीला एटीएमजवळ पाहिले.')
   expect(prompt).toContain('Piece T1 (English translation of a statement):')
   expect(prompt).not.toContain('Masked words never sent.')
-  expect(calls.find((c) => c.url.endsWith('/v1/generate'))!.body).toMatchObject({ feature: 'chargesheet_draft', case_ref: 'f1', prompt_version: 'chargesheet_draft/narrative@1' })
+  expect(calls.find((c) => c.url.endsWith('/v1/generate'))!.body).toMatchObject({ feature: 'chargesheet_draft', case_ref: 'f1', prompt_version: 'chargesheet_draft/narrative@2' })
   expect(screen.getByText(/1 sentences of the AI did not point/)).toBeTruthy()
   expect(screen.getByText(/1 sentences gave an opinion on guilt/)).toBeTruthy()
   expect(screen.queryByText('The accused is guilty of cheating.')).toBeNull()
@@ -116,6 +126,8 @@ test('a failed decision log is shown and the sentences are not taken', async () 
   const calls = stub()
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     calls.push({ url, method: init?.method ?? 'GET' })
+    if (url.endsWith('/case-file')) return { ok: true, status: 200, json: async () => ({ passages: [] }) }
+    if (url.endsWith('/readiness')) return { ok: true, status: 200, json: async () => ({ charges: [] }) }
     if (url.endsWith('/v1/decisions')) return { ok: false, status: 409, json: async () => ({ detail: 'already logged' }) }
     if (url.endsWith('/statements')) return { ok: true, status: 200, json: async () => ({ witnesses: [], statements: [] }) }
     return { ok: true, status: 200, json: async () => ({ request_id: 'r1', draft: JSON.stringify(ANSWER), provider: 'fake', model: 'echo' }) }
@@ -139,6 +151,8 @@ test('a statement is cited by the person\'s name when it has no label, or by a d
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     calls.push({ url, body: init?.body ? JSON.parse(init.body as string) : undefined })
     if (url.endsWith('/statements')) return { ok: true, status: 200, json: async () => ({ witnesses: [], statements: list }) }
+    if (url.endsWith('/case-file')) return { ok: true, status: 200, json: async () => ({ passages: [] }) }
+    if (url.endsWith('/readiness')) return { ok: true, status: 200, json: async () => ({ charges: [] }) }
     if (url.endsWith('/v1/decisions')) return { ok: true, status: 200, json: async () => ({ logged: 1 }) }
     return { ok: true, status: 200, json: async () => ({ request_id: 'r2', draft, provider: 'fake', model: 'echo' }) }
   }))
@@ -153,4 +167,25 @@ test('a statement is cited by the person\'s name when it has no label, or by a d
   fireEvent.click(await screen.findByRole('button', { name: 'Take the ticked sentences into the draft' }))
   await screen.findByText(/Your decision \(rejected\) is logged. 0 sentences/)
   expect(calls.filter((c) => c.url.endsWith('/v1/decisions')).pop()!.body).toMatchObject({ decision: 'rejected', request_id: 'r2' })
+})
+
+test('documents of the file and the readiness check ingredients go to the AI; one paragraph per ingredient with its sources; an ingredient with nothing linked is named, not drafted', async () => {
+  const calls = stub([
+    { part: 'evidence', text: 'The branch manager stated that the statement was printed from the bank server.', source: 'D1', quote: 'printed from the bank server', ingredient: 'I1' },
+    { part: 'evidence', text: 'W1 stated that he saw the accused near the ATM.', source: 'T1', quote: 'I saw the accused near the ATM', ingredient: 'I1' },
+    { part: 'evidence', text: 'A sentence for an unknown ingredient.', source: 'FIR', quote: 'Rs 40,000', ingredient: 'I9' },
+  ])
+  const onTake = vi.fn()
+  render(<NarrativeDraft firId="f1" text={FIR} victimProtected={false} sections="BNS 318(4)" language="en" written={{ facts: '', evidence: 'Mine.' }} onTake={onTake} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Draft with AI from the file' }))
+  expect(await screen.findByText(/Nothing linked yet in the readiness check, so no paragraph was drafted for: BNS 318\(4\), delivery of property/)).toBeTruthy()
+  const prompt = String(calls.find((c) => c.url.endsWith('/v1/generate'))!.body!.prompt)
+  expect(prompt).toContain('Piece D1 (document: BSA 63(4) certificate for the bank statement):')
+  expect(prompt).not.toContain('Visited the ATM.')        // the officer's own diary is not a source
+  expect(prompt).toContain('Ingredient I1: BNS 318(4), dishonest inducement (linked: E1 bank statement)')
+  expect(prompt).not.toContain('delivery of property')
+  for (const box of screen.getAllByRole('checkbox')) fireEvent.click(box)
+  fireEvent.click(screen.getByRole('button', { name: 'Take the ticked sentences into the draft' }))
+  await screen.findByText(/Your decision/)
+  expect(onTake).toHaveBeenCalledWith('', 'Mine.\n\nA sentence for an unknown ingredient. (FIR)\n\nBNS 318(4), dishonest inducement: The branch manager stated that the statement was printed from the bank server. (BSA 63(4) certificate for the bank statement) W1 stated that he saw the accused near the ATM. (English translation of the statement of W1, 5 Nov 2026)', 'r1')
 })
