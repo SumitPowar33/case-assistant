@@ -24,6 +24,7 @@ FEATURES = {
     "notice_draft": "Draft BNSS 94 notices and follow-up letters",
     "reply_check": "Check bank and telecom replies",
     "statement_translate": "Translate statements (original always kept)",
+    "statement_compare": "Point out differences between statements and the FIR",
     "chargesheet_draft": "Draft chargesheet paragraphs",
     "case_qa": "Answer questions about the case file",
     "victim_update": "Draft the 90-day victim update",

@@ -184,3 +184,22 @@ test('a checked translation is shown under the original; English, protected and 
   render(<Statements firId="f1" />)
   expect(await screen.findByText(/No AI translation for this statement/)).toBeTruthy()
 })
+
+test('differences to clarify are offered with the FIR text and a masked person\'s statement is left out; a protected case has none', async () => {
+  const two = { ...data, statements: [
+    { ...data.statements[0], masked: false, translated_text: 'x', translation_corrected: null, translation_checked_at: null, translation_checked_by_name: null },
+    { ...data.statements[0], id: 's2', masked: true, translated_text: null, translation_corrected: null, translation_checked_at: null, translation_checked_by_name: null, original_text: 'masked words' },
+  ] }
+  const calls = stubAi({ load: two, generate: draft('[]') })
+  render(<Statements firId="f1" firText="The FIR text of a fictional case." />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Compare the statements with the FIR using AI' }))
+  expect(await screen.findByText('The AI found no difference it could quote from two sources.')).toBeTruthy()
+  const prompt = String(calls.find((c) => c.url === '/ai/v1/generate')!.body!.prompt)
+  expect(prompt).toContain('The FIR text of a fictional case.')
+  expect(prompt).not.toContain('masked words')
+  cleanup()
+  stubAi({ load: two })
+  render(<Statements firId="f1" firText="The FIR text of a fictional case." victimProtected />)
+  await screen.findByText('Witness tracker')
+  expect(screen.queryByRole('button', { name: 'Compare the statements with the FIR using AI' })).toBeNull()
+})

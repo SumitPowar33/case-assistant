@@ -66,7 +66,7 @@ Next (replaces the "Next" list of session 25; a session finishing an item remove
 2. A8: the AI explanation in the Old law to new law finder (board 18) (already DONE in session 98; check only that it is on the board's screen).
 3. DONE (session 107, counts only; see its entry): the AI's drafts and decisions in the Audit log (gateway read routes, board 20), and the "AI use in this case" counts (A9). Left: the list of events with who and which case on the Audit screen (needs the station's case list from the core), the export for one case, readable labels.
 4. DONE (session 107, draft word lists): Hindi and Marathi guards for the guilt, truth, prediction, opinion and rating refusals (A5, A6, A9). Left: a Marathi-speaking prosecutor's review of the words; other Indian scripts still rely on the model's safety text.
-5. The rest of A3: "differences to clarify" between a statement, the FIR and other statements (board 6), then audio transcription with an on-premises speech model (same rule as embeddings: an offline stand-in in tests).
+5. The rest of A3: "differences to clarify" (DONE, session 108); left: audio transcription with an on-premises speech model (same rule as embeddings: an offline stand-in in tests).
 6. The rest of A6: drafting from the evidence register, bank replies, 63(4) certificates, seizure memos and expert reports, and one paragraph per charge ingredient linked to the readiness check.
 7. The "Left for" parts of A1, A2, A4 and A7 in item 14.
 8. Then the rest of the Next list in its order: item 3 rest, item 15 rest (POCSO), item 16 (duty roster), item 18 (court-format papers), then the real-time screens.
@@ -112,6 +112,7 @@ Done in session 80 (8 Nov, 23:46 IST scheduled run): item 14, A2: AI section sug
 Done in session 79 (8 Nov, Sunday 21:05 IST scheduled run): item 14, A1 first version: AI fact check of the FIR text (board 2, V50).
 Done in session 78 (8 Nov, 02:05 IST scheduled run, last of the night): item 10, first half: a transferred IO loses the old station's cases at once; the Supervisor review's "IO has left the station" list; tests for older code.
 Done in session 77 (7 Nov, 23:35 IST scheduled run): item 11, acid-attack survivors protected like sexual-offence victims (V49); the court and lab forms' date in India time.
+Done in session 108 (17 Nov, scheduled run, Sumit away): priority 5, first half: AI "differences to clarify" on the Statements part (A3, no migration).
 Done in session 107 (17 Nov, 02:05 IST scheduled run, last of the night): priority 3 (AI use counts: gateway `GET /v1/ai-use` and `/v1/ai-use/summary`, the Audit log screen and the diary part) and priority 4 (Hindi and Marathi refusal guards), no migration.
 Done in session 106 (16 Nov, scheduled run, Sumit away): item 17, hybrid RAG for Ask the case file: embedding route in the gateway, vectors in PostgreSQL (V58), BM25 + vectors, source on click, note in case diary.
 Done in session 105 (16 Nov, scheduled run, Sumit away): item 3, fourth part: the third MH playbook (illicit liquor, Maharashtra Prohibition Act, draft; no migration).
@@ -176,6 +177,29 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    **Session 106 (hybrid RAG, V58):** gateway `POST /v1/embed` (local embedder only, `ai_embed` audit rows, 120 calls per officer per 10 minutes; `EMBED_BACKEND=fake` offline stand-in; the real model is a deployment step), vectors kept in PostgreSQL per case, model and text hash (`case_passage_vector`, `CaseVectorController`), BM25 and cosine fused by reciprocal rank in `askFile.ts`, a source opens as its whole passage with the piece marked, "Note in case diary" (editable, saved on the officer's click), Hindi and Marathi questions in the evaluation set, the answers scored on the set with a stand-in provider (the gateway's fake provider only echoes the prompt). Left: bank replies as text (decision 3), the real model (download, `EMBED_MIN_SIMILARITY` tuning, scoring with a real provider), Hindi and Marathi refusal guards beyond the draft word list (priority 4).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 17 Nov 2026, session 108 (scheduled run, Sumit away)
+Started from `setup/seed` (session 107) in a new container (Postgres started, `caseapp` role and both databases made, gateway requirements, `npm ci`). Priorities 1 to 4 were already done by sessions 98, 106 and 107, so this session took priority 5, first half.
+
+**Priority 5, A3: "differences to clarify" (board 6), no migration, no core change:**
+- Gateway: new feature `statement_compare` (refused on a protected case like the other features that send case text).
+- Web: `statementCompare.ts` (prompt, check of the answer) and `StatementCompare.tsx` at the top of the Statements part. The AI gets the FIR text and the statements **without names** (sources FIR, S1, S2 ...) and lists places where two different sources say different things, each with a quote from both. A difference is shown only when both quotes are words of the two sources it names (otherwise dropped); never which source is right. The officer notes a difference in the case diary (written in the screen language) or sets it aside; each choice is logged in the gateway (`accepted` / `rejected`). Masked persons' statements are left out; nothing is offered on a protected case; too-long texts (over 58,000 characters) are not sent.
+- 13 new screen texts in all 11 languages (drafts, not reviewed). `CLAUDE.md` layout line added.
+- Tests: `statementCompare.test.ts` (3), `StatementCompare.test.tsx` (6), `Statements.test.tsx` (1 more), gateway refusal test covers the new feature through `NOT_ON_PROTECTED`.
+
+`scripts/test-all.sh` at the end: all 8 suites PASS (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e browser). Coverage: core 99.01% lines / 96.51% branches, web 99.97% statements / 97.44% branches / 98.76% functions, gateway 99%. Gates unchanged. The start-of-session baseline run overlapped with my first edits (it failed only on the new, then untested, web files), so the baseline is the full run at the end.
+
+Skipped / not checked / risks:
+- **Audio transcription is not built** (second half of priority 5): it needs a gateway route for an on-premises speech model with an offline stand-in, plus the audio upload and storage; next session.
+- The difference check compares only what two sources say differently; a model may still miss differences or flag a paraphrase. The officer decides each one. The check works on the original texts (any Indian language), not on the English translations.
+- No axe or browser test of the new panel yet; not screenshotted against board 6.
+- Translations of the 13 texts are machine drafts for the reviewers.
+
+Next: priority 5 second half (audio transcription with an on-premises speech model and an offline stand-in), then 6, 7 and 8 as listed at the top of Next.
+
+Questions for Sumit:
+1. Should a "difference noted" in the case diary also be kept as its own record (so the Statements part can show which differences are still open)? Today it is only a diary entry, no new table.
+2. Still open: those listed in session 107's question 3.
 
 ## 17 Nov 2026, session 107 (02:05 IST scheduled run, last of the night, Sumit away)
 Started from `setup/seed` at 6825ee6 in a new container (Postgres started, `caseapp` role and the two databases made, gateway requirements, `npm ci`). The `add_repo` tool was not offered in this run, but the clone already pointed at the repository and `git fetch` worked. Baseline: the first seven suites PASS; the e2e suite failed only because the new diary check was written while the baseline ran against the older build (fixed by the final run below). Sumit's priority list: items 1 and 2 were already done, so this session built items 3 and 4.

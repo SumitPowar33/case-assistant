@@ -5,6 +5,7 @@ import { fmt } from './formats'
 import { useLoad } from './useLoad'
 import { useT } from './i18n'
 import { TypingContext } from './typing'
+import StatementCompare from './StatementCompare'
 import { MAX_TRANSLATION, TRANSLATE_PROMPT_VERSION, readTranslation, translatePrompt, type Draft } from './statementTranslate'
 
 type Witness = { person_id: string; role: string; label: string | null; name: string | null; statements: number }
@@ -114,7 +115,7 @@ function Translation({ firId, s, victimProtected, onSaved }: { firId: string; s:
  * new statement is the typing language chosen at the top. An English translation, checked by an officer, sits under a
  * statement made in another language ({@link Translation}).
  */
-export default function Statements({ firId, victimProtected = false }: { firId: string; victimProtected?: boolean }) {
+export default function Statements({ firId, firText = '', victimProtected = false }: { firId: string; firText?: string; victimProtected?: boolean }) {
   const t = useT()
   const { lang } = useContext(TypingContext)
   const [version, setVersion] = useState(0)
@@ -152,6 +153,7 @@ export default function Statements({ firId, victimProtected = false }: { firId: 
           {error && <p role="alert">{error}</p>}
           <button type="submit">{t('statement.save')}</button>
         </form>}
+        {!victimProtected && <StatementCompare firId={firId} firText={firText} statements={statements.filter((s) => !s.masked)} />}
         {statements.length === 0 ? <p>{t('statement.none')}</p> : <ul className="plain">{statements.map((s) => (
           <li key={s.id} className="card">
             <strong>{who(s)}</strong> <span className="chip c-neu">{s.language.toUpperCase()}</span>
