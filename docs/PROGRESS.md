@@ -67,7 +67,7 @@ Next (replaces the "Next" list of session 25; a session finishing an item remove
 3. DONE (session 107, counts only; see its entry): the AI's drafts and decisions in the Audit log (gateway read routes, board 20), and the "AI use in this case" counts (A9). Left: the list of events with who and which case on the Audit screen (needs the station's case list from the core), the export for one case, readable labels.
 4. DONE (session 107, draft word lists): Hindi and Marathi guards for the guilt, truth, prediction, opinion and rating refusals (A5, A6, A9). Left: a Marathi-speaking prosecutor's review of the words; other Indian scripts still rely on the model's safety text.
 5. DONE: the rest of A3: "differences to clarify" (session 108) and audio transcription with an on-premises speech model with an offline stand-in (session 109). Left: the real model's download and word-error check (`docs/DEPLOY-TRANSCRIPTION.md`), keeping which statements came from a recording.
-6. The rest of A6: drafting from the evidence register, bank replies, 63(4) certificates, seizure memos and expert reports, and one paragraph per charge ingredient linked to the readiness check.
+6. DONE (session 110): the rest of A6: drafting also from the evidence register, notices, 63(4) certificates, search/seizure memos, expert requests and the money trail, and one paragraph per charge ingredient linked to the readiness check. Left: bank replies as text (nothing stores them until A4's left-for part, decision 3), the particulars table and court print (item 18), a Marathi-speaking prosecutor's review.
 7. The "Left for" parts of A1, A2, A4 and A7 in item 14.
 8. Then the rest of the Next list in its order: item 3 rest, item 15 rest (POCSO), item 16 (duty roster), item 18 (court-format papers), then the real-time screens.
 Open questions must not stall the work: where one blocks an item, take the safer choice that can be reversed, record it under "Decisions taken for Sumit" above, and carry on.
@@ -178,6 +178,33 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    **Session 106 (hybrid RAG, V58):** gateway `POST /v1/embed` (local embedder only, `ai_embed` audit rows, 120 calls per officer per 10 minutes; `EMBED_BACKEND=fake` offline stand-in; the real model is a deployment step), vectors kept in PostgreSQL per case, model and text hash (`case_passage_vector`, `CaseVectorController`), BM25 and cosine fused by reciprocal rank in `askFile.ts`, a source opens as its whole passage with the piece marked, "Note in case diary" (editable, saved on the officer's click), Hindi and Marathi questions in the evaluation set, the answers scored on the set with a stand-in provider (the gateway's fake provider only echoes the prompt). Left: bank replies as text (decision 3), the real model (download, `EMBED_MIN_SIMILARITY` tuning, scoring with a real provider), Hindi and Marathi refusal guards beyond the draft word list (priority 4).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## Tonight in short (17 Nov scheduled runs: sessions 108, 109 and 110)
+- Session 108: A3 "differences to clarify" between a statement, the FIR and other statements.
+- Session 109: A3 recorded statements written down by an on-premises speech model (offline stand-in in tests).
+- Session 110 (02:05 IST run, last of the night): A6, the final-report draft reads documents and writes one paragraph per charge ingredient.
+- `scripts/test-all.sh` at the end of session 110: all 8 suites PASS (repo rules, packs, xlit, gateway, web, database rules, core, e2e). Coverage: web 99.97 / 97.56 / 98.78 (lines/branches/functions), core and gateway unchanged (core 99.01 / 96.51, gateway 99.34 at session 107); gates unchanged.
+
+## 17 Nov 2026, session 110 (scheduled run, Sumit away)
+Started from `setup/seed` (session 109) in a new container (the clone was on `master`; checked out `origin/setup/seed`; `add_repo` was not offered but `git fetch` and push worked). Postgres started, role `caseapp` and both databases made, gateway requirements, `npm ci`. Baseline: all PASS. Priority 5 was finished, so this session built priority 6.
+
+**Priority 6, A6: more sources and one paragraph per ingredient (web only, no migration, no gateway change):**
+- `NarrativeDraft.tsx` now also reads `GET /firs/{id}/case-file` (the same route Ask the case file uses; case team only) and sends the evidence register entries, notices and their replies, 63(4) certificates, expert requests, search/seizure memos and the money trail as pieces `D1...` ("document: title"). The officer's own case diary and court events are not sent. A masked person's statements stay out as before. Documents that would take the prompt over 50,000 characters (the gateway's cap is 60,000) are left out, never the FIR or statements, and the screen says how many.
+- It also reads `GET /firs/{id}/readiness`: each charge ingredient with evidence linked to it goes in the prompt as `I1...` with its linked evidence labels; the AI writes that ingredient's sentences together and names the id. An ingredient with nothing linked is not drafted: the panel lists it ("Nothing linked yet in the readiness check ..."), so the gap shows where the officer works. A sentence naming an unknown ingredient is kept as a plain sentence.
+- `chargesheetDraft.ts`: prompt version is now `chargesheet_draft/narrative@2`; `appendTo` puts plain sentences first, then one paragraph per ingredient starting with the charge and the ingredient, each sentence followed by its source (a document is cited by its title). The quote check, the opinion filter, the officer's tick and the logged decision are unchanged (every sentence still needs a quote from its piece).
+- 2 new screen texts in 11 languages (10 machine drafts). Tests: `chargesheetDraft.test.ts` (documents and ingredients, 4 new), `NarrativeDraft.test.tsx` (2 new, stubs of the case-file and readiness reads), a11y stub, `FirList` branches simplified (100% now). `FirList.tsx` `rows?.length ?? 0` became `rows!.length` (same behaviour, rows is set whenever data is).
+
+Skipped / not checked / risks:
+- Bank replies are not separate text yet (decision 3), so only the notice's own body is read. Seizure memos: search memos and evidence descriptions are read; there is no separate seizure-memo table in the case file route.
+- Not checked in a browser with a real model; the e2e narrative test runs through the stand-in and still passes. No screenshot taken of the ingredient lines.
+- The paragraph order follows the readiness check's charge order, not the court's form (item 18).
+- Not built: priorities 7 and 8 (the "Left for" parts of A1, A2, A4, A7; then the rest of the Next list). One candidate for A7 (victim's language from the person's record) needs a new column on `person` and the person form, so it was not started this late.
+
+Next: priority 7 (the "Left for" parts of A1, A2, A4 and A7 in item 14), then 8.
+
+Questions for Sumit:
+1. For the victim's letter language (A7): may a person's record get a "language spoken" field (migration on `person`, shown on the person form)? Until you say, the officer picks the language.
+2. Should the final-report draft be allowed to read the officer's case diary as well (it is the officer's own words, left out for now)?
 
 ## 17 Nov 2026, session 109 (scheduled run, Sumit away)
 Started from `setup/seed` (session 108) in a new container (Postgres started, role `caseapp` and both databases made, gateway requirements, `npm ci`). Baseline without the database suites: all PASS; the full run at the end is below. Priorities 1 to 4 and the first half of 5 were done, so this session built priority 5's second half.

@@ -33,10 +33,10 @@ export default function FirList() {
         ))}
       </tbody>
     </table>}
-    {(page > 0 || (rows?.length ?? 0) > PAGE) && <nav aria-label={t('pages.label')}>
+    {(page > 0 || rows!.length > PAGE) && <nav aria-label={t('pages.label')}>
       <button disabled={page === 0} onClick={() => setPage(page - 1)}>{t('pages.newer')}</button>
       <span> {t('pages.page', { n: page + 1 })} </span>
-      <button disabled={(rows?.length ?? 0) <= PAGE} onClick={() => setPage(page + 1)}>{t('pages.older')}</button>
+      <button disabled={rows!.length <= PAGE} onClick={() => setPage(page + 1)}>{t('pages.older')}</button>
     </nav>}
     </>
   )

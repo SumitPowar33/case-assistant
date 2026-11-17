@@ -189,3 +189,15 @@ test('documents of the file and the readiness check ingredients go to the AI; on
   await screen.findByText(/Your decision/)
   expect(onTake).toHaveBeenCalledWith('', 'Mine.\n\nA sentence for an unknown ingredient. (FIR)\n\nBNS 318(4), dishonest inducement: The branch manager stated that the statement was printed from the bank server. (BSA 63(4) certificate for the bank statement) W1 stated that he saw the accused near the ATM. (English translation of the statement of W1, 5 Nov 2026)', 'r1')
 })
+
+test('documents too long to send are left out and the officer is told how many', async () => {
+  const calls = stub([])
+  const fetchNow = globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<unknown>
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => url.endsWith('/case-file')
+    ? { ok: true, status: 200, json: async () => ({ passages: [{ id: 'P1', kind: 'evidence', title: 'Evidence E1', text: 'x'.repeat(60000) }] }) }
+    : fetchNow(url, init)))
+  render(<NarrativeDraft firId="f1" text={FIR} victimProtected={false} sections="" language="en" written={{ facts: '', evidence: '' }} onTake={vi.fn()} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Draft with AI from the file' }))
+  expect(await screen.findByText('1 documents of the file were too long to send and were left out.')).toBeTruthy()
+  expect(String(calls.find((c) => c.url.endsWith('/v1/generate'))!.body!.prompt)).not.toContain('xxxxxxxxxx')
+})

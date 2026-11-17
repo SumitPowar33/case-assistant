@@ -29,7 +29,7 @@ export default function NarrativeDraft({ firId, text, victimProtected, sections,
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
   const cite = (s: Source) => (s.kind === 'fir' ? t('csd.cite.fir')
-    : s.kind === 'document' ? s.who ?? '—'
+    : s.kind === 'document' ? s.who!
     : t(s.kind === 'statement' ? 'csd.cite.statement' : 'csd.cite.translation', { who: s.who ?? '—', date: day(s.date!) }))
 
   if (victimProtected) return <p role="note">{t('csd.notOnProtected')}</p>
@@ -52,7 +52,7 @@ export default function NarrativeDraft({ firId, text, victimProtected, sections,
         .forEach((p, i) => sources.push({ id: `D${i + 1}`, kind: 'document', who: p.title, date: null, text: p.text }))
       const fit = fitSources(sources)
       const ingredients: Ingredient[] = [], open: string[] = []
-      for (const c of report.charges ?? []) for (const i of c.ingredients) {
+      for (const c of report.charges) for (const i of c.ingredients) {
         if (i.evidence.length) ingredients.push({ id: `I${ingredients.length + 1}`, charge: c.label, text: i.text, linked: i.evidence.map((e) => e.label) })
         else open.push(`${c.label}, ${i.text}`)
       }
