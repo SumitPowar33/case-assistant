@@ -75,7 +75,7 @@ class RecordsController {
                      @NotBlank String body, UUID aiRequestId, OffsetDateTime issuedAt,
                      LocalDate replyDueOn, @Pattern(regexp = "draft|sent") String status) {}
 
-    record Reply(@NotNull OffsetDateTime receivedAt, @NotBlank String channel, String checksJson) {}
+    record Reply(@NotNull OffsetDateTime receivedAt, @NotBlank String channel, String checksJson, @Size(max = 30000) String replyText) {}
 
     record Certificate(@NotBlank String part, @NotBlank String signerName, @NotBlank String deviceType,
                        String deviceIds, @NotBlank String hashAlgo, @NotBlank String hashValue,
@@ -635,8 +635,9 @@ class RecordsController {
             throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
                     "This notice was never sent (" + noticeStatus + "); a reply cannot be logged against it.");
         String checks = r.checksJson == null ? "[]" : r.checksJson;
-        db.sql("insert into notice_reply (notice_id, received_at, channel, checks) values (?,?,?,?::jsonb)")
-                .params(noticeId, r.receivedAt, r.channel, checks).update();
+        String text = r.replyText == null || r.replyText.isBlank() ? null : r.replyText.strip();
+        db.sql("insert into notice_reply (notice_id, received_at, channel, checks, reply_text) values (?,?,?,?::jsonb,?)")
+                .params(noticeId, r.receivedAt, r.channel, checks, text).update();
         boolean allPresent = db.sql("""
                 select case when cardinality(n.items_requested) > 0
                   then not exists (select 1 from unnest(n.items_requested) i where not exists (

@@ -60,7 +60,7 @@ def test_an_officer_reads_a_banks_reply_with_the_ai_and_decides_each_item(admin_
         form = card.locator("details", has_text="Log a reply")
         form.locator("summary").click()
         form.get_by_label("Received (date and time, IST)").fill("2026-10-11T15:00")
-        form.get_by_label("Text of the reply (pasted; not saved)").fill(REPLY)
+        form.get_by_label("Text of the reply (pasted; saved with the reply").fill(REPLY)
         form.get_by_role("button", name="Read the reply with AI").click()
         expect(form.get_by_text("Account statement: found in the reply")).to_be_visible()
         expect(form.get_by_text("KYC documents: not found in the reply")).to_be_visible()
@@ -74,3 +74,7 @@ def test_an_officer_reads_a_banks_reply_with_the_ai_and_decides_each_item(admin_
     saved = core.call("GET", f"{case}/notices", token=io)
     mine = next(n for n in saved if n["id"] == notice["id"])
     assert mine["status"] == "complete" and mine["items_missing"] == [] and mine["replies"] == 1
+    # A4 (V59): the pasted reply is kept with the reply and is now a passage of the case file ("Ask the case file")
+    passages = core.call("GET", f"{case}/case-file", token=io)["passages"]
+    kept = [p for p in passages if p["kind"] == "reply"]
+    assert len(kept) == 1 and kept[0]["text"] == REPLY.strip() and "Nodal Officer, Fictional Bank Ltd" in kept[0]["title"]

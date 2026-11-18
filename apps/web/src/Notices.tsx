@@ -77,7 +77,7 @@ function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string;
       submit={async (f) => {
         const result = await send(`/firs/${firId}/notices/${notice.id}/replies`, 'POST', {
           receivedAt: istIso(String(f.get('received'))), channel: f.get('channel'),
-          checksJson: JSON.stringify(items.map((item, i) => ({ item, present: ticks[i] }))),
+          checksJson: JSON.stringify(items.map((item, i) => ({ item, present: ticks[i] }))), replyText: text.trim() || undefined,
         })
         if (asked) {  // the reply is saved; a failure to log the decision must not make the officer save it twice
           const same = asked.read.items.every((r, i) => r.present === ticks[i])
@@ -87,12 +87,10 @@ function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string;
       }}>
       <label>{t('notice.received')} <input name="received" type="datetime-local" required /></label>
       <label>{t('notice.channel')} <select name="channel">{CHANNELS.map((c) => <option key={c} value={c}>{t.code('notice.channel', c)}</option>)}</select></label>
+      <label>{t('notice.replyText')} <textarea rows={5} maxLength={MAX_REPLY} value={text} onChange={(e) => setText(e.target.value)} /></label>
       {canAsk && (
-        <>
-          <label>{t('notice.replyText')} <textarea rows={5} value={text} onChange={(e) => setText(e.target.value)} /></label>
-          <p><button type="button" onClick={readIt} disabled={busy}>{t(busy ? 'notice.asking' : 'notice.readReply')}</button>{' '}
-            <small>{t('notice.replySends')}</small></p>
-        </>
+        <p><button type="button" onClick={readIt} disabled={busy}>{t(busy ? 'notice.asking' : 'notice.readReply')}</button>{' '}
+          <small>{t('notice.replySends')}</small></p>
       )}
       {note && <p role="alert">{note}</p>}
       {asked && (

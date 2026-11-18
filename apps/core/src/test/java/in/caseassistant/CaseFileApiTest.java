@@ -82,6 +82,26 @@ class CaseFileApiTest {
     }
 
     @Test
+    void theTextOfALoggedReplyIsAPassageOfThisCaseOnly() throws Exception {
+        // A4 (V59): a bank's reply saved with its notice is searchable; a reply logged with ticks only adds nothing
+        UUID n = db.sql("insert into notice (fir_id, kind, addressee, items_requested, body, issued_at, reply_due_on, status, signed_by) values (?, 'BNSS_94', 'Nodal Officer, Fictional Bank', array['Statement'], 'Fictional notice body', now(), current_date + 7, 'sent', ?) returning id")
+                .params(fir, ioId).query(UUID.class).single();
+        db.sql("insert into notice_reply (notice_id, received_at, channel, checks, reply_text) values (?, '2026-10-10T10:00Z', 'email', '[]', 'Fictional bank: the account 000111 was frozen on 9 Oct.')").param(n).update();
+        db.sql("insert into notice_reply (notice_id, received_at, channel, checks) values (?, '2026-10-11T10:00Z', 'post', '[]')").param(n).update();
+        UUID n2 = db.sql("insert into notice (fir_id, kind, addressee, items_requested, body, issued_at, reply_due_on, status, signed_by) values (?, 'BNSS_94', 'Other Bank', array['Statement'], 'Fictional', now(), current_date + 7, 'sent', ?) returning id")
+                .params(other, ioId).query(UUID.class).single();
+        db.sql("insert into notice_reply (notice_id, received_at, channel, checks, reply_text) values (?, '2026-10-10T10:00Z', 'email', '[]', 'Fictional other case reply')").param(n2).update();
+        JsonNode p = read(fir, io);
+        JsonNode r = null;
+        for (JsonNode x : p) if (x.get("kind").asText().equals("reply")) r = x;
+        assertThat(r).isNotNull();
+        assertThat(r.get("title").asText()).startsWith("Reply to notice BNSS_94 from Nodal Officer, Fictional Bank, received 10 Oct 2026");
+        assertThat(r.get("text").asText()).contains("was frozen");
+        assertThat(p.toString()).doesNotContain("other case reply");
+        assertThat(p.toString().split("\"kind\":\"reply\"", -1)).hasSize(2);   // exactly one reply passage
+    }
+
+    @Test
     void onlyTheCaseTeamReadsThem() throws Exception {
         mvc.perform(get("/api/firs/" + fir + "/case-file").header("Authorization", outsider)).andExpect(status().isNotFound());
         mvc.perform(get("/api/firs/" + fir + "/case-file").header("Authorization", desk)).andExpect(status().isNotFound());

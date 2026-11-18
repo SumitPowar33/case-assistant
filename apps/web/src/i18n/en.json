@@ -371,7 +371,7 @@
  "notice.channel.post": "post",
  "notice.channel.by_hand": "by hand",
  "notice.tick": "Tick what this reply brought:",
- "notice.replyText": "Text of the reply (pasted; not saved)",
+ "notice.replyText": "Text of the reply (pasted; saved with the reply and searchable in Ask the case file)",
  "notice.readReply": "Read the reply with AI",
  "notice.replySends": "Sends the pasted reply and the list of items to the AI. Not offered on a case that protects the victim's identity.",
  "notice.replyNeedText": "Paste the text of the reply first.",

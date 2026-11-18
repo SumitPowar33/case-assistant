@@ -345,6 +345,12 @@ class RecordsApiTest {
         send("/notices/" + id + "/replies", "{\"receivedAt\":\"2026-10-11T10:00:00Z\",\"channel\":\"post\",\"checksJson\":\"[{\\\"item\\\":\\\"Part B certificate\\\",\\\"present\\\":true}]\"}", 201); // brings only the missing item
         mvc.perform(get("/api/firs/" + fir + "/notices").header("Authorization", auth)).andExpect(jsonPath("$[0].status").value("complete"));
         send("/notices/" + UUID.randomUUID() + "/replies", "{\"receivedAt\":\"2026-10-11T10:00:00Z\",\"channel\":\"post\"}", 404);
+        // V59: the pasted reply text is kept (trimmed); a blank one is kept as nothing; one past 30,000 characters is refused
+        send("/notices/" + id + "/replies", "{\"receivedAt\":\"2026-10-12T10:00:00Z\",\"channel\":\"email\",\"replyText\":\"  Fictional reply text  \"}", 201);
+        send("/notices/" + id + "/replies", "{\"receivedAt\":\"2026-10-12T11:00:00Z\",\"channel\":\"email\",\"replyText\":\"   \"}", 201);
+        send("/notices/" + id + "/replies", "{\"receivedAt\":\"2026-10-12T12:00:00Z\",\"channel\":\"email\",\"replyText\":\"" + "x".repeat(30001) + "\"}", 400);
+        org.assertj.core.api.Assertions.assertThat(db.sql("select reply_text from notice_reply where notice_id = ?::uuid and reply_text is not null").param(id).query(String.class).list())
+                .containsExactly("Fictional reply text");
         // the signer is the signed-in officer, not a name from the request
         org.assertj.core.api.Assertions.assertThat(db.sql("select signed_by from notice where id = ?::uuid").param(id).query(UUID.class).single()).isEqualTo(io);
     }

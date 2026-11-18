@@ -385,8 +385,25 @@ test('A4: the reply reader pre-ticks what the reply brings, with its words; the 
   type(/^Received/, '2026-10-11T15:00', within(form))
   fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
   await vi.waitFor(() => expect(writes).toHaveLength(3))
-  expect(writes[1]).toMatchObject({ url: '/api/firs/f1/notices/n1/replies', body: { checksJson: '[{"item":"Account statement","present":true},{"item":"KYC documents","present":true}]' } })
+  expect(writes[1]).toMatchObject({ url: '/api/firs/f1/notices/n1/replies', body: { checksJson: '[{"item":"Account statement","present":true},{"item":"KYC documents","present":true}]', replyText: REPLY_TEXT } })
   expect(writes[2]).toEqual({ url: '/ai/v1/decisions', body: { request_id: 'rr1', decision: 'edited', feature: 'reply_check', case_ref: 'f1', note: '' } })
+})
+
+test('A4: the pasted reply is saved with the reply even on a protected case (no AI there); an empty box sends no text', async () => {
+  const writes = stubReply('[]', open2)
+  render(<Notices firId="f1" victimProtected />)
+  const form = (await screen.findByText('Log a reply')).closest('details')!
+  type(/^Text of the reply/, REPLY_TEXT, within(form))
+  type(/^Received/, '2026-10-11T15:00', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(1))
+  expect(writes[0].body).toMatchObject({ replyText: REPLY_TEXT })
+  await within(form).findByRole('button', { name: 'Save' })   // the form is free again after saving
+  type(/^Text of the reply/, '   ', within(form))
+  type(/^Received/, '2026-10-12T15:00', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(2))
+  expect(writes[1].body.replyText).toBeUndefined()
 })
 
 test('A4: ticks kept as the AI suggested are logged as accepted; a certificate found is shown with its words', async () => {

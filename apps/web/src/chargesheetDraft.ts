@@ -93,7 +93,7 @@ export function appendTo(written: string, kept: Sentence[], part: Part, cite: (s
 }
 
 /** The documents the AI may read (kinds of the case file other than the FIR text and the statements). */
-export const DOCUMENT_KINDS = ['evidence', 'notice', 'expert', 'search', 'certificate', 'money'] as const
+export const DOCUMENT_KINDS = ['evidence', 'notice', 'expert', 'search', 'certificate', 'money', 'reply'] as const
 /** The gateway refuses a prompt over 60,000 characters: the documents that do not fit are left out (and counted). */
 export function fitSources(sources: Source[], max = 50000): { kept: Source[]; left: number } {
   let total = 0

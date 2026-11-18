@@ -5,7 +5,7 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 ## Decisions taken for Sumit (reverse any of them by telling the next session)
 1. **Vectors are kept as `real[]` in PostgreSQL, not in a pgvector column** (session 106, item 17). You asked for pgvector; the CI database image (`postgres:16`) has none, and one case file has a few hundred pieces, so the core compares them for the one case asked about. Switching later is one migration (a `vector` column and an index on `case_passage_vector`) when a search across cases is built; see `docs/DEPLOY-EMBEDDINGS.md`. Reverse it now and the next session adds pgvector as a required extension.
 2. **The embedding model is `intfloat/multilingual-e5-small` (MIT licence, 384 numbers, Hindi and Marathi included), run with sentence-transformers on the state's own server.** The build container cannot reach huggingface.co, so the weights were not downloaded and the real model has **not been run**; the install steps are in `docs/DEPLOY-EMBEDDINGS.md`. Until they are done the screen finds pieces by words only and says so.
-3. **"Bank replies as searchable text" waits for A4's left-for part** (saving the pasted reply with its notice). Nothing is stored today for it to search; building a second store only for search would copy text. The 63(4) certificates, money trail and notices are already searchable.
+3. **(Resolved in session 111: bank replies are now saved with the reply, V59, and are searchable.) "Bank replies as searchable text" waited for A4's left-for part** (saving the pasted reply with its notice). Nothing is stored today for it to search; building a second store only for search would copy text. The 63(4) certificates, money trail and notices are already searchable.
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
@@ -68,7 +68,7 @@ Next (replaces the "Next" list of session 25; a session finishing an item remove
 4. DONE (session 107, draft word lists): Hindi and Marathi guards for the guilt, truth, prediction, opinion and rating refusals (A5, A6, A9). Left: a Marathi-speaking prosecutor's review of the words; other Indian scripts still rely on the model's safety text.
 5. DONE: the rest of A3: "differences to clarify" (session 108) and audio transcription with an on-premises speech model with an offline stand-in (session 109). Left: the real model's download and word-error check (`docs/DEPLOY-TRANSCRIPTION.md`), keeping which statements came from a recording.
 6. DONE (session 110): the rest of A6: drafting also from the evidence register, notices, 63(4) certificates, search/seizure memos, expert requests and the money trail, and one paragraph per charge ingredient linked to the readiness check. Left: bank replies as text (nothing stores them until A4's left-for part, decision 3), the particulars table and court print (item 18), a Marathi-speaking prosecutor's review.
-7. The "Left for" parts of A1, A2, A4 and A7 in item 14.
+7. The "Left for" parts of A1, A2, A4 and A7 in item 14. A4's "reply saved with the notice" DONE (session 111, V59). Still left in item 7: A4 (reply as a file or photo, reminder letter for a missing item, Part B certificate in the readiness check), A1 (signed complaint at the front desk, several documents and their conflicts, identifiers seen in other FIRs), A2 (offence date on the FIR form, sections outside the playbooks, report to the Magistrate), A7 (letter print, SMS, the 90-day date and steps read from the case, victim's language from the person's record).
 8. Then the rest of the Next list in its order: item 3 rest, item 15 rest (POCSO), item 16 (duty roster), item 18 (court-format papers), then the real-time screens.
 Open questions must not stall the work: where one blocks an item, take the safer choice that can be reversed, record it under "Decisions taken for Sumit" above, and carry on.
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
@@ -178,6 +178,23 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    **Session 106 (hybrid RAG, V58):** gateway `POST /v1/embed` (local embedder only, `ai_embed` audit rows, 120 calls per officer per 10 minutes; `EMBED_BACKEND=fake` offline stand-in; the real model is a deployment step), vectors kept in PostgreSQL per case, model and text hash (`case_passage_vector`, `CaseVectorController`), BM25 and cosine fused by reciprocal rank in `askFile.ts`, a source opens as its whole passage with the piece marked, "Note in case diary" (editable, saved on the officer's click), Hindi and Marathi questions in the evaluation set, the answers scored on the set with a stand-in provider (the gateway's fake provider only echoes the prompt). Left: bank replies as text (decision 3), the real model (download, `EMBED_MIN_SIMILARITY` tuning, scoring with a real provider), Hindi and Marathi refusal guards beyond the draft word list (priority 4).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 18 Nov 2026, session 111 (scheduled run, Sumit away)
+Started from `setup/seed` (session 110) in a new container (the clone was on `master`; checked out `origin/setup/seed`; `add_repo` was not offered, `git fetch` worked). Postgres started, role `caseapp` and both databases made, gateway requirements, `psycopg`, `npm ci`. Baseline: seven suites PASS; the database and browser suites could not start until `psycopg` was installed (container, not code). Priorities 1 to 6 were done, so this session started priority 7 with A4's "reply saved with the notice", which also settles decision 3 (bank replies as searchable text).
+
+**A4: the pasted reply is saved with the reply (V59):**
+- Core: `notice_reply.reply_text` (optional, 1 to 30,000 characters, kept as written). `POST .../notices/{id}/replies` takes `replyText` (trimmed; blank is kept as nothing; over 30,000 is a 400). `GET /firs/{id}/case-file` gives each saved reply as a passage `reply` ("Reply to notice BNSS_94 from <addressee>, received <date>"), so Ask the case file finds a bank's reply.
+- Web: on "Log a reply" the text box is now always shown (it was only shown where the AI reader was offered) and is saved with the reply; the AI button is unchanged (not on a protected case, not for a notice without a list). The final-report draft reads `reply` passages too. The label of the box says it is saved, in all 11 languages (machine drafts).
+- Tests: `db-tests/test_notice_reply_text.py` (V59), `RecordsApiTest` (kept, trimmed, blank, too long), `CaseFileApiTest` (passage, this case only, not for a reply without text), `Notices.test.tsx` (saved on a protected case, blank sends nothing), `tests/e2e/test_reply_reader.py` now also checks the saved text is a case-file passage. `MigrationTest` expects V59.
+
+`scripts/test-all.sh` at the end: all 8 suites PASS (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e browser). Coverage: core 99.01% lines / 96.51% branches (unchanged), web and gateway not lower than session 110 (gates met; web 99.97 / 97.5 / 98.8 at session 110). Gates unchanged.
+
+Not done: A4's reply as a file or photo, reminder letter, Part B certificate in the readiness check; the rest of A1, A2 and A7 (see item 7 of Next). The saved reply text is not AI-read data: the AI reading itself is still only in the gateway log (question 2 of session 82 unanswered).
+
+Questions for Sumit:
+1. May the saved reply text of a protected (sexual-offence or acid-attack) case be searched with the AI in Ask the case file like other documents? It is searchable today the same way as the notice body; the reply reader button stays off there.
+
+## Tonight in short (18 Nov, session 111): A4 reply text saved with the notice (V59), searchable in Ask the case file; all 8 suites PASS.
 
 ## Tonight in short (17 Nov scheduled runs: sessions 108, 109 and 110)
 - Session 108: A3 "differences to clarify" between a statement, the FIR and other statements.

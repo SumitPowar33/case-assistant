@@ -55,6 +55,12 @@ class CaseFileController {
         add(rows, "notice", db.sql("""
                 select 'Notice ' || kind || ' to ' || addressee || ' (' || status || ')' as title, body as text from notice
                 where fir_id = ? order by id limit 100""").params(firId));
+        // the text of each reply logged with a notice (V59): a bank's or telecom's reply is searchable like any other document
+        add(rows, "reply", db.sql("""
+                select 'Reply to notice ' || n.kind || ' from ' || n.addressee || ', received ' || to_char(ist_date(r.received_at), 'DD Mon YYYY') as title,
+                       r.reply_text as text
+                from notice_reply r join notice n on n.id = r.notice_id
+                where n.fir_id = ? and r.reply_text is not null order by r.received_at, r.id limit 100""").params(firId));
         // session 93 (item 17): what the lab or hospital was asked and every step's note, the court events, the search memos
         add(rows, "expert", db.sql("""
                 select 'Request to ' || r.sent_to || ' (' || r.kind || '), sent ' || to_char(r.sent_on, 'DD Mon YYYY') as title,
