@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from 'react'
 import { ai, send } from './api'
-import { NOTICE_PROMPT_VERSION, noticePrompt, type NoticeFacts } from './noticePrompt'
+import { NOTICE_PROMPT_VERSION, REMINDER_PROMPT_VERSION, noticePrompt, reminderPrompt, type NoticeFacts } from './noticePrompt'
 import { Form } from './Forms'
 import { REPLY_PROMPT_VERSION, MAX_REPLY, readReply, replyPrompt, type ReplyRead } from './replyReader'
 import TypingField from './TypingField'
@@ -110,6 +110,61 @@ function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string;
         <label key={item}><input type="checkbox" checked={ticks[i] ?? false} onChange={(e) => setTicks(ticks.map((x, j) => (j === i ? e.target.checked : x)))} /> {item === FULL_REPLY ? t('notice.fullReply') : item}</label>
       ))}
     </Form>
+  )
+}
+
+/**
+ * Reminder letter for the items a reply left out (A4, gateway feature notice_draft). Only the FIR number and sections, the
+ * numbered missing items and, for a BNSS 94 notice, who it is to go to the gateway: never a name or the complaint. The
+ * draft is shown apart as an AI draft; the officer edits it and saves it as a draft follow-up notice (which they then
+ * send like any notice) or discards it, and the decision is logged. Not offered where the victim's identity is protected.
+ */
+function ReminderLetter({ firId, fir, notice, onSaved }: { firId: string; fir?: NoticeFacts['fir']; notice: Notice; onSaved: () => void }) {
+  const t = useT()
+  const [draft, setDraft] = useState<Draft>()
+  const [body, setBody] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+  const decide = (d: Draft, decision: 'accepted' | 'edited' | 'rejected') =>
+    ai('/v1/decisions', { method: 'POST', body: { request_id: d.request_id, decision, feature: 'notice_draft', case_ref: firId, note: '' } })
+
+  async function ask() {
+    setNote(''); setBusy(true)
+    try {
+      const prompt = reminderPrompt({ kind: notice.kind, kindLabel: translateCode('en', 'notice.kind', notice.kind), addressee: notice.addressee, items: notice.items_missing, fir })
+      const out = await ai<Draft>('/v1/generate', { method: 'POST', body: { feature: 'notice_draft', prompt_version: REMINDER_PROMPT_VERSION, prompt, case_ref: firId, max_tokens: 800 } })
+      setDraft(out); setBody(out.draft)
+    } catch (err) { setNote((err as Error).message) }
+    setBusy(false)
+  }
+  async function save() {
+    if (!draft || !body.trim()) return
+    setNote('')
+    try {
+      await send(`/firs/${firId}/notices`, 'POST', {
+        kind: 'follow_up', addressee: notice.addressee, itemsRequested: notice.items_missing, body: body.trim(), aiRequestId: draft.request_id, status: 'draft', issuedAt: null, replyDueOn: null })
+    } catch (err) { setNote((err as Error).message); return }
+    // the follow-up is saved; a failure to log the decision must not make the officer save it twice
+    await decide(draft, body.trim() === draft.draft.trim() ? 'accepted' : 'edited').catch(() => undefined)
+    setDraft(undefined); onSaved()
+  }
+  async function discard() {
+    if (!draft) return
+    try { await decide(draft, 'rejected'); setDraft(undefined) } catch (err) { setNote((err as Error).message) }
+  }
+  return (
+    <div>
+      {!draft && <p><button type="button" onClick={ask} disabled={busy}>{t(busy ? 'notice.asking' : 'notice.remind')}</button> <small>{t('notice.remindSends')}</small></p>}
+      {note && <p role="alert">{note}</p>}
+      {draft && (
+        <section aria-label={t('notice.aiDraft')} className="ai-draft">
+          <p><span className="chip c-ai">{t('notice.aiDraft')}</span> <small>({draft.provider} / {draft.model})</small></p>
+          <textarea aria-label={t('notice.text')} rows={8} value={body} onChange={(e) => setBody(e.target.value)} style={{ width: '100%' }} />
+          <button type="button" onClick={save} disabled={!body.trim()}>{t('notice.remindSave')}</button>{' '}
+          <button type="button" onClick={discard}>{t('notice.discard')}</button>
+        </section>
+      )}
+    </div>
   )
 }
 
@@ -228,6 +283,7 @@ export default function Notices({ firId, fir, victimProtected = false }: { firId
               ))}</ul>
             )}
             {n.status === 'draft' && <SendForm firId={firId} notice={n} onSaved={saved} />}
+            {n.status === 'reply_incomplete' && n.items_missing.length > 0 && !victimProtected && <ReminderLetter firId={firId} fir={fir} notice={n} onSaved={saved} />}
             {['sent', 'reply_incomplete'].includes(n.status) && <ReplyForm firId={firId} notice={n} victimProtected={victimProtected} onSaved={saved} />}
           </li>
         ))}</ul>

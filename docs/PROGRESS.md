@@ -6,6 +6,7 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 1. **Vectors are kept as `real[]` in PostgreSQL, not in a pgvector column** (session 106, item 17). You asked for pgvector; the CI database image (`postgres:16`) has none, and one case file has a few hundred pieces, so the core compares them for the one case asked about. Switching later is one migration (a `vector` column and an index on `case_passage_vector`) when a search across cases is built; see `docs/DEPLOY-EMBEDDINGS.md`. Reverse it now and the next session adds pgvector as a required extension.
 2. **The embedding model is `intfloat/multilingual-e5-small` (MIT licence, 384 numbers, Hindi and Marathi included), run with sentence-transformers on the state's own server.** The build container cannot reach huggingface.co, so the weights were not downloaded and the real model has **not been run**; the install steps are in `docs/DEPLOY-EMBEDDINGS.md`. Until they are done the screen finds pieces by words only and says so.
 3. **(Resolved in session 111: bank replies are now saved with the reply, V59, and are searchable.) "Bank replies as searchable text" waited for A4's left-for part** (saving the pasted reply with its notice). Nothing is stored today for it to search; building a second store only for search would copy text. The 63(4) certificates, money trail and notices are already searchable.
+4. **The AI reminder letter for a missing notice item is not offered on a protected case** (session 113, answer to question 1 of session 112). It sends no name, only the FIR number, the sections and the numbered missing items, so the gateway would allow it, but a bank's missing items can point at the victim's account; the safer choice is to leave it out there, like the reply reader. Reverse it by telling the next session (one condition in `Notices.tsx`).
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
@@ -68,7 +69,7 @@ Next (replaces the "Next" list of session 25; a session finishing an item remove
 4. DONE (session 107, draft word lists): Hindi and Marathi guards for the guilt, truth, prediction, opinion and rating refusals (A5, A6, A9). Left: a Marathi-speaking prosecutor's review of the words; other Indian scripts still rely on the model's safety text.
 5. DONE: the rest of A3: "differences to clarify" (session 108) and audio transcription with an on-premises speech model with an offline stand-in (session 109). Left: the real model's download and word-error check (`docs/DEPLOY-TRANSCRIPTION.md`), keeping which statements came from a recording.
 6. DONE (session 110): the rest of A6: drafting also from the evidence register, notices, 63(4) certificates, search/seizure memos, expert requests and the money trail, and one paragraph per charge ingredient linked to the readiness check. Left: bank replies as text (nothing stores them until A4's left-for part, decision 3), the particulars table and court print (item 18), a Marathi-speaking prosecutor's review.
-7. The "Left for" parts of A1, A2, A4 and A7 in item 14. A4's "reply saved with the notice" DONE (session 111, V59). Still left in item 7: A4 (reply as a file or photo, reminder letter for a missing item, Part B certificate in the readiness check), A1 (signed complaint at the front desk, several documents and their conflicts, identifiers seen in other FIRs), A2 (offence date on the FIR form, sections outside the playbooks, report to the Magistrate), A7 (letter print, SMS, victim's language from the person's record; the 90-day date and the steps read from the case DONE, session 112).
+7. The "Left for" parts of A1, A2, A4 and A7 in item 14. A4's "reply saved with the notice" DONE (session 111, V59). Still left in item 7: A4 (reply as a file or photo, Part B certificate in the readiness check; the reminder letter for a missing item DONE, session 113), A1 (signed complaint at the front desk, several documents and their conflicts, identifiers seen in other FIRs), A2 (offence date on the FIR form, sections outside the playbooks, report to the Magistrate), A7 (letter print, SMS, victim's language from the person's record; the 90-day date and the steps read from the case DONE, session 112).
 8. Then the rest of the Next list in its order: item 3 rest, item 15 rest (POCSO), item 16 (duty roster), item 18 (court-format papers), then the real-time screens.
 Open questions must not stall the work: where one blocks an item, take the safer choice that can be reversed, record it under "Decisions taken for Sumit" above, and carry on.
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
@@ -179,6 +180,26 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
 
+## 19 Nov 2026, session 113 (02:05 IST scheduled run, last of the night, Sumit away)
+Started from `setup/seed` (session 112) in a new container (the clone was on `master`; checked out `origin/setup/seed`; `add_repo` was not offered, `git fetch` worked). Postgres started, role `caseapp` and both databases made, gateway requirements, `psycopg`, `npm ci`. Baseline: all 8 suites PASS. Priorities 1 to 6 were done; this session continued priority 7 with A4's "reminder letter for a missing item".
+
+**A4: reminder letter for the items a reply left out (web only, no core, gateway or migration change):**
+- On a notice that is `reply_incomplete` with items still missing, "Draft a reminder letter with AI" asks the gateway (existing feature `notice_draft`, prompt `notice_draft/reminder@1`). Only the FIR number and sections, the notice's kind, the numbered missing items (not the ones already received) and, for BNSS 94, who it is to are sent; never a name, the complaint or the reply's text. Dates, signature and station are blanks for the officer; the prompt forbids threats and extra facts.
+- The draft is shown apart as "AI draft", editable. "Save as a follow-up notice (draft)" saves a `follow_up` notice with the same addressee, the missing items and the AI request id (the officer sends it like any notice); the decision is logged accepted (unchanged) or edited; "Discard" logs rejected. A failed log after the save does not bring the form back (no double save). Not offered on a protected case (decision 4), on a complete notice or on a draft.
+- 3 new texts in 11 languages (10 machine drafts).
+- Tests: `Notices.test.tsx` (3 new: edited and saved, accepted and rejected and blank addressee, no offer on protected/complete, gateway down, refused save, failed log, empty text, failed discard), `noticePrompt.test.ts`, `tests/e2e/test_reminder_letter.py` (real gateway, the request holds the numbered missing item and not the received item or the reply text, the follow-up is saved as an AI-drafted draft).
+
+`scripts/test-all.sh` at the end: all 8 suites PASS; web 99.97 / 97.53 / 98.8, `Notices.tsx` 100 / 96.2 / 100.
+
+Skipped / risks: no screenshot of the new button and box (desktop and 390 px). The follow-up notice does not copy the earlier notice's reply due date: the officer sets it when sending.
+
+Not done: the rest of item 7 (A4: reply as a file or photo, Part B certificate in the readiness check; A1: signed complaint at the front desk, several documents and conflicts, identifiers in other FIRs; A2: offence date on the FIR form, sections outside the playbooks, report to the Magistrate; A7: letter print, SMS, victim's language from the person's record), then item 8.
+
+Next: the rest of priority 7 (suggest A4's Part B certificate in the readiness check next), then 8.
+
+Questions for Sumit:
+1. Should the reminder letter's follow-up notice be sent automatically with a due date 7 days out when the officer signs it? (Today the officer fills the date in, as for any notice.)
+
 ## 18 Nov 2026, session 112 (scheduled run, Sumit away)
 Started from `setup/seed` (session 111) in a new container (the clone was on `master`; checked out `origin/setup/seed`; `add_repo` was not offered, `git fetch` and push worked). Postgres started, role `caseapp` and both databases made, gateway requirements, `psycopg`, `npm ci`. Baseline: all 8 suites PASS (a first e2e run failed only because I edited code while it ran). Priorities 1 to 6 were done; this session continued priority 7 with A7's "the 90-day date and the steps read from the case".
 
@@ -212,6 +233,12 @@ Not done: A4's reply as a file or photo, reminder letter, Part B certificate in 
 
 Questions for Sumit:
 1. May the saved reply text of a protected (sexual-offence or acid-attack) case be searched with the AI in Ask the case file like other documents? It is searchable today the same way as the notice body; the reply reader button stays off there.
+
+## Tonight in short (18 to 19 Nov, sessions 111, 112 and 113)
+- Session 111: A4 reply text saved with the notice (V59), searchable in Ask the case file.
+- Session 112: A7 victim letter reads the 90-day date and the steps taken from the case.
+- Session 113 (02:05 IST run, last of the night): A4 AI reminder letter for a missing notice item, saved as a draft follow-up notice (web only; not offered on protected cases, decision 4).
+- `scripts/test-all.sh` at the end of session 113: all 8 suites PASS (repo rules, packs, xlit, gateway, web, database rules, core, e2e). Coverage: web 99.97 / 97.53 / 98.8 (lines/branches/functions), core 99.01 / 96.51 and gateway unchanged (no change to either); gates unchanged.
 
 ## Tonight in short (18 Nov, sessions 111 and 112): session 112: A7 victim letter reads the 90-day date and the steps taken from the case.
 

@@ -28,3 +28,23 @@ export function noticePrompt(f: NoticeFacts): string {
     'Do not add any fact about the complaint, the offence or any person beyond what is written above.',
   ].join('\n\n')
 }
+
+export const REMINDER_PROMPT_VERSION = 'notice_draft/reminder@1'
+
+/**
+ * A reminder letter for the items a reply left out (A4). Only the FIR number and sections, the notice's kind, the numbered
+ * list of items still missing and, for a BNSS 94 notice to an institution, who it is to. No name, no complaint text.
+ */
+export function reminderPrompt(f: NoticeFacts): string {
+  const fir = f.fir
+    ? `FIR No. ${f.fir.fir_no}/${f.fir.fir_year}${f.fir.sections.length ? `, registered under ${f.fir.sections.map((s) => `${s.act} ${s.section}`).join(', ')}` : ''}`
+    : 'the FIR (number to be filled in by the officer)'
+  return [
+    `Write a short reminder letter for an earlier police notice (${f.kindLabel}) issued in ${fir}.`,
+    f.kind === 'BNSS_94' ? `Addressed to: ${f.addressee}.` : 'Addressed to: [ADDRESSEE NAME AND ADDRESS] (leave this blank as written).',
+    `The reply received did not bring these items; list them exactly as given, numbered:\n${f.items.map((i, n) => `${n + 1}. ${i}`).join('\n')}`,
+    'Ask for them by [REPLY DUE DATE]. Write formal, short English. Leave these blanks for the officer exactly as written: '
+      + '[REPLY DUE DATE], [DATE OF EARLIER NOTICE], [OFFICER NAME AND RANK], [POLICE STATION], [DATE].',
+    'Do not add any fact about the complaint, the offence or any person beyond what is written above, and do not threaten any action.',
+  ].join('\n\n')
+}

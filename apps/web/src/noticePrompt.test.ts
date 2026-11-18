@@ -32,3 +32,14 @@ test('the prompt is the six parts in order, with the instruction lines and the F
     'Do not add any fact about the complaint, the offence or any person beyond what is written above.',
   ])
 })
+
+test('the reminder prompt lists only the missing items, numbered, and leaves the dates and signature blank', async () => {
+  const { reminderPrompt, REMINDER_PROMPT_VERSION } = await import('./noticePrompt')
+  expect(REMINDER_PROMPT_VERSION).toBe('notice_draft/reminder@1')
+  const p = reminderPrompt({ kind: 'BNSS_94', kindLabel: 'Notice under BNSS 94', addressee: 'Nodal Officer, Fictional Bank', items: ['KYC documents', 'Statement'], fir: { fir_no: 7, fir_year: 2026, sections: [] } })
+  expect(p).toContain('FIR No. 7/2026.')
+  expect(p).toContain('Addressed to: Nodal Officer, Fictional Bank.')
+  expect(p).toContain('1. KYC documents\n2. Statement')
+  expect(p).toContain('[REPLY DUE DATE], [DATE OF EARLIER NOTICE], [OFFICER NAME AND RANK], [POLICE STATION], [DATE]')
+  expect(p).toContain('do not threaten any action')
+})

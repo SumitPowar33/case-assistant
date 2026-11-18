@@ -453,3 +453,91 @@ test('A4: an unreadable answer, a gateway failure and a too long reply leave the
   form = (await screen.findByText('Log a reply')).closest('details')!
   expect(within(form).queryByRole('button', { name: 'Read the reply with AI' })).toBeNull()
 })
+
+const FIR_FACTS = { fir_no: 7, fir_year: 2026, sections: [{ act: 'BNS', section: '318(4)' }] }
+
+test('A4: a reminder letter for the missing items is drafted from the numbered items only, edited, saved as a follow-up draft and logged as edited', async () => {
+  const writes = stubReply('Kindly send the items below.', sent)
+  render(<Notices firId="f1" fir={FIR_FACTS} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Draft a reminder letter with AI' }))
+  const box = await screen.findByRole('region', { name: 'AI draft' })
+  const asked = writes[0].body as { feature: string; prompt_version: string; prompt: string; case_ref: string }
+  expect(asked).toMatchObject({ feature: 'notice_draft', prompt_version: 'notice_draft/reminder@1', case_ref: 'f1' })
+  expect(asked.prompt).toContain('1. KYC documents')
+  expect(asked.prompt).not.toContain('Account statement')   // already received: not asked again
+  expect(asked.prompt).toContain('Addressed to: Nodal Officer, Fictional Bank')
+  expect(asked.prompt).toContain('FIR No. 7/2026, registered under BNS 318(4)')
+  type('Text of the notice', 'Kindly send the items below, today.', within(box))
+  fireEvent.click(within(box).getByRole('button', { name: 'Save as a follow-up notice (draft)' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(3))
+  expect(writes[1]).toEqual({ url: '/api/firs/f1/notices', body: {
+    kind: 'follow_up', addressee: 'Nodal Officer, Fictional Bank', itemsRequested: ['KYC documents'], body: 'Kindly send the items below, today.',
+    aiRequestId: 'rr1', status: 'draft', issuedAt: null, replyDueOn: null } })
+  expect(writes[2]).toEqual({ url: '/ai/v1/decisions', body: { request_id: 'rr1', decision: 'edited', feature: 'notice_draft', case_ref: 'f1', note: '' } })
+  expect(screen.queryByRole('region', { name: 'AI draft' })).toBeNull()
+})
+
+test('A4: a reminder used unchanged is accepted; a discarded one is rejected and nothing is saved; a non-BNSS 94 notice leaves the addressee blank', async () => {
+  const writes = stubReply('Kindly send the items below.', { ...sent, kind: 'follow_up' })
+  render(<Notices firId="f1" />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Draft a reminder letter with AI' }))
+  await screen.findByRole('region', { name: 'AI draft' })
+  expect((writes[0].body as { prompt: string }).prompt).toContain('[ADDRESSEE NAME AND ADDRESS]')
+  expect((writes[0].body as { prompt: string }).prompt).toContain('the FIR (number to be filled in by the officer)')
+  expect((writes[0].body as { prompt: string }).prompt).not.toContain('Fictional Bank')
+  fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(2))
+  expect(writes[1]).toEqual({ url: '/ai/v1/decisions', body: { request_id: 'rr1', decision: 'rejected', feature: 'notice_draft', case_ref: 'f1', note: '' } })
+  fireEvent.click(await screen.findByRole('button', { name: 'Draft a reminder letter with AI' }))
+  await screen.findByRole('region', { name: 'AI draft' })
+  fireEvent.click(screen.getByRole('button', { name: 'Save as a follow-up notice (draft)' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(5))
+  expect(writes[4].body).toMatchObject({ decision: 'accepted', feature: 'notice_draft' })
+})
+
+test('A4: no reminder on a protected case, for a complete notice or a draft; a gateway failure, a refused save and a failed log are shown or kept', async () => {
+  stubReply('x', sent)
+  const protectedCase = render(<Notices firId="f1" victimProtected />)
+  await screen.findByText('Log a reply')
+  expect(screen.queryByRole('button', { name: 'Draft a reminder letter with AI' })).toBeNull()
+  protectedCase.unmount()
+  stubReply('x', { ...sent, status: 'complete', items_missing: [] })
+  const done = render(<Notices firId="f1" />)
+  await screen.findByText('Account statement: received')
+  expect(screen.queryByRole('button', { name: 'Draft a reminder letter with AI' })).toBeNull()
+  done.unmount()
+  stubReply(null, sent)
+  const down = render(<Notices firId="f1" />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Draft a reminder letter with AI' }))
+  expect((await screen.findByRole('alert')).textContent).toBe('The AI gateway answered 503: gateway down')
+  down.unmount()
+  // the save is refused: the draft stays and nothing is logged; then the decision cannot be logged: the saved follow-up is not saved twice
+  const writes: string[] = []
+  let refuse = true
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method && init.method !== 'GET') {
+      writes.push(url)
+      if (url === '/ai/v1/generate') return { ok: true, status: 200, json: async () => ({ request_id: 'rr1', draft: 'Kindly send.' }) }
+      if (url === '/api/firs/f1/notices') return refuse ? { ok: false, status: 400, json: async () => ({ message: 'refused' }) } : { ok: true, status: 201, json: async () => ({}) }
+      return { ok: false, status: 500, json: async () => ({ detail: 'log down' }) }
+    }
+    return { ok: true, status: 200, json: async () => (url.endsWith('/notices') ? [sent] : []) }
+  }))
+  render(<Notices firId="f1" />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Draft a reminder letter with AI' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Save as a follow-up notice (draft)' }))
+  expect((await screen.findByRole('alert')).textContent).toMatch(/refused/)
+  expect(writes).toEqual(['/ai/v1/generate', '/api/firs/f1/notices'])
+  refuse = false
+  fireEvent.click(screen.getByRole('button', { name: 'Save as a follow-up notice (draft)' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(4))
+  expect(screen.queryByRole('region', { name: 'AI draft' })).toBeNull()   // saved; the failed log did not bring the form back
+  // an empty text cannot be saved, and a log that fails on discard keeps the draft on screen
+  fireEvent.click(await screen.findByRole('button', { name: 'Draft a reminder letter with AI' }))
+  const box = await screen.findByRole('region', { name: 'AI draft' })
+  type('Text of the notice', '  ', within(box))
+  expect((within(box).getByRole('button', { name: 'Save as a follow-up notice (draft)' }) as HTMLButtonElement).disabled).toBe(true)
+  fireEvent.click(within(box).getByRole('button', { name: 'Discard' }))
+  expect((await screen.findByRole('alert')).textContent).toMatch(/log down/)
+  expect(screen.getByRole('region', { name: 'AI draft' })).toBeTruthy()
+})
