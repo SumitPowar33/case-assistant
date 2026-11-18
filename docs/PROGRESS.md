@@ -187,7 +187,7 @@ Started from `setup/seed` (session 111) in a new container (the clone was on `ma
 - Web (`VictimLetter.tsx`): the steps the case has taken are ticked once when the part opens (a line says so; the officer may untick or tick), and "The 90-day update is due by <date> (BNSS 193(3)(ii))" is shown from the case's `victim_progress_update` deadline (it disappears once the update is recorded). Still only the ticked generic steps, the FIR number and its day go to the gateway. 2 new texts in 11 languages (10 machine drafts).
 - Tests: `CaseApiTest.progressStepsAreFourYesNoAnswersReadFromTheCase` (empty, masked person not counted, each step, outsider and malkhana 404), `VictimLetter.test.tsx` (2 new: ticked from the case and sent; nothing ticked and no date without a deadline), `tests/e2e/test_victim_letter.py` (the demo case's bank notice is ticked, the date shows, the FIR text still never goes).
 
-`scripts/test-all.sh`: see the end of this entry.
+`scripts/test-all.sh` at the end: all 8 suites PASS (repo rules, packs, xlit, gateway, web, database rules, core, e2e); coverage gates met, unchanged.
 
 Skipped / risks: no screenshot of the added lines (desktop and 390 px) was taken this run; the lines are plain paragraphs in the existing fieldset. The "ticked from the case" tick is a suggestion; a letter still goes to the victim only after the officer reads and sends it.
 
