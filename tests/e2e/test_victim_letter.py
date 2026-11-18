@@ -52,6 +52,8 @@ def test_an_officer_drafts_the_victim_letter_with_ai_and_the_decision_is_logged(
         sign_in(page, "io.adminui", demo["accounts"]["io.adminui"])
         page.evaluate(f"location.hash = '#/firs/{demo['fir_id']}/deadlines'")
         expect(page.get_by_role("heading", name="AI draft of the 90-day letter to the victim or informant")).to_be_visible()
+        expect(page.get_by_label("Information has been asked from banks, telecom companies or other offices")).to_be_checked()
+        expect(page.get_by_text("The 90-day update is due by")).to_be_visible()
         page.get_by_label("Statements of people who know about the matter have been recorded").check()
         page.get_by_label("Language of the letter").select_option("mr")
         page.get_by_role("button", name="Draft the letter with AI").click()
@@ -68,7 +70,8 @@ def test_an_officer_drafts_the_victim_letter_with_ai_and_the_decision_is_logged(
         assert kinds == ["generate", "decisions", "generate", "decisions"], kinds
         prompt = json.loads(posts[0][1])["prompt"]
         assert f"the FIR number is {fir['fir_no']}/{fir['fir_year']}" in prompt and "in Marathi" in prompt
-        assert fir["contents_original"] not in prompt and "banks" not in prompt
+        # the demo case has notices to banks, so that step was ticked from the case (A7); the FIR text itself never goes
+        assert fir["contents_original"] not in prompt and "information has been asked from banks" in prompt
         assert [json.loads(b)["decision"] for k, b in posts if k == "decisions"] == ["rejected", "edited"]
         expect(page.get_by_role("alert")).to_have_count(0)
         browser.close()

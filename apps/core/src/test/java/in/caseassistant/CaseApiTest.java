@@ -81,6 +81,24 @@ class CaseApiTest {
         mvc.perform(get("/api/firs/" + fir + "/victim-updates").header("Authorization", outsider)).andExpect(status().isNotFound());
     }
 
+    /** A7: the letter's generic steps are read from the case as yes/no only; a masked person's statement does not count. */
+    @Test
+    void progressStepsAreFourYesNoAnswersReadFromTheCase() throws Exception {
+        String url = "/api/firs/" + fir + "/progress-steps";
+        mvc.perform(get(url).header("Authorization", sho)).andExpect(status().isOk()).andExpect(jsonPath("$.evidence").value(true))
+                .andExpect(jsonPath("$.statements").value(false)).andExpect(jsonPath("$.enquiries").value(false)).andExpect(jsonPath("$.expert").value(false));
+        UUID me = db.sql("select id from app_user where role = 'sho'").query(UUID.class).single();
+        UUID w = db.sql("insert into person (fir_id, role, label, full_name, identity_masked) values (?, 'witness', 'W1', 'Fictional Witness', true) returning id").param(fir).query(UUID.class).single();
+        db.sql("insert into witness_statement (fir_id, person_id, recorded_by, language, medium, original_text) values (?,?,?,'en','written','Fictional statement')").params(fir, w, me).update();
+        mvc.perform(get(url).header("Authorization", sho)).andExpect(jsonPath("$.statements").value(false));
+        db.sql("update person set identity_masked = false where id = ?").param(w).update();
+        db.sql("insert into notice (fir_id, kind, addressee, items_requested, body, issued_at, reply_due_on, status, signed_by) values (?, 'BNSS_94', 'Fictional Bank', array['Statement'], 'Fictional body', now(), current_date + 7, 'sent', ?)").params(fir, me).update();
+        db.sql("insert into expert_request (fir_id, kind, subject, sent_to, sent_on, recorded_by) values (?, 'forensic', 'Fictional phone', 'Fictional Lab', date '2026-10-03', ?)").params(fir, me).update();
+        mvc.perform(get(url).header("Authorization", sho)).andExpect(jsonPath("$.statements").value(true)).andExpect(jsonPath("$.enquiries").value(true))
+                .andExpect(jsonPath("$.expert").value(true));
+        for (String who : new String[] {malkhana, outsider}) mvc.perform(get(url).header("Authorization", who)).andExpect(status().isNotFound());
+    }
+
     @Test
     void onlyTheCaseTeamReadsTheCaseAndMalkhanaReadsEvidence() throws Exception {
         for (String who : new String[] {malkhana, outsider})

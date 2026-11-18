@@ -64,6 +64,24 @@ class CaseController {
                 .param(firId).query().listOfRows();
     }
 
+    /**
+     * Which of the generic steps of the 90-day letter (A7) the case has already taken, read from the case: only four yes/no
+     * answers, no name and no text, so it is safe on any case. Statements of a person masked by hand do not count.
+     */
+    @GetMapping("/progress-steps")
+    Map<String, Boolean> progressSteps(@PathVariable UUID firId) {
+        return db.sql("""
+                select exists (select 1 from witness_statement s join person p on p.id = s.person_id where s.fir_id = :f and not p.identity_masked) as statements,
+                       exists (select 1 from evidence_item where fir_id = :f) as evidence,
+                       exists (select 1 from notice where fir_id = :f) as enquiries,
+                       exists (select 1 from expert_request where fir_id = :f) as expert""")
+                .param("f", firId).query((rs, i) -> {
+                    var m = new java.util.LinkedHashMap<String, Boolean>();
+                    for (String k : new String[] {"statements", "evidence", "enquiries", "expert"}) m.put(k, rs.getBoolean(k));
+                    return (Map<String, Boolean>) m;
+                }).single();
+    }
+
     @PostMapping("/victim-updates")
     ResponseEntity<Map<String, UUID>> victimUpdate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody VictimUpdate v) {
         UUID me = CaseTeam.user(jwt);

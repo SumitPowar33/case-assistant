@@ -103,3 +103,36 @@ test('a refusal by the gateway and a failed log are shown and nothing is lost', 
   expect(await screen.findByRole('alert')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Use this letter' })).toBeTruthy()
 })
+
+test('the steps the case has taken are ticked and the 90-day date is shown, from the case, and only the ticked steps are sent', async () => {
+  const calls: { url: string; body?: Record<string, unknown> }[] = []
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    calls.push({ url, body: init?.body ? JSON.parse(init.body as string) : undefined })
+    const ok = (j: unknown) => ({ ok: true, status: 200, json: async () => j })
+    if (url.endsWith('/progress-steps')) return ok({ statements: true, evidence: false, enquiries: true, expert: false })
+    if (url.endsWith('/deadlines')) return ok([{ kind: 'custody_review', due_on: '2026-12-01' }, { kind: 'victim_progress_update', due_on: '2027-02-01' }])
+    if (url.endsWith('/v1/generate')) return ok({ request_id: 'r1', draft: 'The inquiry continues.', provider: 'fake', model: 'echo' })
+    return ok({ logged: 1 })
+  }))
+  show()
+  expect(await screen.findByText('The 90-day update is due by 2027-02-01 (BNSS 193(3)(ii)).')).toBeTruthy()
+  expect(await screen.findByText(/Ticked from what the case already holds/)).toBeTruthy()
+  expect((screen.getByLabelText('Statements of people who know about the matter have been recorded') as HTMLInputElement).checked).toBe(true)
+  expect((screen.getByLabelText('Information has been asked from banks, telecom companies or other offices') as HTMLInputElement).checked).toBe(true)
+  expect((screen.getByLabelText('Items have been sent to an expert or a laboratory') as HTMLInputElement).checked).toBe(false)
+  fireEvent.click(screen.getByLabelText('Statements of people who know about the matter have been recorded'))   // the officer unticks one
+  draftIt()
+  await screen.findByLabelText('Letter to the victim or informant')
+  const prompt = String(calls.find((c) => c.url.endsWith('/v1/generate'))!.body!.prompt)
+  expect(prompt).toContain('information has been asked from banks')
+  expect(prompt).not.toContain('statements of people')
+})
+
+test('without a deadline or a step taken nothing is ticked and no date is shown', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () =>
+    url.endsWith('/progress-steps') ? { statements: false, evidence: false, enquiries: false, expert: false } : [] })))
+  show()
+  await new Promise((r) => setTimeout(r, 20))
+  expect(screen.queryByText(/The 90-day update is due/)).toBeNull()
+  expect(screen.queryByText(/Ticked from what the case/)).toBeNull()
+})

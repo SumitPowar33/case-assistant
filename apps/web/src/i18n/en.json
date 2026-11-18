@@ -1234,6 +1234,8 @@
  "fr.aiSaved": "with AI-drafted sentences",
  "vl.title": "AI draft of the 90-day letter to the victim or informant",
  "vl.steps": "Steps to tell them about (tick those that are true)",
+ "vl.fromCase": "Ticked from what the case already holds; change them if needed.",
+ "vl.due": "The 90-day update is due by {date} (BNSS 193(3)(ii)).",
  "vl.step.statements": "Statements of people who know about the matter have been recorded",
  "vl.step.evidence": "Material connected with the matter has been collected and kept safe",
  "vl.step.enquiries": "Information has been asked from banks, telecom companies or other offices",

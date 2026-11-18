@@ -1,9 +1,12 @@
-import { useContext, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { ai } from './api'
+import { useLoad } from './useLoad'
 import { ScreenLangContext, useT } from './i18n'
 import { LANGUAGE_NAMES } from './statementTranslate'
 import { LETTER_PROMPT_VERSION, STEPS, decisionFor, letterPrompt, readLetter, type Letter, type Step } from './victimLetter'
 
+type Taken = { statements: boolean; evidence: boolean; enquiries: boolean; expert: boolean }
+type Due = { kind: string; due_on: string }
 type Request = { request_id: string; draft: string; provider: string; model: string }
 type Asked = { request: Request; read: Letter; text: string; logged?: 'accepted' | 'edited' | 'rejected' }
 
@@ -22,6 +25,16 @@ export default function VictimLetter({ firId, firNo, firYear, registeredAt }: { 
   const [asked, setAsked] = useState<Asked | null>(null)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  // read from the case (A7): the steps the case has already taken are ticked once, and the 90-day date is shown; both only
+  // suggest, the officer ticks and unticks, and nothing of the case itself is sent to the gateway
+  const taken = useLoad<Taken>(`/firs/${firId}/progress-steps`).data
+  const due = useLoad<Due[]>(`/firs/${firId}/deadlines`).data
+  const [fromCase, setFromCase] = useState(false)
+  useEffect(() => {
+    const ticked = taken ? STEPS.filter((s) => taken[s] === true) : []
+    if (ticked.length) { setSteps(ticked); setFromCase(true) }
+  }, [taken])
+  const dueOn = Array.isArray(due) ? due.find((d) => d.kind === 'victim_progress_update')?.due_on : undefined
   const facts = { firNo, firYear, registered: new Date(registeredAt), steps }
 
   async function draft() {
@@ -56,9 +69,11 @@ export default function VictimLetter({ firId, firNo, firYear, registeredAt }: { 
   return (
     <div aria-label={t('vl.title')}>
       <h3>{t('vl.title')}</h3>
+      {dueOn && <p>{t('vl.due', { date: dueOn })}</p>}
       {!asked?.logged && (
         <fieldset>
           <legend>{t('vl.steps')}</legend>
+          {fromCase && <p><small>{t('vl.fromCase')}</small></p>}
           {STEPS.map((s) => (
             <label key={s}><input type="checkbox" checked={steps.includes(s)} onChange={(e) => setSteps(e.target.checked ? [...steps, s] : steps.filter((x) => x !== s))} /> {t.code('vl.step', s)}</label>
           ))}
