@@ -381,6 +381,7 @@
  "notice.aiReadHint": "కింది పెట్టెలు దీని ఆధారంగా ముందే టిక్ చేయబడ్డాయి. నిర్ణయం మీదే.",
  "notice.readFound": "{item}: జవాబులో ఉంది",
  "notice.readNotFound": "{item}: జవాబులో లేదు",
+ "notice.certTick": "ఈ జవాబుతో BSA 63(4) సర్టిఫికేట్ (భాగం A, భాగం B) వచ్చింది",
  "notice.readCertYes": "BSA 63(4) సర్టిఫికేట్: జవాబులో ఉంది",
  "notice.readCertNo": "BSA 63(4) సర్టిఫికేట్: జవాబులో లేదు",
  "notice.writeTitle": "నోటీసు రాయి",

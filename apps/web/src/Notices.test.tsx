@@ -43,7 +43,7 @@ test('a notice shows what has come and what is still missing; a reply sends chec
   fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
   await vi.waitFor(() => expect(writes).toHaveLength(1))
   expect(writes[0]).toEqual({ url: '/api/firs/f1/notices/n1/replies', body: {
-    receivedAt: '2026-10-11T15:00:00+05:30', channel: 'email', checksJson: '[{"item":"KYC documents","present":true}]' } })
+    receivedAt: '2026-10-11T15:00:00+05:30', channel: 'email', checksJson: '[{"item":"KYC documents","present":true},{"item":"certificate","present":false}]' } })
 })
 
 test('a BNSS 94 notice needs items; sending now needs the issue time and is sent as signed', async () => {
@@ -385,7 +385,7 @@ test('A4: the reply reader pre-ticks what the reply brings, with its words; the 
   type(/^Received/, '2026-10-11T15:00', within(form))
   fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
   await vi.waitFor(() => expect(writes).toHaveLength(3))
-  expect(writes[1]).toMatchObject({ url: '/api/firs/f1/notices/n1/replies', body: { checksJson: '[{"item":"Account statement","present":true},{"item":"KYC documents","present":true}]', replyText: REPLY_TEXT } })
+  expect(writes[1]).toMatchObject({ url: '/api/firs/f1/notices/n1/replies', body: { checksJson: '[{"item":"Account statement","present":true},{"item":"KYC documents","present":true},{"item":"certificate","present":false}]', replyText: REPLY_TEXT } })
   expect(writes[2]).toEqual({ url: '/ai/v1/decisions', body: { request_id: 'rr1', decision: 'edited', feature: 'reply_check', case_ref: 'f1', note: '' } })
 })
 
@@ -540,4 +540,49 @@ test('A4: no reminder on a protected case, for a complete notice or a draft; a g
   fireEvent.click(within(box).getByRole('button', { name: 'Discard' }))
   expect((await screen.findByRole('alert')).textContent).toMatch(/log down/)
   expect(screen.getByRole('region', { name: 'AI draft' })).toBeTruthy()
+})
+
+test('A4: a BNSS 94 reply form asks whether a 63(4) certificate came; the reader pre-ticks it only with words from the reply, and a change is logged as edited', async () => {
+  const writes = stubReply(reading([
+    { item: 'Account statement', present: true, quote: 'The account statement for September is attached' },
+    { item: 'KYC documents', present: false, quote: '' },
+    { item: 'certificate', present: true, quote: 'Part A and Part B' },   // not in the reply text: stays unticked
+  ]), open2)
+  render(<Notices firId="f1" />)
+  const form = (await screen.findByText('Log a reply')).closest('details')!
+  const box = () => within(form).getByLabelText('A BSA 63(4) certificate (Part A and Part B) came with this reply') as HTMLInputElement
+  expect(box().checked).toBe(false)
+  type(/^Text of the reply/, REPLY_TEXT + ' Certificate: Part A and Part B signed.', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Read the reply with AI' }))
+  await within(form).findByRole('region', { name: 'AI reading, check before saving' })
+  expect(box().checked).toBe(true)
+  type(/^Received/, '2026-10-11T15:00', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(3))
+  expect(String(writes[1].body.checksJson)).toContain('{"item":"certificate","present":true}')
+  expect(writes[2].body.decision).toBe('accepted')
+})
+
+test('A4: the officer unticks the certificate the reader found; no certificate box on a notice that is not BNSS 94', async () => {
+  const writes = stubReply(reading([
+    { item: 'Account statement', present: true, quote: 'The account statement for September is attached' },
+    { item: 'KYC documents', present: false, quote: '' },
+    { item: 'certificate', present: true, quote: 'certificate' },
+  ]), open2)
+  const { unmount } = render(<Notices firId="f1" />)
+  const form = (await screen.findByText('Log a reply')).closest('details')!
+  type(/^Text of the reply/, REPLY_TEXT + ' The certificate is enclosed.', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Read the reply with AI' }))
+  await within(form).findByRole('region', { name: 'AI reading, check before saving' })
+  fireEvent.click(within(form).getByLabelText('A BSA 63(4) certificate (Part A and Part B) came with this reply'))
+  type(/^Received/, '2026-10-11T15:00', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(3))
+  expect(String(writes[1].body.checksJson)).toContain('{"item":"certificate","present":false}')
+  expect(writes[2].body.decision).toBe('edited')
+  unmount()
+  stubReply('[]', { ...open2, kind: 'BNSS_179' })
+  render(<Notices firId="f1" />)
+  const other = (await screen.findByText('Log a reply')).closest('details')!
+  expect(within(other).queryByLabelText('A BSA 63(4) certificate (Part A and Part B) came with this reply')).toBeNull()
 })

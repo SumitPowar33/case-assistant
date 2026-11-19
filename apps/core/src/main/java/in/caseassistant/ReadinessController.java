@@ -242,6 +242,17 @@ class ReadinessController {
             notReady.forEach((id, label) -> gaps.add(gap("certificate:" + id, "critical",
                     label + " is electronic evidence without a complete BSA 63(4) certificate (Part A and Part B with a matching SHA-256).",
                     overrides)));
+            // A4: a BNSS 94 reply logged with "no certificate" (the officer's tick, pre-filled by the reply reader) and no later
+            // reply that has one. Replies saved before the tick existed carry no such entry and make no gap.
+            for (var n : db.sql("""
+                    select n.id, n.addressee from notice n
+                    where n.fir_id = ? and n.kind = 'BNSS_94' and n.status <> 'draft'
+                      and exists (select 1 from notice_reply r, jsonb_array_elements(r.checks) x where r.notice_id = n.id and x->>'item' = 'certificate')
+                      and not exists (select 1 from notice_reply r, jsonb_array_elements(r.checks) x
+                                      where r.notice_id = n.id and x->>'item' = 'certificate' and (x->>'present')::boolean)
+                    order by n.issued_at, n.id""").param(firId).query().listOfRows())
+                gaps.add(gap("notice-certificate:" + n.get("id"), "critical",
+                        "The reply of " + n.get("addressee") + " came without a BSA 63(4) certificate (Part A and Part B); ask for it.", overrides));
         }
         var covered = charges.stream().map(c -> (String) c.get("law")).toList();
         out.put("playbook", Map.of("id", pb.id(), "version", pb.version(), "status", pb.status(),

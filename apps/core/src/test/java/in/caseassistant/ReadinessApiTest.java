@@ -138,6 +138,33 @@ class ReadinessApiTest {
                 .hasMessageContaining("kept as written");
     }
 
+    @Test
+    void aBankReplyLoggedWithoutAPartBCertificateIsAGapUntilAReplyBringsOne() throws Exception {
+        call(put("/api/firs/" + fir + "/playbook"), io, "{\"playbookId\":\"cyber-fraud\"}");
+        UUID n94 = db.sql("insert into notice (fir_id, kind, addressee, items_requested, body, signed_by, issued_at, status) "
+                + "select ?, 'BNSS_94', 'Fictional Bank', array['statement'], 'Fictional text', io_id, now(), 'sent' from fir where id = ? returning id")
+                .params(fir, fir).query(UUID.class).single();
+        UUID other = db.sql("insert into notice (fir_id, kind, addressee, items_requested, body, signed_by, issued_at, status) "
+                + "select ?, 'BNSS_94', 'Fictional Telecom', array['cdr'], 'Fictional text', io_id, now(), 'sent' from fir where id = ? returning id")
+                .params(fir, fir).query(UUID.class).single();
+        String key = "notice-certificate:" + n94;
+        String url = "/api/firs/" + fir + "/notices/%s/replies";
+        String reply = "{\"receivedAt\":\"2026-10-05T10:00:00Z\",\"channel\":\"email\",\"checksJson\":\"%s\"}";
+        // a reply saved without the certificate tick (an old reply) makes no gap
+        call(post(url.formatted(n94)), io, reply.formatted("[{\\\"item\\\":\\\"statement\\\",\\\"present\\\":true}]")).andExpect(status().isCreated());
+        report().andExpect(jsonPath("$.gaps[?(@.key=='" + key + "')]").isEmpty());
+        // ticked as not there: a critical gap, named after the addressee; the other notice has no reply and makes none
+        call(post(url.formatted(n94)), io, reply.formatted("[{\\\"item\\\":\\\"statement\\\",\\\"present\\\":true},{\\\"item\\\":\\\"certificate\\\",\\\"present\\\":false}]"))
+                .andExpect(status().isCreated());
+        report().andExpect(jsonPath("$.gaps[?(@.key=='" + key + "')].severity").value("critical"))
+                .andExpect(jsonPath("$.gaps[?(@.key=='" + key + "')].text").value(Matchers.hasItem(Matchers.containsString("Fictional Bank"))))
+                .andExpect(jsonPath("$.gaps[?(@.key=='notice-certificate:" + other + "')]").isEmpty());
+        // a later reply with the certificate closes it; the replies stay as written
+        call(post(url.formatted(n94)), io, reply.formatted("[{\\\"item\\\":\\\"statement\\\",\\\"present\\\":true},{\\\"item\\\":\\\"certificate\\\",\\\"present\\\":true}]"))
+                .andExpect(status().isCreated());
+        report().andExpect(jsonPath("$.gaps[?(@.key=='" + key + "')]").isEmpty());
+    }
+
     UUID person(String role, String label) {
         return db.sql("insert into person (fir_id, role, label, full_name) values (?,?,?,?) returning id")
                 .params(fir, role, label, "Fictional " + label).query(UUID.class).single();

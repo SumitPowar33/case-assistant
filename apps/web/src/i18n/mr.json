@@ -381,6 +381,7 @@
  "notice.aiReadHint": "खालील चौकटी यावरून आधीच खूण केलेल्या आहेत. निर्णय तुमचा.",
  "notice.readFound": "{item}: उत्तरात आढळले",
  "notice.readNotFound": "{item}: उत्तरात आढळले नाही",
+ "notice.certTick": "या उत्तरासोबत BSA 63(4) प्रमाणपत्र (भाग A आणि भाग B) आले",
  "notice.readCertYes": "BSA 63(4) प्रमाणपत्र: उत्तरात आढळले",
  "notice.readCertNo": "BSA 63(4) प्रमाणपत्र: उत्तरात आढळले नाही",
  "notice.writeTitle": "नोटीस लिहा",

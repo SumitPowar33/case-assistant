@@ -381,6 +381,7 @@
  "notice.aiReadHint": "கீழுள்ள பெட்டிகள் இதிலிருந்து முன்பே குறிக்கப்பட்டுள்ளன. முடிவு உங்களுடையது.",
  "notice.readFound": "{item}: பதிலில் உள்ளது",
  "notice.readNotFound": "{item}: பதிலில் இல்லை",
+ "notice.certTick": "இந்தப் பதிலுடன் BSA 63(4) சான்றிதழ் (பகுதி A மற்றும் பகுதி B) வந்தது",
  "notice.readCertYes": "BSA 63(4) சான்றிதழ்: பதிலில் உள்ளது",
  "notice.readCertNo": "BSA 63(4) சான்றிதழ்: பதிலில் இல்லை",
  "notice.writeTitle": "அறிவிப்பு எழுது",

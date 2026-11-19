@@ -381,6 +381,7 @@
  "notice.aiReadHint": "Boxes below are pre-ticked from it. You decide.",
  "notice.readFound": "{item}: found in the reply",
  "notice.readNotFound": "{item}: not found in the reply",
+ "notice.certTick": "A BSA 63(4) certificate (Part A and Part B) came with this reply",
  "notice.readCertYes": "BSA 63(4) certificate: found in the reply",
  "notice.readCertNo": "BSA 63(4) certificate: not found in the reply",
  "notice.writeTitle": "Write a notice",

@@ -381,6 +381,7 @@
  "notice.aiReadHint": "नीचे के खाने इसी से पहले से चिह्नित हैं। निर्णय आपका है।",
  "notice.readFound": "{item}: उत्तर में मिला",
  "notice.readNotFound": "{item}: उत्तर में नहीं मिला",
+ "notice.certTick": "इस उत्तर के साथ BSA 63(4) प्रमाणपत्र (भाग A और भाग B) आया",
  "notice.readCertYes": "BSA 63(4) प्रमाणपत्र: उत्तर में मिला",
  "notice.readCertNo": "BSA 63(4) प्रमाणपत्र: उत्तर में नहीं मिला",
  "notice.writeTitle": "नोटिस लिखें",

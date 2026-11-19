@@ -381,6 +381,7 @@
  "notice.aiReadHint": "ତଳ ଘରଗୁଡ଼ିକ ଏହା ଅନୁଯାୟୀ ଆଗରୁ ଚିହ୍ନିତ। ନିଷ୍ପତ୍ତି ଆପଣଙ୍କର।",
  "notice.readFound": "{item}: ଉତ୍ତରରେ ମିଳିଲା",
  "notice.readNotFound": "{item}: ଉତ୍ତରରେ ମିଳିଲା ନାହିଁ",
+ "notice.certTick": "ଏହି ଉତ୍ତର ସହିତ BSA 63(4) ପ୍ରମାଣପତ୍ର (ଭାଗ A ଓ ଭାଗ B) ଆସିଲା",
  "notice.readCertYes": "BSA 63(4) ପ୍ରମାଣପତ୍ର: ଉତ୍ତରରେ ମିଳିଲା",
  "notice.readCertNo": "BSA 63(4) ପ୍ରମାଣପତ୍ର: ଉତ୍ତରରେ ମିଳିଲା ନାହିଁ",
  "notice.writeTitle": "ନୋଟିସ୍ ଲେଖନ୍ତୁ",

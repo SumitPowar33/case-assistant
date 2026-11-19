@@ -381,6 +381,7 @@
  "notice.aiReadHint": "নিচের ঘরগুলো এ থেকে আগেই টিক করা। সিদ্ধান্ত আপনার।",
  "notice.readFound": "{item}: উত্তরে পাওয়া গেছে",
  "notice.readNotFound": "{item}: উত্তরে পাওয়া যায়নি",
+ "notice.certTick": "এই উত্তরের সঙ্গে BSA 63(4) সনদ (অংশ A ও অংশ B) এসেছে",
  "notice.readCertYes": "BSA 63(4) সনদ: উত্তরে পাওয়া গেছে",
  "notice.readCertNo": "BSA 63(4) সনদ: উত্তরে পাওয়া যায়নি",
  "notice.writeTitle": "নোটিস লিখুন",

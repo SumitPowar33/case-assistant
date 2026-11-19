@@ -381,6 +381,7 @@
  "notice.aiReadHint": "નીચેના ખાના તેના આધારે પહેલેથી નિશાન કરેલા છે. નિર્ણય તમારો.",
  "notice.readFound": "{item}: જવાબમાં મળ્યું",
  "notice.readNotFound": "{item}: જવાબમાં મળ્યું નથી",
+ "notice.certTick": "આ જવાબ સાથે BSA 63(4) પ્રમાણપત્ર (ભાગ A અને ભાગ B) આવ્યું",
  "notice.readCertYes": "BSA 63(4) પ્રમાણપત્ર: જવાબમાં મળ્યું",
  "notice.readCertNo": "BSA 63(4) પ્રમાણપત્ર: જવાબમાં મળ્યું નથી",
  "notice.writeTitle": "નોટિસ લખો",

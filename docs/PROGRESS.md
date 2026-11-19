@@ -180,6 +180,26 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
 
+## 19 Nov 2026, session 114 (scheduled run, Sumit away)
+Started from `setup/seed` (session 113) in a new container (clone on `master`; `add_repo` was not offered, `git fetch` worked; checked out `origin/setup/seed`). Postgres started, role and both databases made, packages installed. Baseline: all 8 suites PASS (the first run showed two FAIL only because the gateway's Python packages were missing in the fresh container; installed, then PASS). Priorities 1 to 6 are done; this session continued priority 7 with A4's "Part B certificate in the readiness check".
+
+**A4: a reply without the 63(4) certificate is a gap in the readiness check (no migration):**
+- The reply form of a BNSS 94 notice with items has one more tick, "A BSA 63(4) certificate (Part A and Part B) came with this reply". The AI reply reader pre-ticks it only when its quote is words of the reply (as before); the officer changes it. It is saved in the reply's `checks` as `{"item":"certificate","present":...}`. It does not change the notice's complete / incomplete status (that reads only the items asked for). The AI decision is logged as edited if the officer changed it.
+- `ReadinessController`: with a playbook that has the electronic-record certificate rule, a sent BNSS 94 notice whose replies carry the certificate entry but none with `present: true` gives the critical gap `notice-certificate:<notice id>` ("The reply of X came without a BSA 63(4) certificate (Part A and Part B); ask for it."). A later reply with the certificate closes it. Replies saved before this tick have no entry and make no gap (nothing is guessed). The gap can be accepted with a reason like any other.
+- 1 new text in 11 languages (10 machine drafts).
+- Tests: core `ReadinessApiTest` (old reply without entry: no gap; ticked absent: gap with the addressee; other notice without reply: none; later reply with certificate: closed), `Notices.test.tsx` (3 changed expectations, 2 new tests: pre-tick, saved value, decision accepted or edited, no box on a non-BNSS 94 notice).
+
+`scripts/test-all.sh` at the end: all 8 suites PASS; web 99.97 / 97.48 / 98.8 (statements / branches / functions), `Notices.tsx` 100 / 95.2 / 100; gateway 99.2 (unchanged); core gate passed.
+
+Skipped / risks: no screenshot of the new tick (desktop and 390 px); no browser (e2e) test of the new gap, the core test covers the route. The gap text is English like the other readiness gaps.
+
+Not done: the rest of item 7 (A4: reply as a file or photo; A1: signed complaint at the front desk, several documents and conflicts, identifiers in other FIRs; A2: offence date on the FIR form, sections outside the playbooks, report to the Magistrate; A7: letter print, SMS, victim's language from the person's record), then item 8.
+
+Next: the rest of priority 7 (A2's offence date on the FIR form next), then 8.
+
+Questions for Sumit:
+1. A bank reply logged without the 63(4) certificate is a critical gap. Should it be only a warning until the final report is drafted? (Today it is critical, like an electronic item without a certificate.)
+
 ## 19 Nov 2026, session 113 (02:05 IST scheduled run, last of the night, Sumit away)
 Started from `setup/seed` (session 112) in a new container (the clone was on `master`; checked out `origin/setup/seed`; `add_repo` was not offered, `git fetch` worked). Postgres started, role `caseapp` and both databases made, gateway requirements, `psycopg`, `npm ci`. Baseline: all 8 suites PASS. Priorities 1 to 6 were done; this session continued priority 7 with A4's "reminder letter for a missing item".
 

@@ -381,6 +381,7 @@
  "notice.aiReadHint": "ਹੇਠਲੇ ਖਾਨੇ ਇਸ ਤੋਂ ਪਹਿਲਾਂ ਹੀ ਨਿਸ਼ਾਨਦੇਹ ਹਨ। ਫ਼ੈਸਲਾ ਤੁਹਾਡਾ।",
  "notice.readFound": "{item}: ਜਵਾਬ ਵਿੱਚ ਮਿਲਿਆ",
  "notice.readNotFound": "{item}: ਜਵਾਬ ਵਿੱਚ ਨਹੀਂ ਮਿਲਿਆ",
+ "notice.certTick": "ਇਸ ਜਵਾਬ ਨਾਲ BSA 63(4) ਸਰਟੀਫਿਕੇਟ (ਭਾਗ A ਅਤੇ ਭਾਗ B) ਆਇਆ",
  "notice.readCertYes": "BSA 63(4) ਸਰਟੀਫਿਕੇਟ: ਜਵਾਬ ਵਿੱਚ ਮਿਲਿਆ",
  "notice.readCertNo": "BSA 63(4) ਸਰਟੀਫਿਕੇਟ: ਜਵਾਬ ਵਿੱਚ ਨਹੀਂ ਮਿਲਿਆ",
  "notice.writeTitle": "ਨੋਟਿਸ ਲਿਖੋ",

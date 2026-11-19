@@ -381,6 +381,7 @@
  "notice.aiReadHint": "ಕೆಳಗಿನ ಪೆಟ್ಟಿಗೆಗಳನ್ನು ಇದರಿಂದ ಮೊದಲೇ ಗುರುತಿಸಲಾಗಿದೆ. ತೀರ್ಮಾನ ನಿಮ್ಮದು.",
  "notice.readFound": "{item}: ಉತ್ತರದಲ್ಲಿ ಸಿಕ್ಕಿತು",
  "notice.readNotFound": "{item}: ಉತ್ತರದಲ್ಲಿ ಸಿಗಲಿಲ್ಲ",
+ "notice.certTick": "ಈ ಉತ್ತರದ ಜೊತೆ BSA 63(4) ಪ್ರಮಾಣಪತ್ರ (ಭಾಗ A ಮತ್ತು ಭಾಗ B) ಬಂದಿದೆ",
  "notice.readCertYes": "BSA 63(4) ಪ್ರಮಾಣಪತ್ರ: ಉತ್ತರದಲ್ಲಿ ಸಿಕ್ಕಿತು",
  "notice.readCertNo": "BSA 63(4) ಪ್ರಮಾಣಪತ್ರ: ಉತ್ತರದಲ್ಲಿ ಸಿಗಲಿಲ್ಲ",
  "notice.writeTitle": "ನೋಟಿಸ್ ಬರೆಯಿರಿ",

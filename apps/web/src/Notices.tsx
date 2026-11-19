@@ -49,6 +49,8 @@ function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string;
   const t = useT()
   const items = notice.items_requested.length ? notice.items_missing : [FULL_REPLY]
   const [ticks, setTicks] = useState<boolean[]>(() => items.map(() => false))
+  const [cert, setCert] = useState(false)   // BNSS 94 only: did a BSA 63(4) certificate come with this reply (kept in the reply's checks; the readiness check reads it)
+  const asksCert = notice.kind === 'BNSS_94' && notice.items_requested.length > 0
   const [text, setText] = useState('')
   const [asked, setAsked] = useState<{ request_id: string; read: Extract<ReplyRead, { kind: 'read' }> }>()
   const [busy, setBusy] = useState(false)
@@ -65,7 +67,7 @@ function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string;
         feature: 'reply_check', prompt_version: REPLY_PROMPT_VERSION, prompt: replyPrompt(items, text, true), case_ref: firId, max_tokens: 1500 } })
       const read = readReply(out.draft, items, text, true)
       if (read.kind === 'unreadable') setNote(t('notice.replyUnreadable'))
-      else { setAsked({ request_id: out.request_id, read }); setTicks(read.items.map((i) => i.present)) }
+      else { setAsked({ request_id: out.request_id, read }); setTicks(read.items.map((i) => i.present)); setCert(read.certificate?.present ?? false) }
     } catch (err) {
       setNote((err as Error).message)
     }
@@ -73,14 +75,14 @@ function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string;
   }
 
   return (
-    <Form title={t('notice.replyTitle')} onSaved={() => { setTicks(items.map(() => false)); setText(''); setAsked(undefined); onSaved() }}
+    <Form title={t('notice.replyTitle')} onSaved={() => { setTicks(items.map(() => false)); setCert(false); setText(''); setAsked(undefined); onSaved() }}
       submit={async (f) => {
         const result = await send(`/firs/${firId}/notices/${notice.id}/replies`, 'POST', {
           receivedAt: istIso(String(f.get('received'))), channel: f.get('channel'),
-          checksJson: JSON.stringify(items.map((item, i) => ({ item, present: ticks[i] }))), replyText: text.trim() || undefined,
+          checksJson: JSON.stringify([...items.map((item, i) => ({ item, present: ticks[i] })), ...(asksCert ? [{ item: 'certificate', present: cert }] : [])]), replyText: text.trim() || undefined,
         })
         if (asked) {  // the reply is saved; a failure to log the decision must not make the officer save it twice
-          const same = asked.read.items.every((r, i) => r.present === ticks[i])
+          const same = asked.read.items.every((r, i) => r.present === ticks[i]) && (!asksCert || (asked.read.certificate?.present ?? false) === cert)
           await ai('/v1/decisions', { method: 'POST', body: { request_id: asked.request_id, decision: same ? 'accepted' : 'edited', feature: 'reply_check', case_ref: firId, note: '' } }).catch(() => undefined)
         }
         return result
@@ -109,6 +111,7 @@ function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string;
       {items.map((item, i) => (
         <label key={item}><input type="checkbox" checked={ticks[i] ?? false} onChange={(e) => setTicks(ticks.map((x, j) => (j === i ? e.target.checked : x)))} /> {item === FULL_REPLY ? t('notice.fullReply') : item}</label>
       ))}
+      {asksCert && <label><input type="checkbox" checked={cert} onChange={(e) => setCert(e.target.checked)} /> {t('notice.certTick')}</label>}
     </Form>
   )
 }
