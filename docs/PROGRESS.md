@@ -62,7 +62,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 7, A2 offence date on the FIR form (session 115, started 23:40 IST)
 **SUMIT'S PRIORITY (16 Nov 2026; replaces "the first item under Next"): AI features and RAG first, then the rest of the Next list.** Build the first unfinished item of this order, keeping every rule of CLAUDE.md and the five AI rules of docs/AI-AND-SCREENS-PLAN.md section 2:
 1. Item 17, Ask the case file as real RAG: embeddings behind the gateway on the state's own server, vectors in PostgreSQL, hybrid with BM25 (DONE in session 106, see its entry and "Decisions taken for Sumit"); open a source on click, "note in case diary", questions in Hindi and Marathi, the answers scored on the evaluation set (DONE, session 106). Left of item 17: bank replies as searchable text (waits for A4's left-for part, decision 3), the real model's download and tuning (deployment step), a monthly run of the set with a real model.
 2. A8: the AI explanation in the Old law to new law finder (board 18) (already DONE in session 98; check only that it is on the board's screen).
@@ -70,7 +69,7 @@ In progress: item 7, A2 offence date on the FIR form (session 115, started 23:40
 4. DONE (session 107, draft word lists): Hindi and Marathi guards for the guilt, truth, prediction, opinion and rating refusals (A5, A6, A9). Left: a Marathi-speaking prosecutor's review of the words; other Indian scripts still rely on the model's safety text.
 5. DONE: the rest of A3: "differences to clarify" (session 108) and audio transcription with an on-premises speech model with an offline stand-in (session 109). Left: the real model's download and word-error check (`docs/DEPLOY-TRANSCRIPTION.md`), keeping which statements came from a recording.
 6. DONE (session 110): the rest of A6: drafting also from the evidence register, notices, 63(4) certificates, search/seizure memos, expert requests and the money trail, and one paragraph per charge ingredient linked to the readiness check. Left: bank replies as text (nothing stores them until A4's left-for part, decision 3), the particulars table and court print (item 18), a Marathi-speaking prosecutor's review.
-7. The "Left for" parts of A1, A2, A4 and A7 in item 14. A4's "reply saved with the notice" DONE (session 111, V59). Still left in item 7: A4 (reply as a file or photo, Part B certificate in the readiness check; the reminder letter for a missing item DONE, session 113), A1 (signed complaint at the front desk, several documents and their conflicts, identifiers seen in other FIRs), A2 (offence date on the FIR form, sections outside the playbooks, report to the Magistrate), A7 (letter print, SMS, victim's language from the person's record; the 90-day date and the steps read from the case DONE, session 112).
+7. The "Left for" parts of A1, A2, A4 and A7 in item 14. A4's "reply saved with the notice" DONE (session 111, V59). Still left in item 7: A4 (reply as a file or photo, Part B certificate in the readiness check; the reminder letter for a missing item DONE, session 113), A1 (signed complaint at the front desk, several documents and their conflicts, identifiers seen in other FIRs), A2 (offence date on the FIR form DONE, session 115; sections outside the playbooks, report to the Magistrate), A7 (letter print, SMS, victim's language from the person's record; the 90-day date and the steps read from the case DONE, session 112).
 8. Then the rest of the Next list in its order: item 3 rest, item 15 rest (POCSO), item 16 (duty roster), item 18 (court-format papers), then the real-time screens.
 Open questions must not stall the work: where one blocks an item, take the safer choice that can be reversed, record it under "Decisions taken for Sumit" above, and carry on.
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
@@ -180,6 +179,26 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    **Session 106 (hybrid RAG, V58):** gateway `POST /v1/embed` (local embedder only, `ai_embed` audit rows, 120 calls per officer per 10 minutes; `EMBED_BACKEND=fake` offline stand-in; the real model is a deployment step), vectors kept in PostgreSQL per case, model and text hash (`case_passage_vector`, `CaseVectorController`), BM25 and cosine fused by reciprocal rank in `askFile.ts`, a source opens as its whole passage with the piece marked, "Note in case diary" (editable, saved on the officer's click), Hindi and Marathi questions in the evaluation set, the answers scored on the set with a stand-in provider (the gateway's fake provider only echoes the prompt). Left: bank replies as text (decision 3), the real model (download, `EMBED_MIN_SIMILARITY` tuning, scoring with a real provider), Hindi and Marathi refusal guards beyond the draft word list (priority 4).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 19 Nov 2026, session 115 (scheduled run, Sumit away)
+Started from `setup/seed` (session 114) in a new container (clone on `master`; `add_repo` was not offered, `git fetch` worked; checked out `origin/setup/seed`). Postgres started, role and both databases made, packages installed. Baseline: all 8 suites PASS. Priorities 1 to 6 are done; this session continued priority 7 with A2's "offence date on the FIR form".
+
+**A2: the FIR form asks when the offence happened (no migration; the columns `occurrence_from` / `occurrence_to` exist since V1):**
+- Two optional fields on the registration form, "Offence began" and "Offence ended" (India time; empty = not known, sent as null, never guessed). `POST /api/firs` keeps them. Refused: an end before the start, and an offence after the time the information was received (one minute of slack). Works with and without a signed complaint (the complaint carries no offence time).
+- Effect: `fir_offence_law` (V51) now reads the real date, so a late-reported old offence is `old` (IPC) whatever the date of the report, and the AI section suggestion no longer says "offence date not recorded" for such FIRs. The case page shows "Offence: from – to" under the registration line when the FIR has it.
+- 3 new texts in 11 languages (10 machine drafts). The file import is unchanged (it does not read an offence time; the made-up MH profile has no such column).
+- Tests: core `FirApiTest` (kept and read back, the law reads `old`, start only, none, reversed range, after the information, nothing saved on refusal), web `Forms.test.tsx` and `FirDetail.test.tsx`.
+
+`scripts/test-all.sh` at the end: all 8 suites PASS.
+
+Skipped / risks: no screenshot of the two new fields (desktop and 390 px); no browser test of them (the web and core tests cover the route and the form); the offence time cannot be corrected after registration (the FIR record is kept as written; no edit route exists).
+
+Not done: the rest of item 7 (A4: reply as a file or photo; A1: signed complaint at the front desk, several documents and conflicts, identifiers in other FIRs; A2: sections outside the playbooks, report to the Magistrate; A7: letter print, SMS, victim's language from the person's record), then item 8.
+
+Next: the rest of priority 7 (A2's sections outside the playbooks next), then 8.
+
+Questions for Sumit:
+1. Should an FIR's offence time be correctable after registration (with a reason, kept in the case diary), for the case where the first time was a mistake? Today it is fixed at registration.
 
 ## 19 Nov 2026, session 114 (scheduled run, Sumit away)
 Started from `setup/seed` (session 113) in a new container (clone on `master`; `add_repo` was not offered, `git fetch` worked; checked out `origin/setup/seed`). Postgres started, role and both databases made, packages installed. Baseline: all 8 suites PASS (the first run showed two FAIL only because the gateway's Python packages were missing in the fresh container; installed, then PASS). Priorities 1 to 6 are done; this session continued priority 7 with A4's "Part B certificate in the readiness check".
