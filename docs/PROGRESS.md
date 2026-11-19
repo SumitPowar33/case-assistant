@@ -69,7 +69,7 @@ Next (replaces the "Next" list of session 25; a session finishing an item remove
 4. DONE (session 107, draft word lists): Hindi and Marathi guards for the guilt, truth, prediction, opinion and rating refusals (A5, A6, A9). Left: a Marathi-speaking prosecutor's review of the words; other Indian scripts still rely on the model's safety text.
 5. DONE: the rest of A3: "differences to clarify" (session 108) and audio transcription with an on-premises speech model with an offline stand-in (session 109). Left: the real model's download and word-error check (`docs/DEPLOY-TRANSCRIPTION.md`), keeping which statements came from a recording.
 6. DONE (session 110): the rest of A6: drafting also from the evidence register, notices, 63(4) certificates, search/seizure memos, expert requests and the money trail, and one paragraph per charge ingredient linked to the readiness check. Left: bank replies as text (nothing stores them until A4's left-for part, decision 3), the particulars table and court print (item 18), a Marathi-speaking prosecutor's review.
-7. The "Left for" parts of A1, A2, A4 and A7 in item 14. A4's "reply saved with the notice" DONE (session 111, V59). Still left in item 7: A4 (reply as a file or photo, Part B certificate in the readiness check; the reminder letter for a missing item DONE, session 113), A1 (signed complaint at the front desk, several documents and their conflicts, identifiers seen in other FIRs), A2 (offence date on the FIR form DONE, session 115; sections outside the playbooks, report to the Magistrate), A7 (letter print, SMS, victim's language from the person's record; the 90-day date and the steps read from the case DONE, session 112).
+7. The "Left for" parts of A1, A2, A4 and A7 in item 14. A4's "reply saved with the notice" DONE (session 111, V59). Still left in item 7: A4 (reply as a file or photo, Part B certificate in the readiness check; the reminder letter for a missing item DONE, session 113), A1 (signed complaint at the front desk, several documents and their conflicts, identifiers seen in other FIRs), A2 (offence date on the FIR form DONE, session 115; sections outside the playbooks DONE, session 116; report to the Magistrate), A7 (letter print, SMS, victim's language from the person's record; the 90-day date and the steps read from the case DONE, session 112).
 8. Then the rest of the Next list in its order: item 3 rest, item 15 rest (POCSO), item 16 (duty roster), item 18 (court-format papers), then the real-time screens.
 Open questions must not stall the work: where one blocks an item, take the safer choice that can be reversed, record it under "Decisions taken for Sumit" above, and carry on.
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
@@ -77,6 +77,7 @@ Done in session 28: evidence import file (ef845fb), notices import file (a792dea
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
 Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)).
 Done in session 31: speech input at the front desk; module 1 is finished.
+Done in session 116 (19 Nov, 02:05 IST scheduled run, last of the night): item 14, A2: a section outside the playbooks, added by the officer with a reason (V60).
 Done in session 32 (31 Oct, 02:05 IST run): upgrade test, web-to-core route contract test, a date-dependent test fixed, more tests for old code. The rest of the MH pack waits for answers (questions 1 and 2 below).
 Done in session 33 (31 Oct, Saturday run at about 14:20 IST): hard-coded role names replaced by permissions from the packs (web and gateway); bug fixed: the admin screen made every new state admin an all-state admin.
 Done in session 34 (31 Oct, on-demand run from 14:34 IST): screen language, part 1 (header, menu, sign-in, password in English + 10 draft translations, kept per officer).
@@ -179,6 +180,32 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    **Session 106 (hybrid RAG, V58):** gateway `POST /v1/embed` (local embedder only, `ai_embed` audit rows, 120 calls per officer per 10 minutes; `EMBED_BACKEND=fake` offline stand-in; the real model is a deployment step), vectors kept in PostgreSQL per case, model and text hash (`case_passage_vector`, `CaseVectorController`), BM25 and cosine fused by reciprocal rank in `askFile.ts`, a source opens as its whole passage with the piece marked, "Note in case diary" (editable, saved on the officer's click), Hindi and Marathi questions in the evaluation set, the answers scored on the set with a stand-in provider (the gateway's fake provider only echoes the prompt). Left: bank replies as text (decision 3), the real model (download, `EMBED_MIN_SIMILARITY` tuning, scoring with a real provider), Hindi and Marathi refusal guards beyond the draft word list (priority 4).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 19 Nov 2026, session 116 (02:05 IST scheduled run, last of the night, Sumit away)
+Started from `setup/seed` (session 115 notes, 3119433) in a new container (clone on `master`; `add_repo` was not offered, `git fetch` worked). Postgres started, role `caseapp` and both databases made, packages installed. Baseline: all 8 suites PASS. Priorities 1 to 6 are done; this session continued priority 7 with A2's "sections outside the playbooks".
+
+**A2: a section chosen by the officer alone, outside the playbooks (V60):**
+- Migration V60: the AI request of an added section is optional now (`fir_section_added_whole`: added_at, reason and chosen_by stay required together; registration and import sections still have none). The law check (V51) and the state-law check (V57) still apply; the "no AI result on a protected case" trigger fires only for a row with an AI request, so a section by hand is allowed there (no AI is used).
+- Core: `POST /api/firs/{id}/sections/own` (law, section, reason of 10 to 2000 characters; case team only). The law must be a national act or a law of the FIR's state; the section is written like `103(1)` or `21(b)` (30 characters at most); a BNS section is refused for an offence before 1 July 2024 and an IPC section for one from that day (BNS 358), either is taken when the law is `spans` or `unknown`; a section already in the FIR is a 409. It is not checked against the punishment table, which is still a draft. `GET .../sections` also returns `acts`.
+- Web: on the FIR's Case details part, under the AI suggestion, a folded "Add a section that is not in the playbooks" (law, section, reason). It is shown on a protected case too. 9 new texts in 11 languages (10 machine drafts, like the rest); the three new server messages are in the screen language.
+- Tests: `SectionApiTest` (4 new: added and read back, diary line, twice and kept; every validation; BNS/IPC by the law of the offence; protected case, outsider, no token), `test_sections_added.py` (2 new, one changed: a request is no longer required), `SectionSuggest.test.tsx` (2 new), `MigrationTest` expects V60; the FirDetail and a11y stubs carry `acts`.
+
+`scripts/test-all.sh` at the end: PASS repo rules, packs, xlit, ai-gateway, database rules, core; web PASS after two test stubs got the new `acts` field (rerun on its own: 647 tests PASS, lint and build fine); e2e PASS in the full run, and `test_section_suggest.py`, `test_phone.py` and the repo rules PASS again after the final web build. Coverage: core 99.02% lines / 96.56% branches, web 99.97 / 97.49 / 98.82, gateway 99%. Gates unchanged (no 2-point rise).
+
+Skipped / risks: no browser test and no screenshot of the new form (web and core tests cover it); a section added by hand cannot be taken out (kept as written); the report to the Magistrate for added sections is still not drafted (question 1 of session 80 stays open; item 18 holds the court format).
+
+Not done: the rest of item 7 (A4: reply as a file or photo, Part B certificate in the readiness check; A1: signed complaint at the front desk, several documents and conflicts, identifiers in other FIRs; A2: report to the Magistrate; A7: letter print, SMS, victim's language from the person's record), then item 8.
+
+Next: the rest of priority 7 (A1's signed complaint at the front desk next), then 8.
+
+Decisions taken for Sumit: none new.
+
+Questions for Sumit:
+1. Should the app check a section typed by hand against the punishment table and warn when it is unknown (the table is a draft, so today it only checks the law and the way a section is written)?
+
+## Tonight in short (19 Nov, session 116)
+- Session 116 (02:05 IST run, last of the night): A2 section by hand outside the playbooks (V60, route `/sections/own`, form on the case details part).
+- `scripts/test-all.sh` at the end: all 8 suites PASS (web and e2e after the small stub fix and a rerun, see the entry). Coverage: core 99.02 / 96.56, web 99.97 / 97.49 / 98.82, gateway 99%; gates unchanged.
 
 ## 19 Nov 2026, session 115 (scheduled run, Sumit away)
 Started from `setup/seed` (session 114) in a new container (clone on `master`; `add_repo` was not offered, `git fetch` worked; checked out `origin/setup/seed`). Postgres started, role and both databases made, packages installed. Baseline: all 8 suites PASS. Priorities 1 to 6 are done; this session continued priority 7 with A2's "offence date on the FIR form".
