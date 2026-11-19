@@ -183,4 +183,40 @@ class FirApiTest {
         }
         assertThat(db.sql("select count(*) from fir").query(Long.class).single()).isZero();
     }
+
+    /** The offence time is optional; when given it is kept and decides BNS or IPC (session 115, question 2 of session 80). */
+    @Test
+    void theOffenceTimeIsKeptAndDecidesTheLaw() throws Exception {
+        var b = new java.util.HashMap<String, Object>(body(60));
+        b.put("occurrenceFrom", "2024-06-20T08:00:00Z");
+        b.put("occurrenceTo", "2024-06-21T08:00:00Z");
+        var res = mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(b)))
+                .andExpect(status().isCreated()).andReturn();
+        String id = json.readTree(res.getResponse().getContentAsString()).get("id").asText();
+        mvc.perform(get("/api/firs/" + id).header("Authorization", clerk)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.occurrence_from").exists()).andExpect(jsonPath("$.occurrence_to").exists());
+        // reported in October 2026 but done in June 2024: the old law, whatever the date of the report
+        assertThat(db.sql("select fir_offence_law(?::uuid)").param(id).query(String.class).single()).isEqualTo("old");
+        // a start without an end is allowed; none at all stays as before
+        var from = new java.util.HashMap<String, Object>(body(61)); from.put("occurrenceFrom", "2026-09-30T08:00:00Z");
+        mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(from)))
+                .andExpect(status().isCreated());
+        mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body(62))))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void theOffenceCannotEndBeforeItBeganOrFollowTheInformation() throws Exception {
+        var reversed = new java.util.HashMap<String, Object>(body(70));
+        reversed.put("occurrenceFrom", "2026-09-30T08:00:00Z"); reversed.put("occurrenceTo", "2026-09-29T08:00:00Z");
+        mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(reversed)))
+                .andExpect(status().isBadRequest()).andExpect(status().reason("The offence cannot end before it began."));
+        for (String key : new String[] {"occurrenceFrom", "occurrenceTo"}) {
+            var late = new java.util.HashMap<String, Object>(body(71));
+            late.put(key, "2026-10-01T09:45:00Z");   // after the 09:30 information
+            mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(late)))
+                    .andExpect(status().isBadRequest()).andExpect(status().reason("The offence cannot be after the time the information was received."));
+        }
+        assertThat(db.sql("select count(*) from fir").query(Long.class).single()).isZero();
+    }
 }

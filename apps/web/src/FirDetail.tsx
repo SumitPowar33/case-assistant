@@ -25,7 +25,7 @@ import { useT } from './i18n'
 import { currentSession } from './api'
 import { PARTS, PART_LABEL, type Part } from './firParts'
 
-type Fir = { id: string; fir_year: number; fir_no: number; registered_at: string; is_zero_fir: boolean; contents_original: string | null; contents_withheld: boolean; victim_protected: boolean; case_team: boolean; action_taken: string; io_name: string | null; sections: { act: string; section: string }[] }
+type Fir = { id: string; fir_year: number; fir_no: number; registered_at: string; occurrence_from: string | null; occurrence_to: string | null; is_zero_fir: boolean; contents_original: string | null; contents_withheld: boolean; victim_protected: boolean; case_team: boolean; action_taken: string; io_name: string | null; sections: { act: string; section: string }[] }
 type Person = { id: string; role: string; label: string; display_name: string; age_years: number | null; identity_masked: boolean }
 type Deadline = { kind: string; due_on: string; basis: string }
 type Evidence = { id: string; label: string; kind: string; sha256: string | null; court_ready: boolean }
@@ -70,7 +70,8 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
         <div>
           <div className="crumb"><a href="#/firs">{t('fir.back')}</a>{only && <> / {t(PART_LABEL[only])}</>}</div>
           <h1>{t('fir.title', { no: fir.fir_no, year: fir.fir_year })}{fir.is_zero_fir ? ` ${t('fir.zeroSuffix')}` : ''}</h1>
-          <p className="lede">{t('fir.registered', { date: fmt(fir.registered_at) })} · {t.code('action', fir.action_taken)}</p>
+          <p className="lede">{t('fir.registered', { date: fmt(fir.registered_at) })} · {t.code('action', fir.action_taken)}
+            {(fir.occurrence_from || fir.occurrence_to) && <> · {t('fir.offence', { date: [fir.occurrence_from, fir.occurrence_to].filter(Boolean).map((d) => fmt(d!)).join(' – ') })}</>}</p>
         </div>
         <div className="chips">{fir.sections.map((s) => <span key={s.act + s.section} className="chip c-info">{s.act} {s.section}</span>)}</div>
       </div>

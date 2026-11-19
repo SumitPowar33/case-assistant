@@ -44,7 +44,19 @@ test('registering an FIR sends the station, India times and sections, then opens
   await vi.waitFor(() => expect(window.location.hash).toBe('#/firs/new1'))
   expect(calls[0]).toMatchObject({ url: '/api/firs', body: { stationId: 's1', ioId: 'u1', firNo: 41, gdEntryNo: 'GD-3', contentsLanguage: 'en',
     informationReceivedAt: '2026-10-01T09:00:00+05:30', registeredAt: '2026-10-01T10:00:00+05:30', actionTaken: 'investigate',
-    sections: [{ act: 'BNS', section: '318(4)' }, { act: 'BNS', section: '319(2)' }] } })
+    sections: [{ act: 'BNS', section: '318(4)' }, { act: 'BNS', section: '319(2)' }], occurrenceFrom: null, occurrenceTo: null } })
+})
+
+test('the offence time is sent in India time when typed, and as null when left empty', async () => {
+  const calls = stub()
+  render(<NewFirForm />)
+  type('FIR number', '43'); type('General diary entry', 'GD-5')
+  type(/Information received/, '2026-10-01T09:00'); type(/^Registered/, '2026-10-01T10:00')
+  type(/^Offence began/, '2024-06-20T08:00'); type(/^Offence ended/, '2024-06-21T08:00')
+  type("Information as given (in the informant's words)", 'A fictional old matter reported late')
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(calls.length).toBe(1))
+  expect(calls[0].body).toMatchObject({ occurrenceFrom: '2024-06-20T08:00:00+05:30', occurrenceTo: '2024-06-21T08:00:00+05:30' })
 })
 
 test('a state law is taken in the sections only when the server names it for the officer\'s state (GET /api/me acts)', async () => {

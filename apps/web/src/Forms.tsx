@@ -69,6 +69,7 @@ export function NewFirForm({ complaintId }: { complaintId?: string } = {}) {
         return send('/firs', 'POST', {
         stationId: station, firYear: Number(f.get('year')), firNo: Number(f.get('no')), gdEntryNo: text(f, 'gd'),
         registeredAt: istIso(String(f.get('registered'))),
+        occurrenceFrom: optionalIst(f, 'offenceFrom'), occurrenceTo: optionalIst(f, 'offenceTo'),
         ...(complaintId ? { complaintId } : { informationReceivedAt: istIso(String(f.get('received'))), contentsOriginal: contents.trim(), contentsLanguage: lang }),
         ioId: f.get('iAmIo') === 'on' ? me!.id : null, actionTaken: f.get('action'), actionReason: text(f, 'reason'),
         sexualOffence: f.get('sexual') === 'on', sections: parseSections(String(f.get('sections') ?? ''), me?.acts),
@@ -79,6 +80,8 @@ export function NewFirForm({ complaintId }: { complaintId?: string } = {}) {
       <label>{t('firForm.gd')} <input name="gd" required /></label>
       {!complaintId && <label>{t('firForm.received')} <input name="received" type="datetime-local" required /></label>}
       <label>{t('firForm.registered')} <input name="registered" type="datetime-local" required /></label>
+      <label>{t('firForm.offenceFrom')} <input name="offenceFrom" type="datetime-local" /></label>
+      <label>{t('firForm.offenceTo')} <input name="offenceTo" type="datetime-local" /></label>
       {complaintId ? <p><small>{t('firForm.fromSigned')}</small></p>
         : <TypingField label={t('desk.words')} value={contents} onChange={setContents} multiline />}
       <label>{t('firForm.sections')} <input name="sections" placeholder="BNS 318(4), IT Act 66D" /></label>
@@ -91,6 +94,9 @@ export function NewFirForm({ complaintId }: { complaintId?: string } = {}) {
     </Form>
   )
 }
+
+/** An optional date and time field: empty means "not known" (null), never a guess. */
+const optionalIst = (f: FormData, name: string) => (f.get(name) ? istIso(String(f.get(name))) : null)
 
 /** What the officer did on the information (BNSS 173, 176); labels are action.<code>. */
 const ACTIONS = ['investigate', 'self_investigation', 'refused', 'transferred']

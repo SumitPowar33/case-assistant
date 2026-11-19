@@ -47,6 +47,21 @@ test('a full case page: sections, people, deadlines and electronic evidence with
   expect(screen.getByText('Knife', { selector: 'strong' }).closest('li')!.textContent).toBe('Knife (physical)')   // no chip, no hash for a physical item
 })
 
+test('the offence time is shown when the FIR has it, and left out when it has not', async () => {
+  stub({ '/firs/f1': { ...fir, occurrence_from: '2024-06-20T02:30:00Z', occurrence_to: null } })
+  render(<FirDetail id="f1" />)
+  expect(await screen.findByText(/Offence: /)).toBeTruthy()
+  cleanup()
+  stub({ '/firs/f1': { ...fir, occurrence_from: '2024-06-20T02:30:00Z', occurrence_to: '2024-06-21T02:30:00Z' } })
+  render(<FirDetail id="f1" />)
+  expect((await screen.findByText(/Offence: /)).textContent).toMatch(/ – /)
+  cleanup()
+  stub({})
+  render(<FirDetail id="f1" />)
+  await screen.findByText('FIR 9/2026')
+  expect(screen.queryByText(/Offence: /)).toBeNull()
+})
+
 test('a zero FIR with no sections, and a protected case that withholds the complaint text', async () => {
   stub({ '/firs/f1': { ...fir, is_zero_fir: true, sections: [], contents_original: null, contents_withheld: true } })
   render(<FirDetail id="f1" />)

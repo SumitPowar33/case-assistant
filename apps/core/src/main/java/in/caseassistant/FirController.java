@@ -24,6 +24,7 @@ class FirController {
     record NewFir(
             @NotNull UUID stationId, @Positive int firYear, @Positive int firNo, @NotBlank String gdEntryNo,
             @NotNull OffsetDateTime registeredAt, OffsetDateTime informationReceivedAt,
+            OffsetDateTime occurrenceFrom, OffsetDateTime occurrenceTo,
             boolean zeroFir, String outsideLimitsPlace, String contentsOriginal,
             String contentsLanguage, @NotBlank String actionTaken, String actionReason,
             UUID ioId, boolean sexualOffence, List<Section> sections, UUID complaintId) {}
@@ -105,12 +106,18 @@ class FirController {
             language = c.get("text_language");
         } else if (f.informationReceivedAt == null || f.contentsOriginal == null || f.contentsOriginal.isBlank() || f.contentsLanguage == null || f.contentsLanguage.isBlank())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The information, its language and the time it was received are needed.");
+        // when the offence happened (optional): it decides BNS or IPC (BNS 358, Article 20(1)); it cannot follow the information
+        if (f.occurrenceFrom != null && f.occurrenceTo != null && f.occurrenceTo.isBefore(f.occurrenceFrom))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The offence cannot end before it began.");
+        OffsetDateTime lastly = f.occurrenceTo != null ? f.occurrenceTo : f.occurrenceFrom;
+        if (lastly != null && db.sql("select ?::timestamptz > ?::timestamptz + interval '1 minute'").params(lastly, received).query(Boolean.class).single())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The offence cannot be after the time the information was received.");
         UUID id = db.sql("""
                 insert into fir (station_id, fir_year, fir_no, gd_entry_no, registered_at, information_received_at,
-                  is_zero_fir, outside_limits_place, contents_original, contents_language, action_taken,
+                  occurrence_from, occurrence_to, is_zero_fir, outside_limits_place, contents_original, contents_language, action_taken,
                   action_reason, io_id, sexual_offence, identity_protected)
-                values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) returning id""")
-                .params(f.stationId, f.firYear, f.firNo, f.gdEntryNo, f.registeredAt, received,
+                values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) returning id""")
+                .params(f.stationId, f.firYear, f.firNo, f.gdEntryNo, f.registeredAt, received, f.occurrenceFrom, f.occurrenceTo,
                         f.zeroFir, f.outsideLimitsPlace, contents, language, f.actionTaken,
                         f.actionReason, f.ioId, sexualOffence, identityProtected)
                 .query(UUID.class).single();
