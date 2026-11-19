@@ -63,7 +63,7 @@ const data: Record<string, unknown> = {
     items: [{ id: 'e1', label: '9/E-03', description: 'Fictional phone', kind: 'physical', seal_no: '9/E-03' }] }],
   '/firs/f1/facts': [{ id: 'k1', kind: 'amount', value: 'Rs 40,000', ai_value: 'Rs 40,000', corrected: false, quote: 'Fictional words', confirmed_at: '2026-11-08T10:00:00Z', confirmed_by_name: 'SI Fictional' }],
   '/firs/f1/sections': { law: 'unknown', sections: [{ act: 'BNS', section: '318(4)', added_at: null, reason: null, chosen_by_name: null }, { act: 'IT Act', section: '66D', added_at: '2026-11-08T10:00:00Z', reason: 'Fictional reason given', chosen_by_name: 'SI Fictional' }],
-    charges: [{ playbook_id: 'p', charge_id: 'c', act: 'BNS', law: 'BNS 319(2)', label: 'Fictional charge', ingredients: [{ id: 'i', text: 'Fictional ingredient' }, { id: 'j', text: 'Another ingredient' }], in_fir: false }] },
+    charges: [{ playbook_id: 'p', charge_id: 'c', act: 'BNS', law: 'BNS 319(2)', label: 'Fictional charge', ingredients: [{ id: 'i', text: 'Fictional ingredient' }, { id: 'j', text: 'Another ingredient' }], in_fir: false }], acts: ['BNS', 'IPC'] },
   '/ai/v1/generate': { request_id: 'r1', draft: '[{"kind":"place","value":"Fictional","quote":"Fictional"}]', provider: 'fake', model: 'm' },
   '/glossary': { status: 'draft', entries: [{ id: 'remand', term: 'Remand', law: 'BNSS 187', meaning: 'Custody ordered by a Magistrate.', terms: { hi: 'रिमांड' } }] },
 }

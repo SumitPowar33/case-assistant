@@ -150,7 +150,7 @@ test('the Ask part loads the case file only when it is chosen (opening a FIR mus
 })
 
 test('the AI fact check and section suggestion are on the case details part for the case team only, and no AI draft is offered on a protected case', async () => {
-  const sections = { '/firs/f1/sections': { law: 'new', sections: [], charges: [] } }
+  const sections = { '/firs/f1/sections': { law: 'new', sections: [], charges: [], acts: ['BNS'] } }
   stub({ ...sections, '/firs/f1': { ...fir, case_team: false, victim_protected: false } })
   render(<FirDetail id="f1" />)
   expect(await screen.findByText('Fictional complaint words')).toBeTruthy()

@@ -21,7 +21,7 @@ const ANSWER = [
   { charge: 'cyber-fraud/it_personation', ingredients: [{ id: 'computer_resource', quote: 'a code sent to my phone' }, { id: 'personation', quote: 'not in the text' }] },
 ]
 const basis = (law = 'unknown', sections: unknown[] = [{ act: 'BNS', section: '318(4)', added_at: null, reason: null, chosen_by_name: null }]) =>
-  ({ status: 200, body: { law, sections, charges: CHARGES } })
+  ({ status: 200, body: { law, sections, charges: CHARGES, acts: ['BNS', 'IPC', 'NDPS Act', 'Other'] } })
 
 type Reply = { status: number; body: unknown }
 function stub(opts: { list?: Reply; save?: Reply; generate?: Reply; decision?: Reply } = {}) {
@@ -155,4 +155,34 @@ test('not offered on a protected case; a refused list is shown', async () => {
   stub({ list: { status: 404, body: { message: 'Not found' } } })
   show()
   expect(await screen.findByRole('alert')).toBeTruthy()
+})
+
+test('a section outside the playbooks is added by hand with a reason, with no AI request, also on a protected case', async () => {
+  const calls = stub()
+  const onSaved = vi.fn()
+  show({ victimProtected: true, onSaved })
+  fireEvent.click(await screen.findByText('Add a section that is not in the playbooks'))
+  const add = screen.getByRole('button', { name: 'Add section' }) as HTMLButtonElement
+  expect(add.disabled).toBe(true)
+  fireEvent.change(screen.getByLabelText('Section'), { target: { value: ' 21(b) ' } })
+  fireEvent.change(screen.getByLabelText('Why you add it (at least 10 characters)'), { target: { value: 'short' } })
+  expect(add.disabled).toBe(true)
+  fireEvent.change(screen.getByLabelText('Law'), { target: { value: 'NDPS Act' } })
+  fireEvent.change(screen.getByLabelText('Why you add it (at least 10 characters)'), { target: { value: '  The field kit tested the powder  ' } })
+  fireEvent.click(add)
+  expect(await screen.findByText('Section added to the FIR.')).toBeTruthy()
+  expect(calls.find((c) => c.url.endsWith('/sections/own'))).toMatchObject({ method: 'POST', body: { act: 'NDPS Act', section: '21(b)', reason: 'The field kit tested the powder' } })
+  expect(onSaved).toHaveBeenCalled()
+  expect((screen.getByLabelText('Section') as HTMLInputElement).value).toBe('')
+})
+
+test('a section by hand takes the first law when none is chosen, and a refusal is shown', async () => {
+  const calls = stub({ save: { status: 422, body: { message: 'Write the section as a number, like 103(1) or 21(b).' } } })
+  show()
+  fireEvent.click(await screen.findByText('Add a section that is not in the playbooks'))
+  fireEvent.change(screen.getByLabelText('Section'), { target: { value: 'abc' } })
+  fireEvent.change(screen.getByLabelText('Why you add it (at least 10 characters)'), { target: { value: 'Because the text says so' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
+  expect(await screen.findByRole('alert')).toBeTruthy()
+  expect(calls.find((c) => c.url.endsWith('/sections/own'))!.body).toMatchObject({ act: 'BNS' })
 })

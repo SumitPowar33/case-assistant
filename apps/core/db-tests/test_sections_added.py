@@ -53,7 +53,7 @@ def test_an_added_section_keeps_who_when_why_and_the_ai_request(db):
 
 
 @pytest.mark.parametrize("change", [
-    "reason=NULL", "ai_request_id=NULL", "chosen_by=NULL", "reason='too short'", "reason=repeat('x',2001)", "reason='          x'",
+    "reason=NULL", "chosen_by=NULL", "reason='too short'", "reason=repeat('x',2001)", "reason='          x'",
 ])
 def test_an_added_section_is_all_or_nothing_and_its_reason_is_10_to_2000_characters(db, change):
     st, io, fir = seed_case(db)
@@ -64,6 +64,29 @@ def test_an_added_section_is_all_or_nothing_and_its_reason_is_10_to_2000_charact
         db.execute(f"""INSERT INTO fir_section(fir_id,act,section,chosen_by,added_at,reason,ai_request_id)
                        VALUES (%(fir)s,'BNS','319(2)',{cols['chosen_by']},clock_timestamp(),{cols['reason']},{cols['ai_request_id']})""",
                    {"fir": fir, "io": io, "reason": REASON, "req": REQ})
+
+
+def test_a_section_by_hand_needs_no_ai_request_but_still_who_when_and_why(db):
+    """V60: the AI request is optional; the reason and the officer are not."""
+    st, io, fir = seed_case(db)
+    add(db, fir, io, act="NDPS Act", section="21(b)", req=None)
+    assert one(db, "SELECT ai_request_id, reason FROM fir_section WHERE fir_id=%s", fir) == (None, REASON)
+    for bad in ("reason=NULL", "chosen_by=NULL", "added_at=NULL"):
+        name = bad.split("=")[0]
+        row = {"reason": "%(reason)s", "chosen_by": "%(io)s", "added_at": "clock_timestamp()"}
+        row[name] = "NULL"
+        with pytest.raises(psycopg.errors.CheckViolation):
+            db.execute(f"""INSERT INTO fir_section(fir_id,act,section,chosen_by,added_at,reason)
+                           VALUES (%(fir)s,'NDPS Act','20(b)',{row['chosen_by']},{row['added_at']},{row['reason']})""",
+                       {"fir": fir, "io": io, "reason": REASON})
+
+
+def test_a_section_by_hand_is_allowed_on_a_protected_case_but_an_ai_one_is_not(db):
+    st, io, fir = seed_case(db)
+    db.execute("UPDATE fir SET identity_protected = true WHERE id = %s", (fir,))
+    add(db, fir, io, section="64(1)", req=None)
+    with pytest.raises(psycopg.errors.CheckViolation, match="protected"):
+        add(db, fir, io, section="65(1)")
 
 
 @pytest.mark.parametrize("column", ["reason", "ai_request_id"])

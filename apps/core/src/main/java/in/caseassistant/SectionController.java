@@ -29,14 +29,20 @@ class SectionController {
     record Choice(@NotBlank String playbookId, @NotBlank String chargeId,
             @NotBlank @Size(min = 10, max = 2000) String reason, @NotNull UUID aiRequestId) {}
 
+    record Own(@NotBlank String act, @NotBlank String section, @NotBlank @Size(min = 10, max = 2000) String reason) {}
+
+    private static final java.util.regex.Pattern SECTION = java.util.regex.Pattern.compile("[0-9][0-9A-Za-z()/.-]{0,29}");
+
     private final JdbcClient db;
     private final CaseTeam team;
     private final Playbooks playbooks;
+    private final Modules modules;
 
-    SectionController(JdbcClient db, CaseTeam team, Playbooks playbooks) {
+    SectionController(JdbcClient db, CaseTeam team, Playbooks playbooks, Modules modules) {
         this.db = db;
         this.team = team;
         this.playbooks = playbooks;
+        this.modules = modules;
     }
 
     private String law(UUID firId) {
@@ -62,7 +68,7 @@ class SectionController {
             m.put("in_fir", inFir.contains(c.act() + " " + c.section()));
             return m;
         })).toList();
-        return Map.of("law", law(firId), "sections", sections, "charges", charges);
+        return Map.of("law", law(firId), "sections", sections, "charges", charges, "acts", modules.acts(team.stateOfFir(firId)));
     }
 
     @PostMapping
@@ -85,5 +91,39 @@ class SectionController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This section is already in the FIR.");
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("act", charge.act(), "section", charge.section()));
+    }
+
+    /**
+     * A section chosen by the officer alone, outside the playbooks (A2, V60): any law the FIR takes (the national acts or a
+     * law of its state) and a section written like 103(1); a reason of 10+ characters; no AI request. Also allowed on a
+     * case that protects the victim's identity, since the AI is not used. The same law rule as above: no BNS section for an
+     * offence under the IPC, no IPC section for one under the BNS (BNS 358). It is not checked against the sections the
+     * app knows (the table is a draft), so the officer's own reading of the Act decides; a wrong one is answered in the
+     * case diary, since an added section is kept as written.
+     */
+    @PostMapping("/own")
+    ResponseEntity<Map<String, Object>> addOwn(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody Own o) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        if (!modules.acts(team.stateOfFir(firId)).contains(o.act)) throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "This law is not one a section of this FIR can be under.");
+        String section = o.section.trim();
+        if (!SECTION.matcher(section).matches()) throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Write the section as a number, like 103(1) or 21(b).");
+        if (o.reason.trim().length() < 10) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Give a reason of at least 10 characters.");
+        String law = law(firId);
+        if (o.act.equals("BNS") && law.equals("old"))
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "The offence of this FIR is before 1 July 2024, so the IPC applies, not the BNS (BNS 358). Find the IPC section in the law finder.");
+        if (o.act.equals("IPC") && law.equals("new"))
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "The offence of this FIR is from 1 July 2024, so the BNS applies, not the IPC (BNS 358).");
+        try {
+            db.sql("""
+                    insert into fir_section (fir_id, act, section, chosen_by, added_at, reason)
+                    values (?, ?, ?, ?, clock_timestamp(), ?)""")
+                    .params(firId, o.act, section, me, o.reason.trim()).update();
+        } catch (DuplicateKeyException twice) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This section is already in the FIR.");
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("act", o.act, "section", section));
     }
 }

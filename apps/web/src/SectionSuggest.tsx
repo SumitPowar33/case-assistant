@@ -7,7 +7,7 @@ import { useT } from './i18n'
 
 type Law = 'new' | 'old' | 'spans' | 'unknown'
 type Added = { act: string; section: string; added_at: string | null; reason: string | null; chosen_by_name: string | null }
-type Basis = { law: Law; sections: Added[]; charges: Charge[] }
+type Basis = { law: Law; sections: Added[]; charges: Charge[]; acts: string[] }
 type Draft = { request_id: string; draft: string; provider: string; model: string }
 type Choice = 'open' | 'added' | 'skipped'
 type Check = { request: Draft; read: SuggestRead; choices: Choice[]; reasons: string[]; logged?: string }
@@ -27,6 +27,7 @@ export default function SectionSuggest({ firId, text, victimProtected, version, 
   const [check, setCheck] = useState<Check | null>(null)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  const [own, setOwn] = useState({ act: '', section: '', reason: '' })
   if (error) return <p role="alert">{error}</p>
   if (!data) return <p>{t('common.loading')}</p>
   const blocked = (c: Charge) => c.act === 'BNS' && data.law === 'old'
@@ -52,6 +53,18 @@ export default function SectionSuggest({ firId, text, victimProtected, version, 
     try {
       await send(`/firs/${firId}/sections`, 'POST', { playbookId: charge.playbook_id, chargeId: charge.charge_id, reason: c.reasons[i].trim(), aiRequestId: c.request.request_id })
       setCheck({ ...c, choices: c.choices.map((x, j) => (j === i ? 'added' : x)) })
+      onSaved()
+    } catch (err) {
+      setNote((err as Error).message)
+    }
+  }
+
+  async function addOwn(b: Basis) {
+    setNote('')
+    try {
+      await send(`/firs/${firId}/sections/own`, 'POST', { act: own.act || b.acts[0], section: own.section.trim(), reason: own.reason.trim() })
+      setOwn({ act: '', section: '', reason: '' })
+      setNote(t('sections.ownAdded'))
       onSaved()
     } catch (err) {
       setNote((err as Error).message)
@@ -87,6 +100,15 @@ export default function SectionSuggest({ firId, text, victimProtected, version, 
         <p><button type="button" onClick={() => void suggest(data)} disabled={busy}>{t(busy ? 'facts.reading' : 'sections.suggest')}</button>{' '}
           <small>{t('sections.sends')}</small></p>
       )}
+      <details>
+        <summary>{t('sections.ownTitle')}</summary>
+        <p><small>{t('sections.ownHelp')}</small></p>
+        <label>{t('sections.ownAct')} <select value={own.act || data.acts[0]} onChange={(e) => setOwn({ ...own, act: e.target.value })}>
+          {data.acts.map((a) => <option key={a} value={a}>{a}</option>)}</select></label>{' '}
+        <label>{t('sections.ownSection')} <input value={own.section} maxLength={30} onChange={(e) => setOwn({ ...own, section: e.target.value })} /></label>
+        <label>{t('sections.ownReason')} <textarea value={own.reason} maxLength={2000} rows={2} onChange={(e) => setOwn({ ...own, reason: e.target.value })} /></label>
+        <p><button type="button" onClick={() => void addOwn(data)} disabled={!own.section.trim() || own.reason.trim().length < 10}>{t('sections.ownAdd')}</button></p>
+      </details>
       {note && <p role="alert">{note}</p>}
       {check && (
         <div className="card" aria-label={t('sections.aiPanel')}>

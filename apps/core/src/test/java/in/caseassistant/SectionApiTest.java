@@ -144,4 +144,71 @@ class SectionApiTest {
         db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '64')").param(fir).update();
         assertThat(db.sql("select count(*) from fir_section where fir_id = ?").param(fir).query(Long.class).single()).isEqualTo(2);
     }
+
+    // A2, the rest (V60): a section outside the playbooks, chosen by the officer alone
+    ResultActions own(String who, String act, String section, String reason) throws Exception {
+        return mvc.perform(post("/api/firs/" + fir + "/sections/own").header("Authorization", who).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"act\":\"" + act + "\",\"section\":\"" + section + "\",\"reason\":\"" + reason + "\"}"));
+    }
+
+    @Test
+    void aSectionOutsideThePlaybooksIsAddedWithAReasonAndNoAiRequest() throws Exception {
+        mvc.perform(get("/api/firs/" + fir + "/sections").header("Authorization", io))
+                .andExpect(jsonPath("$.acts").value(org.hamcrest.Matchers.hasItems("BNS", "IPC", "NDPS Act", "Other")));
+        own(io, "NDPS Act", " 21(b) ", "  The seized powder tested positive in the field kit  ").andExpect(status().isCreated())
+                .andExpect(jsonPath("$.act").value("NDPS Act")).andExpect(jsonPath("$.section").value("21(b)"));
+        mvc.perform(get("/api/firs/" + fir + "/sections").header("Authorization", sho)).andExpect(jsonPath("$.sections.length()").value(2))
+                .andExpect(jsonPath("$.sections[1].section").value("21(b)")).andExpect(jsonPath("$.sections[1].reason").value("The seized powder tested positive in the field kit"))
+                .andExpect(jsonPath("$.sections[1].chosen_by_name").value("Fictional io"));
+        assertThat(db.sql("select ai_request_id is null from fir_section where act = 'NDPS Act'").query(Boolean.class).single()).isTrue();
+        mvc.perform(get("/api/firs/" + fir + "/diary").header("Authorization", io))
+                .andExpect(jsonPath("$.events[?(@.what == 'section_added')].detail").value("NDPS Act 21(b)"));
+        own(io, "NDPS Act", "21(b)", REASON).andExpect(status().isConflict()).andExpect(status().reason("This section is already in the FIR."));
+        own(io, "BNS", "318(4)", REASON).andExpect(status().isConflict());   // the registration's own
+        // kept as written
+        assertThatThrownBy(() -> db.sql("delete from fir_section where act = 'NDPS Act'").update()).hasMessageContaining("kept");
+    }
+
+    @Test
+    void aSectionByHandIsChecked() throws Exception {
+        own(io, "BNS", "103(1)", "too short").andExpect(status().isBadRequest());
+        own(io, "BNS", "103(1)", "         x").andExpect(status().isBadRequest()).andExpect(status().reason("Give a reason of at least 10 characters."));
+        own(io, "BNS", "103(1)", "x".repeat(2001)).andExpect(status().isBadRequest());
+        own(io, "", "103(1)", REASON).andExpect(status().isBadRequest());
+        own(io, "BNS", "", REASON).andExpect(status().isBadRequest());
+        own(io, "Made Up Act", "5", REASON).andExpect(status().isUnprocessableEntity()).andExpect(status().reason("This law is not one a section of this FIR can be under."));
+        own(io, "MPID Act", "3", REASON).andExpect(status().isUnprocessableEntity());   // a law of a state, and this FIR is of no such state
+        for (String bad : new String[] {"abc", "(1)", "103 1", "1".repeat(31), "-5", "5;drop"})
+            own(io, "BNS", bad, REASON).andExpect(status().isUnprocessableEntity()).andExpect(status().reason("Write the section as a number, like 103(1) or 21(b)."));
+        mvc.perform(post("/api/firs/" + fir + "/sections/own").header("Authorization", io).contentType(MediaType.APPLICATION_JSON).content("{\"act\":\"BNS\",\"reason\":\"" + REASON + "\"}"))
+                .andExpect(status().isBadRequest());
+        assertThat(db.sql("select count(*) from fir_section").query(Long.class).single()).isOne();
+    }
+
+    @Test
+    void theLawOfTheOffenceDecidesBetweenBnsAndIpcForASectionByHand() throws Exception {
+        db.sql("update fir set occurrence_from = '2024-06-30T23:59+05:30' where id = ?").param(fir).update();
+        own(io, "BNS", "103(1)", REASON).andExpect(status().isUnprocessableEntity()).andExpect(status().reason(
+                "The offence of this FIR is before 1 July 2024, so the IPC applies, not the BNS (BNS 358). Find the IPC section in the law finder."));
+        own(io, "IPC", "302", REASON).andExpect(status().isCreated());
+        db.sql("update fir set occurrence_from = '2024-07-01T00:00+05:30' where id = ?").param(fir).update();
+        own(io, "IPC", "420", REASON).andExpect(status().isUnprocessableEntity()).andExpect(status().reason(
+                "The offence of this FIR is from 1 July 2024, so the BNS applies, not the IPC (BNS 358)."));
+        own(io, "BNS", "103(1)", REASON).andExpect(status().isCreated());
+        // an offence under the BNS and the IPC, or an unknown date, may take either (a person decides with the prosecutor)
+        db.sql("update fir set occurrence_from = '2024-06-01T00:00+05:30', occurrence_to = '2024-08-01T00:00+05:30' where id = ?").param(fir).update();
+        own(io, "IPC", "420", REASON).andExpect(status().isCreated());
+    }
+
+    @Test
+    void aSectionByHandIsAllowedOnAProtectedCaseBecauseNoAiIsUsedButOnlyTheTeamAdds() throws Exception {
+        db.sql("update fir set identity_protected = true where id = ?").param(fir).update();
+        own(io, "BNS", "64(1)", REASON).andExpect(status().isCreated());
+        own(desk, "BNS", "65(1)", REASON).andExpect(status().isForbidden());
+        own(otherIo, "BNS", "65(1)", REASON).andExpect(status().isForbidden());
+        mvc.perform(post("/api/firs/" + fir + "/sections/own").contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/firs/" + UUID.randomUUID() + "/sections/own").header("Authorization", io).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"act\":\"BNS\",\"section\":\"64\",\"reason\":\"" + REASON + "\"}")).andExpect(status().isForbidden());
+        assertThat(db.sql("select count(*) from fir_section").query(Long.class).single()).isEqualTo(2);
+    }
 }
