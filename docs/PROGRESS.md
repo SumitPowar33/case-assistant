@@ -8,6 +8,8 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 3. **(Resolved in session 111: bank replies are now saved with the reply, V59, and are searchable.) "Bank replies as searchable text" waited for A4's left-for part** (saving the pasted reply with its notice). Nothing is stored today for it to search; building a second store only for search would copy text. The 63(4) certificates, money trail and notices are already searchable.
 4. **The AI reminder letter for a missing notice item is not offered on a protected case** (session 113, answer to question 1 of session 112). It sends no name, only the FIR number, the sections and the numbered missing items, so the gateway would allow it, but a bank's missing items can point at the victim's account; the safer choice is to leave it out there, like the reply reader. Reverse it by telling the next session (one condition in `Notices.tsx`).
 
+5. **A complaint's confirmed AI facts are copied to the FIR registered from it** (session 118, answer to question 1 of session 117). The FIR carries the complaint's signed text unchanged, so each quote is still words of the FIR text; the copy keeps who confirmed, when, the AI's value and its request id. It is skipped when the FIR protects the victim's identity (no AI result is kept there) and the officer can still run the check on the FIR. Reverse it by telling the next session (one insert in `FirController.create`).
+
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
 ## 2 Nov 2026, decisions on the open questions (Sumit: "research and resolve the answers yourself", session 55)
@@ -62,7 +64,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 7, A1 (complaint facts carried to the FIR) (session 118, started 23:36 IST)
 **SUMIT'S PRIORITY (16 Nov 2026; replaces "the first item under Next"): AI features and RAG first, then the rest of the Next list.** Build the first unfinished item of this order, keeping every rule of CLAUDE.md and the five AI rules of docs/AI-AND-SCREENS-PLAN.md section 2:
 1. Item 17, Ask the case file as real RAG: embeddings behind the gateway on the state's own server, vectors in PostgreSQL, hybrid with BM25 (DONE in session 106, see its entry and "Decisions taken for Sumit"); open a source on click, "note in case diary", questions in Hindi and Marathi, the answers scored on the evaluation set (DONE, session 106). Left of item 17: bank replies as searchable text (waits for A4's left-for part, decision 3), the real model's download and tuning (deployment step), a monthly run of the set with a real model.
 2. A8: the AI explanation in the Old law to new law finder (board 18) (already DONE in session 98; check only that it is on the board's screen).
@@ -70,7 +71,7 @@ In progress: item 7, A1 (complaint facts carried to the FIR) (session 118, start
 4. DONE (session 107, draft word lists): Hindi and Marathi guards for the guilt, truth, prediction, opinion and rating refusals (A5, A6, A9). Left: a Marathi-speaking prosecutor's review of the words; other Indian scripts still rely on the model's safety text.
 5. DONE: the rest of A3: "differences to clarify" (session 108) and audio transcription with an on-premises speech model with an offline stand-in (session 109). Left: the real model's download and word-error check (`docs/DEPLOY-TRANSCRIPTION.md`), keeping which statements came from a recording.
 6. DONE (session 110): the rest of A6: drafting also from the evidence register, notices, 63(4) certificates, search/seizure memos, expert requests and the money trail, and one paragraph per charge ingredient linked to the readiness check. Left: bank replies as text (nothing stores them until A4's left-for part, decision 3), the particulars table and court print (item 18), a Marathi-speaking prosecutor's review.
-7. The "Left for" parts of A1, A2, A4 and A7 in item 14. A4's "reply saved with the notice" DONE (session 111, V59). Still left in item 7: A4 (reply as a file or photo, Part B certificate in the readiness check; the reminder letter for a missing item DONE, session 113), A1 (signed complaint at the front desk DONE, session 117; several documents and their conflicts, identifiers seen in other FIRs, the complaint's facts carried to its FIR), A2 (offence date on the FIR form DONE, session 115; sections outside the playbooks DONE, session 116; report to the Magistrate), A7 (letter print, SMS, victim's language from the person's record; the 90-day date and the steps read from the case DONE, session 112).
+7. The "Left for" parts of A1, A2, A4 and A7 in item 14. A4's "reply saved with the notice" DONE (session 111, V59). Still left in item 7: A4 (reply as a file or photo, Part B certificate in the readiness check; the reminder letter for a missing item DONE, session 113), A1 (signed complaint at the front desk DONE, session 117; the complaint's facts carried to its FIR DONE, session 118; several documents and their conflicts, identifiers seen in other FIRs), A2 (offence date on the FIR form DONE, session 115; sections outside the playbooks DONE, session 116; report to the Magistrate), A7 (letter print, SMS, victim's language from the person's record; the 90-day date and the steps read from the case DONE, session 112).
 8. Then the rest of the Next list in its order: item 3 rest, item 15 rest (POCSO), item 16 (duty roster), item 18 (court-format papers), then the real-time screens.
 Open questions must not stall the work: where one blocks an item, take the safer choice that can be reversed, record it under "Decisions taken for Sumit" above, and carry on.
 Done in session 26: the browser test of the Load data screen, the MH module with `import_self_approval` = 0, the made-up MH CCTNS-style profile.
@@ -78,6 +79,7 @@ Done in session 28: evidence import file (ef845fb), notices import file (a792dea
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
 Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)).
 Done in session 31: speech input at the front desk; module 1 is finished.
+Done in session 118 (20 Nov, scheduled run, Sumit away): item 14, A1: a complaint's confirmed facts carry over to the FIR registered from it (no migration).
 Done in session 117 (20 Nov, scheduled run, Sumit away): item 14, A1: the AI fact check also on a signed complaint at the front desk (V61).
 Done in session 116 (19 Nov, 02:05 IST scheduled run, last of the night): item 14, A2: a section outside the playbooks, added by the officer with a reason (V60).
 Done in session 32 (31 Oct, 02:05 IST run): upgrade test, web-to-core route contract test, a date-dependent test fixed, more tests for old code. The rest of the MH pack waits for answers (questions 1 and 2 below).
@@ -182,6 +184,21 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
    **Session 106 (hybrid RAG, V58):** gateway `POST /v1/embed` (local embedder only, `ai_embed` audit rows, 120 calls per officer per 10 minutes; `EMBED_BACKEND=fake` offline stand-in; the real model is a deployment step), vectors kept in PostgreSQL per case, model and text hash (`case_passage_vector`, `CaseVectorController`), BM25 and cosine fused by reciprocal rank in `askFile.ts`, a source opens as its whole passage with the piece marked, "Note in case diary" (editable, saved on the officer's click), Hindi and Marathi questions in the evaluation set, the answers scored on the set with a stand-in provider (the gateway's fake provider only echoes the prompt). Left: bank replies as text (decision 3), the real model (download, `EMBED_MIN_SIMILARITY` tuning, scoring with a real provider), Hindi and Marathi refusal guards beyond the draft word list (priority 4).
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
+
+## 20 Nov 2026, session 118 (scheduled run, Sumit away)
+Started from `setup/seed` (session 117 notes, da697c3) in a new container (clone on `master`; `add_repo` was not offered, `git fetch` worked). Postgres started, role `caseapp` and both databases made, packages installed. Baseline `scripts/test-all.sh`: all 8 suites PASS. Priorities 1 to 6 are done; this session continued priority 7 with the carry-over of a complaint's facts.
+
+**A1: a complaint's confirmed facts carry over to its FIR (no migration):**
+- `FirController.create`: after the sections are saved, the facts confirmed on the signed complaint (`complaint_fact`) are copied into `fir_fact` with the same value, AI value, quote, request id, confirmer and time. Done only when the FIR does not protect the victim's identity (as the section list is saved first, a BNS 64 section added at registration is seen); otherwise nothing is copied and the FIR is still registered.
+- Tests: `ComplaintFactApiTest` (2 new: the facts arrive as confirmed with their quote and request id and stay on the complaint; a complaint without facts and a FIR with BNS 64 register and copy nothing).
+- Decision 5 in "Decisions taken for Sumit" above (answer to question 1 of session 117).
+
+Not done: the rest of item 7 (A4: reply as a file or photo, Part B certificate in the readiness check; A1: several documents and conflicts, identifiers in other FIRs; A2: report to the Magistrate; A7: letter print, SMS, victim's language from the person's record), then item 8. Skipped: the FIR fact card has no label saying a fact came from the complaint (its source is the same text); no browser screenshot (no screen changed).
+
+Next: the rest of priority 7 (A1's several documents and conflicts, or A4's Part B certificate in the readiness check, or A7's victim language), then 8.
+
+Questions for Sumit:
+1. Should a fact carried over from the complaint be marked "from the complaint" on the FIR's fact card, or is it fine to show it as any confirmed fact?
 
 ## 20 Nov 2026, session 117 (scheduled run, Sumit away)
 Started from `setup/seed` (session 116 notes, 64f7902) in a new container (clone on `master`; `add_repo` was not offered, `git fetch` worked). Postgres started, role `caseapp` and both databases made, packages installed. Baseline: all 8 suites PASS (16 min). Priorities 1 to 6 are done; this session continued priority 7 with A1's "signed complaint at the front desk".

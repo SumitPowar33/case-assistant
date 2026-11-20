@@ -131,6 +131,13 @@ class FirController {
                         .params(id, s.act, s.section).update();
             }
         }
+        // the facts the desk confirmed on the signed complaint stay true for the FIR (it carries the same text, so each quote
+        // still holds); not on a protected case, where the database refuses an AI result
+        if (f.complaintId != null && !identityProtected && !team.identityProtected(id))
+            db.sql("""
+                    insert into fir_fact (fir_id, kind, value, ai_value, quote, ai_request_id, confirmed_by, confirmed_at)
+                    select ?, kind, value, ai_value, quote, ai_request_id, confirmed_by, confirmed_at from complaint_fact where complaint_id = ?""")
+                    .params(id, f.complaintId).update();
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", id));
     }
 

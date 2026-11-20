@@ -146,4 +146,36 @@ class ComplaintFactApiTest {
         mvc.perform(get("/api/complaints/" + c + "/facts").header("Authorization", sho)).andExpect(jsonPath("$.length()").value(1));
         assertThat(db.sql("select count(*) from protected_read where complaint_id = ?").param(c).query(Long.class).single()).isOne();
     }
+
+    UUID register(UUID c, int no, Object sections) throws Exception {
+        var m = new HashMap<String, Object>(Map.of("stationId", station, "firYear", 2026, "firNo", no, "gdEntryNo", "GD-" + no,
+                "registeredAt", Instant.now().toString(), "actionTaken", "investigate", "complaintId", c));
+        if (sections != null) m.put("sections", sections);
+        return UUID.fromString(json.readTree(mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(m))).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText());
+    }
+
+    @Test
+    void theFactsConfirmedOnTheComplaintCarryOverToItsFirAsConfirmed() throws Exception {
+        UUID c = take("cyber_financial_fraud", true);
+        confirm(c, clerk, fact("amount", "Rs 40,000", "Rs 40,000", "Rs 40,000 by UPI")).andExpect(status().isCreated());
+        confirm(c, clerk, fact("upi", "UPI", "by UPI", "by UPI")).andExpect(status().isCreated());
+        UUID f = register(c, 7, null);
+        var rows = db.sql("select kind, value, ai_value, quote, ai_request_id::text r, confirmed_by from fir_fact where fir_id = ? order by kind").param(f).query().listOfRows();
+        assertThat(rows).hasSize(2);
+        assertThat(rows.get(0)).containsEntry("kind", "amount").containsEntry("quote", "Rs 40,000 by UPI").containsEntry("r", REQ);
+        assertThat(rows.get(1)).containsEntry("value", "UPI").containsEntry("ai_value", "by UPI");
+        assertThat(db.sql("select count(*) from complaint_fact where complaint_id = ?").param(c).query(Long.class).single()).isEqualTo(2);
+    }
+
+    @Test
+    void aComplaintWithoutFactsOrAFirThatProtectsTheVictimCarriesNothingOverAndStillRegisters() throws Exception {
+        UUID none = take("other", true);
+        register(none, 8, null);
+        UUID c = take("cyber_financial_fraud", true);
+        confirm(c, clerk, fact("amount", "Rs 40,000", "Rs 40,000", "Rs 40,000")).andExpect(status().isCreated());
+        UUID f = register(c, 9, java.util.List.of(Map.of("act", "BNS", "section", "64")));
+        assertThat(db.sql("select count(*) from fir_fact").query(Long.class).single()).isZero();
+        assertThat(db.sql("select count(*) from fir where id = ?").param(f).query(Long.class).single()).isOne();
+    }
 }
