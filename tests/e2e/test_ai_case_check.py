@@ -34,6 +34,13 @@ def test_the_gateway_sends_a_case_s_text_only_for_its_team_and_not_when_the_vict
             assert ask("fir_extract", io) == 200
             assert ask("fir_extract", desk) == 404 and ask("fir_extract", root) == 404   # not on the case team
             assert ask("fir_extract", io, case_ref="FIR 1/2026") == 422                 # the FIR is named by its id
+            # A1 at the front desk (session 117): the signed complaint's own check, with the desk's token
+            complaint = demo["complaint_id"]
+
+            def ask_complaint(token):
+                return gw.call("POST", "/v1/generate", {"feature": "fir_extract", "prompt": "Fictional text", "prompt_version": "e2e@1",
+                                                         "case_ref": complaint, "case_kind": "complaint"}, token)[0]
+            assert ask_complaint(desk) == 200
             with psycopg.connect(dbname=DB, **PG) as c:
                 c.execute("update fir set identity_protected = true where id = %s", (fir,))
             assert ask("fir_extract", io) == 403
@@ -43,3 +50,5 @@ def test_the_gateway_sends_a_case_s_text_only_for_its_team_and_not_when_the_vict
             refused = [r for r in audit["rows"] if r["action"] == "ai_refused"]
             assert [r["detail"]["status"] for r in refused] == [403, 422, 404, 404]   # newest first
             assert refused[0]["case_ref"] == fir and refused[0]["detail"]["victim_protected"] is True
+            # once its FIR protects the victim the complaint's text is withheld from a clerk who is not on the case team
+            assert ask_complaint(desk) == 404

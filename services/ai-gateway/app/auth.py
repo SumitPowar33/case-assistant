@@ -147,9 +147,10 @@ class CaseCheck:
         self.base = base_url.rstrip("/")
         self.client = client or httpx.Client(timeout=5.0)
 
-    def __call__(self, token: str, fir_id: str) -> dict:
+    def __call__(self, token: str, fir_id: str, kind: str = "fir") -> dict:
+        what = "complaints" if kind == "complaint" else "firs"   # a signed complaint at the front desk has the same check
         try:
-            r = self.client.get(f"{self.base}/api/firs/{fir_id}/ai-check", headers={"Authorization": "Bearer " + token})
+            r = self.client.get(f"{self.base}/api/{what}/{fir_id}/ai-check", headers={"Authorization": "Bearer " + token})
         except httpx.HTTPError as e:
             raise CoreUnavailable("cannot reach the core app to check the case") from e
         if r.status_code in (403, 404):

@@ -116,6 +116,7 @@ def refused_question(feature: str, prompt: str) -> str | None:
 # notice_draft and supervisor_brief send no victim details; law_explain reads no case.
 NO_CASE_FEATURES = {"law_explain"}
 NOT_ON_PROTECTED = {"fir_extract", "section_suggest", "statement_translate", "statement_compare", "reply_check", "chargesheet_draft"}
+COMPLAINT_FEATURES = {"fir_extract"}   # the facts of a signed complaint (A1 at the front desk)
 UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 
@@ -126,6 +127,8 @@ class GenerateIn(BaseModel):
     # Which prompt template the caller used, e.g. "notice_draft/bnss94@1". Logged with every request.
     prompt_version: str = Field(min_length=1, max_length=80, pattern=r"^[\w./@-]+$")
     case_ref: str | None = Field(default=None, max_length=200)
+    # what case_ref names: an FIR (default) or, for fir_extract only, a signed complaint at the front desk (before any FIR)
+    case_kind: str = Field(default="fir", pattern=r"^(fir|complaint)$")
     provider: str | None = Field(default=None, max_length=20)  # officer override, if allowed
     model: str | None = Field(default=None, pattern=MODEL_NAME)
     max_tokens: int = Field(default=1024, ge=1, le=8192)
@@ -281,8 +284,10 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         if body.feature not in NO_CASE_FEATURES:
             if not body.case_ref or not UUID_RE.match(body.case_ref):
                 refuse(422, "this feature reads a case: name the FIR (its id) in case_ref")
+            if body.case_kind == "complaint" and body.feature not in COMPLAINT_FEATURES:
+                refuse(422, "this feature reads an FIR, not a complaint")
             try:
-                case = case_check(u["token"], body.case_ref)
+                case = case_check(u["token"], body.case_ref, body.case_kind)
             except CaseNotOpen:
                 refuse(404, "no case of your case team with that id")
             except CoreUnavailable as e:
@@ -323,7 +328,7 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         if wait:
             refuse(429, f"Too many requests in a short time. Try again in {wait} seconds.", headers={"Retry-After": str(wait)})
         try:
-            case_check(u["token"], body.case_ref)
+            case_check(u["token"], body.case_ref, "fir")
         except CaseNotOpen:
             refuse(404, "no case of your case team with that id")
         except CoreUnavailable as e:
@@ -361,7 +366,7 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         if wait:
             refuse(429, f"Too many recordings in a short time. Try again in {wait} seconds.", headers={"Retry-After": str(wait)})
         try:
-            case_check(u["token"], case_ref)
+            case_check(u["token"], case_ref, "fir")
         except CaseNotOpen:
             refuse(404, "no case of your case team with that id")
         except CoreUnavailable as e:
@@ -406,7 +411,7 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         if not UUID_RE.match(case_ref):
             raise HTTPException(422, "name the FIR (its id) in case_ref")
         try:
-            case_check(u["token"], case_ref)
+            case_check(u["token"], case_ref, "fir")
         except CaseNotOpen:
             raise HTTPException(404, "no case of your case team with that id")
         except CoreUnavailable as e:

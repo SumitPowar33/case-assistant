@@ -25,7 +25,7 @@ const kinds = [{ id: 'cyber_financial_fraud', label: 'Online financial fraud', s
 const base = {
   id: 'c1', received_at: '2026-10-30T04:30:00Z', mode: 'oral', informant_name: 'Fictional Informant', informant_contact: null, kind: 'cyber_financial_fraud',
   kind_label: 'Online financial fraud', text_original: 'Fictional caller took money.', text_language: 'mr', recorded_by_name: 'HC Fictional',
-  read_back_language: null, signed_at: null, signed_by_name: null, outcome: null, outcome_reason: null, fir_id: null, fir_no: null, fir_year: null, sign_by: null, enquiry_due: null,
+  read_back_language: null, signed_at: null, signed_by_name: null, victim_protected: false, outcome: null, outcome_reason: null, fir_id: null, fir_no: null, fir_year: null, sign_by: null, enquiry_due: null,
   steps: [
     { id: 'report_1930', text: 'Report on 1930', basis: 'MHA I4C', due_at: '2026-10-30T05:30:00Z', done_at: null, done_by_name: null, note: null, overdue: true },
     { id: 'note_transactions', text: 'Write down every transaction', basis: null, due_at: '2026-10-30T05:30:00Z', done_at: '2026-10-30T04:40:00Z', done_by_name: 'HC Fictional', note: 'UTR noted', overdue: false },
@@ -276,4 +276,27 @@ test('a complaint in an unknown language and with no spoken read-back shows the 
   render(<ComplaintPage id="c1" />)
   expect(await screen.findByText('Fictional caller took money.')).toBeTruthy()
   expect(document.querySelector('[lang="zz"]') ?? screen.getByText(/zz/, { exact: false })).toBeTruthy()
+})
+
+test('a signed complaint offers the AI fact check, an unsigned, withheld or protected one does not', async () => {
+  const signed = { ...base, signed_at: '2026-10-30T04:50:00Z', signed_by_name: 'HC Fictional', read_back_language: 'mr' }
+  stub({ '/complaints/c1': signed, '/complaints/c1/facts': [{ id: 'k1', kind: 'amount', value: 'Rs 40,000', ai_value: 'Rs 40,000', corrected: false, quote: 'took money', confirmed_at: '2026-10-30T05:00:00Z', confirmed_by_name: 'HC Fictional' }] })
+  render(<ComplaintPage id="c1" />)
+  expect(await screen.findByRole('button', { name: 'Find facts with AI' })).toBeTruthy()
+  expect(await screen.findByText('Rs 40,000')).toBeTruthy()
+  cleanup()
+  stub({ '/complaints/c1': base })
+  render(<ComplaintPage id="c1" />)
+  await screen.findByText('Report on 1930')
+  expect(screen.queryByRole('button', { name: 'Find facts with AI' })).toBeNull()
+  cleanup()
+  stub({ '/complaints/c1': { ...signed, withheld: true, text_original: null } })
+  render(<ComplaintPage id="c1" />)
+  await screen.findByText('Report on 1930')
+  expect(screen.queryByRole('button', { name: 'Find facts with AI' })).toBeNull()
+  cleanup()
+  stub({ '/complaints/c1': { ...signed, victim_protected: true } })
+  render(<ComplaintPage id="c1" />)
+  expect(await screen.findByText(/not offered on a case that protects/)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Find facts with AI' })).toBeNull()
 })

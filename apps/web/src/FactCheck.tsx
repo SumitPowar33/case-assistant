@@ -21,12 +21,13 @@ function InText({ text, fact }: { text: string; fact: Fact }) {
  * the dates, times, places, amounts and numbers in the text. Only facts whose quote is words of the text are shown, each
  * with where it stands; the officer confirms each (the value can be corrected first) or marks it wrong. Nothing is kept
  * until confirmed (POST /firs/{id}/facts, case team only); finishing the check logs the officer's decision in the gateway.
+ * With `complaint` the id is a signed complaint at the front desk (before any FIR): same steps, same rules, kept in complaint_fact (V61).
  * Not offered on a case that protects the victim's identity: its text would go to the AI provider (question for Sumit).
  */
-export default function FactCheck({ firId, text, victimProtected }: { firId: string; text: string; victimProtected: boolean }) {
+export default function FactCheck({ firId, text, victimProtected, complaint }: { firId: string; text: string; victimProtected: boolean; complaint?: boolean }) {
   const t = useT()
   const [version, setVersion] = useState(0)
-  const { data, error } = useLoad<Confirmed[]>(`/firs/${firId}/facts`, version)
+  const { data, error } = useLoad<Confirmed[]>(complaint ? `/complaints/${firId}/facts` : `/firs/${firId}/facts`, version)
   const confirmed = Array.isArray(data) ? data : []
   const [check, setCheck] = useState<Check | null>(null)
   const [busy, setBusy] = useState(false)
@@ -37,7 +38,7 @@ export default function FactCheck({ firId, text, victimProtected }: { firId: str
     setBusy(true)
     try {
       const request = await ai<Draft>('/v1/generate', { method: 'POST', body: {
-        feature: 'fir_extract', prompt_version: FACT_PROMPT_VERSION, prompt: factPrompt(text), case_ref: firId, max_tokens: 1500 } })
+        feature: 'fir_extract', prompt_version: FACT_PROMPT_VERSION, prompt: factPrompt(text), case_ref: firId, case_kind: complaint ? 'complaint' : 'fir', max_tokens: 1500 } })
       const read = readFacts(request.draft, text)
       const n = read.kind === 'facts' ? read.facts.length : 0
       setCheck({ request, read, choices: Array<Choice>(n).fill('open'), values: read.kind === 'facts' ? read.facts.map((f) => f.value) : [] })
@@ -51,7 +52,7 @@ export default function FactCheck({ firId, text, victimProtected }: { firId: str
     setNote('')
     const f = c.read.facts[i]
     try {
-      await send(`/firs/${firId}/facts`, 'POST', { kind: f.kind, value: c.values[i].trim(), aiValue: f.value, quote: f.quote, aiRequestId: c.request.request_id })
+      await send(complaint ? `/complaints/${firId}/facts` : `/firs/${firId}/facts`, 'POST', { kind: f.kind, value: c.values[i].trim(), aiValue: f.value, quote: f.quote, aiRequestId: c.request.request_id })
       setCheck({ ...c, choices: c.choices.map((x, j) => (j === i ? 'confirmed' : x)) })
       setVersion((v) => v + 1)
     } catch (err) {

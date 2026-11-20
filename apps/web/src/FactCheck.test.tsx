@@ -148,3 +148,25 @@ test('a fact far into a long text is shown with the words around it, cut with do
   expect(q.textContent!.endsWith('…')).toBe(true)
   expect(q.textContent!.length).toBeLessThan(120)
 })
+
+test('on a signed complaint the same check names the complaint to the gateway and keeps the fact with the complaint', async () => {
+  const calls = stub({ generate: draft(JSON.stringify([LIST[1]])) })
+  render(<FactCheck firId="c1" text={TEXT} victimProtected={false} complaint />)
+  await screen.findByText('No fact of this FIR is confirmed yet.')
+  fireEvent.click(screen.getByRole('button', { name: 'Find facts with AI' }))
+  await screen.findByText('AI draft · check each fact')
+  expect(calls.find((c) => c.url === '/ai/v1/generate')!.body).toMatchObject({ feature: 'fir_extract', case_ref: 'c1', case_kind: 'complaint' })
+  fireEvent.click(within(card('Amount: Rs 40,000')).getByRole('button', { name: 'Confirm' }))
+  await within(card('Amount: Rs 40,000')).findByText('Confirmed')
+  expect(calls.find((c) => c.method === 'POST' && c.url === '/api/complaints/c1/facts')!.body).toMatchObject({ kind: 'amount', quote: 'Rs 40,000 went out', aiRequestId: 'r1' })
+  expect(calls.some((c) => c.url === '/api/firs/c1/facts')).toBe(false)
+})
+
+test('on an FIR the gateway is told the case is an FIR', async () => {
+  const calls = stub({ generate: draft('[]') })
+  render(<FactCheck firId="f1" text={TEXT} victimProtected={false} />)
+  await screen.findByText('No fact of this FIR is confirmed yet.')
+  fireEvent.click(screen.getByRole('button', { name: 'Find facts with AI' }))
+  await screen.findByText('AI draft · check each fact')
+  expect(calls.find((c) => c.url === '/ai/v1/generate')!.body).toMatchObject({ case_kind: 'fir' })
+})

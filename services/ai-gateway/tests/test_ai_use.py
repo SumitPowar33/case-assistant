@@ -63,7 +63,7 @@ def test_a_core_that_cannot_be_reached_gives_503(monkeypatch):
 
     class Down:
         def __init__(self, *a, **k): pass
-        def __call__(self, token, fir_id): raise gateway_main.CoreUnavailable("core is down")
+        def __call__(self, token, fir_id, kind="fir"): raise gateway_main.CoreUnavailable("core is down")
     monkeypatch.setattr(gateway_main, "CaseCheck", Down)
     c, _ = make()
     assert c.get("/v1/ai-use", params={"case_ref": CASE}).status_code == 503

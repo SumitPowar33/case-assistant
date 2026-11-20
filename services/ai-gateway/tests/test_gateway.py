@@ -70,8 +70,8 @@ class FakeCaseCheck:
     def __init__(self, *args, **kwargs):
         pass
 
-    def __call__(self, token, fir_id):
-        FakeCaseCheck.asked.append(fir_id)
+    def __call__(self, token, fir_id, kind="fir"):
+        FakeCaseCheck.asked.append(fir_id if kind == "fir" else (kind, fir_id))
         if fir_id == NOT_MINE:
             raise gateway_main.CaseNotOpen("not on the team")
         return {"victim_protected": fir_id == PROTECTED}
@@ -855,7 +855,7 @@ def test_the_case_check_fails_closed(status, answer, error):
 def test_the_core_app_down_during_the_case_check_is_503_and_logged():
     store = Store(":memory:")
 
-    def down(token, fir_id):
+    def down(token, fir_id, kind="fir"):
         raise gateway_main.CoreUnavailable("cannot reach the core app to check the case")
     c = TestClient(create_app(store, {"fake": FakeProvider()}, SECRET, core_says_active, case_check=down),
                    headers={"Authorization": "Bearer " + token("user-io-7", "io")})
@@ -901,3 +901,39 @@ def test_ordinary_hindi_and_marathi_questions_go_on(setup, question):
     c, store = setup
     r = c.post("/v1/generate", json={"feature": "case_qa", "prompt": ASK.format(question, "x"), "prompt_version": "case_qa/ask@1", "case_ref": "36a3be51-b4e6-58f7-96b1-74cbf0beab90"})
     assert r.status_code == 200
+
+
+# A1 at the front desk (session 117): the facts of a signed complaint, before any FIR exists
+def test_fir_extract_may_name_a_complaint_and_the_core_is_asked_about_that_complaint(setup):
+    c, store = setup
+    FakeCaseCheck.asked.clear()
+    c.put("/v1/settings/fir_extract", json={"provider": "fake"})
+    r = c.post("/v1/generate", json={"feature": "fir_extract", "prompt": "Fictional text", "prompt_version": "t@1", "case_ref": CASE, "case_kind": "complaint"})
+    assert r.status_code == 200
+    assert FakeCaseCheck.asked == [("complaint", CASE)]
+    assert store.audit_rows()[0]["case_ref"] == CASE
+
+
+def test_a_protected_complaint_is_refused_for_the_facts_and_a_complaint_of_another_station_is_404(setup):
+    c, store = setup
+    c.put("/v1/settings/fir_extract", json={"provider": "fake"})
+    body = {"feature": "fir_extract", "prompt": "Fictional text", "prompt_version": "t@1", "case_kind": "complaint"}
+    r = c.post("/v1/generate", json=body | {"case_ref": PROTECTED})
+    assert r.status_code == 403 and "protected" in r.text
+    assert store.audit_rows()[0]["detail"]["victim_protected"] is True
+    assert c.post("/v1/generate", json=body | {"case_ref": NOT_MINE}).status_code == 404
+
+
+def test_no_other_feature_reads_a_complaint_and_the_kind_is_one_of_two(setup):
+    c, _ = setup
+    for feature in ("section_suggest", "case_qa", "statement_translate"):
+        r = c.post("/v1/generate", json={"feature": feature, "prompt": "Fictional", "prompt_version": "t@1", "case_ref": CASE, "case_kind": "complaint"})
+        assert r.status_code == 422 and "not a complaint" in r.text
+    assert c.post("/v1/generate", json={"feature": "fir_extract", "prompt": "x", "prompt_version": "t@1", "case_ref": CASE, "case_kind": "notice"}).status_code == 422
+
+
+def test_the_case_check_of_a_complaint_asks_the_complaints_route():
+    from app import auth
+    seen, handler = case_core(200, {"victim_protected": False})
+    assert auth.CaseCheck("http://core", mock_client(handler))("tok-1", CASE, "complaint") == {"victim_protected": False}
+    assert seen[0].url.path == f"/api/complaints/{CASE}/ai-check" and seen[0].headers["authorization"] == "Bearer tok-1"

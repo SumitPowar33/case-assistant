@@ -50,6 +50,11 @@ class ComplaintController {
     record Outcome(@NotBlank @Pattern(regexp = "ncr|preliminary_enquiry|transferred|no_offence|not_signed_in_time") String outcome,
                    @NotBlank @Size(min = 10, max = 2000) String reason, @Size(max = 200) String permittedBy) {}
 
+    /** A fact the officer confirmed from the signed text (AI feature A1 at the front desk, V61): the same shape as an FIR's fact. */
+    record Fact(@NotBlank @Pattern(regexp = "date|time|place|amount|utr|phone|account|upi") String kind,
+                @NotBlank @Size(max = 200) String value, @NotBlank @Size(max = 200) String aiValue,
+                @NotBlank @Size(max = 500) String quote, @NotNull UUID aiRequestId) {}
+
     private final JdbcClient db;
     private final CaseTeam team;
     private final ProtectedReads reads;
@@ -124,6 +129,7 @@ class ComplaintController {
         if (withheld) for (String k : new String[] {"informant_name", "informant_contact", "text_original"}) out.put(k, null);
         else if (isProtected(c)) reads.complaints(CaseTeam.user(jwt), List.of(id), "complaint");
         out.put("withheld", withheld);
+        out.put("victim_protected", isProtected(c));
         out.put("versions", withheld ? List.of() : db.sql("""
                 select v.informant_name, v.informant_contact, v.kind, v.text_original, v.text_language, v.replaced_at, u.full_name as replaced_by_name
                 from complaint_version v join app_user u on u.id = v.replaced_by where v.complaint_id = ? order by v.replaced_at""")
@@ -211,6 +217,44 @@ class ComplaintController {
     }
 
     // ---------------------------------------------------------------------------------------------
+
+    /** What the AI gateway asks before it sends this complaint's text to a model: may this officer read it, and does it name a protected victim. */
+    @GetMapping("/complaints/{id}/ai-check")
+    Map<String, Object> aiCheck(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return Map.of("victim_protected", isProtected(handle(jwt, id)));
+    }
+
+    @GetMapping("/complaints/{id}/facts")
+    List<Map<String, Object>> facts(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        var c = handle(jwt, id);
+        var rows = db.sql("""
+                select f.id, f.kind, f.value, f.ai_value, f.value <> f.ai_value as corrected, f.quote, f.ai_request_id,
+                       f.confirmed_at, u.full_name as confirmed_by_name
+                from complaint_fact f join app_user u on u.id = f.confirmed_by where f.complaint_id = ? order by f.confirmed_at, f.id""")
+                .param(id).query().listOfRows();
+        if (!rows.isEmpty() && isProtected(c)) reads.complaints(CaseTeam.user(jwt), List.of(id), "complaint");
+        return rows;
+    }
+
+    @Transactional
+    @PostMapping("/complaints/{id}/facts")
+    ResponseEntity<Map<String, Object>> confirmFact(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody Fact f) {
+        var c = handle(jwt, id);
+        if (isProtected(c))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The AI is not used on information that names a protected victim, so its result is not taken.");
+        if (c.get("signed_at") == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "The informant has not signed the text yet.");
+        try {
+            UUID fact = db.sql("""
+                    insert into complaint_fact (complaint_id, kind, value, ai_value, quote, ai_request_id, confirmed_by)
+                    values (?, ?, ?, ?, ?, ?, ?) returning id""")
+                    .params(id, f.kind, f.value.trim(), f.aiValue.trim(), f.quote, f.aiRequestId, CaseTeam.user(jwt)).query(UUID.class).single();
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", fact));
+        } catch (org.springframework.dao.DuplicateKeyException twice) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This fact is already confirmed for this complaint.");
+        } catch (org.springframework.dao.DataIntegrityViolationException notInText) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The quote of a fact must be words of the complaint text, exactly as written.");
+        }
+    }
 
     /** The complaint for a step that needs its text read: refused to station staff from whom the text is withheld. */
     private Map<String, Object> handle(Jwt jwt, UUID id) {

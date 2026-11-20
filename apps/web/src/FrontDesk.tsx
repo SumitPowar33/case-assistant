@@ -6,6 +6,7 @@ import TypingField from './TypingField'
 import { LANGS, TypingContext } from './typing'
 import { fmt, istIso, text } from './formats'
 import { ScreenLangContext, useT } from './i18n'
+import FactCheck from './FactCheck'
 
 type Step = { id: string; text: string; withinMinutes: number | null; basis: string | null }
 type Kind = { id: string; label: string; steps: Step[] }
@@ -14,7 +15,7 @@ type CheckStep = { id: string; text: string; basis: string | null; due_at: strin
 type Complaint = {
   id: string; received_at: string; mode: string; informant_name: string | null; informant_contact: string | null; kind: string; kind_label: string
   withheld: boolean; text_original: string | null; text_language: string; recorded_by_name: string; read_back_language: string | null; signed_at: string | null
-  signed_by_name: string | null; outcome: string | null; outcome_reason: string | null; fir_id: string | null; fir_no: number | null; fir_year: number | null
+  signed_by_name: string | null; victim_protected: boolean; outcome: string | null; outcome_reason: string | null; fir_id: string | null; fir_no: number | null; fir_year: number | null
   sign_by: string | null; enquiry_due: string | null; steps: CheckStep[]
   enquiry_at?: string | null; enquiry_permitted_by?: string | null; enquiry_reason?: string | null; enquiry_overdue?: boolean
   versions?: { text_original: string; replaced_at: string; replaced_by_name: string }[]
@@ -104,6 +105,7 @@ export function ComplaintPage({ id }: { id: string }) {
         <button type="button" className="no-print" onClick={() => window.print()}>{t('copy.print')}</button>
       </section>}
       </div>
+      {c.signed_at && !c.withheld && c.text_original && <div className="card"><FactCheck firId={c.id} text={c.text_original} victimProtected={c.victim_protected} complaint /></div>}
       {c.steps.length > 0 && <div className="card">
         <h3>{t('steps.title')}</h3>
         <ol>{c.steps.map((s) => (
