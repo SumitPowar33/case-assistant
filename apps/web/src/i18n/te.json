@@ -436,6 +436,8 @@
  "personForm.gender": "లింగం",
  "personForm.phone": "ఫోన్",
  "personForm.address": "ప్రస్తుత చిరునామా",
+ "personForm.language": "వ్యక్తి చదివే భాష (లేఖల కోసం)",
+ "personForm.languageNone": "నమోదు కాలేదు",
  "personForm.masked": "ఈ వ్యక్తి గుర్తింపును రక్షించండి (BNS 72)",
  "evForm.title": "సాక్ష్యం చేర్చు",
  "evForm.needSha": "ఎలక్ట్రానిక్ సాక్ష్యానికి స్వాధీనం సమయంలో తీసుకున్న 64 అక్షరాల SHA-256 అవసరం.",

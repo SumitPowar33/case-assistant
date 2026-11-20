@@ -436,6 +436,8 @@
  "personForm.gender": "লিঙ্গ",
  "personForm.phone": "ফোন",
  "personForm.address": "বর্তমান ঠিকানা",
+ "personForm.language": "ব্যক্তি যে ভাষায় পড়েন (চিঠির জন্য)",
+ "personForm.languageNone": "নথিভুক্ত নেই",
  "personForm.masked": "এই ব্যক্তির পরিচয় সুরক্ষিত রাখুন (BNS 72)",
  "evForm.title": "প্রমাণ যোগ করুন",
  "evForm.needSha": "ইলেকট্রনিক প্রমাণের জন্য জব্দের সময় নেওয়া 64 অক্ষরের SHA-256 দরকার।",

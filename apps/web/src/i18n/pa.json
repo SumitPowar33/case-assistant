@@ -436,6 +436,8 @@
  "personForm.gender": "ਲਿੰਗ",
  "personForm.phone": "ਫ਼ੋਨ",
  "personForm.address": "ਮੌਜੂਦਾ ਪਤਾ",
+ "personForm.language": "ਵਿਅਕਤੀ ਦੀ ਪੜ੍ਹਨ ਦੀ ਭਾਸ਼ਾ (ਚਿੱਠੀਆਂ ਲਈ)",
+ "personForm.languageNone": "ਦਰਜ ਨਹੀਂ",
  "personForm.masked": "ਇਸ ਵਿਅਕਤੀ ਦੀ ਪਛਾਣ ਸੁਰੱਖਿਅਤ ਰੱਖੋ (BNS 72)",
  "evForm.title": "ਸਬੂਤ ਜੋੜੋ",
  "evForm.needSha": "ਇਲੈਕਟ੍ਰਾਨਿਕ ਸਬੂਤ ਲਈ ਜ਼ਬਤੀ ਵੇਲੇ ਲਿਆ 64 ਅੱਖਰਾਂ ਦਾ SHA-256 ਚਾਹੀਦਾ ਹੈ।",

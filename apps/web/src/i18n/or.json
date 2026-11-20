@@ -436,6 +436,8 @@
  "personForm.gender": "ଲିଙ୍ଗ",
  "personForm.phone": "ଫୋନ",
  "personForm.address": "ବର୍ତ୍ତମାନ ଠିକଣା",
+ "personForm.language": "ବ୍ୟକ୍ତି ପଢ଼ୁଥିବା ଭାଷା (ଚିଠି ପାଇଁ)",
+ "personForm.languageNone": "ଦର୍ଜ ହୋଇନାହିଁ",
  "personForm.masked": "ଏହି ବ୍ୟକ୍ତିଙ୍କ ପରିଚୟ ସୁରକ୍ଷିତ ରଖନ୍ତୁ (BNS 72)",
  "evForm.title": "ପ୍ରମାଣ ଯୋଡ଼ନ୍ତୁ",
  "evForm.needSha": "ଇଲେକ୍ଟ୍ରୋନିକ ପ୍ରମାଣ ପାଇଁ ଜବତ ସମୟରେ ନିଆଯାଇଥିବା 64 ଅକ୍ଷରର SHA-256 ଦରକାର।",

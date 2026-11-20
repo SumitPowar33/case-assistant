@@ -26,7 +26,8 @@ import org.springframework.web.bind.annotation.*;
 class RecordsController {
     record NewPerson(@NotBlank String role, String label, boolean identityKnown, String fullName, String alias,
                      String parentage, Integer ageYears, String gender, String phone, String addressPresent,
-                     String addressPermanent, String nationality, boolean identityMasked) {}
+                     String addressPermanent, String nationality, boolean identityMasked,
+                     @Pattern(regexp = "en|hi|mr|bn|pa|gu|or|ta|te|kn|ml") String language) {}
 
     record NewArrest(@NotNull UUID personId, @NotNull OffsetDateTime arrestedAt, @NotBlank String place,
                      @NotEmpty List<@NotBlank String> grounds, @NotBlank String informedName, String informedContact,
@@ -116,10 +117,10 @@ class RecordsController {
         requireFir(firId);
         return created(db.sql("""
                 insert into person (fir_id, role, label, identity_known, full_name, alias, parentage, age_years, gender,
-                  phone, address_present, address_permanent, nationality, identity_masked)
-                values (?,?,?,?,?,?,?,?,?,?,?,?,?,?) returning id""")
+                  phone, address_present, address_permanent, nationality, identity_masked, language)
+                values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) returning id""")
                 .params(firId, p.role, p.label, p.identityKnown, p.fullName, p.alias, p.parentage, p.ageYears,
-                        p.gender, p.phone, p.addressPresent, p.addressPermanent, p.nationality, p.identityMasked)
+                        p.gender, p.phone, p.addressPresent, p.addressPermanent, p.nationality, p.identityMasked, p.language)
                 .query(UUID.class).single());
     }
 

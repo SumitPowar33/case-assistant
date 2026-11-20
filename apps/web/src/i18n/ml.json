@@ -436,6 +436,8 @@
  "personForm.gender": "ലിംഗം",
  "personForm.phone": "ഫോൺ",
  "personForm.address": "ഇപ്പോഴത്തെ വിലാസം",
+ "personForm.language": "വ്യക്തി വായിക്കുന്ന ഭാഷ (കത്തുകൾക്ക്)",
+ "personForm.languageNone": "രേഖപ്പെടുത്തിയിട്ടില്ല",
  "personForm.masked": "ഈ വ്യക്തിയുടെ ഐഡന്റിറ്റി സംരക്ഷിക്കുക (BNS 72)",
  "evForm.title": "തെളിവ് ചേർക്കുക",
  "evForm.needSha": "ഇലക്ട്രോണിക് തെളിവിന് പിടിച്ചെടുക്കുമ്പോൾ എടുത്ത 64 അക്ഷര SHA-256 വേണം.",

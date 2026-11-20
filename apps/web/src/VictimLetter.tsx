@@ -30,6 +30,9 @@ export default function VictimLetter({ firId, firNo, firYear, registeredAt }: { 
   const taken = useLoad<Taken>(`/firs/${firId}/progress-steps`).data
   const due = useLoad<Due[]>(`/firs/${firId}/deadlines`).data
   const [fromCase, setFromCase] = useState(false)
+  // the language kept on the victim's (else the informant's) record opens the letter; the officer can still change it
+  const kept = useLoad<{ language: string | null }>(`/firs/${firId}/victim-language`).data?.language
+  useEffect(() => { if (kept && kept in LANGUAGE_NAMES) setLanguage(kept) }, [kept])
   useEffect(() => {
     const ticked = taken ? STEPS.filter((s) => taken[s] === true) : []
     if (ticked.length) { setSteps(ticked); setFromCase(true) }

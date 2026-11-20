@@ -436,6 +436,8 @@
  "personForm.gender": "ಲಿಂಗ",
  "personForm.phone": "ಫೋನ್",
  "personForm.address": "ಈಗಿನ ವಿಳಾಸ",
+ "personForm.language": "ವ್ಯಕ್ತಿ ಓದುವ ಭಾಷೆ (ಪತ್ರಗಳಿಗಾಗಿ)",
+ "personForm.languageNone": "ದಾಖಲಾಗಿಲ್ಲ",
  "personForm.masked": "ಈ ವ್ಯಕ್ತಿಯ ಗುರುತನ್ನು ರಕ್ಷಿಸಿ (BNS 72)",
  "evForm.title": "ಸಾಕ್ಷ್ಯ ಸೇರಿಸಿ",
  "evForm.needSha": "ಎಲೆಕ್ಟ್ರಾನಿಕ್ ಸಾಕ್ಷ್ಯಕ್ಕೆ ವಶಪಡಿಸಿಕೊಂಡಾಗ ತೆಗೆದ 64 ಅಕ್ಷರಗಳ SHA-256 ಬೇಕು.",

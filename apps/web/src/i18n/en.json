@@ -436,6 +436,8 @@
  "personForm.gender": "Gender",
  "personForm.phone": "Phone",
  "personForm.address": "Present address",
+ "personForm.language": "Language the person reads (for letters)",
+ "personForm.languageNone": "Not recorded",
  "personForm.masked": "Protect this person's identity (BNS 72)",
  "evForm.title": "Add evidence",
  "evForm.needSha": "Electronic evidence needs the 64-character SHA-256 taken at seizure.",

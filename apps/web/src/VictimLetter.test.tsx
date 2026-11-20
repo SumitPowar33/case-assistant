@@ -49,6 +49,23 @@ test('the officer ticks steps, the gateway gets only the FIR number, day and ste
   expect(screen.queryByRole('button', { name: 'Draft the letter with AI' })).toBeNull()
 })
 
+test('the letter opens in the language kept on the victim\'s record, and the officer can change it', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => (url.endsWith('/victim-language') ? { language: 'ta' } : {}) })))
+  show('mr')
+  const pick = screen.getByRole('combobox') as HTMLSelectElement
+  await vi.waitFor(() => expect(pick.value).toBe('ta'))
+  fireEvent.change(pick, { target: { value: 'hi' } })
+  expect(pick.value).toBe('hi')
+})
+
+test('a language the app does not know, or none kept, leaves the screen language', async () => {
+  const get = vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => (url.endsWith('/victim-language') ? { language: 'xx' } : {}) }))
+  vi.stubGlobal('fetch', get)
+  show('mr')
+  await vi.waitFor(() => expect(get).toHaveBeenCalledWith(expect.stringContaining('/victim-language'), expect.anything()))
+  expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('mr')
+})
+
 test('the letter language starts as the screen language', () => {
   stub('')
   show('mr')
@@ -58,7 +75,7 @@ test('the letter language starts as the screen language', () => {
 test('a letter the officer changes is logged as edited; an odd number is flagged; an unknown screen language falls back to English', async () => {
   const calls = stub('Registered on 4 November 2026. Call within 7 weeks.')
   show('xx')
-  expect((screen.getByLabelText('Language of the letter') as HTMLSelectElement).value).toBe('en')
+  expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('en')
   draftIt()
   const box = (await screen.findByLabelText('Letter to the victim or informant')) as HTMLTextAreaElement
   expect(screen.getByText(/numbers that are not in the facts you gave: 7/)).toBeTruthy()

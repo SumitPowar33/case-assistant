@@ -436,6 +436,8 @@
  "personForm.gender": "लिंग",
  "personForm.phone": "फोन",
  "personForm.address": "सध्याचा पत्ता",
+ "personForm.language": "व्यक्तीची वाचण्याची भाषा (पत्रांसाठी)",
+ "personForm.languageNone": "नोंद नाही",
  "personForm.masked": "या व्यक्तीची ओळख सुरक्षित ठेवा (BNS 72)",
  "evForm.title": "पुरावा जोडा",
  "evForm.needSha": "इलेक्ट्रॉनिक पुराव्यासाठी जप्तीच्या वेळी घेतलेला 64 अक्षरी SHA-256 हवा.",

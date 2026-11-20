@@ -436,6 +436,8 @@
  "personForm.gender": "பாலினம்",
  "personForm.phone": "தொலைபேசி",
  "personForm.address": "தற்போதைய முகவரி",
+ "personForm.language": "நபர் படிக்கும் மொழி (கடிதங்களுக்கு)",
+ "personForm.languageNone": "பதிவு இல்லை",
  "personForm.masked": "இந்த நபரின் அடையாளத்தைப் பாதுகாக்கவும் (BNS 72)",
  "evForm.title": "சான்றைச் சேர்",
  "evForm.needSha": "மின்னணுச் சான்றுக்குக் கைப்பற்றும்போது எடுத்த 64 எழுத்து SHA-256 தேவை.",

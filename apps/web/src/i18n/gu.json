@@ -436,6 +436,8 @@
  "personForm.gender": "જાતિ",
  "personForm.phone": "ફોન",
  "personForm.address": "હાલનું સરનામું",
+ "personForm.language": "વ્યક્તિ જે ભાષા વાંચે છે (પત્રો માટે)",
+ "personForm.languageNone": "નોંધ નથી",
  "personForm.masked": "આ વ્યક્તિની ઓળખ સુરક્ષિત રાખો (BNS 72)",
  "evForm.title": "પુરાવો ઉમેરો",
  "evForm.needSha": "ઇલેક્ટ્રોનિક પુરાવા માટે જપ્તી વખતે લીધેલો 64 અક્ષરનો SHA-256 જોઈએ.",

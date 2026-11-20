@@ -82,6 +82,19 @@ class CaseController {
                 }).single();
     }
 
+    /**
+     * The language the victim (else the informant) reads, kept on the person's record (V62); null when none is recorded.
+     * One code and no name, so it is safe on any case. The 90-day letter opens in it (A7).
+     */
+    @GetMapping("/victim-language")
+    Map<String, String> victimLanguage(@PathVariable UUID firId) {
+        var language = db.sql("select language from person where fir_id = ? and role in ('victim','complainant') and language is not null "
+                + "order by (role = 'victim') desc, label limit 1").param(firId).query(String.class).optional();
+        var m = new java.util.HashMap<String, String>();
+        m.put("language", language.orElse(null));
+        return m;
+    }
+
     @PostMapping("/victim-updates")
     ResponseEntity<Map<String, UUID>> victimUpdate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody VictimUpdate v) {
         UUID me = CaseTeam.user(jwt);

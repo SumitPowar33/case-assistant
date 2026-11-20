@@ -99,6 +99,28 @@ class CaseApiTest {
         for (String who : new String[] {malkhana, outsider}) mvc.perform(get(url).header("Authorization", who)).andExpect(status().isNotFound());
     }
 
+    /** A7: the letter opens in the language kept on the victim's record, else the informant's; one code, no name; a wrong code is refused. */
+    @Test
+    void victimLanguageIsReadFromThePersonsRecord() throws Exception {
+        String url = "/api/firs/" + fir + "/victim-language";
+        mvc.perform(get(url).header("Authorization", sho)).andExpect(status().isOk()).andExpect(jsonPath("$.language").isEmpty());
+        String person = "{\"role\":\"%s\",\"label\":\"%s\",\"identityKnown\":true,\"fullName\":\"Fictional Person\",\"language\":%s}";
+        java.util.function.BiFunction<String, String, org.springframework.test.web.servlet.ResultActions> add = (role, lang) -> {
+            try {
+                return mvc.perform(post("/api/firs/" + fir + "/people").header("Authorization", sho).contentType(MediaType.APPLICATION_JSON)
+                        .content(person.formatted(role, role.substring(0, 1).toUpperCase() + "1", lang)));
+            } catch (Exception e) { throw new IllegalStateException(e); }
+        };
+        add.apply("witness", "\"ta\"").andExpect(status().isCreated());
+        add.apply("complainant", "\"hi\"").andExpect(status().isCreated());
+        add.apply("victim", "\"klingon\"").andExpect(status().isBadRequest());
+        add.apply("victim", "null").andExpect(status().isCreated());
+        mvc.perform(get(url).header("Authorization", sho)).andExpect(jsonPath("$.language").value("hi"));
+        add.apply("victim", "\"mr\"").andExpect(status().isCreated());
+        mvc.perform(get(url).header("Authorization", sho)).andExpect(jsonPath("$.language").value("mr"));
+        for (String who : new String[] {malkhana, outsider}) mvc.perform(get(url).header("Authorization", who)).andExpect(status().isNotFound());
+    }
+
     @Test
     void onlyTheCaseTeamReadsTheCaseAndMalkhanaReadsEvidence() throws Exception {
         for (String who : new String[] {malkhana, outsider})

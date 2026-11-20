@@ -112,7 +112,18 @@ test('a person is added; an unknown name is sent as identity not known', async (
   type('Label', 'A3')
   fireEvent.click(screen.getByRole('button', { name: 'Save' }))
   await vi.waitFor(() => expect(saved).toHaveBeenCalled())
-  expect(calls[0]).toMatchObject({ url: '/api/firs/f1/people', body: { role: 'accused', label: 'A3', identityKnown: false, fullName: null } })
+  expect(calls[0]).toMatchObject({ url: '/api/firs/f1/people', body: { role: 'accused', label: 'A3', identityKnown: false, fullName: null, language: null } })
+})
+
+test('the language a person reads is kept on the record when chosen', async () => {
+  const calls = stub()
+  const saved = vi.fn()
+  render(<AddPersonForm firId="f1" onSaved={saved} />)
+  fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'victim' } })
+  fireEvent.change(screen.getByLabelText(/Language the person reads/), { target: { value: 'mr' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(saved).toHaveBeenCalled())
+  expect(calls[0].body).toMatchObject({ role: 'victim', language: 'mr' })
 })
 
 test('electronic evidence needs its SHA-256; the server refusal is shown', async () => {

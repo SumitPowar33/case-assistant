@@ -4,6 +4,7 @@ import TypingField from './TypingField'
 import { TypingContext } from './typing'
 import { istIso, parseSections, text } from './formats'
 import { useT } from './i18n'
+import { LANGUAGE_NAMES } from './statementTranslate'
 
 export function Form({ title, submit, onSaved, children }: {
   title: string; submit: (f: FormData) => Promise<unknown>; onSaved: (result: unknown) => void; children: ReactNode
@@ -110,7 +111,7 @@ export function AddPersonForm({ firId, onSaved }: { firId: string; onSaved: () =
       submit={(f) => send(`/firs/${firId}/people`, 'POST', {
         role: f.get('role'), label: text(f, 'label'), identityKnown: name.trim() !== '', fullName: name.trim() || null,
         ageYears: f.get('age') ? Number(f.get('age')) : null, gender: text(f, 'gender'), phone: text(f, 'phone'),
-        addressPresent: text(f, 'address'), identityMasked: f.get('masked') === 'on',
+        addressPresent: text(f, 'address'), identityMasked: f.get('masked') === 'on', language: text(f, 'language'),
       })}>
       <label>{t('personForm.role')} <select name="role">
         {['complainant', 'victim', 'accused', 'witness', 'suspect'].map((r) => <option key={r} value={r}>{t.code('person', r)}</option>)}
@@ -121,6 +122,9 @@ export function AddPersonForm({ firId, onSaved }: { firId: string; onSaved: () =
       <label>{t('personForm.gender')} <input name="gender" /></label>
       <label>{t('personForm.phone')} <input name="phone" inputMode="tel" /></label>
       <label>{t('personForm.address')} <input name="address" /></label>
+      <label>{t('personForm.language')} <select name="language" defaultValue="">
+        <option value="">{t('personForm.languageNone')}</option>
+        {Object.entries(LANGUAGE_NAMES).map(([code, nm]) => <option key={code} value={code}>{nm}</option>)}</select></label>
       <label><input name="masked" type="checkbox" /> {t('personForm.masked')}</label>
     </Form>
   )
