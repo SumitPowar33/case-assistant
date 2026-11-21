@@ -86,7 +86,8 @@ class PocsoController {
                 .params(s.doneAt, firId).query().singleRow();
         if (!(Boolean) fir.get("pocso"))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This FIR is not a POCSO case.");
-        if ((Boolean) fir.get("early"))
+        // a hospital may examine the child before it informs the police (POCSO 19(1), V63); no other step comes before
+        if ((Boolean) fir.get("early") && !s.step.equals("medical_examination"))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A step cannot be before the information was received.");
         UUID id = db.sql("insert into pocso_step (fir_id, step, done_at, recorded_by) values (?,?,?,?) returning id")
                 .params(firId, s.step, s.doneAt, me).query(UUID.class).single();

@@ -115,8 +115,11 @@ class PocsoApiTest {
         mvc.perform(get("/api/firs/" + fir + "/pocso")).andExpect(status().isUnauthorized());
         record(io, ok.replace("medical_examination", "lie_detector")).andExpect(status().isBadRequest());
         record(io, "{\"step\":\"medical_examination\"}").andExpect(status().isBadRequest());
-        record(io, ok.replace("2026-10-01T12:00", "2026-10-01T09:59")).andExpect(status().isBadRequest())
+        String report = ok.replace("medical_examination", "cwc_court_report");
+        record(io, report.replace("2026-10-01T12:00", "2026-10-01T09:59")).andExpect(status().isBadRequest())
                 .andExpect(status().reason("A step cannot be before the information was received."));
+        // weekly review 21 Nov: a hospital may examine the child before it informs the police (POCSO 19(1))
+        record(io, ok.replace("2026-10-01T12:00", "2026-10-01T09:59")).andExpect(status().isCreated());
         record(io, ok.replace("2026-10-01T12:00", "2999-01-01T12:00")).andExpect(status().isBadRequest())
                 .andExpect(status().reason("The time a step was done cannot be in the future."));
         record(io, ok.replace("2026-10-01T12:00", "2026-10-01T10:00")).andExpect(status().isCreated());   // the minute of the information
