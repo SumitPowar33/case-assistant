@@ -170,13 +170,20 @@ class ReadinessController {
 
     private Map<String, Object> report(UUID firId) {
         var out = new LinkedHashMap<String, Object>();
+        var overrides = new HashMap<String, Map<String, Object>>();
+        db.sql("""
+                select o.id, o.gap_key, o.reason, o.decided_at, u.full_name as decided_by
+                from readiness_override o join app_user u on u.id = o.decided_by where o.fir_id = ? and o.withdrawn_at is null""")
+                .param(firId).query().listOfRows().forEach(r -> overrides.put((String) r.get("gap_key"), r));
         var pbOpt = playbookOf(firId);
         if (pbOpt.isEmpty()) {
+            // a section added without a report to the Magistrate is a gap of the file with or without a playbook
+            var gaps = sectionReportGaps(firId, overrides);
             out.put("playbook", null);
             out.put("charges", List.of());
             out.put("accountHolders", List.of());
-            out.put("gaps", List.of());
-            out.put("openGaps", 0);
+            out.put("gaps", gaps);
+            out.put("openGaps", gaps.stream().filter(g -> g.get("override") == null).count());
             return out;
         }
         var pb = pbOpt.get();
@@ -186,11 +193,6 @@ class ReadinessController {
                 from ingredient_evidence l join evidence_item e on e.id = l.evidence_item_id
                 left join electronic_item_readiness r on r.id = e.id
                 where l.fir_id = ? and l.withdrawn_at is null order by e.label""").param(firId).query().listOfRows();
-        var overrides = new HashMap<String, Map<String, Object>>();
-        db.sql("""
-                select o.id, o.gap_key, o.reason, o.decided_at, u.full_name as decided_by
-                from readiness_override o join app_user u on u.id = o.decided_by where o.fir_id = ? and o.withdrawn_at is null""")
-                .param(firId).query().listOfRows().forEach(r -> overrides.put((String) r.get("gap_key"), r));
 
         var charges = new ArrayList<Map<String, Object>>();
         var gaps = new ArrayList<Map<String, Object>>();
@@ -254,6 +256,7 @@ class ReadinessController {
                 gaps.add(gap("notice-certificate:" + n.get("id"), "critical",
                         "The reply of " + n.get("addressee") + " came without a BSA 63(4) certificate (Part A and Part B); ask for it.", overrides));
         }
+        gaps.addAll(sectionReportGaps(firId, overrides));
         var covered = charges.stream().map(c -> (String) c.get("law")).toList();
         out.put("playbook", Map.of("id", pb.id(), "version", pb.version(), "status", pb.status(),
                 "reviewNote", Objects.requireNonNullElse(pb.reviewNote(), "")));
@@ -296,6 +299,16 @@ class ReadinessController {
             if (!Boolean.TRUE.equals(l.get("court_ready"))) notReady.put(l.get("id").toString(), (String) l.get("label"));
         }
         return e;
+    }
+
+    /** A2 (V64): each section added after registration that no report to the Magistrate has covered yet. */
+    private List<Map<String, Object>> sectionReportGaps(UUID firId, Map<String, Map<String, Object>> overrides) {
+        return SectionReportController.unreported(db, firId).stream().map(s -> {
+            String law = s.get("act") + " " + s.get("section");
+            var day = db.sql("select ist_date(?)").param(s.get("added_at")).query(java.time.LocalDate.class).single();
+            return gap("section-report:" + law, "high", law + " was added on " + day
+                    + " and the Magistrate has not been sent a report of it yet (Case details, Report to the Magistrate).", overrides);
+        }).toList();
     }
 
     private static Map<String, Object> gap(String key, String severity, String text, Map<String, Map<String, Object>> overrides) {
