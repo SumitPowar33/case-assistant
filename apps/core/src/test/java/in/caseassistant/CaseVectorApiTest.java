@@ -79,19 +79,42 @@ class CaseVectorApiTest {
     }
 
     @Test
-    void vectorsOfPiecesThatAreGoneAreRemovedAndAnotherModelOrCaseIsNotTouched() throws Exception {
+    void vectorsOfPiecesThatAreGoneAreRemovedAndAnotherCaseIsNotTouched() throws Exception {
         keep(io, fir, "m/1", "[\"" + H1 + "\",\"" + H2 + "\"]", "[{\"hash\":\"" + H1 + "\",\"vec\":[1]},{\"hash\":\"" + H2 + "\",\"vec\":[2]}]", 200);
-        keep(io, fir, "m/2", "[\"" + H1 + "\"]", "[{\"hash\":\"" + H1 + "\",\"vec\":[3]}]", 200);
+        keep(io, other, "m/1", "[\"" + H1 + "\"]", "[{\"hash\":\"" + H1 + "\",\"vec\":[3]}]", 200);
         String out = keep(io, fir, "m/1", "[\"" + H2 + "\"]", "[]", 200);
         assertThat(json.readTree(out).get("removed").asInt()).isOne();
         assertThat(read(io, fir, "m/1").get("items")).hasSize(1);
-        assertThat(read(io, fir, "m/2").get("items")).hasSize(1);
         keep(io, fir, "m/1", "[]", "[]", 200);
         assertThat(read(io, fir, "m/1").get("items")).isEmpty();
-        // the other case has none, and a case's vectors go with the case
-        assertThat(read(io, other, "m/2").get("items")).isEmpty();
-        db.sql("delete from fir where id = ?").param(fir).update();
+        assertThat(read(io, other, "m/1").get("items")).hasSize(1);   // the other case keeps its own
+        db.sql("delete from fir where id = ?").param(other).update();
         assertThat(db.sql("select count(*) from case_passage_vector").query(Long.class).single()).isZero();
+    }
+
+    /** Weekly review 21 Nov: a case holds the vectors of one model; a write under a new name removes the others, so model names
+     * cannot be used to fill the database. */
+    @Test
+    void aCaseKeepsTheVectorsOfOneModelOnly() throws Exception {
+        keep(io, fir, "m/1", "[\"" + H1 + "\"]", "[{\"hash\":\"" + H1 + "\",\"vec\":[1]}]", 200);
+        String out = keep(io, fir, "m/2", "[\"" + H1 + "\"]", "[{\"hash\":\"" + H1 + "\",\"vec\":[3]}]", 200);
+        assertThat(json.readTree(out).get("removed").asInt()).isOne();
+        assertThat(read(io, fir, "m/1").get("items")).isEmpty();
+        assertThat(read(io, fir, "m/2").get("items")).hasSize(1);
+        assertThat(db.sql("select count(*) from case_passage_vector where fir_id = ?").param(fir).query(Long.class).single()).isOne();
+    }
+
+    /** Weekly review 21 Nov: vectors are made from the text of a protected case, so the team's read of them is logged as the text's is. */
+    @Test
+    void readingTheVectorsOfAProtectedCaseIsLogged() throws Exception {
+        keep(io, fir, "m/1", "[\"" + H1 + "\"]", "[{\"hash\":\"" + H1 + "\",\"vec\":[1]}]", 200);
+        read(io, fir, "m/1");
+        assertThat(db.sql("select count(*) from protected_read").query(Long.class).single()).isZero();   // not protected: nothing logged
+        db.sql("update fir set identity_protected = true where id = ?").param(fir).update();
+        read(io, fir, "m/1");
+        assertThat(db.sql("select count(*) from protected_read where fir_id = ? and reader = ?").params(fir, ioId).query(Long.class).single()).isOne();
+        read(io, fir, "m/none");   // no vectors read: nothing to log
+        assertThat(db.sql("select count(*) from protected_read").query(Long.class).single()).isOne();
     }
 
     @Test

@@ -636,6 +636,7 @@ class RecordsController {
             throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
                     "This notice was never sent (" + noticeStatus + "); a reply cannot be logged against it.");
         String checks = r.checksJson == null ? "[]" : r.checksJson;
+        requireChecks(checks);
         String text = r.replyText == null || r.replyText.isBlank() ? null : r.replyText.strip();
         db.sql("insert into notice_reply (notice_id, received_at, channel, checks, reply_text) values (?,?,?,?::jsonb,?)")
                 .params(noticeId, r.receivedAt, r.channel, checks, text).update();
@@ -653,6 +654,25 @@ class RecordsController {
         db.sql("update notice set status = ? where id = ? and status in ('sent','reply_incomplete')")
                 .params(status, noticeId).update();
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("replyComplete", allPresent));
+    }
+
+    /**
+     * The ticks of a reply are a list of {item, present: true or false}, at most 50 (weekly review 21 Nov): a reply is kept as
+     * written, so one tick with "present": "maybe" would have broken every later readiness check of the case.
+     */
+    static void requireChecks(String checks) {
+        com.fasterxml.jackson.databind.JsonNode list;
+        try {
+            list = JSON.readTree(checks);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            list = null;
+        }
+        boolean ok = list != null && list.isArray() && list.size() <= 50;
+        if (ok) for (var x : list)
+            ok &= x.isObject() && x.path("item").isTextual() && !x.get("item").asText().isBlank()
+                    && x.get("item").asText().length() <= 500 && x.path("present").isBoolean();
+        if (!ok) throw new org.springframework.web.server.ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "The ticks of a reply are a list of at most 50 {\"item\", \"present\": true or false}.");
     }
 
     /** All 63(4) certificates of an item, oldest first; `replaced_by` is set on those a correction replaced. */

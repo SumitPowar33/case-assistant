@@ -399,6 +399,11 @@ class RecordsApiTest {
         send("/notices/" + id + "/replies", reply.formatted(",\"checksJson\":\"[{\\\"item\\\":\\\"CDR\\\",\\\"present\\\":true}]\""), 201);
         mvc.perform(get("/api/firs/" + fir + "/notices").header("Authorization", auth)).andExpect(jsonPath("$[0].status").value("reply_incomplete"));
         send("/notices/" + id + "/replies", reply.formatted(",\"checksJson\":\"{\\\"present\\\":true}\""), 400); // not a list
+        // weekly review 21 Nov: a kept tick that is not true or false would break every later readiness check of the case
+        for (String bad : new String[] {"[{\\\"item\\\":\\\"certificate\\\",\\\"present\\\":\\\"maybe\\\"}]", "[{\\\"present\\\":true}]",
+                "[{\\\"item\\\":\\\" \\\",\\\"present\\\":true}]", "[1]", "not json", "[{\\\"item\\\":\\\"" + "x".repeat(501) + "\\\",\\\"present\\\":true}]",
+                "[" + "{\\\"item\\\":\\\"CDR\\\",\\\"present\\\":true},".repeat(50) + "{\\\"item\\\":\\\"CDR\\\",\\\"present\\\":true}]"})
+            send("/notices/" + id + "/replies", reply.formatted(",\"checksJson\":\"" + bad + "\""), 400);
         mvc.perform(get("/api/firs/" + fir + "/notices").header("Authorization", auth)).andExpect(jsonPath("$[0].replies").value(2));
     }
 

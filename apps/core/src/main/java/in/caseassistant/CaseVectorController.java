@@ -33,15 +33,18 @@ class CaseVectorController {
 
     private final JdbcClient db;
     private final CaseTeam team;
+    private final ProtectedReads reads;
 
-    CaseVectorController(JdbcClient db, CaseTeam team) {
+    CaseVectorController(JdbcClient db, CaseTeam team, ProtectedReads reads) {
         this.db = db;
         this.team = team;
+        this.reads = reads;
     }
 
     @GetMapping
     Map<String, Object> read(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @RequestParam @Pattern(regexp = "[A-Za-z0-9._/-]{1,80}") String model) {
-        team.requireTeam(CaseTeam.user(jwt), firId);
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
         var items = new ArrayList<Map<String, Object>>();
         for (var r : db.sql("select text_hash, array_to_string(vec, ',') as v from case_passage_vector where fir_id = ? and model = ? order by text_hash")
                 .params(firId, model).query().listOfRows()) {
@@ -50,6 +53,8 @@ class CaseVectorController {
             m.put("vec", java.util.Arrays.stream(((String) r.get("v")).split(",")).map(Double::parseDouble).toList());
             items.add(m);
         }
+        // vectors are made from the FIR text and statements: on a protected case their read is logged like the text's (weekly review 21 Nov)
+        if (!items.isEmpty() && team.identityProtected(firId)) reads.fir(me, firId, "fir_text");
         return Map.of("model", model, "items", items);
     }
 
@@ -67,7 +72,9 @@ class CaseVectorController {
                     on conflict (fir_id, model, text_hash) do update set vec = excluded.vec, created_at = now()""")
                     .params(firId, body.model, i.hash, "{" + i.vec.stream().map(String::valueOf).collect(Collectors.joining(",")) + "}").update();
         }
-        int gone = db.sql("delete from case_passage_vector where fir_id = ? and model = ? and not (text_hash = any (?::text[]))")
+        // one model per case: vectors of another model are of no use to the next question and are removed, so a case holds at
+        // most `keep` vectors however many model names are sent (weekly review 21 Nov)
+        int gone = db.sql("delete from case_passage_vector where fir_id = ? and (model <> ? or not (text_hash = any (?::text[])))")
                 .params(firId, body.model, "{" + String.join(",", body.keep) + "}").update();
         return Map.of("saved", body.items.size(), "removed", gone);
     }

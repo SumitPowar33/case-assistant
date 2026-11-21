@@ -126,6 +126,15 @@ class FirController {
         if (f.ioId != null)
             db.sql("insert into fir_io_assignment (fir_id, to_io, assigned_by) values (?,?,?)").params(id, f.ioId, me).update();
         if (f.sections != null) {
+            // with the offence date given, the sections follow it as added ones do (BNS 358; weekly review 21 Nov): no BNS
+            // section for an offence before 1 July 2024, no IPC one for an offence from that day
+            String law = f.occurrenceFrom == null ? "unknown" : db.sql("select fir_offence_law(?)").param(id).query(String.class).single();
+            for (Section s : f.sections) {
+                if ("BNS".equals(s.act) && law.equals("old"))
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The offence is before 1 July 2024, so the IPC applies, not the BNS (BNS 358).");
+                if ("IPC".equals(s.act) && law.equals("new"))
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The offence is from 1 July 2024, so the BNS applies, not the IPC (BNS 358).");
+            }
             for (Section s : f.sections) {
                 db.sql("insert into fir_section (fir_id, act, section) values (?,?,?)")
                         .params(id, s.act, s.section).update();

@@ -190,6 +190,7 @@ class FirApiTest {
         var b = new java.util.HashMap<String, Object>(body(60));
         b.put("occurrenceFrom", "2024-06-20T08:00:00Z");
         b.put("occurrenceTo", "2024-06-21T08:00:00Z");
+        b.put("sections", new Object[] {Map.of("act", "IPC", "section", "420")});
         var res = mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(b)))
                 .andExpect(status().isCreated()).andReturn();
         String id = json.readTree(res.getResponse().getContentAsString()).get("id").asText();
@@ -218,5 +219,30 @@ class FirApiTest {
                     .andExpect(status().isBadRequest()).andExpect(status().reason("The offence cannot be after the time the information was received."));
         }
         assertThat(db.sql("select count(*) from fir").query(Long.class).single()).isZero();
+    }
+
+    /** Weekly review 21 Nov: the sections given at registration follow the offence date too, so an FIR never holds both laws. */
+    @Test
+    void theSectionsGivenAtRegistrationFollowTheOffenceDate() throws Exception {
+        var oldWithBns = new java.util.HashMap<String, Object>(body(80));
+        oldWithBns.put("occurrenceFrom", "2024-06-30T18:29:00Z");   // 23:59 IST on 30 June 2024: the IPC
+        mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(oldWithBns)))
+                .andExpect(status().isBadRequest()).andExpect(status().reason("The offence is before 1 July 2024, so the IPC applies, not the BNS (BNS 358)."));
+        var newWithIpc = new java.util.HashMap<String, Object>(body(81));
+        newWithIpc.put("occurrenceFrom", "2024-06-30T18:30:00Z");   // 00:00 IST on 1 July 2024: the BNS
+        newWithIpc.put("sections", new Object[] {Map.of("act", "IPC", "section", "420")});
+        mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(newWithIpc)))
+                .andExpect(status().isBadRequest()).andExpect(status().reason("The offence is from 1 July 2024, so the BNS applies, not the IPC (BNS 358)."));
+        assertThat(db.sql("select count(*) from fir").query(Long.class).single()).isZero();
+        // a span over the day takes either law, and a section of another act is not checked
+        var span = new java.util.HashMap<String, Object>(body(82));
+        span.put("occurrenceFrom", "2024-06-25T08:00:00Z"); span.put("occurrenceTo", "2024-07-05T08:00:00Z");
+        span.put("sections", new Object[] {Map.of("act", "IPC", "section", "420"), Map.of("act", "IT Act", "section", "66D")});
+        mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(span)))
+                .andExpect(status().isCreated());
+        var newWithBns = new java.util.HashMap<String, Object>(body(83));
+        newWithBns.put("occurrenceFrom", "2024-06-30T18:30:00Z");
+        mvc.perform(post("/api/firs").header("Authorization", clerk).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(newWithBns)))
+                .andExpect(status().isCreated());
     }
 }
