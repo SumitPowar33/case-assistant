@@ -53,6 +53,39 @@ class FactController {
         return rows;
     }
 
+    /**
+     * Identifiers of this FIR seen in other FIRs of its station (board 2, V65): for each confirmed phone, account, UTR or
+     * UPI fact with a key, the other FIRs of the station with a confirmed fact of the same kind and key. An FIR the caller
+     * is on the case team of is named (id and number); the others are only counted, so the officer knows to ask whoever
+     * holds them, and nothing of them is shown. No link is made from or to a case that protects the victim's identity:
+     * its numbers may be the victim's own. Only the other FIR's id and number leave, never its facts or text.
+     */
+    @GetMapping("/links")
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> links(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId) {
+        UUID me = CaseTeam.user(jwt);
+        team.requireTeam(me, firId);
+        if (team.identityProtected(firId)) return List.of();
+        var rows = db.sql("""
+                select distinct f.id as fact_id, f.kind, f.value, f.confirmed_at, o.id as other_id, o.fir_no, o.fir_year,
+                       (%s) as open
+                from fir_fact f join fir here on here.id = f.fir_id
+                join fir_fact g on g.kind = f.kind and g.fir_id <> f.fir_id
+                     and fact_identifier_key(g.kind, g.value) = fact_identifier_key(f.kind, f.value)
+                join fir o on o.id = g.fir_id and o.station_id = here.station_id
+                where f.fir_id = ? and fact_identifier_key(f.kind, f.value) is not null and not identity_protected_case(o.id)
+                order by f.confirmed_at, f.id, o.fir_year, o.fir_no""".formatted(team.includesSql("o.id")))
+                .params(me, firId).query().listOfRows();
+        var out = new java.util.LinkedHashMap<UUID, Map<String, Object>>();
+        for (var r : rows) {
+            var link = out.computeIfAbsent((UUID) r.get("fact_id"), id -> new java.util.HashMap<>(Map.of(
+                    "fact_id", id, "kind", r.get("kind"), "value", r.get("value"), "firs", new java.util.ArrayList<Map<String, Object>>(), "others", 0)));
+            if ((Boolean) r.get("open")) ((List<Map<String, Object>>) link.get("firs")).add(Map.of("id", r.get("other_id"), "fir_no", r.get("fir_no"), "fir_year", r.get("fir_year")));
+            else link.put("others", (Integer) link.get("others") + 1);
+        }
+        return List.copyOf(out.values());
+    }
+
     @PostMapping
     ResponseEntity<Map<String, Object>> confirm(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody Fact f) {
         UUID me = CaseTeam.user(jwt);
