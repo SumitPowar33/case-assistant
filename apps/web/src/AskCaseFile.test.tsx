@@ -65,8 +65,8 @@ test('"wrong or not supported" logs a rejection', async () => {
   expect(calls[1].body.decision).toBe('rejected')
 })
 
-test('a question about guilt, truth or the future is refused with the reason and nothing is sent', async () => {
-  const calls = stub()
+test('a question about guilt, truth or the future is refused with the reason; only the question goes to the gateway, to be logged', async () => {
+  const calls = stub({ generate: { status: 422, body: { detail: 'This question asks about guilt' } } })
   render(<AskCaseFile firId="f1" />)
   await ask('Is the accused guilty?')
   expect(await screen.findByText(/does not say who is guilty or innocent/)).toBeTruthy()
@@ -74,7 +74,13 @@ test('a question about guilt, truth or the future is refused with the reason and
   expect(await screen.findByText(/does not judge whether anyone is telling the truth/)).toBeTruthy()
   await ask('Will he abscond?')
   expect(await screen.findByText(/does not predict what anyone will do/)).toBeTruthy()
-  expect(calls).toHaveLength(0)
+  // weekly review 21 Nov: a refusal in the browser reached no log; now the gateway refuses the same question and logs it
+  expect(calls).toHaveLength(3)
+  for (const c of calls) {
+    expect(c.body).toMatchObject({ feature: 'case_qa', case_ref: 'f1' })
+    expect(c.body.prompt).not.toContain('transfer')   // no piece of the file is sent with a refused question
+  }
+  expect(screen.queryByRole('alert')).toBeNull()      // the gateway's 422 is not shown as an error
 })
 
 test('nothing in the file matches: "not in the file", no AI call', async () => {

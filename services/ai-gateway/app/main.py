@@ -15,10 +15,12 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import os
 import re
 import threading
 import time
+import unicodedata
 import uuid
 from collections import deque
 from datetime import datetime, timedelta, timezone
@@ -82,31 +84,49 @@ QUESTION_LINE = re.compile(r"question from the investigating officer:(.*?)(?=\n\
 # Kept the same as apps/web/src/askFile.ts (tests/repo_rules/test_question_guard_same.py). The Hindi and Marathi words are an
 # unreviewed draft list (decision 5 of 2 Nov: a Marathi-speaking prosecutor reviews legal words).
 REFUSED_QUESTIONS = {
-    "guilt": re.compile(r"\b(guilty|guilt|innocent|innocence|culprit|criminal|convict\w*|doshi|nirdosh|gunahgar)\b|\b(who|whom) (did"
-                         r"|committed|is behind|is responsible)\b|\bdid (he|she|they|it|[a-z]\d) (do|commit)\b|\bdid (the )?\w+ (do it"
-                         r"|do this|commit)\b|\b(is|are|was|were) (he|she|they|[a-z]\d|the (accused|suspect)) (really "
-                         r"|actually )?responsible\b|दोषी|निर्दोष|गुन्हेगार|गुनहगार"
-                         r"|अपराधी|मुजरिम|गुनाहगार|किसने (यह |ये |वह )?(किया|की|किए)|कौन (है )?(ज़िम्मेदार|जिम्मेदार|जिम्मेवार)|(ज़िम्मेदार|जिम्मेदार|जबाबदार|जबाबदारी) (है|हैं|था|थी|आहे|होता|होती)|(उसने|उन्होंने|आरोपी ने) (ही )?अपराध किया|(त्याने|तिने|त्यांनी|आरोपीने) (हा |ही )?गुन्हा केला|कोणी (हे |ते |हा )?(केले|केलं|केला)|(कोणाचा|किसका) दोष", re.I),
-    "truth": re.compile(r"\b(lying|liar|lies|lie|truthful|truthfully|credible|credibility|believable|trustworthy|honest|dishonest"
-                         r"|reliable|unreliable|reliability|jhooth|jhoot|jhuth)\b|\b(is|are|was|were) (he|she|they|[a-z]\d|the (witness"
-                         r"|victim|accused|complainant)) (telling|speaking)\b|\btelling the truth\b|\b(can|could|should) (we|i) (trust"
-                         r"|believe|rely on)\b|\b(is|are|was|were) (the |his |her |this |that )?(\w+ ){0,2}(true|false|untrue"
-                         r"|fabricated)\b|झूठ|खोटं|खोटे बोल|सच बोल|खरं बोल"
-                         r"|झूठा|झूठी|झूठे|सच (बोल|कह|है|हैं|था|थी)|सच्चा|सच्ची|सत्य बोल|विश्वसनीय|भरोसेमंद|भरोसा कर|विश्वास कर|विश्वासार्ह|विश्वास ठेव|खरे आहे|खरं आहे|खोटे आहे|खोटं आहे|खोटा आहे|खोटी आहे|खोटे बोलत|खोटं बोलत|खरे बोलत|खरं बोलत", re.I),
-    "predict": re.compile(r"\b(will|would|might|likely|going to|chance|probability|probable)\b.{0,40}\b(commit|reoffend|re-offend|offend"
-                           r"|flee|abscond|escape|repeat|do it again|do this again|run away|tamper\w*|threaten\w*|harm)\b|\bflight risk\b"
-                           r"|\b(is|are) (he|she|they|[a-z]\d|the (accused|suspect)) (\w+ )?dangerous\b"
-                           r"|(फरार|फ़रार) (हो|होगा|होगी|होने)|भाग (जाएगा|जाएगी|सकता|सकती|जाने)|भागने की (संभावना|आशंका)|(दोबारा|फिर से|पुन्हा|परत) (अपराध|गुन्हा)|गुन्हा करेल|अपराध करेगा|अपराध करेगी|पळून (जाईल|जाण्याची|जाऊ शकतो|जाऊ शकते)|फरार होण्याची|(खतरनाक|धोकादायक) (है|होगा|होगी|आहे|ठरेल)|(संभावना|आशंका).{0,30}(भाग|फरार|अपराध|धमकी|सबूत)|(शक्यता|भीती).{0,30}(पळ|फरार|गुन्हा|धमक|पुरावा)|(धमक|पळून|फरार|गुन्हा)[^ ]*( [^ ]+){0,3} (शक्यता|भीती)", re.I),
+    "guilt": re.compile(r"\b(guilty|guilt|innocent|innocence|culprit|criminal|convict\w*|doshi|nirdosh|gunahgar|gunehgar|gunahgaar|apradhi|aparadh"
+                         r"i|mujrim)\b|\b(who|whom) (did|committed|is behind|is responsible)\b|\bdid (he|she|they|it|[a-z]\d) (do|commit)\b|\bdid ("
+                         r"the )?\w+ (do it|do this|commit)\b|\b(is|are|was|were) (he|she|they|[a-z]\d|the (accused|suspect)) (really |actually )?r"
+                         r"esponsible\b|दोषी|निर्दोष|गुन्हेगार|गुनहगार|अपराधी|मुजरिम|गुनाहगार|किसने (यह |ये |वह )?(किया|की|किए)|कौन (है )?(ज़िम्मेद"
+                         r"ार|जिम्मेदार|जिम्मेवार)|(ज़िम्मेदार|जिम्मेदार|जबाबदार|जबाबदारी) (है|हैं|था|थी|आहे|होता|होती)|(उसने|उन्होंने|आरोपी ने) (ह"
+                         r"ी )?अपराध किया|(त्याने|तिने|त्यांनी|आरोपीने) (हा |ही )?गुन्हा केला|कोणी (हे |ते |हा )?(केले|केलं|केला)|(कोणाचा|किसका) दो"
+                         r"ष|\bkis(ne|ney) (ye |yeh |woh |wo )?(kiya|kia|ki)\b|\bkaun (hai )?(zimmedar|jimmedar|zimmedaar|jimmedaar|jimmewar)\b", re.I),
+    "truth": re.compile(r"\b(lying|liar|lies|lie|truthful|truthfully|credible|credibility|believable|trustworthy|honest|dishonest|reliable|unrelia"
+                         r"ble|reliability|jhooth|jhoot|jhuth|jhutha|jhuta|jhootha|jhoota|jhuthi|jhooti|jhoothi|jhuti)\b|\b(is|are|was|were) (he|sh"
+                         r"e|they|[a-z]\d|the (witness|victim|accused|complainant)) (telling|speaking)\b|\btelling the truth\b|\b(can|could|should)"
+                         r" (we|i) (trust|believe|rely on)\b|\b(is|are|was|were) (the |his |her |this |that )?(\w+ ){0,2}(true|false|untrue|fabrica"
+                         r"ted)\b|झूठ|खोटं|खोटे बोल|सच बोल|खरं बोल|झूठा|झूठी|झूठे|सच (बोल|कह|है|हैं|था|थी)|सच्चा|सच्ची|सत्य बोल|विश्वसनीय|भरोसेमंद|"
+                         r"भरोसा कर|विश्वास कर|विश्वासार्ह|विश्वास ठेव|खरे आहे|खरं आहे|खोटे आहे|खोटं आहे|खोटा आहे|खोटी आहे|खोटे बोलत|खोटं बोलत|खरे "
+                         r"बोलत|खरं बोलत|\bsach (bol|keh|kah)\w*|\bkhot[ea] bol\w*", re.I),
+    "predict": re.compile(r"\b(will|would|might|likely|going to|chance|probability|probable)\b.{0,40}\b(commit|reoffend|re-offend|offend|flee|abscon"
+                         r"d|escape|repeat|do it again|do this again|run away|tamper\w*|threaten\w*|harm)\b|\bflight risk\b|\b(is|are) (he|she|they"
+                         r"|[a-z]\d|the (accused|suspect)) (\w+ )?dangerous\b|(फरार|फ़रार) (हो|होगा|होगी|होने)|भाग (जाएगा|जाएगी|सकता|सकती|जाने)|भाग"
+                         r"ने की (संभावना|आशंका)|(दोबारा|फिर से|पुन्हा|परत) (अपराध|गुन्हा)|गुन्हा करेल|अपराध करेगा|अपराध करेगी|पळून (जाईल|जाण्याची|"
+                         r"जाऊ शकतो|जाऊ शकते)|फरार होण्याची|(खतरनाक|धोकादायक) (है|होगा|होगी|आहे|ठरेल)|(संभावना|आशंका).{0,30}(भाग|फरार|अपराध|धमकी|सब"
+                         r"ूत)|(शक्यता|भीती).{0,30}(पळ|फरार|गुन्हा|धमक|पुरावा)|(धमक|पळून|फरार|गुन्हा)[^ ]*( [^ ]+){0,3} (शक्यता|भीती)|\b(farar|fara"
+                         r"ar) (ho|hoga|hogi|hone|honar)\w*|\bbha+g (jayega|jaega|jaayega|jayegi|jaegi|sakta|sakti)\b|\bpalun ja\w*|\b(dobara|phir "
+                         r"se|punha) (apradh|gunha)\b", re.I),
 }
 
 
+# Folded before the patterns are tried, the same as foldQuestion in apps/web/src/askFile.ts (weekly review 21 Nov 2026):
+# compatibility forms (NFKC also splits a one-character nukta letter into the letter and the nukta sign, as the patterns write
+# it), invisible characters typed between letters, and Cyrillic and Greek letters that look like Latin ones.
+INVISIBLE = re.compile("[\u00ad\u200b-\u200f\u2060\ufeff]")
+LOOKALIKE = str.maketrans("аеіорсухѕјԁԛԝАВЕІКМНОРСТХЅЈοαικντρυΑΒΕΙΚΜΝΟΡΤΧΥΖ", "aeiopcyxsjdqwABEIKMHOPCTXSJoaikvtpuABEIKMNOPTXYZ")
+
+
+def fold_question(question: str) -> str:
+    return INVISIBLE.sub("", unicodedata.normalize("NFKC", question)).translate(LOOKALIKE)
+
+
 def refused_question(feature: str, prompt: str) -> str | None:
-    """'guilt', 'truth' or 'predict' when a case_qa question asks what the app never answers, else None."""
+    """'guilt', 'truth' or 'predict' when a case_qa question asks what the app never answers, else None. Every question line
+    of the prompt is read, not only the first (weekly review 21 Nov 2026)."""
     if feature != "case_qa":
         return None
-    m = QUESTION_LINE.search(prompt)
-    question = m.group(1) if m else prompt
-    return next((why for why, rx in REFUSED_QUESTIONS.items() if rx.search(question)), None)
+    questions = [m.group(1) for m in QUESTION_LINE.finditer(prompt)] or [prompt]
+    return next((why for q in questions for why, rx in REFUSED_QUESTIONS.items() if rx.search(fold_question(q))), None)
 
 
 # Weekly review of 14 Nov 2026: the screens did not offer these on a protected case, but the gateway took any text. Now every
@@ -337,9 +357,12 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             vectors = embedder.embed(body.texts, body.kind)
         except EmbedderError as e:
             refuse(503, str(e))
-        log(u, "ai_embed", "embed", body.case_ref, {"model": embedder.name, "kind": body.kind, "texts": len(body.texts),
-                                                  "chars": sum(len(t) for t in body.texts),
-                                                  "texts_sha256": hashlib.sha256("\n".join(body.texts).encode()).hexdigest()})
+        # a plain hash of one short question could be checked against guessed questions or names by anyone who reads the
+        # log, so the texts' hash is keyed with AI_AUDIT_KEY, and left out without the key (weekly review 21 Nov 2026)
+        detail = {"model": embedder.name, "kind": body.kind, "texts": len(body.texts), "chars": sum(len(t) for t in body.texts)}
+        if store.key:
+            detail["texts_hmac"] = hmac.new(store.key, "\n".join(body.texts).encode(), hashlib.sha256).hexdigest()
+        log(u, "ai_embed", "embed", body.case_ref, detail)
         return {"model": embedder.name, "dim": len(vectors[0]), "min_similarity": embedder.min_similarity, "vectors": vectors}
 
     @app.post("/v1/transcribe")

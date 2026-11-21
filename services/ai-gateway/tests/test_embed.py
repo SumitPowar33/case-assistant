@@ -1,4 +1,6 @@
 """POST /v1/embed (item 17): vectors made on the state's own server for pieces of one case and for a question."""
+import hashlib
+import hmac
 import math
 import os
 
@@ -15,8 +17,8 @@ from test_gateway import (CASE, NOT_MINE, PROTECTED, SECRET, core_says_active, t
                           no_core_for_the_case_check, no_core_for_the_chain_head)
 
 
-def client(embedder=None, sub="io-1", role="state_admin"):
-    store = Store(":memory:")
+def client(embedder=None, sub="io-1", role="state_admin", key=None):
+    store = Store(":memory:", key)
     app = create_app(store, {}, SECRET, core_says_active, embedder=embedder or FakeEmbedder())
     return TestClient(app, headers={"Authorization": "Bearer " + token(sub, role)}), store
 
@@ -58,9 +60,20 @@ def test_each_call_is_logged_with_a_hash_and_no_text():
     c.post("/v1/embed", json={"case_ref": CASE, "texts": ["Secret fictional text"], "kind": "query"})
     row = store.audit_rows(1)[0]
     assert row["action"] == "ai_embed" and row["feature"] == "embed" and row["case_ref"] == CASE
-    assert row["detail"]["texts"] == 1 and row["detail"]["kind"] == "query" and len(row["detail"]["texts_sha256"]) == 64
+    assert row["detail"]["texts"] == 1 and row["detail"]["kind"] == "query" and row["detail"]["chars"] == 21
+    # weekly review 21 Nov: without the audit key no hash of the text is kept (a plain hash of one question can be guessed)
+    assert "texts_sha256" not in row["detail"] and "texts_hmac" not in row["detail"]
     assert "Secret" not in str(row)
     assert store.verify_chain()
+
+
+def test_with_the_audit_key_the_texts_hash_is_keyed():
+    c, store = client(key="fictional-audit-key")
+    c.post("/v1/embed", json={"case_ref": CASE, "texts": ["Secret fictional text"], "kind": "query"})
+    detail = store.audit_rows(1)[0]["detail"]
+    plain = hashlib.sha256(b"Secret fictional text").hexdigest()
+    assert len(detail["texts_hmac"]) == 64 and detail["texts_hmac"] != plain and plain not in str(detail)
+    assert detail["texts_hmac"] == hmac.new(b"fictional-audit-key", b"Secret fictional text", hashlib.sha256).hexdigest()
 
 
 def test_does_not_count_as_a_draft():

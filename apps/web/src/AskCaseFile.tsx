@@ -49,7 +49,13 @@ export default function AskCaseFile({ firId }: { firId: string }) {
     setNote('')
     const id = turns.length + 1
     const why = refusal(q)
-    if (why) { setTurns([{ id, q, refused: why }, ...turns]); setQuestion(''); return }
+    if (why) {
+      setTurns([{ id, q, refused: why }, ...turns]); setQuestion('')
+      // the question alone (no piece of the file) goes to the gateway, which refuses it too and keeps the refusal in its log
+      ai('/v1/generate', { method: 'POST', body: {
+        feature: 'case_qa', prompt_version: ASK_PROMPT_VERSION, prompt: askPrompt(q, []), case_ref: firId, max_tokens: 700 } }).catch(() => {})
+      return
+    }
     setBusy(true)
     // the meaning search (embedding model on the state's server); without it the pieces are found by words alone
     const vectors = await loadVectors(firId, q, passages)
