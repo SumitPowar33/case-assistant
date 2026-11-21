@@ -18,12 +18,12 @@ const LIST = [
 const kept = { id: 'k1', kind: 'amount', value: 'Rs 40,000', ai_value: 'Rs 40,000', corrected: false, quote: 'Rs 40,000 went out', confirmed_at: '2026-11-08T10:00:00Z', confirmed_by_name: 'SI Fictional' }
 
 type Reply = { status: number; body: unknown }
-function stub(opts: { facts?: Reply; save?: Reply; generate?: Reply; decision?: Reply } = {}) {
+function stub(opts: { facts?: Reply; save?: Reply; generate?: Reply; decision?: Reply; links?: Reply } = {}) {
   const calls: { url: string; method: string; body?: Record<string, unknown> }[] = []
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET'
     calls.push({ url, method, body: init?.body ? JSON.parse(init.body as string) : undefined })
-    const r = url.endsWith('generate') ? opts.generate : url.endsWith('decisions') ? opts.decision : method === 'POST' ? opts.save : opts.facts
+    const r = url.endsWith('/links') ? opts.links ?? { status: 200, body: [] } : url.endsWith('generate') ? opts.generate : url.endsWith('decisions') ? opts.decision : method === 'POST' ? opts.save : opts.facts
     const reply = r ?? { status: method === 'POST' ? 201 : 200, body: method === 'POST' ? { id: 'n1' } : [] }
     return { ok: reply.status < 300, status: reply.status, json: async () => reply.body }
   }))
