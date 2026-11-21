@@ -1351,5 +1351,18 @@
  "transcribe.done": "A draft was written down from the recording. Listen again and correct it before you save.",
  "transcribe.discard": "Discard the draft",
  "csd.left": "{n} documents of the file were too long to send and were left out.",
- "csd.openIngredients": "Nothing linked yet in the readiness check, so no paragraph was drafted for"
+ "csd.openIngredients": "Nothing linked yet in the readiness check, so no paragraph was drafted for",
+ "sreport.title": "Report to the Magistrate on added sections",
+ "sreport.help": "A section added after registration is reported to the court that has the FIR. The draft is built from the case (no AI, no names); change it as needed, send it, then record it here as sent.",
+ "sreport.waiting": "Waiting for a report: {list}",
+ "sreport.which": "Sections in this report",
+ "sreport.court": "Court",
+ "sreport.sentOn": "Sent on",
+ "sreport.text": "Text of the report as sent",
+ "sreport.draft": "Draft the report",
+ "sreport.save": "Record as sent",
+ "sreport.saved": "The report is recorded.",
+ "sreport.sent": "sent to {court} on {date}, recorded by {name}",
+ "sreport.allReported": "Every added section has been reported.",
+ "diaryEvent.section_reported": "Report on added sections sent to the Magistrate"
 }

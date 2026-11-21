@@ -150,3 +150,24 @@ test('several open gaps are counted in the plural; a report that cannot be read 
   render(<Readiness firId="f1" people={people} />)
   expect((await screen.findByRole('alert')).textContent).toContain('500')
 })
+
+test('before a playbook is chosen, a section waiting for its report to the Magistrate is listed as a gap and can be accepted', async () => {
+  const gap = { key: 'section-report:IT Act 66D', severity: 'high', text: 'IT Act 66D was added on 2026-11-20 and the Magistrate has not been sent a report of it yet.', override: null }
+  const calls = mock((url, init) => url.endsWith('/readiness') ? { status: 200, body: { playbook: null, charges: [], accountHolders: [], gaps: [gap], openGaps: 1 } }
+    : init?.method === 'POST' ? { status: 201, body: { id: 'o9' } } : undefined)
+  render(<Readiness firId="f1" people={people} />)
+  expect(await screen.findByText(/IT Act 66D was added on 2026-11-20/)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Use this playbook' })).toBeTruthy()
+  fireEvent.change(screen.getByLabelText(/reason/i), { target: { value: 'Sent with the chargesheet instead' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Accept with reason' }))
+  await vi.waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true))
+  expect(calls.find((c) => c.method === 'POST')).toMatchObject({ url: '/api/firs/f1/readiness/overrides', body: { gapKey: 'section-report:IT Act 66D', reason: 'Sent with the chargesheet instead' } })
+})
+
+test('before a playbook is chosen and with no gap, only the choice is shown', async () => {
+  mock((url) => url.endsWith('/readiness') ? { status: 200, body: { playbook: null, charges: [], accountHolders: [], gaps: [], openGaps: 0 } } : undefined)
+  render(<Readiness firId="f1" people={people} />)
+  expect(await screen.findByRole('button', { name: 'Use this playbook' })).toBeTruthy()
+  expect(screen.queryByText('No gaps found.')).toBeNull()
+  expect(screen.queryByText('Gaps')).toBeNull()
+})

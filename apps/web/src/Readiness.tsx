@@ -54,17 +54,37 @@ export default function Readiness({ firId, people }: { firId: string; people: Pe
   }
 
   if (!report) return <section><h2>{t('readiness.title')}</h2>{error ? <p role="alert">{error}</p> : <p>{t('common.loading')}</p>}</section>
+  // the gaps with their acceptances; also shown before a playbook is chosen (a section waiting for its report, V64)
+  const gapList = () => <>
+    <h3>{t('readiness.gaps')}</h3>
+    {report.gaps.length === 0 ? <p>{t('readiness.noGaps')}</p> : <ul className="gaps">{report.gaps.map((g) => (
+      <li key={g.key}>{g.text}{' '}
+        {g.override ? <><small>{t('readiness.acceptedBy', { name: g.override.decidedBy, reason: g.override.reason })}</small>{' '}
+          <Withdraw firId={firId} kind="overrides" id={g.override.id} what={t('readiness.acceptance')} act={act} /></> : (
+          // folded like Withdraw, so a list of gaps stays short (a phone in the field); the reason is still required
+          <details className="inline">
+            <summary>{t('readiness.acceptSummary')}</summary>
+            <form className="inline" onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/readiness/overrides`, 'POST', { gapKey: g.key, reason: f.get('reason') }))}>
+              <label>{t('readiness.reasonAccept')}{' '}<input name="reason" minLength={10} required /></label>{' '}
+              <button type="submit">{t('readiness.accept')}</button>
+            </form>
+          </details>
+        )}
+      </li>
+    ))}</ul>}
+  </>
   return (
     <section aria-labelledby="readiness">
       <h2 id="readiness">{t('readiness.title')}</h2>
       {error && <p role="alert">{error}</p>}
-      {!report.playbook ? (
+      {!report.playbook ? (<>
         <form onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/playbook`, 'PUT', { playbookId: f.get('playbook') }))}>
           <label>{t('readiness.playbookFor')}{' '}
             <select name="playbook">{playbooks.map((p) => <option key={p.id} value={p.id}>{p.id} {p.version}: {p.appliesTo}</option>)}</select>
           </label>{' '}<button type="submit">{t('readiness.usePlaybook')}</button>
         </form>
-      ) : (
+        {(report.gaps ?? []).length > 0 && gapList()}
+      </>) : (
         <>
           <p>{t('readiness.playbook', { id: report.playbook.id, version: report.playbook.version })}
             {report.playbook.status === 'draft' && <> · <strong>{t('readiness.draft')}</strong>: {report.playbook.reviewNote}</>}</p>
@@ -98,22 +118,7 @@ export default function Readiness({ firId, people }: { firId: string; people: Pe
           {report.secondLinkRule && <SecondLinks firId={firId} rule={report.secondLinkRule} holders={report.accountHolders ?? []}
             accused={people.filter((p) => p.role === 'accused')} evidence={evidence} act={act} />}
           {!!report.sectionsNotInPlaybook?.length && <p>{t('readiness.notChecked', { list: report.sectionsNotInPlaybook.join(', ') })}</p>}
-          <h3>{t('readiness.gaps')}</h3>
-          {report.gaps.length === 0 ? <p>{t('readiness.noGaps')}</p> : <ul className="gaps">{report.gaps.map((g) => (
-            <li key={g.key}>{g.text}{' '}
-              {g.override ? <><small>{t('readiness.acceptedBy', { name: g.override.decidedBy, reason: g.override.reason })}</small>{' '}
-                <Withdraw firId={firId} kind="overrides" id={g.override.id} what={t('readiness.acceptance')} act={act} /></> : (
-                // folded like Withdraw, so a list of gaps stays short (a phone in the field); the reason is still required
-                <details className="inline">
-                  <summary>{t('readiness.acceptSummary')}</summary>
-                  <form className="inline" onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/readiness/overrides`, 'POST', { gapKey: g.key, reason: f.get('reason') }))}>
-                    <label>{t('readiness.reasonAccept')}{' '}<input name="reason" minLength={10} required /></label>{' '}
-                    <button type="submit">{t('readiness.accept')}</button>
-                  </form>
-                </details>
-              )}
-            </li>
-          ))}</ul>}
+          {gapList()}
           {!!report.withdrawn?.length && <>
             <h3>{t('readiness.withdrawn')}</h3>
             <ul>{report.withdrawn.map((w, n) => <li key={n}>{t('readiness.withdrawnBy', { what: t.code('withdrawnKind', w.what), detail: w.detail, name: w.withdrawn_by, reason: w.reason })}</li>)}</ul>
