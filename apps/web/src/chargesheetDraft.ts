@@ -6,6 +6,7 @@
 // officer's own). Change DRAFT_PROMPT_VERSION whenever the prompt text changes (the gateway logs it).
 import { jsonList, locate } from './factCheck'
 import { LANGUAGE_NAMES } from './statementTranslate'
+import { foldQuestion } from './askFile'
 
 export const DRAFT_PROMPT_VERSION = 'chargesheet_draft/narrative@2'
 export const PARTS = ['facts', 'evidence'] as const
@@ -27,7 +28,7 @@ const MAX_QUOTE = 500
 const OPINION = /\b(guilt\w*|innocen\w*|culprit\w*|convict\w*|credib\w*|truthful\w*|untruthful|lying|liars?|lied|believab\w*|unbelievab\w*|trustworth\w*|untrustworth\w*|honest\w*|dishonest\w*|reliab\w*|unreliab\w*)\b|\b(proved|proven|established|clear) beyond\b|\b(is|are|stands?|was|were|has been|have been) (clearly |fully |thus |therefore )?(proved|proven|established)\b|\bcommitted the (offence|crime|theft|fraud|cheating|murder|robbery|assault)\b|\bresponsible for the (offence|crime|theft|fraud|cheating)\b|\b(is|are|was|were) (false|untrue|fabricated|a lie)\b|\bcharges? (is|are|stands?) (made out|proved|proven)\b|दोषी|निर्दोष|गुन्हेगार|अपराधी|मुजरिम|झूठ|अविश्वसनीय|विश्वसनीय|भरोसेमंद|विश्वासार्ह|अविश्वासार्ह|सच्चा|सच्ची|ईमानदार|बेईमान|प्रामाणिक|अप्रामाणिक|खोटा बोल|खोटे बोल|खोटं बोल|सिद्ध (हो गया|हो चुका|होता|झाले|झाला|झाली)|संदेह से परे|संशयापलीकडे|संशयापलिकडे/i
 
 /** True when a sentence gives an opinion on guilt, on truthfulness or that the charge is proved. */
-export const judges = (sentence: string) => OPINION.test(sentence)
+export const judges = (sentence: string) => OPINION.test(foldQuestion(sentence))   // folded as a question is (weekly review 21 Nov)
 
 /** The text sent to the gateway. Written in English whatever the screen language; the answer is in `language`. */
 export function draftPrompt(sources: Source[], sections: string, language: string, ingredients: Ingredient[] = []): string {

@@ -145,25 +145,45 @@ describe('questions in Marathi and Hindi', () => {
 // The answers scored: the pipeline (retrieve, prompt, a provider's answer, the check of the answer against its sources) with a
 // stand-in provider that follows the prompt's rules (the gateway's own fake provider only echoes the prompt, so it cannot answer).
 // The same scoring is the one to run with a real model at deployment (docs/DEPLOY-EMBEDDINGS.md).
-const standIn = (prompt: string) => (/\[S1\]/.test(prompt) ? 'The first piece answers it [S1].' : NOT_IN_FILE)
+// Weekly review 21 Nov 2026: the scoring now reads which piece the answer cites (it must be an expected one) and gives the
+// absent questions the pieces really found, so a provider that answers them from a piece scores below 1.
+const standIn = (prompt: string) => (/\[S1\]/.test(prompt) ? 'The pieces answer it [S1] [S2] [S3].' : NOT_IN_FILE)
+const ABSENT = ['Who owns the red motorcycle?', 'What did the doctor write in the medical report?', 'Was a lookout circular prepared?', 'Was a lookout circular issued?']
 
 function score(provider: (prompt: string) => string) {
+  const isExpected = (title: string, expected: string[]) => expected.some((id) => { const t = FILE.find((p) => p.id === id)!.title; return title === t || title.startsWith(`${t}, `) })
   const rows = FOUND.map(([q, expected]) => {
     const sent = retrieve(q, FILE, 6, vectorsFor(q, FILE))
     const checked = checkAnswer(provider(askPrompt(q, sent)), sent)
-    return { q, expected, ok: sent.slice(0, 3).some((s) => expected.some((id) => s.title.startsWith(FILE.find((p) => p.id === id)!.title))) && checked.kind === 'found' }
+    return { q, expected, ok: checked.kind === 'found' && checked.sources.some((s) => isExpected(s.title, expected)) }
   })
-  const absent = ['Who owns the red motorcycle?', 'What did the doctor write in the medical report?', 'Was a lookout circular prepared?']
-    .map((q) => ({ q, ok: (() => { const sent = retrieve(q, FILE, 6, vectorsFor(q, FILE)); return !sent.length || checkAnswer(provider(askPrompt(q, [])), sent).kind === 'notInFile' })() }))
-  return { found: rows.filter((r) => r.ok).length / rows.length, absent: absent.filter((r) => r.ok).length / absent.length, rows }
+  const absent = ABSENT.map((q) => {
+    const sent = retrieve(q, FILE, 6, vectorsFor(q, FILE))
+    return { q, ok: !sent.length || checkAnswer(provider(askPrompt(q, sent)), sent).kind === 'notInFile' }
+  })
+  return { found: rows.filter((r) => r.ok).length / rows.length, absent: absent.filter((r) => r.ok).length / absent.length, rows, absentRows: absent }
 }
 
 describe('the answers scored on the set', () => {
-  it('a provider that follows the rules answers every question of the set from a cited piece, and the absent ones with "not in the file"', () => {
+  it('a provider that follows the rules answers every question of the set from an expected cited piece; an absent question that sends a piece needs a real model', () => {
     const s = score(standIn)
     expect(s.rows.filter((r) => !r.ok).map((r) => r.q)).toEqual([])
     expect(s.found).toBe(1)
+    // "issued" shares a word with the case diary, so a piece is sent: only a real model can say "not in the file"
+    // there (scored at deployment, docs/DEPLOY-EMBEDDINGS.md); the stand-in answers from the piece and loses that point
+    expect(s.absentRows.filter((r) => !r.ok).map((r) => r.q)).toEqual(['Was a lookout circular issued?'])
+  })
+
+  it('a provider that says "not in the file" whenever it is unsure gets every absent question and no found one', () => {
+    const s = score(() => NOT_IN_FILE)
     expect(s.absent).toBe(1)
+    expect(s.found).toBe(0)
+  })
+
+  it('a provider that cites a piece of the file other than the one with the answer scores below 1', () => {
+    // it cites only the last piece sent, which is never the expected one when six are sent
+    const last = (prompt: string) => { const n = [...prompt.matchAll(/\[S(\d+)\]/g)].map((m) => +m[1]); return n.length ? `See [S${Math.max(...n)}].` : NOT_IN_FILE }
+    expect(score(last).found).toBeLessThan(1)
   })
 
   it('a provider that answers without citing a piece scores zero, so the set catches it', () => {

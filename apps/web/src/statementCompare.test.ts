@@ -46,3 +46,16 @@ test('at most twenty differences are kept, and an empty list or an unreadable an
   expect(readDifferences('[]', sources)).toEqual({ kind: 'differences', differences: [], dropped: 0 })
   expect(readDifferences('I cannot tell.', sources)).toEqual({ kind: 'unreadable' })
 })
+
+test('a topic that says who lies or is believable is dropped, in English, Hindi and Marathi (weekly review 21 Nov)', () => {
+  const ok = [side('FIR', 'on 22 August'), side('S1', 'on 23 August')] as const
+  const r = readDifferences(JSON.stringify([
+    entry(...ok, 'W1 is lying about the date'),
+    entry(...ok, 'the date S1 gives is not credible'),
+    entry(...ok, 'S1 झूठ बोल रहा है'),
+    entry(...ok, 'S1 खोटे बोलत आहे'),
+    entry(...ok, 'date of payment'),
+  ]), sources)
+  expect(r).toMatchObject({ kind: 'differences', dropped: 4 })
+  if (r.kind === 'differences') expect(r.differences.map((d) => d.topic)).toEqual(['date of payment'])
+})

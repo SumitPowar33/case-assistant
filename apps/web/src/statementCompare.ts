@@ -4,6 +4,7 @@
 // source is right, whether anyone lies or is believable: it points at two places the officer may ask about. Names are not
 // sent: a source is "FIR", "S1", "S2"... Change COMPARE_PROMPT_VERSION whenever the prompt text changes (the gateway logs it).
 import { jsonList, locate } from './factCheck'
+import { judges } from './chargesheetDraft'
 
 export const COMPARE_PROMPT_VERSION = 'statement_compare/diff@1'
 export const MAX_PROMPT = 58000
@@ -43,7 +44,8 @@ export function readDifferences(draft: string, sources: Source[]): Read {
     const e = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>
     const topic = typeof e.topic === 'string' ? e.topic.trim() : ''
     const a = side(e.a, sources), b = side(e.b, sources)
-    if (!topic || topic.length > 200 || !a || !b || a.source === b.source || differences.length >= MAX_DIFFS) { dropped++; continue }
+    // the topic is the AI's own words: one that says who lies or is right is dropped (weekly review 21 Nov)
+    if (!topic || topic.length > 200 || judges(topic) || !a || !b || a.source === b.source || differences.length >= MAX_DIFFS) { dropped++; continue }
     differences.push({ topic, a, b })
   }
   return { kind: 'differences', differences, dropped }
