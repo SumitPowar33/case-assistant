@@ -1,5 +1,5 @@
 import { useState, type MouseEvent } from 'react'
-import { ai, send } from './api'
+import { ai, aiUpload, send } from './api'
 import { NOTICE_PROMPT_VERSION, REMINDER_PROMPT_VERSION, noticePrompt, reminderPrompt, type NoticeFacts } from './noticePrompt'
 import { Form } from './Forms'
 import { REPLY_PROMPT_VERSION, MAX_REPLY, readReply, replyPrompt, type ReplyRead } from './replyReader'
@@ -44,6 +44,10 @@ function SendForm({ firId, notice, onSaved }: { firId: string; notice: Notice; o
  * AI gateway (feature reply_check) suggests which items it brings, each with the words of the reply that show it, and
  * whether a BSA 63(4) certificate is in it. The boxes are only pre-ticked: the officer changes them, and saving logs
  * whether the ticks were kept (accepted) or changed (edited). Not offered on a case that protects the victim's identity.
+ * "Read a scan or photo of the reply" (A4): the file goes to the OCR program on the state's own server (gateway
+ * /v1/read-scan; nothing leaves it, so it is offered on every case) and its text fills the reply's box as a draft the
+ * officer reads against the paper; saving logs whether it was kept as read (accepted) or corrected (edited), discarding
+ * or reading another file logs rejected. The file itself is not kept.
  */
 function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string; notice: Notice; victimProtected: boolean; onSaved: () => void }) {
   const t = useT()
@@ -56,6 +60,24 @@ function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string;
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
   const canAsk = !victimProtected && notice.items_requested.length > 0
+  const [scanned, setScanned] = useState<{ id: string; text: string; pages: number }>()   // the OCR's draft of the reply
+  const [scanning, setScanning] = useState(false)
+  const decideScan = (decision: string, note: string) => scanned
+    ? ai('/v1/decisions', { method: 'POST', body: { request_id: scanned.id, decision, feature: 'reply_scan', case_ref: firId, note } }).catch(() => undefined)
+    : Promise.resolve()
+
+  async function readScan(file: File | undefined) {
+    if (!file) return
+    setNote(''); setScanning(true)
+    try {
+      const out = await aiUpload<{ request_id: string; text: string; pages: number }>(`/v1/read-scan?case_ref=${encodeURIComponent(firId)}`, file)
+      await decideScan('rejected', 'replaced by another file')
+      const read = out.text.slice(0, MAX_REPLY)
+      setScanned({ id: out.request_id, text: read, pages: out.pages }); setText(read)
+      if (out.text.length > MAX_REPLY) setNote(t('notice.scanCut'))
+    } catch (err) { setNote((err as Error).message) }
+    setScanning(false)
+  }
 
   async function readIt() {
     setNote('')
@@ -75,12 +97,13 @@ function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string;
   }
 
   return (
-    <Form title={t('notice.replyTitle')} onSaved={() => { setTicks(items.map(() => false)); setCert(false); setText(''); setAsked(undefined); onSaved() }}
+    <Form title={t('notice.replyTitle')} onSaved={() => { setTicks(items.map(() => false)); setCert(false); setText(''); setAsked(undefined); setScanned(undefined); onSaved() }}
       submit={async (f) => {
         const result = await send(`/firs/${firId}/notices/${notice.id}/replies`, 'POST', {
           receivedAt: istIso(String(f.get('received'))), channel: f.get('channel'),
           checksJson: JSON.stringify([...items.map((item, i) => ({ item, present: ticks[i] })), ...(asksCert ? [{ item: 'certificate', present: cert }] : [])]), replyText: text.trim() || undefined,
         })
+        await decideScan(text.trim() === scanned?.text.trim() ? 'accepted' : 'edited', 'scanned reply read and saved')
         if (asked) {  // the reply is saved; a failure to log the decision must not make the officer save it twice
           const same = asked.read.items.every((r, i) => r.present === ticks[i]) && (!asksCert || (asked.read.certificate?.present ?? false) === cert)
           await ai('/v1/decisions', { method: 'POST', body: { request_id: asked.request_id, decision: same ? 'accepted' : 'edited', feature: 'reply_check', case_ref: firId, note: '' } }).catch(() => undefined)
@@ -89,6 +112,11 @@ function ReplyForm({ firId, notice, victimProtected, onSaved }: { firId: string;
       }}>
       <label>{t('notice.received')} <input name="received" type="datetime-local" required /></label>
       <label>{t('notice.channel')} <select name="channel">{CHANNELS.map((c) => <option key={c} value={c}>{t.code('notice.channel', c)}</option>)}</select></label>
+      <div>
+        <label>{t('notice.scanLabel')} <input type="file" accept="application/pdf,image/png,image/jpeg,image/tiff" disabled={scanning} onChange={(e) => void readScan(e.target.files?.[0])} /></label>
+        <p className="note"><small>{scanning ? t('notice.scanWorking') : scanned ? t('notice.scanDone', { pages: scanned.pages }) : t('notice.scanSends')}</small></p>
+        {scanned && <button type="button" className="btn" onClick={() => { setText(''); void decideScan('rejected', 'text of the scan discarded'); setScanned(undefined) }}>{t('notice.scanDiscard')}</button>}
+      </div>
       <label>{t('notice.replyText')} <textarea rows={5} maxLength={MAX_REPLY} value={text} onChange={(e) => setText(e.target.value)} /></label>
       {canAsk && (
         <p><button type="button" onClick={readIt} disabled={busy}>{t(busy ? 'notice.asking' : 'notice.readReply')}</button>{' '}

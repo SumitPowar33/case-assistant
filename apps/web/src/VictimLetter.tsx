@@ -15,7 +15,8 @@ type Asked = { request: Request; read: Letter; text: string; logged?: 'accepted'
  * number, its day and the generic steps the officer ticks go to the gateway: no name and no text of the file, so it is
  * offered on every case, protected ones too. The letter is a draft in the language chosen; the officer reads and changes
  * it, uses or rejects it (the decision is logged in the gateway), sends it by their own means and records the update
- * given in the form below.
+ * given in the form below. Once used, the letter is shown as a paper copy that the officer may print (the browser's own
+ * print, nothing else on the page is printed; nothing is saved).
  */
 export default function VictimLetter({ firId, firNo, firYear, registeredAt }: { firId: string; firNo: number; firYear: number; registeredAt: string }) {
   const t = useT()
@@ -93,8 +94,11 @@ export default function VictimLetter({ firId, firNo, firYear, registeredAt }: { 
           {asked.read.kind === 'refused' && <p>{t(asked.read.why === 'opinion' ? 'vl.opinion' : 'vl.promise')}</p>}
           {asked.read.kind === 'letter' && <>
             {asked.read.odd.length > 0 && <p role="note">{t('vl.odd', { list: asked.read.odd.join(', ') })}</p>}
-            <textarea aria-label={t('vl.letter')} lang={language} rows={9} value={asked.text} readOnly={!!asked.logged}
-              onChange={(e) => setAsked({ ...asked, text: e.target.value })} style={{ width: '100%' }} />
+            {asked.logged && asked.logged !== 'rejected'
+              ? <section className="print-copy" aria-label={t('vl.paper')} lang={language}><p style={{ whiteSpace: 'pre-wrap' }}>{asked.text}</p></section>
+              : <textarea aria-label={t('vl.letter')} lang={language} rows={9} value={asked.text} readOnly={!!asked.logged}
+                onChange={(e) => setAsked({ ...asked, text: e.target.value })} style={{ width: '100%' }} />}
+            {asked.logged && asked.logged !== 'rejected' && <p className="no-print"><button type="button" onClick={() => window.print()}>{t('vl.print')}</button></p>}
             {asked.logged
               ? <p role="status">{t('vl.logged', { decision: t.code('facts.decision', asked.logged) })}</p>
               : <p><button type="button" onClick={() => void finish(asked, decisionFor(asked.read.kind === 'letter' ? asked.read.text : '', asked.text))}>{t('vl.use')}</button>{' '}

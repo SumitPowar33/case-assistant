@@ -586,3 +586,83 @@ test('A4: the officer unticks the certificate the reader found; no certificate b
   const other = (await screen.findByText('Log a reply')).closest('details')!
   expect(within(other).queryByLabelText('A BSA 63(4) certificate (Part A and Part B) came with this reply')).toBeNull()
 })
+
+/** The OCR route answers from `scans` in turn (an answer, or a status the gateway refused with); writes are recorded. */
+function stubScan(scans: ({ text: string; pages: number } | number)[]) {
+  const calls: { url: string; body: unknown }[] = []
+  let n = 0
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.startsWith('/ai/v1/read-scan')) {
+      calls.push({ url, body: 'FILE' })
+      const out = scans[n++]
+      return typeof out === 'number'
+        ? { ok: false, status: out, json: async () => ({ detail: 'the OCR program tesseract is not installed on this server' }) }
+        : { ok: true, status: 200, json: async () => ({ request_id: `s${n}`, ...out }) }
+    }
+    if (init?.method && init.method !== 'GET') {
+      calls.push({ url, body: JSON.parse(init.body as string) })
+      return { ok: true, status: url.startsWith('/ai') ? 200 : 201, json: async () => ({}) }
+    }
+    return { ok: true, status: 200, json: async () => (url.endsWith('/notices') ? [open2] : []) }
+  }))
+  return calls
+}
+const pick = (form: HTMLElement, name = 'reply.pdf') =>
+  fireEvent.change(within(form).getByLabelText(/Read a scan or photo/), { target: { files: [new File(['%PDF-'], name, { type: 'application/pdf' })] } })
+const decisions = (calls: { url: string; body: unknown }[]) => calls.filter((c) => c.url === '/ai/v1/decisions').map((c) => c.body)
+
+test('A4: a scanned reply is read on the state server into the box, corrected and saved; the decision is logged as edited', async () => {
+  const calls = stubScan([{ text: 'Statement of acount enclosed.', pages: 2 }])
+  render(<Notices firId="f1" />)
+  const form = (await screen.findByText('Log a reply')).closest('details')!
+  expect(within(form).getByText(/nothing is sent to a cloud service/)).toBeTruthy()
+  fireEvent.change(within(form).getByLabelText(/Read a scan or photo/), { target: { files: [] } })   // nothing picked: nothing sent
+  expect(calls).toHaveLength(0)
+  pick(form)
+  await within(form).findByText(/The text of 2 page\(s\) was read/)
+  expect(calls[0].url).toBe('/ai/v1/read-scan?case_ref=f1')
+  const box = within(form).getByLabelText(/^Text of the reply/) as HTMLTextAreaElement
+  expect(box.value).toBe('Statement of acount enclosed.')
+  type(/^Text of the reply/, 'Statement of account enclosed.', within(form))   // the officer corrects the OCR's mistake
+  type(/^Received/, '2026-10-11T15:00', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(decisions(calls)).toHaveLength(1))
+  expect(calls.find((c) => c.url === '/api/firs/f1/notices/n1/replies')!.body).toMatchObject({ replyText: 'Statement of account enclosed.' })
+  expect(decisions(calls)[0]).toEqual({ request_id: 's1', decision: 'edited', feature: 'reply_scan', case_ref: 'f1', note: 'scanned reply read and saved' })
+})
+
+test('A4: a scan kept as read is accepted; another file replaces it (rejected); discarding empties the box (rejected); all on a protected case too', async () => {
+  const calls = stubScan([{ text: 'First file.', pages: 1 }, { text: 'Second file.', pages: 1 }, { text: 'Third file.', pages: 1 }])
+  render(<Notices firId="f1" victimProtected />)
+  const form = (await screen.findByText('Log a reply')).closest('details')!
+  expect(within(form).queryByRole('button', { name: 'Read the reply with AI' })).toBeNull()   // the cloud reader is not offered here
+  pick(form)
+  await within(form).findByDisplayValue('First file.')
+  pick(form, 'photo.jpg')
+  await within(form).findByDisplayValue('Second file.')
+  expect(decisions(calls)).toEqual([{ request_id: 's1', decision: 'rejected', feature: 'reply_scan', case_ref: 'f1', note: 'replaced by another file' }])
+  fireEvent.click(within(form).getByRole('button', { name: 'Discard the text read' }))
+  await vi.waitFor(() => expect(decisions(calls)).toHaveLength(2))
+  expect(decisions(calls)[1]).toMatchObject({ request_id: 's2', decision: 'rejected' })
+  expect((within(form).getByLabelText(/^Text of the reply/) as HTMLTextAreaElement).value).toBe('')
+  pick(form)
+  await within(form).findByDisplayValue('Third file.')
+  type(/^Received/, '2026-10-11T15:00', within(form))
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(decisions(calls)).toHaveLength(3))
+  expect(decisions(calls)[2]).toMatchObject({ request_id: 's3', decision: 'accepted' })
+})
+
+test('A4: a refusal by the OCR shows why and leaves the box; a text longer than the box is cut and the officer told', async () => {
+  const calls = stubScan([503, { text: 'x'.repeat(30005), pages: 40 }])
+  render(<Notices firId="f1" />)
+  const form = (await screen.findByText('Log a reply')).closest('details')!
+  type(/^Text of the reply/, 'typed by hand', within(form))
+  pick(form)
+  expect((await within(form).findByRole('alert')).textContent).toContain('not installed on this server')
+  expect((within(form).getByLabelText(/^Text of the reply/) as HTMLTextAreaElement).value).toBe('typed by hand')
+  pick(form)
+  expect((await within(form).findByRole('alert')).textContent).toBe('The text read was longer than the box holds; only its start is in the box.')
+  expect((within(form).getByLabelText(/^Text of the reply/) as HTMLTextAreaElement).value).toHaveLength(30000)
+  expect(decisions(calls)).toHaveLength(0)
+})

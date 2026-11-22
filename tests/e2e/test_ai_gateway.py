@@ -23,7 +23,7 @@ def running_gateway(core_base, secret, path, log_name):
     port = free_port()
     env = {**os.environ, "AUTH_SECRET": secret, "CORE_URL": core_base, "AI_GATEWAY_DB": str(path),
            "AI_AUDIT_KEY": "e2e-only-audit-key-" + "x" * 20, "AI_GATEWAY_AUTOSTART": "1",
-           "EMBED_BACKEND": "fake", "TRANSCRIBE_BACKEND": "fake"}   # the offline embedder and speech model: no weights in a test
+           "EMBED_BACKEND": "fake", "TRANSCRIBE_BACKEND": "fake", "OCR_BACKEND": "fake"}   # offline embedder, speech model and OCR: no weights in a test
     log = open(ROOT / f"apps/core/target/{log_name}", "w")
     proc = subprocess.Popen(["python", "-m", "uvicorn", "app.main:app", "--port", str(port)], cwd=ROOT / "services/ai-gateway",
                             env=env, stdout=log, stderr=subprocess.STDOUT)

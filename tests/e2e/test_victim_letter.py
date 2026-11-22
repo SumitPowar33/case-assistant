@@ -5,6 +5,7 @@ the ticked step, nothing of the FIR text. The offline provider only echoes the p
 in its draft. The first answer promises an arrest and is not shown (and its rejection is logged); the second is shown,
 the IO changes it, uses it, and the decision reaches the gateway. Fictional data only."""
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -65,6 +66,16 @@ def test_an_officer_drafts_the_victim_letter_with_ai_and_the_decision_is_logged(
         letter.fill(ANSWERS[1] + " संपर्क करा.")
         page.get_by_role("button", name="Use this letter").click()
         expect(page.get_by_text("Your decision (partly kept or corrected) is logged.", exact=False)).to_be_visible()
+        # printed (A7): the used letter is the paper copy, and on paper only the letter is drawn, on one page
+        paper = page.get_by_role("region", name="The letter as it will be printed")
+        expect(paper).to_have_text(ANSWERS[1] + " संपर्क करा.")
+        expect(page.get_by_role("button", name="Print the letter")).to_be_visible()
+        page.emulate_media(media="print")
+        expect(page.locator("header")).to_be_hidden()
+        expect(page.get_by_role("button", name="Print the letter")).to_be_hidden()
+        pages = len(re.findall(rb"/Type\s*/Page[^s]", page.pdf()))
+        assert pages == 1, pages   # nothing else of the long Deadlines part takes paper
+        page.emulate_media(media="screen")
 
         kinds = [k for k, _ in posts]
         assert kinds == ["generate", "decisions", "generate", "decisions"], kinds

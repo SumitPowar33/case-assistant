@@ -45,7 +45,16 @@ test('the officer ticks steps, the gateway gets only the FIR number, day and ste
   fireEvent.click(screen.getByRole('button', { name: 'Use this letter' }))
   expect(await screen.findByText(/Your decision \(all kept\) is logged/)).toBeTruthy()
   expect(calls.find((c) => c.url.endsWith('/v1/decisions'))!.body).toMatchObject({ request_id: 'r1', decision: 'accepted', feature: 'victim_update', case_ref: 'f1' })
-  expect(box.readOnly).toBe(true)
+  // the used letter is now the paper copy, printed alone by the browser's print
+  expect(screen.queryByLabelText('Letter to the victim or informant')).toBeNull()
+  const paper = screen.getByRole('region', { name: 'The letter as it will be printed' })
+  expect(paper.className).toBe('print-copy')
+  expect(paper.getAttribute('lang')).toBe('mr')
+  expect(paper.textContent).toBe(box.value)
+  const print = vi.fn()
+  vi.stubGlobal('print', print)
+  fireEvent.click(screen.getByRole('button', { name: 'Print the letter' }))
+  expect(print).toHaveBeenCalledOnce()
   expect(screen.queryByRole('button', { name: 'Draft the letter with AI' })).toBeNull()
 })
 
@@ -83,6 +92,7 @@ test('a letter the officer changes is logged as edited; an odd number is flagged
   fireEvent.click(screen.getByRole('button', { name: 'Use this letter' }))
   expect(await screen.findByText(/Your decision \(partly kept or corrected\) is logged/)).toBeTruthy()
   expect(calls.find((c) => c.url.endsWith('/v1/decisions'))!.body).toMatchObject({ decision: 'edited' })
+  expect(screen.getByRole('region', { name: 'The letter as it will be printed' }).textContent).toBe('Registered on 4 November 2026.')   // the officer's words
 })
 
 test('the officer can reject a letter and the decision is logged', async () => {
@@ -93,6 +103,8 @@ test('the officer can reject a letter and the decision is logged', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Do not use it' }))
   expect(await screen.findByText(/Your decision \(rejected\) is logged/)).toBeTruthy()
   expect(calls.find((c) => c.url.endsWith('/v1/decisions'))!.body).toMatchObject({ decision: 'rejected' })
+  expect(screen.queryByRole('button', { name: 'Print the letter' })).toBeNull()   // a rejected letter is never printed
+  expect(screen.queryByRole('region', { name: 'The letter as it will be printed' })).toBeNull()
 })
 
 test.each([['The accused is guilty of the offence.', /gave an opinion on guilt/], ['Arrest will definitely follow.', /promised a result/], ['  ', /wrote no letter/]])(
