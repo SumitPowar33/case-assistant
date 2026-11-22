@@ -776,6 +776,11 @@ def test_the_feature_list_the_settings_of_an_unknown_feature_and_a_model_switch_
 
 
 # weekly review 14 Nov 2026: the gateway asks the core app about the case before any case text goes to a model
+def test_every_feature_that_sends_a_case_s_text_is_refused_on_a_protected_case():
+    # session 123: fact_conflicts sends the FIR text and the bank replies, so it is listed with the others that carry text
+    assert {"fir_extract", "statement_compare", "fact_conflicts", "reply_check", "chargesheet_draft"} <= gateway_main.NOT_ON_PROTECTED
+
+
 @pytest.mark.parametrize("feature", sorted(gateway_main.NOT_ON_PROTECTED))
 def test_a_protected_case_s_text_is_not_sent_for_the_features_that_carry_it(setup, feature):
     c, store = setup

@@ -135,7 +135,7 @@ def refused_question(feature: str, prompt: str) -> str | None:
 # they are refused on a protected case. case_qa is still allowed there (question 1 of session 92), victim_update,
 # notice_draft and supervisor_brief send no victim details; law_explain reads no case.
 NO_CASE_FEATURES = {"law_explain"}
-NOT_ON_PROTECTED = {"fir_extract", "section_suggest", "statement_translate", "statement_compare", "reply_check", "chargesheet_draft"}
+NOT_ON_PROTECTED = {"fir_extract", "section_suggest", "statement_translate", "statement_compare", "fact_conflicts", "reply_check", "chargesheet_draft"}
 COMPLAINT_FEATURES = {"fir_extract"}   # the facts of a signed complaint (A1 at the front desk)
 UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 

@@ -25,6 +25,7 @@ FEATURES = {
     "reply_check": "Check bank and telecom replies",
     "statement_translate": "Translate statements (original always kept)",
     "statement_compare": "Point out differences between statements and the FIR",
+    "fact_conflicts": "Point out facts on which the FIR and other documents disagree",
     "chargesheet_draft": "Draft chargesheet paragraphs",
     "case_qa": "Answer questions about the case file",
     "victim_update": "Draft the 90-day victim update",
