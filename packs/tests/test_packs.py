@@ -95,6 +95,24 @@ def test_a_state_module_adds_punishments_only_for_sections_the_national_table_do
         assert not named & national, f"{path.parent.name} changes national sections {sorted(named & national)}"
 
 
+def test_a_state_punishment_table_names_only_sections_of_its_own_state_laws():
+    # A state table holds only for FIRs of its own state, so it may only name the laws its module.json declares.
+    for path in ROOT.glob("*/punishments.json"):
+        if path.parent.name == "IN":
+            continue
+        acts = json.loads((path.parent / "module.json").read_text(encoding="utf-8")).get("acts", [])
+        t = json.loads(path.read_text(encoding="utf-8"))
+        for key in set(t.get("sections", {})) | set(t.get("no_penalty_of_their_own", [])):
+            assert any(key.startswith(a + " ") for a in acts), f"{path.parent.name}: {key} is not a section of its own laws"
+
+
+def test_the_mh_table_gives_mpid_3_the_60_day_class_and_leaves_mcoca_to_the_officer():
+    # decision 19: MPID Act 3 is three to six years (60 days, BNSS 187(3)); the MCOC Act has its own limit (MCOC 21)
+    t = json.loads((ROOT / "MH" / "punishments.json").read_text(encoding="utf-8"))
+    assert t["sections"]["MPID Act 3"] == "less_than_10_years"
+    assert not any(k.startswith("MCOC Act") for k in t["sections"])
+
+
 def test_roles_files_use_declared_permissions_and_valid_scopes():
     files = sorted(ROOT.glob("*/roles.json"))
     assert files

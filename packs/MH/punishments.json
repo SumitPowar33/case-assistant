@@ -1,0 +1,8 @@
+{
+  "status": "draft",
+  "review_note": "Unreviewed draft of the Maharashtra module (decision 19 of 23 Nov 2026), from the text of the MPID Act 1999, section 3: imprisonment of not less than three years, which may extend to six years, and fine. Six years is under ten, so the 60-day class of BNSS 187(3). A Marathi-speaking public prosecutor of Maharashtra must check it before use. The MCOC Act (its own custody limit, MCOC 21) and the Maharashtra Prohibition Act are left out on purpose: no class is suggested for them and the officer chooses.",
+  "classes": "as in packs/IN/punishments.json; a state module may only add sections of its own laws",
+  "sections": {
+    "MPID Act 3": "less_than_10_years"
+  }
+}

@@ -102,6 +102,21 @@ class StatePlaybookApiTest {
     }
 
     @Test
+    void theMhPunishmentTableSuggestsTheSixtyDayLimitForMpid3AndNothingForMcoca() throws Exception {
+        // decision 19: MPID Act 3 (three to six years) is in the 60-day class of BNSS 187(3); the MCOC Act is left to the officer
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'MPID Act', '3'), (?, 'BNS', '318(4)')").params(mhFir, mhFir).update();
+        String url = "/api/firs/" + mhFir + "/punishment-hint";
+        mvc.perform(get(url).header("Authorization", mhIo)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggested").value("less_than_10_years"))
+                .andExpect(jsonPath("$.sections[?(@.section == 'MPID Act 3')].class").value("less_than_10_years"))
+                .andExpect(jsonPath("$.unknown").isEmpty());
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'MCOC Act', '3(1)(ii)')").param(mhFir).update();
+        mvc.perform(get(url).header("Authorization", mhIo))
+                .andExpect(jsonPath("$.suggested").doesNotExist())
+                .andExpect(jsonPath("$.unknown[0]").value("MCOC Act 3(1)(ii)"));
+    }
+
+    @Test
     void anFirIsRegisteredWithAStateLawOnlyInThatState() throws Exception {
         mvc.perform(get("/api/me").header("Authorization", mhIo)).andExpect(jsonPath("$.acts").value(Matchers.hasItems("BNS", "IT Act", "MPID Act")));
         mvc.perform(get("/api/me").header("Authorization", inIo)).andExpect(jsonPath("$.acts").value(Matchers.not(Matchers.hasItem("MPID Act"))))
