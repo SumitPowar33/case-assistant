@@ -31,6 +31,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .auth import CaseCheck, CaseNotOpen, ChainAnchor, CoreCheck, CoreUnavailable, TokenError, verify
 from .embedder import EmbedderError, from_env as embedder_from_env
 from .transcriber import TranscriberError, from_env as transcriber_from_env
+from .scanreader import ScanReaderError, from_env as scanreader_from_env, kind_of
 from .providers import ClaudeProvider, FakeProvider, GeminiProvider, Provider, ProviderError
 from .store import DEFAULT_MODELS, FEATURES, PROVIDERS, Store
 
@@ -168,6 +169,8 @@ EMBEDS_PER_WINDOW = 120     # calls per officer in DRAFT_WINDOW_SECONDS (a case 
 MAX_AUDIO_BYTES = 15 * 1024 * 1024   # under the web server's 16 MB; about 15 minutes of a phone recording
 TRANSCRIBES_PER_WINDOW = 12          # recordings per officer in DRAFT_WINDOW_SECONDS (each one keeps the server's CPU busy)
 LANGUAGE_RE = re.compile(r"^[a-z]{2,3}$")
+MAX_SCAN_BYTES = 15 * 1024 * 1024    # a scanned reply of a few pages, or a phone photo of one
+SCANS_PER_WINDOW = 30                # scans per officer in DRAFT_WINDOW_SECONDS (each page keeps the server's CPU busy)
 
 
 class DecisionIn(BaseModel):
@@ -185,7 +188,7 @@ class SettingIn(BaseModel):
 
 
 def create_app(store: Store | None = None, providers: dict[str, Provider] | None = None,
-               auth_secret: str | None = None, core_check=None, anchor=None, case_check=None, embedder=None, transcriber=None) -> FastAPI:
+               auth_secret: str | None = None, core_check=None, anchor=None, case_check=None, embedder=None, transcriber=None, scanreader=None) -> FastAPI:
     secret = auth_secret if auth_secret is not None else os.environ.get("AUTH_SECRET", "")
     if len(secret) < 32:
         raise RuntimeError("AUTH_SECRET must be set (at least 32 characters, the same value as the core app)")
@@ -204,6 +207,8 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
     embedder = embedder or embedder_from_env()
     transcriber = transcriber or transcriber_from_env()
     transcribes = DraftLimit(TRANSCRIBES_PER_WINDOW, DRAFT_WINDOW_SECONDS)
+    scanreader = scanreader or scanreader_from_env()
+    scans = DraftLimit(SCANS_PER_WINDOW, DRAFT_WINDOW_SECONDS)
 
     def user(authorization: str = Header(default="")) -> dict:
         scheme, _, token = authorization.partition(" ")
@@ -365,6 +370,39 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         log(u, "ai_embed", "embed", body.case_ref, detail)
         return {"model": embedder.name, "dim": len(vectors[0]), "min_similarity": embedder.min_similarity, "vectors": vectors}
 
+    async def local_upload(request: Request, u: dict, feature: str, case_ref: str, limit: DraftLimit, max_bytes: int, what: str):
+        """The checks every file sent to a model on this server goes through (a recording, a scan): the case named and open to
+        the officer's case team, the size, the rate; each refusal is logged. Gives the request id, the file and its refuse()."""
+        request_id = str(uuid.uuid4())
+
+        def refuse(status: int, message: str, headers: dict | None = None):
+            log(u, "ai_refused", feature, case_ref, {"request_id": request_id, "status": status, "reason": message})
+            raise HTTPException(status, message, headers=headers)
+
+        if not UUID_RE.match(case_ref):
+            refuse(422, "name the FIR (its id) in case_ref")
+        too_big = f"the {what} is longer than {max_bytes // (1024 * 1024)} MB"
+        declared = request.headers.get("content-length", "")
+        if declared.isdigit() and int(declared) > max_bytes:
+            refuse(413, too_big)
+        wait = limit.wait(str(u["sub"]))
+        if wait:
+            refuse(429, f"Too many files in a short time. Try again in {wait} seconds.", headers={"Retry-After": str(wait)})
+        try:
+            case_check(u["token"], case_ref, "fir")
+        except CaseNotOpen:
+            refuse(404, "no case of your case team with that id")
+        except CoreUnavailable as e:
+            refuse(503, str(e))
+        data = b""
+        async for chunk in request.stream():   # read in pieces so a body with no length cannot fill the memory
+            data += chunk
+            if len(data) > max_bytes:
+                refuse(413, too_big)
+        if not data:
+            refuse(422, f"no {what} was sent")
+        return request_id, data, refuse
+
     @app.post("/v1/transcribe")
     async def transcribe(request: Request, case_ref: str = "", language: str = "", u: dict = Depends(user)):
         """The words of one recorded statement, written down by the speech model on this server (A3). The body is the recording
@@ -372,35 +410,10 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         be written down (it stays on this server); the case check and the log are the same as for a draft. The recording and
         the text are not kept here (the log holds the recording's hash and sizes); the answer is a draft for the officer to
         listen to and correct."""
-        request_id = str(uuid.uuid4())
-
-        def refuse(status: int, message: str, headers: dict | None = None):
-            log(u, "ai_refused", "statement_transcribe", case_ref, {"request_id": request_id, "status": status, "reason": message})
-            raise HTTPException(status, message, headers=headers)
-
-        if not UUID_RE.match(case_ref):
-            refuse(422, "name the FIR (its id) in case_ref")
         if language and not LANGUAGE_RE.match(language):
-            refuse(422, "language is a two or three letter code such as hi or mr")
-        declared = request.headers.get("content-length", "")
-        if declared.isdigit() and int(declared) > MAX_AUDIO_BYTES:
-            refuse(413, f"the recording is longer than {MAX_AUDIO_BYTES // (1024 * 1024)} MB")
-        wait = transcribes.wait(str(u["sub"]))
-        if wait:
-            refuse(429, f"Too many recordings in a short time. Try again in {wait} seconds.", headers={"Retry-After": str(wait)})
-        try:
-            case_check(u["token"], case_ref, "fir")
-        except CaseNotOpen:
-            refuse(404, "no case of your case team with that id")
-        except CoreUnavailable as e:
-            refuse(503, str(e))
-        audio = b""
-        async for chunk in request.stream():   # read in pieces so a body with no length cannot fill the memory
-            audio += chunk
-            if len(audio) > MAX_AUDIO_BYTES:
-                refuse(413, f"the recording is longer than {MAX_AUDIO_BYTES // (1024 * 1024)} MB")
-        if not audio:
-            refuse(422, "no recording was sent")
+            log(u, "ai_refused", "statement_transcribe", case_ref, {"status": 422, "reason": "language code"})
+            raise HTTPException(422, "language is a two or three letter code such as hi or mr")
+        request_id, audio, refuse = await local_upload(request, u, "statement_transcribe", case_ref, transcribes, MAX_AUDIO_BYTES, "recording")
         try:
             text = transcriber.transcribe(audio, language or None)
         except TranscriberError as e:
@@ -409,6 +422,26 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
             "request_id": request_id, "model": transcriber.name, "language": language or None, "audio_bytes": len(audio),
             "audio_sha256": hashlib.sha256(audio).hexdigest(), "output_chars": len(text)})
         return {"request_id": request_id, "model": transcriber.name, "text": text, "label": "AI draft - listen and correct before use"}
+
+    @app.post("/v1/read-scan")
+    async def read_scan(request: Request, case_ref: str = "", u: dict = Depends(user)):
+        """The text of a scan or photo of a reply to a notice (A4), read by OCR on this server. The body is the file itself
+        (PDF, PNG, JPEG or TIFF, known by its first bytes). Like a recording: never a cloud provider, so a protected case's
+        reply may be read too; the file and the text are not kept here (the log holds the file's hash and sizes); the
+        answer is a draft the officer reads against the paper and corrects before saving the reply."""
+        request_id, data, refuse = await local_upload(request, u, "reply_scan", case_ref, scans, MAX_SCAN_BYTES, "file")
+        kind = kind_of(data)
+        if kind is None:
+            refuse(415, "send a PDF, PNG, JPEG or TIFF file")
+        try:
+            text, pages = scanreader.read(data, kind)
+        except ScanReaderError as e:
+            refuse(503, str(e))
+        log(u, "ai_transcribe", "reply_scan", case_ref, {
+            "request_id": request_id, "model": scanreader.name, "kind": kind, "pages": pages, "file_bytes": len(data),
+            "file_sha256": hashlib.sha256(data).hexdigest(), "output_chars": len(text)})
+        return {"request_id": request_id, "model": scanreader.name, "pages": pages, "text": text,
+                "label": "AI draft - read it against the paper and correct before use"}
 
     @app.post("/v1/decisions")
     def decision(body: DecisionIn, u: dict = Depends(user)):

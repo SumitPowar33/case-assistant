@@ -39,7 +39,8 @@ AUDIT_ACTIONS = {"ai_request", "ai_embed", "ai_transcribe", "ai_error", "ai_refu
 USE_COLUMNS = {"ai_request": "asked", "ai_transcribe": "asked", "accepted": "accepted", "edited": "edited", "rejected": "rejected", "ai_refused": "refused",
                "ai_error": "failed", "ai_embed": "embedded"}
 # on-premises helpers that are not providers' features (no settings row): label for the AI use counts
-LOCAL_LABELS = {"embed": "Search the case file by meaning", "statement_transcribe": "Write down a recording (speech model on this server)"}
+LOCAL_LABELS = {"embed": "Search the case file by meaning", "statement_transcribe": "Write down a recording (speech model on this server)",
+                "reply_scan": "Read a scanned reply (OCR on this server)"}
 GENESIS = "0" * 64
 
 
