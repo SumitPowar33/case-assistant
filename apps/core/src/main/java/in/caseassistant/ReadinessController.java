@@ -178,7 +178,8 @@ class ReadinessController {
         var pbOpt = playbookOf(firId);
         if (pbOpt.isEmpty()) {
             // a section added without a report to the Magistrate is a gap of the file with or without a playbook
-            var gaps = sectionReportGaps(firId, overrides);
+            var gaps = new ArrayList<>(sectionReportGaps(firId, overrides));
+            gaps.addAll(pocsoGaps(firId, overrides));
             out.put("playbook", null);
             out.put("charges", List.of());
             out.put("accountHolders", List.of());
@@ -257,6 +258,7 @@ class ReadinessController {
                         "The reply of " + n.get("addressee") + " came without a BSA 63(4) certificate (Part A and Part B); ask for it.", overrides));
         }
         gaps.addAll(sectionReportGaps(firId, overrides));
+        gaps.addAll(pocsoGaps(firId, overrides));
         var covered = charges.stream().map(c -> (String) c.get("law")).toList();
         out.put("playbook", Map.of("id", pb.id(), "version", pb.version(), "status", pb.status(),
                 "reviewNote", Objects.requireNonNullElse(pb.reviewNote(), "")));
@@ -310,6 +312,38 @@ class ReadinessController {
                     + " and the Magistrate has not been sent a report of it yet (Case details, Report to the Magistrate).", overrides);
         }).toList();
     }
+
+    /**
+     * Item 15 (decision 21): a POCSO case (V56 pocso_case) whose FIR has no POCSO Act section yet, because a child victim
+     * is recorded in a sexual-offence FIR, and each POCSO step not recorded yet. Like every gap each holds back the final
+     * report until it is done or accepted in writing with a reason (for example, the Special Court did not order interim
+     * compensation).
+     */
+    private List<Map<String, Object>> pocsoGaps(UUID firId, Map<String, Map<String, Object>> overrides) {
+        var fir = db.sql("""
+                select pocso_case(f.id) as pocso,
+                       exists (select 1 from fir_section s where s.fir_id = f.id and s.act = 'POCSO Act') as has_section
+                from fir f where f.id = ?""").param(firId).query().singleRow();
+        var gaps = new ArrayList<Map<String, Object>>();
+        if (!(Boolean) fir.get("pocso")) return gaps;
+        if (!(Boolean) fir.get("has_section"))
+            gaps.add(gap("pocso-section", "high", "A victim under 18 is recorded in this sexual-offence FIR, but no POCSO Act section"
+                    + " is in it. Add the POCSO section that fits the facts (POCSO 42 keeps the heavier punishment of the two laws).", overrides));
+        var done = db.sql("select distinct step from pocso_step where fir_id = ?").param(firId).query(String.class).set();
+        for (Object[] st : PocsoController.STEPS)
+            if (!done.contains((String) st[0]))
+                gaps.add(gap("pocso-step:" + st[0], "high", POCSO_STEP_TEXT.get((String) st[0]) + " is not recorded yet (" + st[1]
+                        + "; Deadlines, POCSO case steps).", overrides));
+        return gaps;
+    }
+
+    private static final Map<String, String> POCSO_STEP_TEXT = Map.of(
+            "cwc_court_report", "The report to the Child Welfare Committee and the Special Court",
+            "medical_examination", "The medical examination of the child",
+            "statement_chosen_place", "The child's statement at the child's home or chosen place, by a woman officer",
+            "magistrate_statement", "The child's statement before the Magistrate",
+            "support_person", "The support person for the child",
+            "interim_compensation", "The request to the Special Court for interim compensation");
 
     private static Map<String, Object> gap(String key, String severity, String text, Map<String, Map<String, Object>> overrides) {
         var g = new LinkedHashMap<String, Object>();

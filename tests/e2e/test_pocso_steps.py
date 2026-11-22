@@ -1,7 +1,7 @@
 """POCSO case mode in a real browser (item 15, V56): the IO opens a fictional POCSO case on the Deadlines part, sees the
 two 24-hour steps in the deadlines and every step red, records the report to the Child Welfare Committee and the Special
 Court, and that step turns done while its deadline goes; a case without a POCSO section shows no steps; an officer
-outside the case team is refused. Fictional data only."""
+outside the case team is refused; the steps not recorded are gaps of the readiness check. Fictional data only."""
 from playwright.sync_api import expect
 
 from test_load_data import setup_station, sign_in
@@ -50,6 +50,13 @@ def test_the_io_records_a_pocso_step_and_its_deadline_goes(core, page):
     expect(steps.locator(".chip.c-crit")).to_have_count(5)
     expect(page.get_by_text("Report to the Child Welfare Committee and the Special Court (24 hours): by 2026-10-31")).to_have_count(0)
     expect(page.get_by_text("Medical examination of the child (24 hours): by 2026-10-31")).to_be_visible()
+
+    # item 15 (session 125): each step not recorded is a gap of the readiness check; the recorded one is not
+    page.evaluate(f"location.hash = '#/firs/{fir['id']}/readiness'")
+    expect(page.get_by_text("The medical examination of the child is not recorded yet (POCSO 27; BNSS 184(1)", exact=False)).to_be_visible()
+    expect(page.get_by_text("The report to the Child Welfare Committee and the Special Court is not recorded yet", exact=False)).to_have_count(0)
+    expect(page.get_by_text("no POCSO Act section", exact=False)).to_have_count(0)
+    page.evaluate(f"location.hash = '#/firs/{fir['id']}/deadlines'")
 
     # on a phone the steps and the form fit the screen
     page.set_viewport_size({"width": 390, "height": 844})

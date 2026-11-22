@@ -125,4 +125,43 @@ class PocsoApiTest {
         record(io, ok.replace("2026-10-01T12:00", "2026-10-01T10:00")).andExpect(status().isCreated());   // the minute of the information
         record(io, ok).andExpect(status().isCreated());
     }
+    String readiness() {
+        return "/api/firs/" + fir + "/readiness";
+    }
+
+    @Test
+    void aChildVictimInASexualOffenceFirWithoutAPocsoSectionIsAReadinessGapUntilTheSectionIsAdded() throws Exception {
+        db.sql("insert into fir_section (fir_id, act, section) values (?, 'BNS', '64(1)')").param(fir).update();
+        mvc.perform(get(readiness()).header("Authorization", io)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.gaps[?(@.key == 'pocso-section')]").isEmpty())   // no child victim yet: not a POCSO case
+                .andExpect(jsonPath("$.gaps[?(@.key =~ /pocso-step:.*/)]").isEmpty());
+        db.sql("insert into person (fir_id, role, label, identity_known, age_years) values (?, 'victim', 'V1', false, 15)").param(fir).update();
+        mvc.perform(get(readiness()).header("Authorization", io))
+                .andExpect(jsonPath("$.gaps[?(@.key == 'pocso-section')].severity").value("high"))
+                .andExpect(jsonPath("$.gaps[?(@.key == 'pocso-section')].text").value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("no POCSO Act section"))))
+                .andExpect(jsonPath("$.openGaps").value(7));
+        pocsoSection();
+        mvc.perform(get(readiness()).header("Authorization", io))
+                .andExpect(jsonPath("$.gaps[?(@.key == 'pocso-section')]").isEmpty())
+                .andExpect(jsonPath("$.openGaps").value(6));
+    }
+
+    @Test
+    void eachPocsoStepNotRecordedIsAGapAndARecordedOrAcceptedStepIsNot() throws Exception {
+        pocsoSection();
+        mvc.perform(get(readiness()).header("Authorization", io))
+                .andExpect(jsonPath("$.gaps[0].key").value("pocso-step:cwc_court_report"))
+                .andExpect(jsonPath("$.gaps[0].text").value(org.hamcrest.Matchers.containsString("POCSO 19(6)")))
+                .andExpect(jsonPath("$.gaps[5].key").value("pocso-step:interim_compensation"))
+                .andExpect(jsonPath("$.openGaps").value(6));
+        record(io, "{\"step\":\"medical_examination\",\"doneAt\":\"2026-10-01T12:00:00+05:30\"}").andExpect(status().isCreated());
+        mvc.perform(post(readiness() + "/overrides").header("Authorization", io).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"gapKey\":\"pocso-step:interim_compensation\",\"reason\":\"The family did not want it asked for; recorded in the case diary\"}"))
+                .andExpect(status().isCreated());
+        mvc.perform(get(readiness()).header("Authorization", io))
+                .andExpect(jsonPath("$.gaps[?(@.key == 'pocso-step:medical_examination')]").isEmpty())
+                .andExpect(jsonPath("$.gaps[?(@.key == 'pocso-step:interim_compensation')].override.reason").isNotEmpty())
+                .andExpect(jsonPath("$.openGaps").value(4));
+        mvc.perform(get(readiness()).header("Authorization", outsider)).andExpect(status().isNotFound());
+    }
 }
