@@ -127,6 +127,7 @@ test('a protected case is not sent to the AI; a failed list read shows its error
   render(<FactCheck firId="f1" text={TEXT} victimProtected />)
   expect(await screen.findByText(/not offered on a case that protects the victim's identity/)).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Find facts with AI' })).toBeNull()
+  expect(screen.queryByRole('button', { name: "Compare the FIR with the case's documents using AI" })).toBeNull()   // session 123
   expect(calls.some((c) => c.url.startsWith('/ai'))).toBe(false)
   cleanup()
   stub({ facts: { status: 500, body: {} } })
@@ -153,6 +154,7 @@ test('on a signed complaint the same check names the complaint to the gateway an
   const calls = stub({ generate: draft(JSON.stringify([LIST[1]])) })
   render(<FactCheck firId="c1" text={TEXT} victimProtected={false} complaint />)
   await screen.findByText('No fact of this FIR is confirmed yet.')
+  expect(screen.queryByRole('button', { name: "Compare the FIR with the case's documents using AI" })).toBeNull()   // no documents before an FIR
   fireEvent.click(screen.getByRole('button', { name: 'Find facts with AI' }))
   await screen.findByText('AI draft · check each fact')
   expect(calls.find((c) => c.url === '/ai/v1/generate')!.body).toMatchObject({ feature: 'fir_extract', case_ref: 'c1', case_kind: 'complaint' })
@@ -166,6 +168,7 @@ test('on an FIR the gateway is told the case is an FIR', async () => {
   const calls = stub({ generate: draft('[]') })
   render(<FactCheck firId="f1" text={TEXT} victimProtected={false} />)
   await screen.findByText('No fact of this FIR is confirmed yet.')
+  expect(screen.getByRole('button', { name: "Compare the FIR with the case's documents using AI" })).toBeTruthy()   // session 123: documents disagree
   fireEvent.click(screen.getByRole('button', { name: 'Find facts with AI' }))
   await screen.findByText('AI draft · check each fact')
   expect(calls.find((c) => c.url === '/ai/v1/generate')!.body).toMatchObject({ case_kind: 'fir' })

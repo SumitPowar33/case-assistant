@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ai, send } from './api'
 import { FACT_PROMPT_VERSION, factPrompt, readFacts, type Fact, type Read } from './factCheck'
+import FactConflicts from './FactConflicts'
 import FactLinks from './FactLinks'
 import { fmt } from './formats'
 import { useLoad } from './useLoad'
@@ -90,6 +91,7 @@ export default function FactCheck({ firId, text, victimProtected, complaint }: {
         ))}</ul>
       ) : <p>{t('facts.noneYet')}</p>}
       {!complaint && !victimProtected && confirmed.length > 0 && <FactLinks firId={firId} version={version} />}
+      {!complaint && !victimProtected && <FactConflicts firId={firId} firText={text} />}
       {victimProtected ? <p role="note">{t('facts.notOnProtected')}</p> : (
         <p><button type="button" onClick={() => void find()} disabled={busy}>{t(busy ? 'facts.reading' : 'facts.find')}</button>{' '}
           <small>{t('facts.sends')}</small></p>
