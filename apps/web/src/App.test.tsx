@@ -314,6 +314,23 @@ test('the Court and trial link is for accounts of a station and opens the tracke
   expect(await screen.findByRole('heading', { name: 'Court and trial tracker' })).toBeTruthy()
 })
 
+test('the Duty roster link is for accounts of a station and opens the roster at #/roster', async () => {
+  mockApi()
+  Object.assign(routes, { ['/api/duty-roster?stationId=' + io.user.station_id]: { from: '2026-11-24', rows: [], now: { shift: 'morning', on_duty: [] }, can_manage: false } })
+  const nav = () => within(screen.getByRole('navigation', { name: 'Main' }))
+  const { unmount } = render(<App />)
+  expect(nav().getByRole('link', { name: 'Duty roster' }).getAttribute('href')).toBe('#/roster')
+  unmount()
+  setSession({ ...io, user: { ...io.user, station_id: null } })
+  const second = render(<App />)
+  expect(nav().queryByRole('link', { name: 'Duty roster' })).toBeNull()
+  second.unmount()
+  setSession(io)
+  window.location.hash = '#/roster'
+  render(<App />)
+  expect(await screen.findByRole('heading', { name: 'Duty roster' })).toBeTruthy()
+})
+
 test('the Old to new law link is for every signed-in account and opens the finder at #/laws', async () => {
   mockApi()
   Object.assign(routes, { '/api/law-finder': { status: 'draft', note: '', entries: [] } })

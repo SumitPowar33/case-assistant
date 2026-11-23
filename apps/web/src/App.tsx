@@ -17,6 +17,7 @@ import Supervisor from './Supervisor'
 import Property from './Property'
 import ExpertRequests from './ExpertRequests'
 import Court from './Court'
+import DutyRoster from './DutyRoster'
 import LawFinder from './LawFinder'
 import LoginPage from './LoginPage'
 import { ComplaintPage, FrontDeskPage } from './FrontDesk'
@@ -83,6 +84,7 @@ export default function App() {
           {session.user.station_id && link('#/property', t('nav.property'))}
           {session.user.station_id && link('#/expert', t('nav.expert'))}
           {session.user.station_id && link('#/court', t('nav.court'))}
+          {session.user.station_id && link('#/roster', t('nav.roster'))}
           {supervisor && link('#/supervisor', t('nav.supervisor'))}
           {auditor && link('#/reads', t('nav.reads'))}
           {auditor && link('#/audit', t('nav.audit'))}
@@ -120,7 +122,7 @@ export default function App() {
         <span className="chip demo-chip">{t('app.tagline')}</span>
         {session?.user.acting?.map((a) => <span key={a.role} className="chip demo-chip" role="status">{t('acting.banner').replace('{role}', a.role.toUpperCase()).replace('{date}', fmt(a.ends_at))}</span>)}
       </div>
-      <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} only={firPart} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : hash === '#/audit' ? <AuditPage /> : hash === '#/state-setup' ? <StatePage /> : hash === '#/acting' ? <ActingPage /> : hash === '#/supervisor' ? <Supervisor /> : hash === '#/property' ? <Property /> : hash === '#/expert' ? <ExpertRequests /> : hash === '#/court' ? <Court /> : hash === '#/laws' ? <LawFinder /> : hash === '#/firs' ? <FirList /> : <Dashboard />}</main>
+      <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} only={firPart} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : hash === '#/audit' ? <AuditPage /> : hash === '#/state-setup' ? <StatePage /> : hash === '#/acting' ? <ActingPage /> : hash === '#/supervisor' ? <Supervisor /> : hash === '#/property' ? <Property /> : hash === '#/expert' ? <ExpertRequests /> : hash === '#/court' ? <Court /> : hash === '#/roster' ? <DutyRoster /> : hash === '#/laws' ? <LawFinder /> : hash === '#/firs' ? <FirList /> : <Dashboard />}</main>
     </TypingContext.Provider>
     </ScreenLangContext.Provider>
   )
