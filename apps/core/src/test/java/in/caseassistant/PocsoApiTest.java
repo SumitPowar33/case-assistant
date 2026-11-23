@@ -164,4 +164,30 @@ class PocsoApiTest {
                 .andExpect(jsonPath("$.openGaps").value(4));
         mvc.perform(get(readiness()).header("Authorization", outsider)).andExpect(status().isNotFound());
     }
+
+    @Test
+    void aRecordedStepIsOnThatDaysCaseDiaryPageAndNotOnAnotherDay() throws Exception {
+        pocsoSection();
+        record(io, "{\"step\":\"support_person\",\"doneAt\":\"2026-10-01T16:00:00+05:30\"}").andExpect(status().isCreated());
+        mvc.perform(get("/api/firs/" + fir + "/diary?date=2026-10-01").header("Authorization", io))
+                .andExpect(jsonPath("$.events[?(@.what=='pocso_step')].detail").value("support_person"));
+        mvc.perform(get("/api/firs/" + fir + "/diary?date=2026-10-02").header("Authorization", io))
+                .andExpect(jsonPath("$.events[?(@.what=='pocso_step')]").isEmpty());
+        mvc.perform(get("/api/firs/" + fir + "/diary?date=2026-10-01").header("Authorization", outsider)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void theDashboardListsAPocsoCaseWithOpenStepsUntilEveryStepIsRecorded() throws Exception {
+        mvc.perform(get("/api/dashboard").header("Authorization", io)).andExpect(jsonPath("$.pocso_open.length()").value(0));   // not a POCSO case
+        pocsoSection();
+        mvc.perform(get("/api/dashboard").header("Authorization", io)).andExpect(jsonPath("$.pocso_open.length()").value(1))
+                .andExpect(jsonPath("$.pocso_open[0].fir_no").value(31)).andExpect(jsonPath("$.pocso_open[0].open_steps").value(6));
+        record(io, "{\"step\":\"support_person\",\"doneAt\":\"2026-10-01T16:00:00+05:30\"}");
+        record(sho, "{\"step\":\"support_person\",\"doneAt\":\"2026-10-01T17:00:00+05:30\"}");     // the same step again counts once
+        mvc.perform(get("/api/dashboard").header("Authorization", io)).andExpect(jsonPath("$.pocso_open[0].open_steps").value(5));
+        mvc.perform(get("/api/dashboard").header("Authorization", outsider)).andExpect(jsonPath("$.pocso_open.length()").value(0));   // not on the team
+        for (String st : new String[] {"cwc_court_report", "medical_examination", "statement_chosen_place", "magistrate_statement", "interim_compensation"})
+            record(io, "{\"step\":\"" + st + "\",\"doneAt\":\"2026-10-01T18:00:00+05:30\"}").andExpect(status().isCreated());
+        mvc.perform(get("/api/dashboard").header("Authorization", io)).andExpect(jsonPath("$.pocso_open.length()").value(0));
+    }
 }

@@ -1388,5 +1388,7 @@
  "sreport.saved": "నివేదిక నమోదైంది.",
  "sreport.sent": "{court}కు {date}న పంపారు, నమోదు చేసినవారు {name}",
  "sreport.allReported": "చేర్చిన ప్రతి సెక్షన్‌కు నివేదిక ఇచ్చారు.",
- "diaryEvent.section_reported": "చేర్చిన సెక్షన్ల నివేదిక మేజిస్ట్రేట్‌కు పంపారు"
+ "diaryEvent.section_reported": "చేర్చిన సెక్షన్ల నివేదిక మేజిస్ట్రేట్‌కు పంపారు",
+ "diaryEvent.pocso_step": "POCSO దశ నమోదైంది",
+ "dash.pocsoOpen": "POCSO దశలు ఇంకా తెరిచి ఉన్నాయి: {n}"
 }

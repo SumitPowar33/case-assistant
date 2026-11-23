@@ -1388,5 +1388,7 @@
  "sreport.saved": "अहवाल नोंदवला.",
  "sreport.sent": "{court} यांना {date} रोजी पाठवला, नोंद करणारे {name}",
  "sreport.allReported": "प्रत्येक जोडलेल्या कलमाचा अहवाल दिला आहे.",
- "diaryEvent.section_reported": "जोडलेल्या कलमांचा अहवाल दंडाधिकाऱ्यांना पाठवला"
+ "diaryEvent.section_reported": "जोडलेल्या कलमांचा अहवाल दंडाधिकाऱ्यांना पाठवला",
+ "diaryEvent.pocso_step": "POCSO ची पायरी नोंदवली",
+ "dash.pocsoOpen": "POCSO च्या पायऱ्या अजून उघड्या: {n}"
 }

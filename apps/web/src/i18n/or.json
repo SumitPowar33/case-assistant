@@ -1388,5 +1388,7 @@
  "sreport.saved": "ରିପୋର୍ଟ ଲେଖାଗଲା।",
  "sreport.sent": "{court}କୁ {date}ରେ ପଠାଗଲା, ଲେଖିଥିବା {name}",
  "sreport.allReported": "ପ୍ରତ୍ୟେକ ଯୋଗ ହୋଇଥିବା ଧାରାର ରିପୋର୍ଟ ହୋଇଛି।",
- "diaryEvent.section_reported": "ଯୋଗ ହୋଇଥିବା ଧାରାର ରିପୋର୍ଟ ମାଜିଷ୍ଟ୍ରେଟଙ୍କୁ ପଠାଗଲା"
+ "diaryEvent.section_reported": "ଯୋଗ ହୋଇଥିବା ଧାରାର ରିପୋର୍ଟ ମାଜିଷ୍ଟ୍ରେଟଙ୍କୁ ପଠାଗଲା",
+ "diaryEvent.pocso_step": "POCSO ପଦକ୍ଷେପ ଦର୍ଜ ହେଲା",
+ "dash.pocsoOpen": "POCSO ପଦକ୍ଷେପ ଏବେ ବି ଖୋଲା: {n}"
 }

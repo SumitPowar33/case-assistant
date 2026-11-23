@@ -1388,5 +1388,7 @@
  "sreport.saved": "റിപ്പോർട്ട് രേഖപ്പെടുത്തി.",
  "sreport.sent": "{court}ക്ക് {date}ന് അയച്ചു, രേഖപ്പെടുത്തിയത് {name}",
  "sreport.allReported": "ചേർത്ത ഓരോ വകുപ്പിന്റെയും റിപ്പോർട്ട് നൽകി.",
- "diaryEvent.section_reported": "ചേർത്ത വകുപ്പുകളുടെ റിപ്പോർട്ട് മജിസ്ട്രേറ്റിന് അയച്ചു"
+ "diaryEvent.section_reported": "ചേർത്ത വകുപ്പുകളുടെ റിപ്പോർട്ട് മജിസ്ട്രേറ്റിന് അയച്ചു",
+ "diaryEvent.pocso_step": "POCSO ഘട്ടം രേഖപ്പെടുത്തി",
+ "dash.pocsoOpen": "POCSO ഘട്ടങ്ങൾ ഇനിയും തുറന്നിരിക്കുന്നു: {n}"
 }

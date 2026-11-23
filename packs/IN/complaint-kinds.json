@@ -42,8 +42,31 @@
     "missing_child": {
       "label": "Missing child",
       "steps": [
-        {"id": "register_fir", "text": "Register an FIR for a missing child at once; do not wait", "within_minutes": 60, "basis": "Supreme Court, Bachpan Bachao Andolan v. Union of India (2013)"},
-        {"id": "circulate_photo", "text": "Send the photograph and description to neighbouring police stations, railway police and the missing-persons portal", "within_minutes": 120}
+        {"id": "register_fir", "text": "Register an FIR for a missing child (under 18) at once; do not wait, and treat the case as a possible abduction or trafficking until the child is found", "within_minutes": 60, "basis": "Supreme Court, Bachpan Bachao Andolan v. Union of India (2013)"},
+        {"id": "record_description", "text": "Write down the child's name, age, height, clothing, marks, phone, friends, the place and time last seen, and take a recent photograph", "within_minutes": 60},
+        {"id": "circulate_photo", "text": "Send the photograph and description to neighbouring police stations, railway police, bus stands and the control room", "within_minutes": 120},
+        {"id": "track_child", "text": "Upload the child's details to the national missing-children portal (TrackChild)", "within_minutes": 1440, "basis": "Ministry of Women and Child Development, TrackChild portal"},
+        {"id": "juvenile_unit", "text": "Inform the Special Juvenile Police Unit and the Anti-Human Trafficking Unit of the district", "within_minutes": 1440, "basis": "Juvenile Justice Act 2015, section 107"}
+      ]
+    },
+    "kidnapping_for_ransom": {
+      "label": "Kidnapping for ransom (BNS 140)",
+      "steps": [
+        {"id": "record_demand", "text": "Write down every demand call or message: number, time, words used and the amount asked; keep the phones and do not let anyone delete anything", "within_minutes": 30},
+        {"id": "inform_senior", "text": "Inform the Superintendent of Police and the control room so a team can be formed", "within_minutes": 60},
+        {"id": "request_call_data", "text": "Ask the telecom company, by notice, for call details and tower locations of the numbers used", "within_minutes": 60, "basis": "BNSS 94"},
+        {"id": "alert_stations", "text": "Send the description of the person taken and of any vehicle to neighbouring stations, check posts and the railway police", "within_minutes": 60},
+        {"id": "advise_family", "text": "Tell the family not to pay or hand anything over except as the police plan with them", "within_minutes": 60}
+      ]
+    },
+    "custodial_death": {
+      "label": "Death in police custody (inquiry by a Magistrate, BNSS 196)",
+      "steps": [
+        {"id": "inform_magistrate", "text": "Inform the Judicial or Metropolitan Magistrate who holds the inquiry into the death", "within_minutes": 60, "basis": "BNSS 196"},
+        {"id": "preserve_records", "text": "Keep the lock-up register, the general diary and all CCTV footage of the station and of the place of death, sealed", "within_minutes": 60},
+        {"id": "inform_relatives", "text": "Inform the relatives of the person who died", "within_minutes": 120},
+        {"id": "post_mortem", "text": "Post-mortem examination within 24 hours of the death, by two doctors where the rules say so, recorded on video", "within_minutes": 1440, "basis": "BNSS 196(3)"},
+        {"id": "inform_nhrc", "text": "Report the death to the National Human Rights Commission", "within_minutes": 1440, "basis": "NHRC guidelines on deaths in custody"}
       ]
     },
     "vehicle_theft": {

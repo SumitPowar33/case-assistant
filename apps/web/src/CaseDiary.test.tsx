@@ -58,3 +58,9 @@ test('a page that cannot be read says why', async () => {
   render(<CaseDiary firId="f1" />)
   expect((await screen.findByRole('alert')).textContent).toContain('404')
 })
+
+test('a POCSO step recorded in the app shows on the page by its name, not its code', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ...today, events: [{ at: '2026-11-02T05:35:00Z', what: 'pocso_step', detail: 'support_person' }] }) })))
+  render(<CaseDiary firId="f1" />)
+  expect(await screen.findByText('POCSO step recorded: Support person for the child')).toBeTruthy()
+})

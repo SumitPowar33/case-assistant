@@ -275,6 +275,19 @@ def test_complaint_kinds_are_well_formed_and_marked_as_draft_until_reviewed():
     assert "other" in seen and "cyber_financial_fraud" in seen
 
 
+def test_the_high_alert_kinds_have_first_hours_steps_and_each_deadline_is_reasoned():
+    """Item 15 (plan section 6): missing child, kidnapping for ransom and death in custody each carry a golden-hour checklist; the
+    custody death's Magistrate and post-mortem steps cite BNSS 196, and none of these kinds hides the front desk's text."""
+    kinds = json.loads((ROOT / "IN" / "complaint-kinds.json").read_text(encoding="utf-8"))["kinds"]
+    assert {"missing_child", "kidnapping_for_ransom", "custodial_death"} <= set(kinds)
+    for kid in ("missing_child", "kidnapping_for_ransom", "custodial_death"):
+        assert len(kinds[kid]["steps"]) >= 4 and not kinds[kid].get("protects_identity"), kid
+        assert any(0 < s.get("within_minutes", 0) <= 120 for s in kinds[kid]["steps"]), kid
+    custody = {s["id"]: s for s in kinds["custodial_death"]["steps"]}
+    assert custody["inform_magistrate"]["basis"] == "BNSS 196" and custody["post_mortem"]["within_minutes"] == 1440
+    assert {"record_description", "track_child", "juvenile_unit"} <= {s["id"] for s in kinds["missing_child"]["steps"]}
+
+
 def test_the_kinds_naming_a_protected_victim_protect_identity():
     """Before an FIR, only these kinds keep the information from the front desk: sexual offences (BNS 72, POCSO 23) and acid
     attacks (decision 4 of 2 Nov 2026). The flag is a boolean; a state module may add a protected kind, never redeclare one."""

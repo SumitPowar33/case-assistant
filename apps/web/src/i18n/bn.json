@@ -1388,5 +1388,7 @@
  "sreport.saved": "রিপোর্ট নথিভুক্ত হয়েছে।",
  "sreport.sent": "{court}-এ {date} তারিখে পাঠানো, নথিভুক্ত করেছেন {name}",
  "sreport.allReported": "প্রতিটি যোগ করা ধারার রিপোর্ট হয়েছে।",
- "diaryEvent.section_reported": "যোগ করা ধারার রিপোর্ট ম্যাজিস্ট্রেটের কাছে পাঠানো হয়েছে"
+ "diaryEvent.section_reported": "যোগ করা ধারার রিপোর্ট ম্যাজিস্ট্রেটের কাছে পাঠানো হয়েছে",
+ "diaryEvent.pocso_step": "POCSO ধাপ নথিভুক্ত হয়েছে",
+ "dash.pocsoOpen": "POCSO ধাপ এখনও খোলা: {n}"
 }

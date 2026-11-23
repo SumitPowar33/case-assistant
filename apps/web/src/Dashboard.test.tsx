@@ -62,3 +62,13 @@ test('without a signed-in user the welcome has no name (the screen is only reach
   render(<Dashboard />)
   expect(await screen.findByRole('heading', { name: /Welcome/ })).toBeTruthy()
 })
+
+test('a POCSO case with steps still open is listed in red with its count, linked to its deadlines, even when no deadline is near', async () => {
+  stub({ cases: 1, due_in_7_days: 0, notices_waiting: 0, deadlines: [], pocso_open: [{ fir_id: 'f9', fir_no: 31, fir_year: 2026, open_steps: 5 }] })
+  render(<Dashboard />)
+  const attention = within(await screen.findByRole('region', { name: 'Needs your attention' }))
+  expect(attention.getByText(/FIR 31\/2026 · POCSO steps still open: 5/)).toBeTruthy()
+  expect(attention.getByText('Critical')).toBeTruthy()
+  expect(attention.queryByText('Nothing falls due in your cases.')).toBeNull()
+  expect(attention.getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('#/firs/f9/deadlines')
+})

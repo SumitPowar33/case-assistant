@@ -4,7 +4,7 @@ import { useLoad } from './useLoad'
 import { useT, type Key } from './i18n'
 
 type Deadline = { fir_id: string; fir_no: number; fir_year: number; kind: string; due_on: string; basis: string; days_left: number }
-type Board = { cases: number; due_in_7_days: number; notices_waiting: number; deadlines: Deadline[] }
+type Board = { cases: number; due_in_7_days: number; notices_waiting: number; deadlines: Deadline[]; pocso_open?: { fir_id: string; fir_no: number; fir_year: number; open_steps: number }[] }
 
 /** How urgent a deadline is, as a word and a colour (the colour never alone). */
 function urgency(daysLeft: number): { chip: string; key: Key } {
@@ -43,7 +43,14 @@ export default function Dashboard() {
         <div className="two-col">
           <section className="flush" aria-labelledby="attention">
             <h2 id="attention">{t('dash.attention')}</h2>
-            {soon.length === 0 ? <p className="row">{t('dash.nothing')}</p> : soon.map((d, i) => {
+            {(data.pocso_open ?? []).map((c) => (
+              <div className="row" key={c.fir_id}>
+                <span className="chip c-crit">{t('chip.critical')}</span>
+                <div><strong>{t('fir.title', { no: c.fir_no, year: c.fir_year })} · {t('dash.pocsoOpen', { n: c.open_steps })}</strong></div>
+                <a className="btn" href={`#/firs/${c.fir_id}/deadlines`}>{t('dash.open')}</a>
+              </div>
+            ))}
+            {soon.length === 0 && !data.pocso_open?.length ? <p className="row">{t('dash.nothing')}</p> : soon.map((d, i) => {
               const u = urgency(d.days_left)
               return (
                 <div className="row" key={i}>

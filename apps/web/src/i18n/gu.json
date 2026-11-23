@@ -1388,5 +1388,7 @@
  "sreport.saved": "અહેવાલ નોંધાયો.",
  "sreport.sent": "{court}ને {date}એ મોકલ્યો, નોંધનાર {name}",
  "sreport.allReported": "દરેક ઉમેરેલી કલમનો અહેવાલ થઈ ગયો છે.",
- "diaryEvent.section_reported": "ઉમેરેલી કલમોનો અહેવાલ મેજિસ્ટ્રેટને મોકલાયો"
+ "diaryEvent.section_reported": "ઉમેરેલી કલમોનો અહેવાલ મેજિસ્ટ્રેટને મોકલાયો",
+ "diaryEvent.pocso_step": "POCSO નું પગલું નોંધાયું",
+ "dash.pocsoOpen": "POCSO ના પગલાં હજી ખુલ્લાં: {n}"
 }

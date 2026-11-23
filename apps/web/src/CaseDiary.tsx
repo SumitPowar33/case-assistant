@@ -34,7 +34,7 @@ export default function CaseDiary({ firId }: { firId: string }) {
   const list = <T,>(x: T[] | undefined) => (Array.isArray(x) ? x : [])
   const entries = list(data.entries), events = list(data.events), days = list(data.days)
   const lines = [...entries.map((e) => ({ at: e.at, officer: true, text: e.text, by: e.author_name })),
-    ...events.map((e) => ({ at: e.at, officer: false, text: t.code('diaryEvent', e.what) + (e.detail ? `: ${e.detail}` : ''), by: '' }))]
+    ...events.map((e) => ({ at: e.at, officer: false, text: t.code('diaryEvent', e.what) + (e.detail ? `: ${e.what === 'pocso_step' ? t.code('pocsoStep', e.detail) : e.detail}` : ''), by: '' }))]
     .sort((a, b) => a.at.localeCompare(b.at))
   const open = data.today && !data.page
   return (

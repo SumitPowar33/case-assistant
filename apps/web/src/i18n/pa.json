@@ -1388,5 +1388,7 @@
  "sreport.saved": "ਰਿਪੋਰਟ ਦਰਜ ਹੋ ਗਈ।",
  "sreport.sent": "{court} ਨੂੰ {date} ਨੂੰ ਭੇਜੀ, ਦਰਜ ਕਰਨ ਵਾਲੇ {name}",
  "sreport.allReported": "ਹਰ ਜੋੜੀ ਧਾਰਾ ਦੀ ਰਿਪੋਰਟ ਹੋ ਚੁੱਕੀ ਹੈ।",
- "diaryEvent.section_reported": "ਜੋੜੀਆਂ ਧਾਰਾਵਾਂ ਦੀ ਰਿਪੋਰਟ ਮੈਜਿਸਟ੍ਰੇਟ ਨੂੰ ਭੇਜੀ ਗਈ"
+ "diaryEvent.section_reported": "ਜੋੜੀਆਂ ਧਾਰਾਵਾਂ ਦੀ ਰਿਪੋਰਟ ਮੈਜਿਸਟ੍ਰੇਟ ਨੂੰ ਭੇਜੀ ਗਈ",
+ "diaryEvent.pocso_step": "POCSO ਦਾ ਕਦਮ ਦਰਜ ਹੋਇਆ",
+ "dash.pocsoOpen": "POCSO ਦੇ ਕਦਮ ਅਜੇ ਖੁੱਲ੍ਹੇ: {n}"
 }

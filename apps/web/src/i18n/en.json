@@ -1388,5 +1388,7 @@
  "sreport.saved": "The report is recorded.",
  "sreport.sent": "sent to {court} on {date}, recorded by {name}",
  "sreport.allReported": "Every added section has been reported.",
- "diaryEvent.section_reported": "Report on added sections sent to the Magistrate"
+ "diaryEvent.section_reported": "Report on added sections sent to the Magistrate",
+ "diaryEvent.pocso_step": "POCSO step recorded",
+ "dash.pocsoOpen": "POCSO steps still open: {n}"
 }
