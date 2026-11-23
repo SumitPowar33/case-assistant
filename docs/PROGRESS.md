@@ -101,6 +101,7 @@ Done in session 28: evidence import file (ef845fb), notices import file (a792dea
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
 Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)).
 Done in session 31: speech input at the front desk; module 1 is finished.
+Done in session 128 (24 Nov, 02:05 IST scheduled run, last of the night, Sumit away): item 18, first paper: the arrest memo printed in the court format (no migration, web only).
 Done in session 127 (23 to 24 Nov, scheduled nightly run, Sumit away): item 16, first part: the station duty roster (V66, `#/roster`).
 Done in session 126 (23 Nov, scheduled run, Sumit away): item 15: golden-hour checklists for missing child, kidnapping for ransom and custodial death; POCSO steps in the case diary and on the Dashboard's red list. No migration.
 Done in session 125 (23 Nov, 02:05 IST weekend run, last of the night, Sumit away): item 3, MPID Act 3 punishment class (decision 19), no MH roles (decision 20); item 15, the POCSO section and the POCSO steps in the readiness check (decision 21). No migration.
@@ -212,7 +213,7 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 16. **Station duty roster** (plan section 5). First part DONE (session 127, V66): shifts, posts, weekly offs and leave per station, who is on duty now, written by the SHO (`roster.manage`), kept as written and taken back with a reason (`#/roster`). Left for 16: each state's shift hours from its pack, swaps with approval, the court-date clash warning (needs the court tracker's dates per officer), the duty officer on the front desk and the Dashboard, 112 calls to the beat officer, a screenshot against a board (none exists for it).
 17. **Ask the case file as real RAG** (plan section 9; replaces the canned board answers; the eight fixes are the tests). First part DONE (session 92): BM25 ranking in the browser over this case's pieces (passage names searched too, "call" finds "caller"), each piece named by its lines (flaw 3, no pages: the documents are typed text), checked English translations of statements in the case file, and the evaluation set `askFile.eval.test.ts` (flaws 4, 6, 8: 12 questions with known answer pieces, a disagreement, 3 questions the file has no words for). Left: embeddings kept on state servers (needs an on-premises embedding model and where the index lives, question 1 of session 92), more documents (bank replies as text and 63(4) certificates; money trail DONE in session 94; 63(4) certificates DONE in session 95; searches, lab/hospital requests and court events DONE in session 93), opening a source on click, the AI's own answers judged on the set (needs a provider), questions in Indian languages beyond word matching, the "note in case diary" button.
    **Session 106 (hybrid RAG, V58):** gateway `POST /v1/embed` (local embedder only, `ai_embed` audit rows, 120 calls per officer per 10 minutes; `EMBED_BACKEND=fake` offline stand-in; the real model is a deployment step), vectors kept in PostgreSQL per case, model and text hash (`case_passage_vector`, `CaseVectorController`), BM25 and cosine fused by reciprocal rank in `askFile.ts`, a source opens as its whole passage with the piece marked, "Note in case diary" (editable, saved on the officer's click), Hindi and Marathi questions in the evaluation set, the answers scored on the set with a stand-in provider (the gateway's fake provider only echoes the prompt). Left: bank replies as text (decision 3), the real model (download, `EMBED_MIN_SIMILARITY` tuning, scoring with a real provider), Hindi and Marathi refusal guards beyond the draft word list (priority 4).
-18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
+18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60); arrest memo (BNSS 36) done (session 128, from the Arrests part: "Show the arrest memo as paper", then print). Left: the others, and the FIR number repeated on every page of a long paper.
 Real-time screens (plan section 10) after these, in that order.
 
 ## 22 Nov 2026, session 122 (02:05 IST weekend run, last of the night, Sumit away)
@@ -242,6 +243,30 @@ Questions for Sumit:
 - Session 125 (02:05 run, last of the night): priority 8 started. Item 3: MPID Act 3 gets the 60-day class in a draft MH punishment table, no MH roles of its own. Item 15: a child victim's FIR without a POCSO section, and each POCSO step not recorded, are gaps of the readiness check. No migration.
 - `scripts/test-all.sh` at the end of session 125: all 8 suites PASS. Coverage: core 99.06% lines / 96.70% branches, web unchanged (no web change; 99.97 / 97.63 / 98.89 in session 124), gateway 99%.
 - Open questions: session 124's 1 (OCR on protected cases), session 123's 1 and 3, and session 125's 1 to 3 below.
+
+## 24 Nov 2026, session 128 (02:05 IST scheduled run, last of the night, Sumit away)
+Started from `setup/seed` (session 127 notes). The clone was on `master`; `git fetch` and `checkout setup/seed` worked (no `add_repo` needed). PostgreSQL started, role `caseapp` and both databases made, Python and Node packages installed. Priorities 1 to 7 are done or wait for Sumit / a model download (see sessions 126 and 127), so this session took priority 8: item 18, court-format papers. The first baseline run was cut off by my own 10-minute timeout, and I edited web files while it ran, so it is not a clean baseline; the full run after the change is below (the change is small and web only, and the branch was green at the end of session 127).
+
+**Item 18, arrest memo (BNSS 36) as a court-format paper (no migration):**
+- Arrests part: a button "Show the arrest memo as paper" per arrest opens one paper at the foot of the part (only one at a time, so the print rule `.print-copy` never overlaps two). The paper holds the heading, the FIR number, numbered paragraphs (person arrested, date/time/place, grounds, person informed, arresting officer; a line with nothing recorded is left out) and the signature lines of the arresting officer, the person arrested and a witness. It shows the memo as it stands after corrections (the list already gives the newest). "Print the arrest memo" uses the browser's print; `index.css` prints only the paper.
+- `@page` now carries a foot "page / pages" (Chromium; not checked on paper).
+- 8 new keys in all 11 screen catalogs (ten are drafts). Web: one new `Arrests.test.tsx` test; `FirDetail` passes the FIR title.
+
+**Tests:** `scripts/test-all.sh`: repo rules PASS, packs PASS, xlit PASS, ai-gateway PASS, web PASS, database rules PASS, core PASS, e2e PASS (all 8). Coverage: web 99.98 / 97.53 / 98.91 (710 tests), core 99.07% lines / 96.59% branches, gateway unchanged (99%). No gate raised (none rose by 2 points).
+
+Skipped / not checked: the other papers of item 18; the FIR number is not repeated on every page of a long paper (browsers cannot repeat a text per page; the memo is one page); no look at real paper or a PDF of the print; no sample state form was supplied, so the paragraph order follows the memo fields, not a state's form; the accused's name is printed as recorded (an accused is never masked by the app today). No time was left for older-code tests after a long wait for the suites.
+
+Next: item 18 (seizure memo from the Property screen, BNSS 94 notice, FIR copy, 63(4) certificate, diary page, chargesheet), then the real-time screens, item 15 rest, item 3's Marathi playbook texts when a reviewer is named.
+
+## Tonight in short (23 to 24 Nov: sessions 127 and 128)
+- Session 127: item 16, first part, the station duty roster (V66, `#/roster`).
+- Session 128 (last of the night): item 18, the arrest memo printed in the court format. Web only.
+- `scripts/test-all.sh` after session 128: all 8 suites PASS. Coverage: core 99.07% / 96.59%, web 99.98 / 97.53 / 98.91, gateway 99%.
+
+Questions for Sumit:
+1. Does your pilot state have a printed arrest memo form whose paragraph order the paper must follow? If you can send a blank one (fictional data), the next paper follows it.
+2. Which paper next: seizure memo, BNSS 94 notice, or the chargesheet with its enclosure lists?
+3. Still open: sessions 123 to 127 (see their entries).
 
 ## 24 Nov 2026, session 127 (scheduled nightly run, Sumit away)
 Started from `setup/seed` (session 126 notes). The clone was on `master`; `git fetch` and `checkout setup/seed` worked (no `add_repo` needed). PostgreSQL started, role `caseapp` and both databases made, Python packages, `npm ci` and the gateway's packages installed (the first full run failed only for the missing gateway packages and for the migration count test, below). Priorities 1 to 7 are done (left only the items that need Sumit or a model download, see session 126), so this session took priority 8: item 3 rest (only the Marathi playbook texts are left, they need a reviewer), item 15 rest (blocked: officer gender not recorded, 112 interface) and so item 16, the duty roster.
