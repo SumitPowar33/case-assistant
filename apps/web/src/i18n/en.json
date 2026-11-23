@@ -1421,5 +1421,13 @@
  "roster.post.patrol": "Patrolling vehicle",
  "roster.post.court": "Court duty",
  "roster.post.lock_up": "Lock-up guard",
- "roster.post.bandobast": "Bandobast"
+ "roster.post.bandobast": "Bandobast",
+ "memo.show": "Show the arrest memo as paper",
+ "memo.label": "Arrest memo, paper copy",
+ "memo.title": "Arrest memo (BNSS 36)",
+ "memo.person": "Person arrested: {name} ({label}).",
+ "memo.when": "Date, time and place of arrest: {date}, {place}.",
+ "memo.officer": "Arrested by: {officer}.",
+ "memo.sign": "Signature of the arresting officer · Signature of the person arrested · Signature of a witness",
+ "memo.print": "Print the arrest memo"
 }

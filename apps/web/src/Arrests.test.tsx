@@ -272,3 +272,34 @@ test('BNSS 58: an arrest without a remand shows when to produce the person; a re
   expect(await screen.findAllByText(/Produce before the Magistrate by 13 Sept 2026, 8:00 am IST/)).toHaveLength(1)   // not for the one released
   expect(screen.getAllByRole('note').map((n) => n.textContent)).toEqual([expect.stringContaining('after the day the 24 hours ended (BNSS 58)')])
 })
+
+test('the arrest memo is shown as a court-format paper for one arrest only and prints from its button', async () => {
+  stub({ '/firs/f1/arrests': [
+    { ...base, id: 'a1', first_remand_on: null, chargesheet_last_day: null, informed_contact: '99999 00000' },
+    { ...base, id: 'a2', person_label: 'A2', place: 'Otherpur', informed_name: null, arresting_officer_name: null, first_remand_on: null, chargesheet_last_day: null },
+  ] })
+  const print = vi.fn()
+  vi.stubGlobal('print', print)
+  render(<Arrests firId="f1" firTitle="FIR 9/2026" people={people} version={0} onSaved={() => {}} />)
+  const buttons = await screen.findAllByRole('button', { name: 'Show the arrest memo as paper' })
+  expect(screen.queryByLabelText('Arrest memo, paper copy')).toBeNull()
+  fireEvent.click(buttons[0])
+  const paper = screen.getByLabelText('Arrest memo, paper copy')
+  expect(paper.className).toBe('print-copy')
+  expect(within(paper).getByText('Arrest memo (BNSS 36)')).toBeTruthy()
+  expect(within(paper).getByText('FIR 9/2026')).toBeTruthy()
+  expect(within(paper).getByText('Person arrested: Fictional Accused (A1).')).toBeTruthy()
+  expect(within(paper).getByText(/Grounds: to prevent further offence; proper investigation/)).toBeTruthy()
+  expect(within(paper).getByText(/Informed: Fictional Relative \(99999 00000\)/)).toBeTruthy()
+  expect(within(paper).getByText('Arrested by: SI Fictional.')).toBeTruthy()
+  expect(within(paper).getByText(/Signature of the arresting officer/)).toBeTruthy()
+  fireEvent.click(within(paper).getByRole('button', { name: 'Print the arrest memo' }))
+  expect(print).toHaveBeenCalled()
+  // the second arrest: no informed person and no arresting officer recorded (old record), so those lines are left out
+  fireEvent.click(buttons[1])
+  const second = screen.getByLabelText('Arrest memo, paper copy')
+  expect(screen.getAllByLabelText('Arrest memo, paper copy')).toHaveLength(1)
+  expect(within(second).getByText('Person arrested: A2 (A2).')).toBeTruthy()
+  expect(within(second).getAllByRole('listitem')).toHaveLength(3)
+  expect(within(second).queryByText(/Arrested by/)).toBeNull()
+})

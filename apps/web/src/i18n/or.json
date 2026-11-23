@@ -1421,5 +1421,13 @@
  "roster.post.patrol": "ପ୍ରହରୀ ଗାଡ଼ି",
  "roster.post.court": "କୋର୍ଟ ଡ୍ୟୁଟି",
  "roster.post.lock_up": "ଲକ୍-ଅପ୍ ପହରା",
- "roster.post.bandobast": "ବନ୍ଦୋବସ୍ତ"
+ "roster.post.bandobast": "ବନ୍ଦୋବସ୍ତ",
+ "memo.show": "ଗିରଫ ମେମୋ କାଗଜ ରୂପରେ ଦେଖାନ୍ତୁ",
+ "memo.label": "ଗିରଫ ମେମୋ, କାଗଜ ନକଲ",
+ "memo.title": "ଗିରଫ ମେମୋ (BNSS 36)",
+ "memo.person": "ଗିରଫ ବ୍ୟକ୍ତି: {name} ({label})।",
+ "memo.when": "ଗିରଫର ତାରିଖ, ସମୟ ଓ ସ୍ଥାନ: {date}, {place}।",
+ "memo.officer": "ଗିରଫ କରିଥିବା ଅଧିକାରୀ: {officer}।",
+ "memo.sign": "ଗିରଫ କରିଥିବା ଅଧିକାରୀଙ୍କ ସ୍ୱାକ୍ଷର · ଗିରଫ ବ୍ୟକ୍ତିଙ୍କ ସ୍ୱାକ୍ଷର · ସାକ୍ଷୀଙ୍କ ସ୍ୱାକ୍ଷର",
+ "memo.print": "ଗିରଫ ମେମୋ ଛାପନ୍ତୁ"
 }

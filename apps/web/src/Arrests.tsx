@@ -177,7 +177,31 @@ function ArrestForm({ firId, accused, hint, onSaved }: { firId: string; accused:
   )
 }
 
-export default function Arrests({ firId, people, version, onSaved }: { firId: string; people: Person[] | undefined; version: number; onSaved: () => void }) {
+/**
+ * The arrest memo as paper (BNSS 36, court format of docs/DESIGN.md "Printed papers"): numbered paragraphs, then the signature
+ * lines. It shows the memo as it stands now (the newest corrections count); the browser's own print prints only this paper.
+ */
+function MemoPaper({ a, name, firTitle }: { a: Arrest; name: string; firTitle: string }) {
+  const t = useT()
+  return (
+    <section className="print-copy" aria-label={t('memo.label')}>
+      <h3>{t('memo.title')}</h3>
+      <p>{firTitle}</p>
+      <ol>
+        <li>{t('memo.person', { name, label: a.person_label })}</li>
+        <li>{t('memo.when', { date: fmt(a.arrested_at), place: a.place })}</li>
+        <li>{t('arrest.groundsLine', { grounds: a.grounds.join('; ') })}</li>
+        {a.informed_name && <li>{t('arrest.informedLine', { name: a.informed_name })}{a.informed_contact ? ` (${a.informed_contact})` : ''}</li>}
+        {a.arresting_officer_name && <li>{t('memo.officer', { officer: a.arresting_officer_name })}</li>}
+      </ol>
+      <p>{t('memo.sign')}</p>
+      <button type="button" className="no-print" onClick={() => window.print()}>{t('memo.print')}</button>
+    </section>
+  )
+}
+
+export default function Arrests({ firId, firTitle = '', people, version, onSaved }: { firId: string; firTitle?: string; people: Person[] | undefined; version: number; onSaved: () => void }) {
+  const [memoOf, setMemoOf] = useState<string | null>(null)
   const { data, error } = useLoad<Arrest[]>(`/firs/${firId}/arrests`, version)
   const { data: memoFixes } = useLoad<MemoFix[]>(`/firs/${firId}/arrests/memo-corrections`, version)
   const { data: timeFixes } = useLoad<TimeFix[]>(`/firs/${firId}/arrests/time-corrections`, version)
@@ -218,6 +242,7 @@ export default function Arrests({ firId, people, version, onSaved }: { firId: st
             {(timeFixes ?? []).filter((c) => c.arrest_id === a.id).map((c) => (
               <small key={c.id}><br />{t('arrest.timeFixLine', { date: fmt(c.recorded_at), name: c.recorded_by_name, time: fmt(c.arrested_at), reason: c.reason })}</small>
             ))}
+            <br /><button type="button" onClick={() => setMemoOf(a.id)}>{t('memo.show')}</button>
             {!a.corrected && !a.first_remand_on && <RemandForm firId={firId} arrest={a} onSaved={onSaved} />}
             {!a.corrected && !a.released_on && <ReleaseForm firId={firId} arrest={a} onSaved={onSaved} />}
             <CorrectionForm firId={firId} arrest={a} onSaved={onSaved} />
@@ -227,6 +252,9 @@ export default function Arrests({ firId, people, version, onSaved }: { firId: st
         ))}</ul>
       )}
       {people && <ArrestForm firId={firId} accused={people.filter((p) => p.role === 'accused')} hint={hint ?? null} onSaved={onSaved} />}
+      {(data ?? []).filter((a) => a.id === memoOf).map((a) => (
+        <MemoPaper key={a.id} a={a} firTitle={firTitle} name={people?.find((p) => p.role === 'accused' && p.label === a.person_label)?.display_name ?? a.person_label} />
+      ))}
     </section>
   )
 }

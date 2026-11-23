@@ -174,7 +174,7 @@ form.inline { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: cent
 /* Printed papers follow the courts' format (Supreme Court circular of 12 Mar 2020, followed by the High Courts): A4,
    Times New Roman 14 pt at 1.5 line spacing, quotations 12 pt single-spaced, margins 2 cm top and bottom, 4 cm left and right.
    Indian scripts print in the app's own Noto fonts. Black on white, no colour, no screen chrome. (docs/DESIGN.md, "Printed papers") */
-@page { size: A4; margin: 2cm 4cm; }
+@page { size: A4; margin: 2cm 4cm; @bottom-center { content: counter(page) " / " counter(pages); font: 10pt 'Times New Roman', serif; } }
 @media print {
   .print-copy { font-family: 'Times New Roman', Times, 'Noto Sans Devanagari Variable', 'Noto Sans Bengali Variable', 'Noto Sans Gurmukhi Variable',
     'Noto Sans Gujarati Variable', 'Noto Sans Oriya Variable', 'Noto Sans Tamil Variable', 'Noto Sans Telugu Variable',

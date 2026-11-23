@@ -1421,5 +1421,13 @@
  "roster.post.patrol": "પેટ્રોલિંગ વાહન",
  "roster.post.court": "કોર્ટ ડ્યુટી",
  "roster.post.lock_up": "લોક-અપ ચોકી",
- "roster.post.bandobast": "બંદોબસ્ત"
+ "roster.post.bandobast": "બંદોબસ્ત",
+ "memo.show": "ધરપકડ મેમો કાગળ તરીકે બતાવો",
+ "memo.label": "ધરપકડ મેમો, કાગળની નકલ",
+ "memo.title": "ધરપકડ મેમો (BNSS 36)",
+ "memo.person": "ધરપકડ કરાયેલ વ્યક્તિ: {name} ({label}).",
+ "memo.when": "ધરપકડની તારીખ, સમય અને સ્થળ: {date}, {place}.",
+ "memo.officer": "ધરપકડ કરનાર અધિકારી: {officer}.",
+ "memo.sign": "ધરપકડ કરનાર અધિકારીની સહી · ધરપકડ કરાયેલ વ્યક્તિની સહી · સાક્ષીની સહી",
+ "memo.print": "ધરપકડ મેમો છાપો"
 }

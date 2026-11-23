@@ -1421,5 +1421,13 @@
  "roster.post.patrol": "টহল গাড়ি",
  "roster.post.court": "আদালত ডিউটি",
  "roster.post.lock_up": "হাজত পাহারা",
- "roster.post.bandobast": "বন্দোবস্ত"
+ "roster.post.bandobast": "বন্দোবস্ত",
+ "memo.show": "গ্রেপ্তারের মেমো কাগজের আকারে দেখান",
+ "memo.label": "গ্রেপ্তারের মেমো, কাগজের কপি",
+ "memo.title": "গ্রেপ্তারের মেমো (BNSS 36)",
+ "memo.person": "গ্রেপ্তার ব্যক্তি: {name} ({label})।",
+ "memo.when": "গ্রেপ্তারের তারিখ, সময় ও স্থান: {date}, {place}।",
+ "memo.officer": "গ্রেপ্তারকারী কর্মকর্তা: {officer}।",
+ "memo.sign": "গ্রেপ্তারকারী কর্মকর্তার স্বাক্ষর · গ্রেপ্তার ব্যক্তির স্বাক্ষর · সাক্ষীর স্বাক্ষর",
+ "memo.print": "গ্রেপ্তারের মেমো ছাপুন"
 }

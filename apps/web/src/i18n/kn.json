@@ -1421,5 +1421,13 @@
  "roster.post.patrol": "ಗಸ್ತು ವಾಹನ",
  "roster.post.court": "ನ್ಯಾಯಾಲಯ ಕರ್ತವ್ಯ",
  "roster.post.lock_up": "ಲಾಕ್-ಅಪ್ ಕಾವಲು",
- "roster.post.bandobast": "ಬಂದೋಬಸ್ತ್"
+ "roster.post.bandobast": "ಬಂದೋಬಸ್ತ್",
+ "memo.show": "ಬಂಧನ ಮೆಮೊವನ್ನು ಕಾಗದದ ರೂಪದಲ್ಲಿ ತೋರಿಸಿ",
+ "memo.label": "ಬಂಧನ ಮೆಮೊ, ಕಾಗದದ ಪ್ರತಿ",
+ "memo.title": "ಬಂಧನ ಮೆಮೊ (BNSS 36)",
+ "memo.person": "ಬಂಧಿತ ವ್ಯಕ್ತಿ: {name} ({label}).",
+ "memo.when": "ಬಂಧನದ ದಿನಾಂಕ, ಸಮಯ ಮತ್ತು ಸ್ಥಳ: {date}, {place}.",
+ "memo.officer": "ಬಂಧಿಸಿದ ಅಧಿಕಾರಿ: {officer}.",
+ "memo.sign": "ಬಂಧಿಸಿದ ಅಧಿಕಾರಿಯ ಸಹಿ · ಬಂಧಿತ ವ್ಯಕ್ತಿಯ ಸಹಿ · ಸಾಕ್ಷಿಯ ಸಹಿ",
+ "memo.print": "ಬಂಧನ ಮೆಮೊ ಮುದ್ರಿಸಿ"
 }

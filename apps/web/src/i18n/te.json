@@ -1421,5 +1421,13 @@
  "roster.post.patrol": "పెట్రోలింగ్ వాహనం",
  "roster.post.court": "కోర్టు డ్యూటీ",
  "roster.post.lock_up": "లాక్-అప్ కాపలా",
- "roster.post.bandobast": "బందోబస్తు"
+ "roster.post.bandobast": "బందోబస్తు",
+ "memo.show": "అరెస్టు మెమోను కాగితం రూపంలో చూపండి",
+ "memo.label": "అరెస్టు మెమో, కాగితం ప్రతి",
+ "memo.title": "అరెస్టు మెమో (BNSS 36)",
+ "memo.person": "అరెస్టయిన వ్యక్తి: {name} ({label}).",
+ "memo.when": "అరెస్టు తేదీ, సమయం, స్థలం: {date}, {place}.",
+ "memo.officer": "అరెస్టు చేసిన అధికారి: {officer}.",
+ "memo.sign": "అరెస్టు చేసిన అధికారి సంతకం · అరెస్టయిన వ్యక్తి సంతకం · సాక్షి సంతకం",
+ "memo.print": "అరెస్టు మెమో ముద్రించండి"
 }

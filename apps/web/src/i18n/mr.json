@@ -1421,5 +1421,13 @@
  "roster.post.patrol": "गस्ती वाहन",
  "roster.post.court": "न्यायालय ड्युटी",
  "roster.post.lock_up": "लॉक-अप पहारा",
- "roster.post.bandobast": "बंदोबस्त"
+ "roster.post.bandobast": "बंदोबस्त",
+ "memo.show": "अटक मेमो कागदाच्या रूपात दाखवा",
+ "memo.label": "अटक मेमो, कागदी प्रत",
+ "memo.title": "अटक मेमो (BNSS 36)",
+ "memo.person": "अटक केलेली व्यक्ती: {name} ({label}).",
+ "memo.when": "अटकेची तारीख, वेळ आणि ठिकाण: {date}, {place}.",
+ "memo.officer": "अटक करणारे अधिकारी: {officer}.",
+ "memo.sign": "अटक करणाऱ्या अधिकाऱ्याची सही · अटक केलेल्या व्यक्तीची सही · साक्षीदाराची सही",
+ "memo.print": "अटक मेमो छापा"
 }

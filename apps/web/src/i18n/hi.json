@@ -1421,5 +1421,13 @@
  "roster.post.patrol": "गश्ती वाहन",
  "roster.post.court": "न्यायालय ड्यूटी",
  "roster.post.lock_up": "हवालात पहरा",
- "roster.post.bandobast": "बंदोबस्त"
+ "roster.post.bandobast": "बंदोबस्त",
+ "memo.show": "गिरफ्तारी मेमो कागज़ के रूप में दिखाएँ",
+ "memo.label": "गिरफ्तारी मेमो, कागज़ी प्रति",
+ "memo.title": "गिरफ्तारी मेमो (BNSS 36)",
+ "memo.person": "गिरफ्तार व्यक्ति: {name} ({label})।",
+ "memo.when": "गिरफ्तारी की तारीख, समय और स्थान: {date}, {place}।",
+ "memo.officer": "गिरफ्तार करने वाला अधिकारी: {officer}।",
+ "memo.sign": "गिरफ्तार करने वाले अधिकारी के हस्ताक्षर · गिरफ्तार व्यक्ति के हस्ताक्षर · गवाह के हस्ताक्षर",
+ "memo.print": "गिरफ्तारी मेमो छापें"
 }

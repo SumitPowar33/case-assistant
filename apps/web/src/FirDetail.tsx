@@ -103,7 +103,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
           <AddPersonForm firId={id} onSaved={saved} />
         </section>
       </div>
-      <div className={shown('arrests')}><Arrests firId={id} people={people} version={version} onSaved={saved} /></div>
+      <div className={shown('arrests')}><Arrests firId={id} firTitle={t('fir.title', { no: fir.fir_no, year: fir.fir_year })} people={people} version={version} onSaved={saved} /></div>
       <div className={shown('chargesheets')}><Chargesheets firId={id} people={people} version={version} onSaved={saved} /></div>
       <div className={shown('closure')}><ClosureReport firId={id} version={version} onSaved={saved} /></div>
       <div className={shown('deadlines')}>

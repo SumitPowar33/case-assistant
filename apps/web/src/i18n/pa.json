@@ -1421,5 +1421,13 @@
  "roster.post.patrol": "ਗਸ਼ਤੀ ਗੱਡੀ",
  "roster.post.court": "ਅਦਾਲਤ ਡਿਊਟੀ",
  "roster.post.lock_up": "ਹਵਾਲਾਤ ਪਹਿਰਾ",
- "roster.post.bandobast": "ਬੰਦੋਬਸਤ"
+ "roster.post.bandobast": "ਬੰਦੋਬਸਤ",
+ "memo.show": "ਗ੍ਰਿਫ਼ਤਾਰੀ ਮੈਮੋ ਕਾਗਜ਼ ਵਜੋਂ ਦਿਖਾਓ",
+ "memo.label": "ਗ੍ਰਿਫ਼ਤਾਰੀ ਮੈਮੋ, ਕਾਗਜ਼ੀ ਕਾਪੀ",
+ "memo.title": "ਗ੍ਰਿਫ਼ਤਾਰੀ ਮੈਮੋ (BNSS 36)",
+ "memo.person": "ਗ੍ਰਿਫ਼ਤਾਰ ਵਿਅਕਤੀ: {name} ({label})।",
+ "memo.when": "ਗ੍ਰਿਫ਼ਤਾਰੀ ਦੀ ਤਾਰੀਖ਼, ਸਮਾਂ ਅਤੇ ਥਾਂ: {date}, {place}।",
+ "memo.officer": "ਗ੍ਰਿਫ਼ਤਾਰ ਕਰਨ ਵਾਲਾ ਅਧਿਕਾਰੀ: {officer}।",
+ "memo.sign": "ਗ੍ਰਿਫ਼ਤਾਰ ਕਰਨ ਵਾਲੇ ਅਧਿਕਾਰੀ ਦੇ ਦਸਤਖ਼ਤ · ਗ੍ਰਿਫ਼ਤਾਰ ਵਿਅਕਤੀ ਦੇ ਦਸਤਖ਼ਤ · ਗਵਾਹ ਦੇ ਦਸਤਖ਼ਤ",
+ "memo.print": "ਗ੍ਰਿਫ਼ਤਾਰੀ ਮੈਮੋ ਛਾਪੋ"
 }

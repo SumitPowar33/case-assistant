@@ -97,8 +97,8 @@ printed on both sides.** Every printed paper of the app follows it:
 - Indian scripts print in Noto (bundled); a state that prescribes another face (Maharashtra offices often use Mangal or
   Kokila) sets it in its pack.
 - Page numbers "Page x of y" at the foot; the FIR number on every page.
-Done now: the informant's copy (BNSS 173(2)) prints this way on one A4 page.
-To do: the FIR copy, BNSS 94 notices, the arrest memo (BNSS 36), the seizure memo, the 63(4) certificate, the case diary
+Done now: the informant's copy (BNSS 173(2)) and the arrest memo (BNSS 36, session 128) print this way on one A4 page; the foot of every page shows "page / pages" (the FIR number on every page of a long paper is not done: browsers cannot yet repeat a text per page).
+To do: the FIR copy, BNSS 94 notices, the seizure memo, the 63(4) certificate, the case diary
 page, the chargesheet with its enclosure lists. Each uses the state's form layout once a sample form is supplied.
 
 ## 9. Ask the case file (RAG chatbot), and the flaws to avoid (item 17)
