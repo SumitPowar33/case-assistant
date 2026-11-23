@@ -367,6 +367,14 @@ def test_acting_charge_is_given_by_the_roles_that_reach_a_station_and_held_by_a_
     assert not givers & held
 
 
+def test_the_duty_roster_is_written_by_a_station_role_and_never_by_a_role_without_a_station_reach():
+    """Item 16: only roles that run one station (or act for it) hold roster.manage; no role that rates or judges gets it."""
+    roles = json.loads((ROOT / "IN/roles.json").read_text(encoding="utf-8"))["roles"]
+    writers = {c for c, r in roles.items() if "roster.manage" in r["permissions"]}
+    assert writers == {"sho"}
+    assert all(roles[c]["case_scope"] == "station" for c in writers)
+
+
 def test_state_laws_are_named_by_state_modules_only_once_and_never_a_national_act():
     # Modules.java refuses the same at start-up; V57 refuses it in the database
     seen = {}
