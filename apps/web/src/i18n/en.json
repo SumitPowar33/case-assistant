@@ -1446,5 +1446,15 @@
  "n94.issued": "Issued on: {date}.",
  "n94.due": "Reply to be given by: {date}.",
  "n94.sign": "Name, rank and signature of the issuing officer: {name}",
- "n94.print": "Print the notice"
+ "n94.print": "Print the notice",
+ "certp.show": "Show the certificate as paper",
+ "certp.label": "BSA 63(4) certificate, paper copy",
+ "certp.title": "Certificate under BSA 63(4)",
+ "certp.item": "Electronic record: {label}.",
+ "certp.by": "Given by: {name}.",
+ "certp.device": "Device or source: {device}{ids}.",
+ "certp.hash": "Hash value ({algo}): {hash}.",
+ "certp.when": "Signed on {date} at {place}.",
+ "certp.sign": "Signature of the person giving the certificate",
+ "certp.print": "Print the certificate"
 }

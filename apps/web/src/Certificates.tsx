@@ -11,6 +11,27 @@ type Certificate = {
 }
 const PART = { A: 'cert.partA', B: 'cert.partB' } as const
 
+/** One certificate as paper (court format of docs/DESIGN.md "Printed papers"): numbered paragraphs, then the signature line. */
+function CertificatePaper({ c, label }: { c: Certificate; label: string }) {
+  const t = useT()
+  return (
+    <section className="print-copy" aria-label={t('certp.label')}>
+      <h3>{t('certp.title')}</h3>
+      <p>{t(PART[c.part])}</p>
+      <ol>
+        <li>{t('certp.item', { label })}</li>
+        <li>{t('certp.by', { name: c.signer_name })}</li>
+        <li>{t('certp.device', { device: c.device_type, ids: c.device_ids ? ` (${c.device_ids})` : '' })}</li>
+        <li>{t('certp.hash', { algo: c.hash_algo, hash: c.hash_value })}</li>
+        <li>{t('certp.when', { date: fmt(c.signed_at), place: c.place })}</li>
+        {c.correction_reason && <li>{t('cert.correction', { reason: c.correction_reason })}</li>}
+      </ol>
+      <p>{t('certp.sign')}</p>
+      <button type="button" className="no-print" onClick={() => window.print()}>{t('certp.print')}</button>
+    </section>
+  )
+}
+
 /**
  * BSA 63(4) certificates of one electronic item. A signed certificate is never edited: a mistake is fixed by a new
  * certificate that names the one it replaces and says why (the server keeps both).
@@ -18,6 +39,7 @@ const PART = { A: 'cert.partA', B: 'cert.partB' } as const
 export default function Certificates({ firId, item, onSaved }: { firId: string; item: { id: string; label: string; sha256: string | null }; onSaved: () => void }) {
   const t = useT()
   const [version, setVersion] = useState(0)
+  const [paperOf, setPaperOf] = useState<string>()
   const { data, error } = useLoad<Certificate[]>(`/firs/${firId}/evidence/${item.id}/certificates`, version)
   const current = (data ?? []).filter((c) => !c.replaced_by)
   return (
@@ -29,6 +51,9 @@ export default function Certificates({ firId, item, onSaved }: { firId: string; 
             {' '}{c.hash_algo} {t(c.hash_algo === 'SHA256' && item.sha256 && c.hash_value.toLowerCase() === item.sha256 ? 'cert.matches' : 'cert.noMatch')}
             {c.correction_reason && <> · {t('cert.correction', { reason: c.correction_reason })}</>}
             {c.replaced_by && <> · <em>{t('cert.replaced')}</em></>}
+            {!c.replaced_by && (paperOf === c.id
+              ? <CertificatePaper c={c} label={item.label} />
+              : <> · <button type="button" onClick={() => setPaperOf(c.id)}>{t('certp.show')}</button></>)}
           </li>
         ))}</ul>
       )}

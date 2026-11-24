@@ -192,6 +192,38 @@ test('a replaced certificate is marked and cannot be replaced again', async () =
   expect(options).toHaveLength(2) // "No" and the current certificate only
 })
 
+test('a current certificate is shown as a court-format paper and prints; a replaced one offers none', async () => {
+  stub({ '/firs/f1/evidence/e1/certificates': [{ ...certA, device_ids: 'IMEI 000000000000000', replaced_by: 'c2' },
+    { ...certA, id: 'c2', part: 'B', device_ids: 'IMEI 000000000000000', hash_value: SHA, supersedes: 'c1', correction_reason: 'hash re-read from the device' },
+    { ...certA, id: 'c3', hash_algo: 'MD5' }] })
+  const print = vi.fn()
+  vi.stubGlobal('print', print)
+  render(<Certificates firId="f1" item={{ id: 'e1', label: 'E-01', sha256: SHA }} onSaved={() => {}} />)
+  const buttons = await screen.findAllByRole('button', { name: 'Show the certificate as paper' })
+  expect(buttons).toHaveLength(2) // c2 and c3; c1 was replaced
+  fireEvent.click(buttons[0])
+  const paper = screen.getByLabelText('BSA 63(4) certificate, paper copy')
+  expect(paper.className).toBe('print-copy')
+  expect(within(paper).getByText('Certificate under BSA 63(4)')).toBeTruthy()
+  expect(within(paper).getByText('Part B (expert)')).toBeTruthy()
+  expect(within(paper).getByText('Electronic record: E-01.')).toBeTruthy()
+  expect(within(paper).getByText('Given by: Fictional Signer.')).toBeTruthy()
+  expect(within(paper).getByText('Device or source: phone (IMEI 000000000000000).')).toBeTruthy()
+  expect(within(paper).getByText(`Hash value (SHA256): ${SHA}.`)).toBeTruthy()
+  expect(within(paper).getByText(/^Signed on .* at Testpur\.$/)).toBeTruthy()
+  expect(within(paper).getByText('correction: hash re-read from the device')).toBeTruthy()
+  expect(within(paper).getByText('Signature of the person giving the certificate')).toBeTruthy()
+  fireEvent.click(within(paper).getByRole('button', { name: 'Print the certificate' }))
+  expect(print).toHaveBeenCalled()
+  // the other certificate replaces the paper on screen, and has no correction line
+  fireEvent.click(screen.getByRole('button', { name: 'Show the certificate as paper' }))
+  const second = screen.getByLabelText('BSA 63(4) certificate, paper copy')
+  expect(within(second).getByText('Part A (person in charge of the device)')).toBeTruthy()
+  expect(within(second).getByText(`Hash value (MD5): ${'c'.repeat(64)}.`)).toBeTruthy()
+  expect(within(second).getByText('Device or source: phone.')).toBeTruthy()
+  expect(within(second).queryByText(/^correction:/)).toBeNull()
+})
+
 test('in Marathi a certificate reads in Marathi, and the form refuses a short hash and a correction of the other part in Marathi', async () => {
   stub({ '/firs/f1/evidence/e1/certificates': [{ ...certA, device_ids: 'IMEI 000000000000000' }] })
   render(<ScreenLangContext.Provider value="mr"><Certificates firId="f1" item={{ id: 'e1', label: 'E-01', sha256: SHA }} onSaved={() => {}} /></ScreenLangContext.Provider>)
