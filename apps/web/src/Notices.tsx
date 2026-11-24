@@ -290,12 +290,36 @@ function NewNoticeForm({ firId, fir, onSaved }: { firId: string; fir?: NoticeFac
   )
 }
 
+/**
+ * The BNSS 94 notice as paper (court format of docs/DESIGN.md "Printed papers"): FIR number and sections, numbered
+ * paragraphs (addressee, what is to be produced, issue time, reply date), then the name and signature line of the
+ * officer who signed it. Built only from the saved notice; shown once it has an issue time.
+ */
+function NoticePaper({ notice, fir }: { notice: Notice; fir?: NoticeFacts['fir'] }) {
+  const t = useT()
+  return (
+    <section className="print-copy" aria-label={t('n94.label')}>
+      <h3>{t('n94.title')}</h3>
+      {fir && <p>{t('fir.title', { no: fir.fir_no, year: fir.fir_year })}{fir.sections.length > 0 && ` · ${fir.sections.map((s) => `${s.act} ${s.section}`).join(', ')}`}</p>}
+      <ol>
+        <li>{t('n94.to', { addressee: notice.addressee })}</li>
+        <li>{t('n94.produce')}<ol>{notice.items_requested.map((item) => <li key={item}>{item}</li>)}</ol></li>
+        <li>{t('n94.issued', { date: fmt(notice.issued_at ?? '') })}</li>
+        {notice.reply_due_on && <li>{t('n94.due', { date: notice.reply_due_on })}</li>}
+      </ol>
+      <p>{t('n94.sign', { name: notice.signed_by_name ?? '' })}</p>
+      <button type="button" className="no-print" onClick={() => window.print()}>{t('n94.print')}</button>
+    </section>
+  )
+}
+
 /** Notices on the case, what each still waits for, and forms to write, send and log replies (case team only). */
 export default function Notices({ firId, fir, victimProtected = false }: { firId: string; fir?: NoticeFacts['fir']; victimProtected?: boolean }) {
   const [version, setVersion] = useState(0)
   const saved = () => setVersion((v) => v + 1)
   const { data, error } = useLoad<Notice[]>(`/firs/${firId}/notices`, version)
   const t = useT()
+  const [paperOf, setPaperOf] = useState<string>()
   return (
     <section aria-labelledby="notices">
       <h2 id="notices">{t('notice.heading')}</h2>
@@ -313,6 +337,9 @@ export default function Notices({ firId, fir, victimProtected = false }: { firId
                 <li key={item}>{t(n.items_missing.includes(item) ? 'notice.itemMissing' : 'notice.itemReceived', { item })}</li>
               ))}</ul>
             )}
+            {n.kind === 'BNSS_94' && n.issued_at && n.items_requested.length > 0 && (paperOf === n.id
+              ? <NoticePaper notice={n} fir={fir} />
+              : <p><button type="button" onClick={() => setPaperOf(n.id)}>{t('n94.show')}</button></p>)}
             {n.status === 'draft' && <SendForm firId={firId} notice={n} onSaved={saved} />}
             {n.status === 'reply_incomplete' && n.items_missing.length > 0 && !victimProtected && <ReminderLetter firId={firId} fir={fir} notice={n} onSaved={saved} />}
             {['sent', 'reply_incomplete'].includes(n.status) && <ReplyForm firId={firId} notice={n} victimProtected={victimProtected} onSaved={saved} />}

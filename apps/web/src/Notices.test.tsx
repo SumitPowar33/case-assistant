@@ -666,3 +666,28 @@ test('A4: a refusal by the OCR shows why and leaves the box; a text longer than 
   expect((within(form).getByLabelText(/^Text of the reply/) as HTMLTextAreaElement).value).toHaveLength(30000)
   expect(decisions(calls)).toHaveLength(0)
 })
+
+test('an issued BNSS 94 notice is shown as a court-format paper and prints; a draft or another kind offers none', async () => {
+  stub({ '/firs/f1/notices': [sent, { ...sent, id: 'n2', status: 'draft', issued_at: null }, { ...sent, id: 'n3', kind: 'BNSS_35_3', items_requested: [] },
+    { ...sent, id: 'n4', reply_due_on: null, signed_by_name: null }] })
+  const print = vi.fn()
+  vi.stubGlobal('print', print)
+  render(<Notices firId="f1" fir={fir} />)
+  await screen.findAllByText('Account statement: received')
+  const buttons = screen.getAllByRole('button', { name: 'Show the BNSS 94 notice as paper' })
+  expect(buttons).toHaveLength(2) // n1 and n4 only
+  fireEvent.click(buttons[0])
+  const paper = screen.getByLabelText('BNSS 94 notice, paper copy')
+  expect(paper.className).toBe('print-copy')
+  expect(within(paper).getByText('Notice to produce documents or data (BNSS 94)')).toBeTruthy()
+  expect(within(paper).getByText('FIR 214/2026 · BNS 318(4)')).toBeTruthy()
+  expect(within(paper).getByText('To: Nodal Officer, Fictional Bank.')).toBeTruthy()
+  expect(within(paper).getByText('KYC documents')).toBeTruthy()
+  expect(within(paper).getByText('Reply to be given by: 2026-10-12.')).toBeTruthy()
+  expect(within(paper).getByText('Name, rank and signature of the issuing officer: SI Fictional')).toBeTruthy()
+  fireEvent.click(within(paper).getByRole('button', { name: 'Print the notice' }))
+  expect(print).toHaveBeenCalled()
+  // the other issued notice: no reply date line; and without the FIR facts no FIR line
+  fireEvent.click(screen.getByRole('button', { name: 'Show the BNSS 94 notice as paper' }))
+  expect(screen.queryByText(/Reply to be given by/)).toBeNull()
+})

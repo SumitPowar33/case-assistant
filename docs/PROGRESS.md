@@ -101,6 +101,7 @@ Done in session 28: evidence import file (ef845fb), notices import file (a792dea
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
 Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)).
 Done in session 31: speech input at the front desk; module 1 is finished.
+Done in session 130 (24 to 25 Nov, scheduled run, Sumit away): item 18, third paper: the BNSS 94 notice printed in the court format from the Notices part (web only).
 Done in session 129 (24 Nov, scheduled run, Sumit away): item 18, second paper: the seizure memo printed from the Property screen (web only).
 Done in session 128 (24 Nov, 02:05 IST scheduled run, last of the night, Sumit away): item 18, first paper: the arrest memo printed in the court format (no migration, web only).
 Done in session 127 (23 to 24 Nov, scheduled nightly run, Sumit away): item 16, first part: the station duty roster (V66, `#/roster`).
@@ -245,6 +246,24 @@ Questions for Sumit:
 - `scripts/test-all.sh` at the end of session 125: all 8 suites PASS. Coverage: core 99.06% lines / 96.70% branches, web unchanged (no web change; 99.97 / 97.63 / 98.89 in session 124), gateway 99%.
 - Open questions: session 124's 1 (OCR on protected cases), session 123's 1 and 3, and session 125's 1 to 3 below.
 
+## 25 Nov 2026, session 130 (scheduled run, Sumit away)
+Started from `setup/seed` (session 129 notes). The clone was on `master`; `git fetch` and `checkout setup/seed` worked. Priorities 1 to 7 are done or wait for Sumit / a model download, so this session took priority 8: item 18, the third court-format paper. Question 2 of session 129 was unanswered, so the safer, reversible choice was taken: the BNSS 94 notice (named in that entry as the default).
+
+**Item 18, BNSS 94 notice as a court-format paper (no migration, web only):**
+- Notices part: an issued BNSS 94 notice that lists items shows a button "Show the BNSS 94 notice as paper" (one paper at a time). The paper holds the heading, the FIR number and sections (when the FIR is known), numbered paragraphs (addressee, the numbered items to produce, issue time, reply date when set) and the name line and signature line of the officer who signed. Built only from the saved notice, so it carries no complaint text or victim detail. "Print the notice" uses the browser's print (`.print-copy`).
+- 9 new keys `n94.*` in all 11 screen catalogs (ten are drafts, unreviewed). Web: one new `Notices.test.tsx` test (drafts and other kinds show no button, no reply date line, print is called).
+
+**Tests:** repo rules PASS, packs PASS, xlit PASS, web PASS (tests, gate, lint, build), core PASS (mvn verify). In this fresh container the gateway, database and e2e suites first failed only because Python packages (pytest-cov, psycopg, playwright) were not installed; after installing them they were run by hand: gateway 207 passed (99.47%), database rules 409 passed, e2e 48 passed and 3 skipped. No coverage gate raised.
+
+Skipped / not checked: the body text of the notice is not on the paper (the list route does not return it; the paper states the items, which is what BNSS 94 asks the addressee to produce); BNSS 94 as the section for production of documents or data (CrPC 91 before 1 July 2024) should be confirmed by a prosecutor; no look at real paper; no sample state form was supplied; the translations are drafts.
+
+Next: item 18 (FIR copy, 63(4) certificate, diary page, chargesheet), then the real-time screens, item 15 rest, item 3's Marathi playbook texts when a reviewer is named.
+
+Questions for Sumit:
+1. Does your pilot state have a printed BNSS 94 notice form whose paragraph order the paper must follow? A blank one with fictional data would let the next paper follow it.
+2. Which paper next: the chargesheet with its enclosure lists, the 63(4) certificate, or the case diary page? (Without an answer the next session takes the 63(4) certificate.)
+3. Still open: sessions 123 to 129 (see their entries).
+
 ## 24 Nov 2026, session 129 (scheduled run, Sumit away)
 Started from `setup/seed` (session 128 notes). The clone was on `master`; `git fetch` and `checkout setup/seed` worked. PostgreSQL started, role `caseapp` and both databases made, packages installed. Priorities 1 to 7 are done or wait for Sumit / a model download, so this session took priority 8: item 18, the second court-format paper. Questions 1 and 2 of session 128 were unanswered, so the safer, reversible choice was taken: the seizure memo (next on the list) in the same pattern as the arrest memo.
 
@@ -256,7 +275,7 @@ Started from `setup/seed` (session 128 notes). The clone was on `master`; `git f
 
 Skipped / not checked: the first baseline run was not clean (I edited web files while it ran; the web suite failed in it for that reason, the other seven passed); the full run above is on the final code. The memo does not show the seizing officer, the time of the seizure or the witnesses' names because the register does not keep them (the seizure's own record is the evidence entry and, for a search, the search memo); BNSS 106 as the section of the police power to seize (CrPC 102 before 1 July 2024) should be confirmed by a prosecutor; no look at real paper; no sample state form was supplied. No time was left for older-code tests.
 
-Next: item 18 (BNSS 94 notice, FIR copy, 63(4) certificate, diary page, chargesheet), then the real-time screens, item 15 rest, item 3's Marathi playbook texts when a reviewer is named.
+Next: item 18 (FIR copy, 63(4) certificate, diary page, chargesheet), then the real-time screens, item 15 rest, item 3's Marathi playbook texts when a reviewer is named.
 
 Questions for Sumit:
 1. Does your pilot state have a printed seizure memo (panchnama) form whose paragraph order the paper must follow? A blank one with fictional data would let the next paper follow it.

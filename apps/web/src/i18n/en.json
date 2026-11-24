@@ -1437,5 +1437,14 @@
  "seize.desc": "Description: {description}.",
  "seize.where": "Now kept at: {location}.",
  "seize.sign": "Signature of the seizing officer · Signature of witness 1 · Signature of witness 2",
- "seize.print": "Print the seizure memo"
+ "seize.print": "Print the seizure memo",
+ "n94.show": "Show the BNSS 94 notice as paper",
+ "n94.label": "BNSS 94 notice, paper copy",
+ "n94.title": "Notice to produce documents or data (BNSS 94)",
+ "n94.to": "To: {addressee}.",
+ "n94.produce": "You are required to produce the following:",
+ "n94.issued": "Issued on: {date}.",
+ "n94.due": "Reply to be given by: {date}.",
+ "n94.sign": "Name, rank and signature of the issuing officer: {name}",
+ "n94.print": "Print the notice"
 }
