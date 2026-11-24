@@ -86,6 +86,7 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
+In progress: item 18, seizure memo paper (session 129, started 03:00 IST)
 **SUMIT'S PRIORITY (16 Nov 2026; replaces "the first item under Next"): AI features and RAG first, then the rest of the Next list.** Build the first unfinished item of this order, keeping every rule of CLAUDE.md and the five AI rules of docs/AI-AND-SCREENS-PLAN.md section 2:
 1. Item 17, Ask the case file as real RAG: embeddings behind the gateway on the state's own server, vectors in PostgreSQL, hybrid with BM25 (DONE in session 106, see its entry and "Decisions taken for Sumit"); open a source on click, "note in case diary", questions in Hindi and Marathi, the answers scored on the evaluation set (DONE, session 106). Left of item 17: bank replies as searchable text (waits for A4's left-for part, decision 3), the real model's download and tuning (deployment step), a monthly run of the set with a real model.
 2. A8: the AI explanation in the Old law to new law finder (board 18) (already DONE in session 98; check only that it is on the board's screen).
