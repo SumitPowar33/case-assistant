@@ -90,3 +90,13 @@ test('a failed load is shown, for the stations and for the station page', async 
   render(<ActingPage />)
   expect((await screen.findByRole('alert')).textContent).toContain('The server answered 403 for /acting-charges')
 })
+
+test('a failed list of charges is shown when the officer options load', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => url === '/api/stations'
+    ? { ok: true, status: 200, json: async () => stations }
+    : url.startsWith('/api/acting-charges/options')
+      ? { ok: true, status: 200, json: async () => options }
+      : { ok: false, status: 500, json: async () => ({}) }))
+  render(<ActingPage />)
+  expect((await screen.findByRole('alert')).textContent).toBe('The server answered 500 for /acting-charges?stationId=s1')
+})

@@ -108,3 +108,11 @@ test('an account without a police station names the state first; nothing is load
   expect(calls[0].url).toBe('/api/pack-changes?state=MH')
   expect(await screen.findByRole('button', { name: 'Send for approval' })).toBeTruthy()
 })
+
+test('a decided change with no test note and no decision note shows neither', async () => {
+  stub({ pack, changes: [change({ tested_note: null, decision: 'approved', decision_note: null, decided_at: '2026-11-02T04:30:00Z', decided_by_name: 'Adv Fictional', decided_by_rank: 'PP' })], can_propose: false })
+  render(<StatePage />)
+  await screen.findByText('Fictional playbook v1.5')
+  expect(screen.queryByText(/Tried on 40/)).toBeNull()
+  expect(screen.getByText(/Adv Fictional \(PP\)/).textContent).not.toContain('·')
+})
