@@ -93,3 +93,16 @@ test('a refused take-back shows the server\'s reason; an account without a stati
   render(<DutyRoster />)
   expect(await screen.findByRole('alert')).toBeTruthy()
 })
+
+test('a duty row without a shift or post still lists, and a failed officer list shows its reason instead of the form', async () => {
+  stub(roster({ rows: [row({ shift: null, post: null })], now: { shift: 'morning', on_duty: [row({ post: null })] } }))
+  render(<DutyRoster />)
+  expect(await screen.findAllByText(/SI Fictional Asha \(SI\)/)).toHaveLength(2)
+  cleanup()
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => url.startsWith('/api/duty-roster/options')
+    ? { ok: false, status: 403, json: async () => ({}) }
+    : { ok: true, status: 200, json: async () => roster() }))
+  render(<DutyRoster />)
+  expect(await screen.findByText('The server answered 403 for /duty-roster/options?stationId=s1')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Save entry' })).toBeNull()
+})
