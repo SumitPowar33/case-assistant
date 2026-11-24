@@ -13,6 +13,28 @@ type Move = { at: string; handed_by: string; received_by: string; location: stri
 const STATUS_CHIP: Record<string, string> = { in_malkhana: 'c-ok', out: 'c-info', released: 'c-neu', other: 'c-neu', not_stated: 'c-warn', not_logged: 'c-warn' }
 const PLACES = ['malkhana', 'lab', 'court', 'owner', 'other'] as const
 
+/**
+ * The seizure memo as paper (BNSS 106, court format of docs/DESIGN.md "Printed papers"): numbered paragraphs from the register
+ * (item, description, where it is now), then the signature lines of the seizing officer and two witnesses (BNSS 105 asks for
+ * a recording; the witnesses sign the memo as police practice). A withheld description (protected case) stays withheld.
+ */
+function SeizurePaper({ item }: { item: Item }) {
+  const t = useT()
+  return (
+    <section className="print-copy" aria-label={t('seize.label')}>
+      <h3>{t('seize.title')}</h3>
+      <p>{t('fir.title', { no: item.fir_no, year: item.fir_year })} · {item.station}</p>
+      <ol>
+        <li>{t('seize.item', { label: item.label })}</li>
+        <li>{t('seize.desc', { description: item.withheld ? t('common.withheld') : (item.description ?? '—') })}</li>
+        {item.location && <li>{t('seize.where', { location: item.location })}</li>}
+      </ol>
+      <p>{t('seize.sign')}</p>
+      <button type="button" className="no-print" onClick={() => window.print()}>{t('seize.print')}</button>
+    </section>
+  )
+}
+
 /** The hand-overs of one item, oldest first, and the form that adds the next one (the log only grows, V1 and V43). */
 function Movements({ item, onSaved }: { item: Item; onSaved: () => void }) {
   const t = useT()
@@ -35,10 +57,13 @@ function Movements({ item, onSaved }: { item: Item; onSaved: () => void }) {
     } catch (err) { setError((err as Error).message) }
   }
   const moves = Array.isArray(data) ? data : []
+  const [paper, setPaper] = useState(false)
   return (
     <section aria-labelledby="prop-moves">
       <h2 id="prop-moves">{t('prop.moves', { label: item.label })}</h2>
       <p><a href={`#/firs/${item.fir_id}/evidence`}>{t('prop.openCase', { no: item.fir_no, year: item.fir_year })}</a></p>
+      <p><button type="button" onClick={() => setPaper(true)}>{t('seize.show')}</button></p>
+      {paper && <SeizurePaper item={item} />}
       {loadError ? <p role="alert">{loadError}</p> : moves.length === 0 ? <p>{t('common.noneYet')}</p> : (
         <div className="table-scroll"><table>
           <caption>{t('prop.moves', { label: item.label })}</caption>

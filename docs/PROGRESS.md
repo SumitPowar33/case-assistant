@@ -86,7 +86,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 18, seizure memo paper (session 129, started 03:00 IST)
 **SUMIT'S PRIORITY (16 Nov 2026; replaces "the first item under Next"): AI features and RAG first, then the rest of the Next list.** Build the first unfinished item of this order, keeping every rule of CLAUDE.md and the five AI rules of docs/AI-AND-SCREENS-PLAN.md section 2:
 1. Item 17, Ask the case file as real RAG: embeddings behind the gateway on the state's own server, vectors in PostgreSQL, hybrid with BM25 (DONE in session 106, see its entry and "Decisions taken for Sumit"); open a source on click, "note in case diary", questions in Hindi and Marathi, the answers scored on the evaluation set (DONE, session 106). Left of item 17: bank replies as searchable text (waits for A4's left-for part, decision 3), the real model's download and tuning (deployment step), a monthly run of the set with a real model.
 2. A8: the AI explanation in the Old law to new law finder (board 18) (already DONE in session 98; check only that it is on the board's screen).
@@ -102,6 +101,7 @@ Done in session 28: evidence import file (ef845fb), notices import file (a792dea
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
 Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)).
 Done in session 31: speech input at the front desk; module 1 is finished.
+Done in session 129 (24 Nov, scheduled run, Sumit away): item 18, second paper: the seizure memo printed from the Property screen (web only).
 Done in session 128 (24 Nov, 02:05 IST scheduled run, last of the night, Sumit away): item 18, first paper: the arrest memo printed in the court format (no migration, web only).
 Done in session 127 (23 to 24 Nov, scheduled nightly run, Sumit away): item 16, first part: the station duty roster (V66, `#/roster`).
 Done in session 126 (23 Nov, scheduled run, Sumit away): item 15: golden-hour checklists for missing child, kidnapping for ransom and custodial death; POCSO steps in the case diary and on the Dashboard's red list. No migration.
@@ -244,6 +244,24 @@ Questions for Sumit:
 - Session 125 (02:05 run, last of the night): priority 8 started. Item 3: MPID Act 3 gets the 60-day class in a draft MH punishment table, no MH roles of its own. Item 15: a child victim's FIR without a POCSO section, and each POCSO step not recorded, are gaps of the readiness check. No migration.
 - `scripts/test-all.sh` at the end of session 125: all 8 suites PASS. Coverage: core 99.06% lines / 96.70% branches, web unchanged (no web change; 99.97 / 97.63 / 98.89 in session 124), gateway 99%.
 - Open questions: session 124's 1 (OCR on protected cases), session 123's 1 and 3, and session 125's 1 to 3 below.
+
+## 24 Nov 2026, session 129 (scheduled run, Sumit away)
+Started from `setup/seed` (session 128 notes). The clone was on `master`; `git fetch` and `checkout setup/seed` worked. PostgreSQL started, role `caseapp` and both databases made, packages installed. Priorities 1 to 7 are done or wait for Sumit / a model download, so this session took priority 8: item 18, the second court-format paper. Questions 1 and 2 of session 128 were unanswered, so the safer, reversible choice was taken: the seizure memo (next on the list) in the same pattern as the arrest memo.
+
+**Item 18, seizure memo (BNSS 106) as a court-format paper (no migration, web only):**
+- Property screen: picking an item shows a button "Show the seizure memo as paper" that opens one paper under the item's hand-overs. It holds the heading, FIR number and station, numbered paragraphs (property seized, description, where it is now; the place line is left out when no hand-over is written) and the signature lines of the seizing officer and two witnesses. A protected case's description stays "Withheld (BNS 72)". "Print the seizure memo" uses the browser's print (the `.print-copy` rule prints only the paper).
+- 8 new keys `seize.*` in all 11 screen catalogs (ten are drafts, unreviewed). Web: two new `Property.test.tsx` tests.
+
+**Tests:** `scripts/test-all.sh`: repo rules PASS, packs PASS, xlit PASS, ai-gateway PASS, web PASS, database rules PASS, core PASS, e2e PASS (all 8). Coverage: core 99.07% lines / 96.59% branches, web and gateway unchanged. No gate raised.
+
+Skipped / not checked: the first baseline run was not clean (I edited web files while it ran; the web suite failed in it for that reason, the other seven passed); the full run above is on the final code. The memo does not show the seizing officer, the time of the seizure or the witnesses' names because the register does not keep them (the seizure's own record is the evidence entry and, for a search, the search memo); BNSS 106 as the section of the police power to seize (CrPC 102 before 1 July 2024) should be confirmed by a prosecutor; no look at real paper; no sample state form was supplied. No time was left for older-code tests.
+
+Next: item 18 (BNSS 94 notice, FIR copy, 63(4) certificate, diary page, chargesheet), then the real-time screens, item 15 rest, item 3's Marathi playbook texts when a reviewer is named.
+
+Questions for Sumit:
+1. Does your pilot state have a printed seizure memo (panchnama) form whose paragraph order the paper must follow? A blank one with fictional data would let the next paper follow it.
+2. Which paper next: BNSS 94 notice, the chargesheet with its enclosure lists, or the 63(4) certificate? (Without an answer the next session takes the BNSS 94 notice.)
+3. Still open: sessions 123 to 128 (see their entries).
 
 ## 24 Nov 2026, session 128 (02:05 IST scheduled run, last of the night, Sumit away)
 Started from `setup/seed` (session 127 notes). The clone was on `master`; `git fetch` and `checkout setup/seed` worked (no `add_repo` needed). PostgreSQL started, role `caseapp` and both databases made, Python and Node packages installed. Priorities 1 to 7 are done or wait for Sumit / a model download (see sessions 126 and 127), so this session took priority 8: item 18, court-format papers. The first baseline run was cut off by my own 10-minute timeout, and I edited web files while it ran, so it is not a clean baseline; the full run after the change is below (the change is small and web only, and the branch was green at the end of session 127).

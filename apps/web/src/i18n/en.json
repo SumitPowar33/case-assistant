@@ -1429,5 +1429,13 @@
  "memo.when": "Date, time and place of arrest: {date}, {place}.",
  "memo.officer": "Arrested by: {officer}.",
  "memo.sign": "Signature of the arresting officer · Signature of the person arrested · Signature of a witness",
- "memo.print": "Print the arrest memo"
+ "memo.print": "Print the arrest memo",
+ "seize.show": "Show the seizure memo as paper",
+ "seize.label": "Seizure memo, paper copy",
+ "seize.title": "Seizure memo (BNSS 106)",
+ "seize.item": "Property seized: {label}.",
+ "seize.desc": "Description: {description}.",
+ "seize.where": "Now kept at: {location}.",
+ "seize.sign": "Signature of the seizing officer · Signature of witness 1 · Signature of witness 2",
+ "seize.print": "Print the seizure memo"
 }
