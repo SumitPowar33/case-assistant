@@ -101,6 +101,7 @@ Done in session 28: evidence import file (ef845fb), notices import file (a792dea
 Done in session 29: front desk, typed intake, read-back and golden-hour checklist (f8fcfe8); speech input still to do.
 Done in session 30: printable copy for the informant (BNSS 173(2)) and the 14-day preliminary-enquiry limit (173(3)).
 Done in session 31: speech input at the front desk; module 1 is finished.
+Done in session 131 (25 Nov, 02:05 IST scheduled run, last of the night, Sumit away): item 18, fourth paper: the BSA 63(4) certificate printed from the evidence screen (web only), more web branch tests.
 Done in session 130 (24 to 25 Nov, scheduled run, Sumit away): item 18, third paper: the BNSS 94 notice printed in the court format from the Notices part (web only).
 Done in session 129 (24 Nov, scheduled run, Sumit away): item 18, second paper: the seizure memo printed from the Property screen (web only).
 Done in session 128 (24 Nov, 02:05 IST scheduled run, last of the night, Sumit away): item 18, first paper: the arrest memo printed in the court format (no migration, web only).
@@ -245,6 +246,27 @@ Questions for Sumit:
 - Session 125 (02:05 run, last of the night): priority 8 started. Item 3: MPID Act 3 gets the 60-day class in a draft MH punishment table, no MH roles of its own. Item 15: a child victim's FIR without a POCSO section, and each POCSO step not recorded, are gaps of the readiness check. No migration.
 - `scripts/test-all.sh` at the end of session 125: all 8 suites PASS. Coverage: core 99.06% lines / 96.70% branches, web unchanged (no web change; 99.97 / 97.63 / 98.89 in session 124), gateway 99%.
 - Open questions: session 124's 1 (OCR on protected cases), session 123's 1 and 3, and session 125's 1 to 3 below.
+
+## 25 Nov 2026, session 131 (02:05 IST scheduled run, last of the night, Sumit away)
+Started from `setup/seed` (session 130 notes; the clone was on `master`, fetch and checkout worked). Sumit's priority list (AI and RAG first) is done or waits for him / a model download (priorities 1 to 7), so this session took priority 8: item 18, the fourth court-format paper. Question 2 of session 130 was unanswered, so the default named there was taken: the BSA 63(4) certificate.
+
+**Item 18, BSA 63(4) certificate as a court-format paper (no migration, web only):** each current (not replaced) certificate in the evidence screen has "Show the certificate as paper". The paper holds the heading, the part (A or B), numbered paragraphs (the electronic record, who gave it, device or source with its ids, hash and algorithm, date and place of signing, the correction reason when it replaces an earlier one) and the signature line, with "Print the certificate" (browser print, `.print-copy`). Built only from the saved certificate; a replaced certificate offers none. 10 new keys `certp.*` in all 11 screen catalogs (ten are drafts, unreviewed). The hash is printed as saved; whether it matches the seizure hash stays on the list line, not on the paper.
+
+**More tests for older code (web):** DutyRoster, StatePage and ActingPage branch tests (DutyRoster 91.8% to 100% branches, StatePage 92.7% to 97.6%, ActingPage 94.4% to 97.1%).
+
+**Tests:** scripts/test-all.sh: repo rules PASS, packs PASS, xlit PASS, ai-gateway PASS (coverage gate 98), web PASS (tests, gate, lint, build; statements 99.98, branches about 97.6), database rules PASS, core PASS (mvn verify), e2e PASS. In this fresh container the gateway needed `pip install -r requirements.txt -r requirements-dev.txt` first. Two overlapping runs of the suite (my own mistake) failed against each other; a single run was clean. No gate raised.
+
+Skipped / not checked: no look at real paper; the wording of the certificate follows BSA 63(4) in general terms and the Schedule form of Part A and Part B was not copied (a prosecutor should supply the exact form); translations are drafts.
+
+Next: item 18 (FIR copy, diary page, chargesheet), then the real-time screens, item 15 rest, item 3's Marathi playbook texts when a reviewer is named.
+
+Questions for Sumit:
+1. Can you give the exact BSA Schedule form of the Part A and Part B certificate (blank, fictional data)? The paper would then follow its paragraph order and wording.
+2. Which paper next: the chargesheet with its enclosure lists, the case diary page, or the FIR copy? (Without an answer the next session takes the case diary page.)
+3. Still open: sessions 123 to 130 (see their entries).
+
+## Tonight in short (24 to 25 Nov: sessions 130 and 131)
+Session 130: BNSS 94 notice paper. Session 131: BSA 63(4) certificate paper, more web branch tests. Final scripts/test-all.sh: PASS on all 8 lines (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e). Coverage: gateway above 98 gate, web 99.98 statements / about 97.6 branches, core gate held. Blocked: none. Questions 1 and 2 above.
 
 ## 25 Nov 2026, session 130 (scheduled run, Sumit away)
 Started from `setup/seed` (session 129 notes). The clone was on `master`; `git fetch` and `checkout setup/seed` worked. Priorities 1 to 7 are done or wait for Sumit / a model download, so this session took priority 8: item 18, the third court-format paper. Question 2 of session 129 was unanswered, so the safer, reversible choice was taken: the BNSS 94 notice (named in that entry as the default).
