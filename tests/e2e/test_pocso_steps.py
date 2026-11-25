@@ -58,6 +58,20 @@ def test_the_io_records_a_pocso_step_and_its_deadline_goes(core, page):
     expect(page.get_by_text("no POCSO Act section", exact=False)).to_have_count(0)
     page.evaluate(f"location.hash = '#/firs/{fir['id']}/deadlines'")
 
+    # V71: the statement at the child's place names the officer who took it; no gender is on the account, so the
+    # screen says it is not recorded as a woman officer and the readiness check has a gap for it
+    steps.get_by_text("Record a step done").click()
+    steps.get_by_label("Step").select_option("statement_chosen_place")
+    steps.get_by_label("Officer who took the statement", exact=False).select_option(index=1)
+    steps.get_by_label("Done at").fill("2026-10-30T17:00")
+    steps.get_by_role("button", name="Save").click()
+    place = steps.get_by_role("listitem").nth(2)
+    expect(place).to_contain_text("Taken by")
+    expect(place.get_by_text("not recorded as a woman officer", exact=False)).to_be_visible()
+    page.evaluate(f"location.hash = '#/firs/{fir['id']}/readiness'")
+    expect(page.get_by_text("not recorded as taken by a woman officer", exact=False)).to_be_visible()
+    page.evaluate(f"location.hash = '#/firs/{fir['id']}/deadlines'")
+
     # on a phone the steps and the form fit the screen
     page.set_viewport_size({"width": 390, "height": 844})
     expect(steps).to_be_visible()
