@@ -1603,5 +1603,14 @@
  "certp.hash": "હેશ મૂલ્ય ({algo}): {hash}.",
  "certp.when": "{date} ના રોજ {place} ખાતે સહી.",
  "certp.sign": "પ્રમાણપત્ર આપનાર વ્યક્તિની સહી",
- "certp.print": "પ્રમાણપત્ર છાપો"
+ "certp.print": "પ્રમાણપત્ર છાપો",
+ "diary.paperShow": "આ પાનું કાગળ સ્વરૂપે બતાવો",
+ "diary.paperLabel": "કેસ ડાયરીનું પાનું, કાગળની નકલ",
+ "diary.paperTitle": "કેસ ડાયરી (BNSS 192)",
+ "diary.paperDate": "તારીખ: {date}",
+ "diary.paperPage": "પાના નં. {n}, {time} ના રોજ બંધ",
+ "diary.paperOpen": "આ પાનું હજી બંધ થયું નથી (મુસદ્દો).",
+ "diary.paperApp": "(એપ દ્વારા નોંધાયેલ)",
+ "diary.paperSign": "તપાસ અધિકારીની સહી",
+ "diary.paperPrint": "પાનું છાપો"
 }

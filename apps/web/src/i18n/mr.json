@@ -1603,5 +1603,14 @@
  "certp.hash": "हॅश मूल्य ({algo}): {hash}.",
  "certp.when": "{date} रोजी {place} येथे सही.",
  "certp.sign": "प्रमाणपत्र देणाऱ्या व्यक्तीची सही",
- "certp.print": "प्रमाणपत्र छापा"
+ "certp.print": "प्रमाणपत्र छापा",
+ "diary.paperShow": "हे पान कागदाच्या स्वरूपात दाखवा",
+ "diary.paperLabel": "केस डायरीचे पान, कागदी प्रत",
+ "diary.paperTitle": "केस डायरी (BNSS 192)",
+ "diary.paperDate": "दिनांक: {date}",
+ "diary.paperPage": "पान क्रमांक {n}, {time} रोजी बंद",
+ "diary.paperOpen": "हे पान अजून बंद झालेले नाही (मसुदा).",
+ "diary.paperApp": "(अ‍ॅपने नोंदवलेले)",
+ "diary.paperSign": "तपास अधिकाऱ्याची स्वाक्षरी",
+ "diary.paperPrint": "पान छापा"
 }

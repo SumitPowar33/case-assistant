@@ -22,6 +22,7 @@ export default function CaseDiary({ firId }: { firId: string }) {
   const [date, setDate] = useState<string>()
   const [version, setVersion] = useState(0)
   const [text, setText] = useState('')
+  const [paper, setPaper] = useState(false)
   const [error, setError] = useState('')
   const { data, error: loadError } = useLoad<Page>(`/firs/${firId}/diary${date ? `?date=${date}` : ''}`, version)
   async function act(run: () => Promise<unknown>) {
@@ -52,6 +53,15 @@ export default function CaseDiary({ firId }: { firId: string }) {
         ))}</ul>}
         {data.page && <p role="status" className="chip c-ok">{t('diary.closedBy', { n: data.page.page_no, time: fmt(data.page.closed_at), name: data.page.closed_by_name })}</p>}
         {error && <p role="alert">{error}</p>}
+        <button type="button" onClick={() => setPaper((p) => !p)} aria-pressed={paper}>{t('diary.paperShow')}</button>
+        {paper && <article className="print-copy court-paper" aria-label={t('diary.paperLabel')}>
+          <h2>{t('diary.paperTitle')}</h2>
+          <p>{t('diary.paperDate', { date: data.date })}{data.page ? ` · ${t('diary.paperPage', { n: data.page.page_no, time: fmt(data.page.closed_at) })}` : ''}</p>
+          {!data.page && <p className="paper-draft">{t('diary.paperOpen')}</p>}
+          <ol className="paper-items">{lines.map((l, i) => <li key={i}>{time(l.at)} · {l.text} {l.officer ? `— ${l.by}` : t('diary.paperApp')}</li>)}</ol>
+          <div className="paper-signs"><p>{t('diary.paperSign')}</p></div>
+          <button type="button" className="no-print" onClick={() => window.print()}>{t('diary.paperPrint')}</button>
+        </article>}
         {open && <form className="record-form" onSubmit={(e) => { e.preventDefault(); void act(async () => { await send(`/firs/${firId}/diary`, 'POST', { text }); setText('') }) }}>
           <TypingField label={t('diary.add')} value={text} onChange={setText} multiline speech />
           <div className="chips">

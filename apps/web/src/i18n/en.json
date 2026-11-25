@@ -1603,5 +1603,14 @@
  "certp.hash": "Hash value ({algo}): {hash}.",
  "certp.when": "Signed on {date} at {place}.",
  "certp.sign": "Signature of the person giving the certificate",
- "certp.print": "Print the certificate"
+ "certp.print": "Print the certificate",
+ "diary.paperShow": "Show this page as paper",
+ "diary.paperLabel": "Case diary page, paper copy",
+ "diary.paperTitle": "Case diary (BNSS 192)",
+ "diary.paperDate": "Date: {date}",
+ "diary.paperPage": "Page no. {n}, closed on {time}",
+ "diary.paperOpen": "This page is not closed yet (draft).",
+ "diary.paperApp": "(recorded by the app)",
+ "diary.paperSign": "Signature of the investigating officer",
+ "diary.paperPrint": "Print the page"
 }

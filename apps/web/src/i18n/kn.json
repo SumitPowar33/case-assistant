@@ -1603,5 +1603,14 @@
  "certp.hash": "ಹ್ಯಾಶ್ ಮೌಲ್ಯ ({algo}): {hash}.",
  "certp.when": "{date} ರಂದು {place} ಯಲ್ಲಿ ಸಹಿ.",
  "certp.sign": "ಪ್ರಮಾಣಪತ್ರ ನೀಡಿದ ವ್ಯಕ್ತಿಯ ಸಹಿ",
- "certp.print": "ಪ್ರಮಾಣಪತ್ರ ಮುದ್ರಿಸಿ"
+ "certp.print": "ಪ್ರಮಾಣಪತ್ರ ಮುದ್ರಿಸಿ",
+ "diary.paperShow": "ಈ ಪುಟವನ್ನು ಕಾಗದದ ರೂಪದಲ್ಲಿ ತೋರಿಸಿ",
+ "diary.paperLabel": "ಕೇಸ್ ಡೈರಿ ಪುಟ, ಕಾಗದದ ಪ್ರತಿ",
+ "diary.paperTitle": "ಕೇಸ್ ಡೈರಿ (BNSS 192)",
+ "diary.paperDate": "ದಿನಾಂಕ: {date}",
+ "diary.paperPage": "ಪುಟ ಸಂಖ್ಯೆ {n}, {time} ರಂದು ಮುಚ್ಚಲಾಗಿದೆ",
+ "diary.paperOpen": "ಈ ಪುಟವನ್ನು ಇನ್ನೂ ಮುಚ್ಚಿಲ್ಲ (ಕರಡು).",
+ "diary.paperApp": "(ಆ್ಯಪ್ ದಾಖಲಿಸಿದ್ದು)",
+ "diary.paperSign": "ತನಿಖಾಧಿಕಾರಿಯ ಸಹಿ",
+ "diary.paperPrint": "ಪುಟ ಮುದ್ರಿಸಿ"
 }

@@ -1603,5 +1603,14 @@
  "certp.hash": "ഹാഷ് മൂല്യം ({algo}): {hash}.",
  "certp.when": "{date}-ന് {place}-ൽ ഒപ്പിട്ടത്.",
  "certp.sign": "സർട്ടിഫിക്കറ്റ് നൽകുന്നയാളുടെ ഒപ്പ്",
- "certp.print": "സർട്ടിഫിക്കറ്റ് പ്രിന്റ് ചെയ്യുക"
+ "certp.print": "സർട്ടിഫിക്കറ്റ് പ്രിന്റ് ചെയ്യുക",
+ "diary.paperShow": "ഈ പേജ് കടലാസ് രൂപത്തിൽ കാണിക്കുക",
+ "diary.paperLabel": "കേസ് ഡയറി പേജ്, കടലാസ് പകർപ്പ്",
+ "diary.paperTitle": "കേസ് ഡയറി (BNSS 192)",
+ "diary.paperDate": "തീയതി: {date}",
+ "diary.paperPage": "പേജ് നമ്പർ {n}, {time}-ന് അടച്ചു",
+ "diary.paperOpen": "ഈ പേജ് ഇതുവരെ അടച്ചിട്ടില്ല (കരട്).",
+ "diary.paperApp": "(ആപ്പ് രേഖപ്പെടുത്തിയത്)",
+ "diary.paperSign": "അന്വേഷണ ഉദ്യോഗസ്ഥന്റെ ഒപ്പ്",
+ "diary.paperPrint": "പേജ് പ്രിന്റ് ചെയ്യുക"
 }

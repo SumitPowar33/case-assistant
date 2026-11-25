@@ -1603,5 +1603,14 @@
  "certp.hash": "হ্যাশ মান ({algo}): {hash}।",
  "certp.when": "{date} তারিখে {place}-এ স্বাক্ষরিত।",
  "certp.sign": "প্রমাণপত্র প্রদানকারীর স্বাক্ষর",
- "certp.print": "প্রমাণপত্র ছাপুন"
+ "certp.print": "প্রমাণপত্র ছাপুন",
+ "diary.paperShow": "এই পৃষ্ঠা কাগজের আকারে দেখান",
+ "diary.paperLabel": "কেস ডায়েরির পৃষ্ঠা, কাগজের কপি",
+ "diary.paperTitle": "কেস ডায়েরি (BNSS 192)",
+ "diary.paperDate": "তারিখ: {date}",
+ "diary.paperPage": "পৃষ্ঠা নং {n}, {time} তারিখে বন্ধ",
+ "diary.paperOpen": "এই পৃষ্ঠা এখনও বন্ধ হয়নি (খসড়া)।",
+ "diary.paperApp": "(অ্যাপ দ্বারা নথিভুক্ত)",
+ "diary.paperSign": "তদন্তকারী কর্মকর্তার স্বাক্ষর",
+ "diary.paperPrint": "পৃষ্ঠা ছাপুন"
 }

@@ -1603,5 +1603,14 @@
  "certp.hash": "हैश मान ({algo}): {hash}.",
  "certp.when": "{date} को {place} पर हस्ताक्षरित।",
  "certp.sign": "प्रमाणपत्र देने वाले व्यक्ति के हस्ताक्षर",
- "certp.print": "प्रमाणपत्र प्रिंट करें"
+ "certp.print": "प्रमाणपत्र प्रिंट करें",
+ "diary.paperShow": "यह पृष्ठ कागज़ के रूप में दिखाएँ",
+ "diary.paperLabel": "केस डायरी का पृष्ठ, कागज़ी प्रति",
+ "diary.paperTitle": "केस डायरी (BNSS 192)",
+ "diary.paperDate": "दिनांक: {date}",
+ "diary.paperPage": "पृष्ठ संख्या {n}, {time} को बंद",
+ "diary.paperOpen": "यह पृष्ठ अभी बंद नहीं हुआ है (मसौदा)।",
+ "diary.paperApp": "(ऐप द्वारा दर्ज)",
+ "diary.paperSign": "अन्वेषण अधिकारी के हस्ताक्षर",
+ "diary.paperPrint": "पृष्ठ प्रिंट करें"
 }

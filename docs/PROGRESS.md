@@ -253,6 +253,22 @@ Questions for Sumit:
 - `scripts/test-all.sh` at the end of session 125: all 8 suites PASS. Coverage: core 99.06% lines / 96.70% branches, web unchanged (no web change; 99.97 / 97.63 / 98.89 in session 124), gateway 99%.
 - Open questions: session 124's 1 (OCR on protected cases), session 123's 1 and 3, and session 125's 1 to 3 below.
 
+## 25 Nov 2026, session 132 (scheduled run, Sumit away)
+Started from `setup/seed`. Sumit's priority list (AI and RAG first) is done or waits for him / a model download (priorities 1 to 7); this session took priority 8: item 18, the fifth court-format paper. Question 2 of session 131 was unanswered, so the default named there was taken: the case diary page.
+
+**Item 18, case diary page as a court-format paper (no migration, web only):** the case diary screen has "Show this page as paper" for the day on screen. The paper holds the heading (BNSS 192), the date, the page number and close time (or a DRAFT line while the page is open), the day's entries and app-recorded steps in time order (app steps marked), the signature line of the investigating officer and "Print the page" (browser print, `.print-copy`). Built only from the page already loaded. 9 new keys `diary.paper*` in all 11 screen catalogs (ten are drafts, unreviewed). The paper does not carry the FIR number (the diary page route does not return it); the printed page is meant to sit in the case file.
+
+**Tests:** scripts/test-all.sh: repo rules PASS, packs PASS, xlit PASS, ai-gateway PASS (gate 98), web PASS (statements 99.87, branches 97.07; CaseDiary.tsx 100 / 98.5), database rules PASS, core PASS, e2e PASS. In this fresh container `psycopg[binary]` also had to be installed (e2e and database rules need it). No gate raised. The full suite takes over 10 minutes; run it in the background.
+
+Skipped / not checked: no look at real paper; translations are drafts.
+
+Next: item 18 (FIR copy, chargesheet with enclosure lists), then the real-time screens, item 15 rest, item 3's Marathi playbook texts when a reviewer is named.
+
+Questions for Sumit:
+1. Should the diary paper carry the FIR number and station in its heading (needs the diary route to return them; small change)? Without an answer the next session adds it.
+2. Which paper next: the chargesheet with its enclosure lists or the FIR copy? (Without an answer the next session takes the FIR copy.)
+3. Still open: sessions 123 to 131 (see their entries).
+
 ## 25 Nov 2026, session 131 (02:05 IST scheduled run, last of the night, Sumit away)
 Started from `setup/seed` (session 130 notes; the clone was on `master`, fetch and checkout worked). Sumit's priority list (AI and RAG first) is done or waits for him / a model download (priorities 1 to 7), so this session took priority 8: item 18, the fourth court-format paper. Question 2 of session 130 was unanswered, so the default named there was taken: the BSA 63(4) certificate.
 

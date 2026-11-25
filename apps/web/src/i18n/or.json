@@ -1603,5 +1603,14 @@
  "certp.hash": "ହ୍ୟାସ୍ ମୂଲ୍ୟ ({algo}): {hash}।",
  "certp.when": "{date} ରେ {place}ରେ ସ୍ୱାକ୍ଷରିତ।",
  "certp.sign": "ପ୍ରମାଣପତ୍ର ଦେଉଥିବା ବ୍ୟକ୍ତିଙ୍କ ସ୍ୱାକ୍ଷର",
- "certp.print": "ପ୍ରମାଣପତ୍ର ଛାପନ୍ତୁ"
+ "certp.print": "ପ୍ରମାଣପତ୍ର ଛାପନ୍ତୁ",
+ "diary.paperShow": "ଏହି ପୃଷ୍ଠାକୁ କାଗଜ ରୂପେ ଦେଖାନ୍ତୁ",
+ "diary.paperLabel": "କେସ୍ ଡାଏରୀ ପୃଷ୍ଠା, କାଗଜ ନକଲ",
+ "diary.paperTitle": "କେସ୍ ଡାଏରୀ (BNSS 192)",
+ "diary.paperDate": "ତାରିଖ: {date}",
+ "diary.paperPage": "ପୃଷ୍ଠା ସଂଖ୍ୟା {n}, {time} ରେ ବନ୍ଦ",
+ "diary.paperOpen": "ଏହି ପୃଷ୍ଠା ଏପର୍ଯ୍ୟନ୍ତ ବନ୍ଦ ହୋଇନାହିଁ (ଖସଡ଼ା)।",
+ "diary.paperApp": "(ଆପ୍ ଦ୍ୱାରା ଲିପିବଦ୍ଧ)",
+ "diary.paperSign": "ତଦନ୍ତକାରୀ ଅଧିକାରୀଙ୍କ ସ୍ୱାକ୍ଷର",
+ "diary.paperPrint": "ପୃଷ୍ଠା ଛାପନ୍ତୁ"
 }

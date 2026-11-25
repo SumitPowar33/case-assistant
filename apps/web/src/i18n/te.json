@@ -1603,5 +1603,14 @@
  "certp.hash": "హాష్ విలువ ({algo}): {hash}.",
  "certp.when": "{date} నాడు {place}లో సంతకం చేయబడింది.",
  "certp.sign": "సర్టిఫికెట్ ఇచ్చిన వ్యక్తి సంతకం",
- "certp.print": "సర్టిఫికెట్ ముద్రించు"
+ "certp.print": "సర్టిఫికెట్ ముద్రించు",
+ "diary.paperShow": "ఈ పేజీని కాగితం రూపంలో చూపండి",
+ "diary.paperLabel": "కేసు డైరీ పేజీ, కాగితం ప్రతి",
+ "diary.paperTitle": "కేసు డైరీ (BNSS 192)",
+ "diary.paperDate": "తేదీ: {date}",
+ "diary.paperPage": "పేజీ సంఖ్య {n}, {time}న మూసివేయబడింది",
+ "diary.paperOpen": "ఈ పేజీ ఇంకా మూసివేయబడలేదు (ముసాయిదా).",
+ "diary.paperApp": "(యాప్ నమోదు చేసినది)",
+ "diary.paperSign": "దర్యాప్తు అధికారి సంతకం",
+ "diary.paperPrint": "పేజీని ముద్రించు"
 }

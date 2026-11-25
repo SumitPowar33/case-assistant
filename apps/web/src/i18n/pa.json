@@ -1603,5 +1603,14 @@
  "certp.hash": "ਹੈਸ਼ ਮੁੱਲ ({algo}): {hash}।",
  "certp.when": "{date} ਨੂੰ {place} ਵਿਖੇ ਦਸਤਖ਼ਤ ਕੀਤੇ।",
  "certp.sign": "ਸਰਟੀਫਿਕੇਟ ਦੇਣ ਵਾਲੇ ਵਿਅਕਤੀ ਦੇ ਦਸਤਖ਼ਤ",
- "certp.print": "ਸਰਟੀਫਿਕੇਟ ਛਾਪੋ"
+ "certp.print": "ਸਰਟੀਫਿਕੇਟ ਛਾਪੋ",
+ "diary.paperShow": "ਇਹ ਪੰਨਾ ਕਾਗਜ਼ ਦੇ ਰੂਪ ਵਿੱਚ ਦਿਖਾਓ",
+ "diary.paperLabel": "ਕੇਸ ਡਾਇਰੀ ਦਾ ਪੰਨਾ, ਕਾਗਜ਼ੀ ਕਾਪੀ",
+ "diary.paperTitle": "ਕੇਸ ਡਾਇਰੀ (BNSS 192)",
+ "diary.paperDate": "ਮਿਤੀ: {date}",
+ "diary.paperPage": "ਪੰਨਾ ਨੰ. {n}, {time} ਨੂੰ ਬੰਦ",
+ "diary.paperOpen": "ਇਹ ਪੰਨਾ ਅਜੇ ਬੰਦ ਨਹੀਂ ਹੋਇਆ (ਖਰੜਾ)।",
+ "diary.paperApp": "(ਐਪ ਵੱਲੋਂ ਦਰਜ)",
+ "diary.paperSign": "ਜਾਂਚ ਅਧਿਕਾਰੀ ਦੇ ਦਸਤਖ਼ਤ",
+ "diary.paperPrint": "ਪੰਨਾ ਛਾਪੋ"
 }
