@@ -1647,5 +1647,20 @@
  "calls.kind.missing_person": "बेपत्ता व्यक्ती",
  "calls.kind.fire_medical": "आग किंवा वैद्यकीय आणीबाणी",
  "calls.kind.dispute": "वाद",
- "calls.kind.other": "इतर"
+ "calls.kind.other": "इतर",
+ "pocso.takenBy": "जबाब घेणारे अधिकारी (पोक्सो 24: महिला अधिकारी)",
+ "pocso.statementUsed": "ज्यावर हे आधारित आहे ते मुलाचे एक नोंदवलेले जबाब (दुसरे जबाब घेतले जात नाही)",
+ "pocso.takenByDone": "{officer} यांनी घेतले",
+ "pocso.womanYes": "महिला अधिकारी म्हणून नोंद",
+ "pocso.womanNo": "महिला अधिकारी म्हणून नोंद नाही (राज्य प्रशासक खात्यावर हे ठरवतो)",
+ "pocso.statementShown": "मुलाच्या {time} च्या नोंदवलेल्या जबाबावर आधारित",
+ "admin.gender": "लिंग (ऐच्छिक; पोक्सो 24 चा जबाब महिला अधिकाऱ्याने घेतला हे तपासण्यासाठीच)",
+ "adminGender.female": "महिला",
+ "adminGender.male": "पुरुष",
+ "adminGender.other": "इतर",
+ "server.pocsoNeedsOfficer": "जबाब घेणाऱ्या अधिकाऱ्याचे नाव लिहा (पोक्सो 24: महिला अधिकारी).",
+ "server.pocsoOnlyPlace": "फक्त मुलाच्या ठिकाणी घेतलेला जबाब कोणी घेतला ते सांगतो.",
+ "server.pocsoOfficerStation": "अधिकारी याच पोलीस ठाण्यात नेमलेला असावा.",
+ "server.pocsoOnlyStatement": "फक्त जबाबाची पायरी नोंदवलेला जबाब सांगते.",
+ "server.pocsoChildStatement": "जबाब या एफआयआरच्या एखाद्या बाल पीडिताचा असावा."
 }

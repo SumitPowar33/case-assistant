@@ -1647,5 +1647,20 @@
  "calls.kind.missing_person": "Missing person",
  "calls.kind.fire_medical": "Fire or medical emergency",
  "calls.kind.dispute": "Dispute",
- "calls.kind.other": "Other"
+ "calls.kind.other": "Other",
+ "pocso.takenBy": "Officer who took the statement (POCSO 24: a woman officer)",
+ "pocso.statementUsed": "The child's one recorded statement it relies on (no second statement is taken)",
+ "pocso.takenByDone": "Taken by {officer}",
+ "pocso.womanYes": "recorded as a woman officer",
+ "pocso.womanNo": "not recorded as a woman officer (the state admin sets it on the account)",
+ "pocso.statementShown": "Relies on the child's recorded statement of {time}",
+ "admin.gender": "Gender (optional; only used to check that a woman officer took a POCSO 24 statement)",
+ "adminGender.female": "Female",
+ "adminGender.male": "Male",
+ "adminGender.other": "Other",
+ "server.pocsoNeedsOfficer": "Name the officer who took the statement (POCSO 24: a woman officer).",
+ "server.pocsoOnlyPlace": "Only the statement at the child's place names who took it.",
+ "server.pocsoOfficerStation": "The officer must be posted at this police station.",
+ "server.pocsoOnlyStatement": "Only a statement step names the recorded statement.",
+ "server.pocsoChildStatement": "The statement must be one of a child victim of this FIR."
 }

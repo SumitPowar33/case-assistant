@@ -1647,5 +1647,20 @@
  "calls.kind.missing_person": "ନିଖୋଜ ବ୍ୟକ୍ତି",
  "calls.kind.fire_medical": "ଅଗ୍ନିକାଣ୍ଡ କିମ୍ବା ଚିକିତ୍ସା ଜରୁରୀକାଳୀନ",
  "calls.kind.dispute": "ବିବାଦ",
- "calls.kind.other": "ଅନ୍ୟାନ୍ୟ"
+ "calls.kind.other": "ଅନ୍ୟାନ୍ୟ",
+ "pocso.takenBy": "ବୟାନ ନେଇଥିବା ଅଧିକାରୀ (ପକ୍ସୋ 24: ମହିଳା ଅଧିକାରୀ)",
+ "pocso.statementUsed": "ଯେଉଁ ଗୋଟିଏ ଦର୍ଜ ବୟାନ ଉପରେ ଏହା ନିର୍ଭର କରେ (ଦ୍ୱିତୀୟ ବୟାନ ନିଆଯାଏ ନାହିଁ)",
+ "pocso.takenByDone": "{officer} ନେଇଛନ୍ତି",
+ "pocso.womanYes": "ମହିଳା ଅଧିକାରୀ ଭାବେ ଦର୍ଜ",
+ "pocso.womanNo": "ମହିଳା ଅଧିକାରୀ ଭାବେ ଦର୍ଜ ନାହିଁ (ରାଜ୍ୟ ଆଡମିନ୍ ଖାତାରେ ଏହା ସ୍ଥିର କରନ୍ତି)",
+ "pocso.statementShown": "ଶିଶୁର {time} ର ଦର୍ଜ ବୟାନ ଉପରେ ନିର୍ଭରଶୀଳ",
+ "admin.gender": "ଲିଙ୍ଗ (ଇଚ୍ଛାଧୀନ; କେବଳ ପକ୍ସୋ 24 ବୟାନ ମହିଳା ଅଧିକାରୀ ନେଇଛନ୍ତି କି ନାହିଁ ଯାଞ୍ଚ ପାଇଁ)",
+ "adminGender.female": "ମହିଳା",
+ "adminGender.male": "ପୁରୁଷ",
+ "adminGender.other": "ଅନ୍ୟ",
+ "server.pocsoNeedsOfficer": "ବୟାନ ନେଇଥିବା ଅଧିକାରୀଙ୍କ ନାମ ଲେଖନ୍ତୁ (ପକ୍ସୋ 24: ମହିଳା ଅଧିକାରୀ)।",
+ "server.pocsoOnlyPlace": "କେବଳ ଶିଶୁର ସ୍ଥାନରେ ନିଆଯାଇଥିବା ବୟାନ ହିଁ କିଏ ନେଲା ତାହା କହେ।",
+ "server.pocsoOfficerStation": "ଅଧିକାରୀ ଏହି ଥାନାରେ ନିଯୁକ୍ତ ଥିବା ଆବଶ୍ୟକ।",
+ "server.pocsoOnlyStatement": "କେବଳ ବୟାନର ପଦକ୍ଷେପ ଦର୍ଜ ବୟାନର ନାମ ଦିଏ।",
+ "server.pocsoChildStatement": "ବୟାନ ଏହି ଏଫଆଇଆରର କୌଣସି ଶିଶୁ ପୀଡ଼ିତଙ୍କର ହେବା ଆବଶ୍ୟକ।"
 }

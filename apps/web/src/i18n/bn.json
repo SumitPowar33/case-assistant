@@ -1647,5 +1647,20 @@
  "calls.kind.missing_person": "নিখোঁজ ব্যক্তি",
  "calls.kind.fire_medical": "আগুন বা চিকিৎসা জরুরি অবস্থা",
  "calls.kind.dispute": "বিবাদ",
- "calls.kind.other": "অন্যান্য"
+ "calls.kind.other": "অন্যান্য",
+ "pocso.takenBy": "জবানবন্দি গ্রহণকারী কর্মকর্তা (পকসো ২৪: মহিলা কর্মকর্তা)",
+ "pocso.statementUsed": "শিশুর যে একটি নথিভুক্ত জবানবন্দির উপর এটি নির্ভর করে (দ্বিতীয় জবানবন্দি নেওয়া হয় না)",
+ "pocso.takenByDone": "{officer} গ্রহণ করেছেন",
+ "pocso.womanYes": "মহিলা কর্মকর্তা হিসেবে নথিভুক্ত",
+ "pocso.womanNo": "মহিলা কর্মকর্তা হিসেবে নথিভুক্ত নয় (রাজ্যের অ্যাডমিন অ্যাকাউন্টে এটি ঠিক করেন)",
+ "pocso.statementShown": "শিশুর {time} এর নথিভুক্ত জবানবন্দির উপর নির্ভরশীল",
+ "admin.gender": "লিঙ্গ (ঐচ্ছিক; শুধু পকসো ২৪ জবানবন্দি মহিলা কর্মকর্তা নিয়েছেন কি না যাচাইয়ের জন্য)",
+ "adminGender.female": "মহিলা",
+ "adminGender.male": "পুরুষ",
+ "adminGender.other": "অন্য",
+ "server.pocsoNeedsOfficer": "জবানবন্দি গ্রহণকারী কর্মকর্তার নাম দিন (পকসো ২৪: মহিলা কর্মকর্তা)।",
+ "server.pocsoOnlyPlace": "শুধু শিশুর স্থানে নেওয়া জবানবন্দিতেই কে নিয়েছেন তা লেখা হয়।",
+ "server.pocsoOfficerStation": "কর্মকর্তাকে এই থানায় নিযুক্ত থাকতে হবে।",
+ "server.pocsoOnlyStatement": "শুধু জবানবন্দির ধাপই নথিভুক্ত জবানবন্দির নাম দেয়।",
+ "server.pocsoChildStatement": "জবানবন্দি এই এফআইআরের কোনো শিশু ভুক্তভোগীর হতে হবে।"
 }

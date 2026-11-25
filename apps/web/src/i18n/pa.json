@@ -1647,5 +1647,20 @@
  "calls.kind.missing_person": "ਲਾਪਤਾ ਵਿਅਕਤੀ",
  "calls.kind.fire_medical": "ਅੱਗ ਜਾਂ ਮੈਡੀਕਲ ਐਮਰਜੈਂਸੀ",
  "calls.kind.dispute": "ਝਗੜਾ",
- "calls.kind.other": "ਹੋਰ"
+ "calls.kind.other": "ਹੋਰ",
+ "pocso.takenBy": "ਬਿਆਨ ਲੈਣ ਵਾਲਾ ਅਧਿਕਾਰੀ (ਪੋਕਸੋ 24: ਮਹਿਲਾ ਅਧਿਕਾਰੀ)",
+ "pocso.statementUsed": "ਬੱਚੇ ਦਾ ਉਹ ਇੱਕ ਦਰਜ ਬਿਆਨ ਜਿਸ ਉੱਤੇ ਇਹ ਆਧਾਰਿਤ ਹੈ (ਦੂਜਾ ਬਿਆਨ ਨਹੀਂ ਲਿਆ ਜਾਂਦਾ)",
+ "pocso.takenByDone": "{officer} ਵੱਲੋਂ ਲਿਆ ਗਿਆ",
+ "pocso.womanYes": "ਮਹਿਲਾ ਅਧਿਕਾਰੀ ਵਜੋਂ ਦਰਜ",
+ "pocso.womanNo": "ਮਹਿਲਾ ਅਧਿਕਾਰੀ ਵਜੋਂ ਦਰਜ ਨਹੀਂ (ਰਾਜ ਐਡਮਿਨ ਖਾਤੇ ਉੱਤੇ ਇਹ ਤੈਅ ਕਰਦਾ ਹੈ)",
+ "pocso.statementShown": "ਬੱਚੇ ਦੇ {time} ਦੇ ਦਰਜ ਬਿਆਨ ਉੱਤੇ ਆਧਾਰਿਤ",
+ "admin.gender": "ਲਿੰਗ (ਵਿਕਲਪਿਕ; ਸਿਰਫ਼ ਇਹ ਜਾਂਚਣ ਲਈ ਕਿ ਪੋਕਸੋ 24 ਦਾ ਬਿਆਨ ਮਹਿਲਾ ਅਧਿਕਾਰੀ ਨੇ ਲਿਆ)",
+ "adminGender.female": "ਔਰਤ",
+ "adminGender.male": "ਮਰਦ",
+ "adminGender.other": "ਹੋਰ",
+ "server.pocsoNeedsOfficer": "ਬਿਆਨ ਲੈਣ ਵਾਲੇ ਅਧਿਕਾਰੀ ਦਾ ਨਾਮ ਲਿਖੋ (ਪੋਕਸੋ 24: ਮਹਿਲਾ ਅਧਿਕਾਰੀ)।",
+ "server.pocsoOnlyPlace": "ਸਿਰਫ਼ ਬੱਚੇ ਦੀ ਥਾਂ ਉੱਤੇ ਲਿਆ ਬਿਆਨ ਹੀ ਦੱਸਦਾ ਹੈ ਕਿ ਕਿਸ ਨੇ ਲਿਆ।",
+ "server.pocsoOfficerStation": "ਅਧਿਕਾਰੀ ਇਸੇ ਥਾਣੇ ਵਿੱਚ ਤੈਨਾਤ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ।",
+ "server.pocsoOnlyStatement": "ਸਿਰਫ਼ ਬਿਆਨ ਦਾ ਪੜਾਅ ਦਰਜ ਬਿਆਨ ਦਾ ਨਾਮ ਦਿੰਦਾ ਹੈ।",
+ "server.pocsoChildStatement": "ਬਿਆਨ ਇਸ ਐਫਆਈਆਰ ਦੇ ਕਿਸੇ ਬਾਲ ਪੀੜਤ ਦਾ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ।"
 }

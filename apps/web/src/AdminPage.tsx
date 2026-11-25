@@ -4,7 +4,7 @@ import { fmt, text } from './formats'
 import { useT } from './i18n'
 
 type Account = {
-  id: string; username: string | null; full_name: string; rank: string; role: string; station_id: string | null
+  id: string; username: string | null; full_name: string; rank: string; role: string; station_id: string | null; gender?: string | null
   station_name: string | null; district: string | null; active: boolean; locked_until: string | null
 }
 type Station = { id: string; state_code: string; district: string; name: string; cctns_code: string | null }
@@ -58,7 +58,7 @@ export default function AdminPage() {
     const role = String(f.get('role'))
     return send('/users', 'POST', {
       username: String(f.get('username')).trim().toLowerCase(), password: f.get('password'), fullName: text(f, 'fullName'),
-      rank: text(f, 'rank'), role, stationId: station(f, role),
+      rank: text(f, 'rank'), role, stationId: station(f, role), gender: f.get('gender') || undefined,
     })
   }
 
@@ -66,7 +66,7 @@ export default function AdminPage() {
   async function changeAccount(a: Account, f: FormData) {
     const role = String(f.get('role'))
     const r = await send<{ changed: string; firsAsIo: number }>(`/users/${a.id}`, 'PUT', {
-      role, rank: text(f, 'rank'), stationId: station(f, role), reason: f.get('reason'),
+      role, rank: text(f, 'rank'), stationId: station(f, role), reason: f.get('reason'), gender: f.get('gender') || undefined,
     })
     return t('admin.changed', { name: a.full_name, changed: r!.changed })   // what changed is written by the server
       + (r!.firsAsIo ? ` ${t(r!.firsAsIo === 1 ? 'admin.stillIo.one' : 'admin.stillIo.other', { n: r!.firsAsIo })}` : '')
@@ -100,6 +100,8 @@ export default function AdminPage() {
                     <label>{t('admin.rank')} <input name="rank" required maxLength={60} defaultValue={a.rank} /></label>
                     <label>{t('common.policeStation')} <select name="station" defaultValue={a.station_id ?? ''}><option value="">{t('admin.noneOption')}</option>
                       {stations.map((s) => <option key={s.id} value={s.id}>{s.name}, {s.district} ({s.state_code})</option>)}</select></label>
+                    <label>{t('admin.gender')} <select name="gender" defaultValue={a.gender ?? ''}><option value="">{t('admin.noneOption')}</option>
+                      {['female', 'male', 'other'].map((g) => <option key={g} value={g}>{t.code('adminGender', g)}</option>)}</select></label>
                     <label>{t('admin.changeReason')} <input name="reason" minLength={10} maxLength={2000} required /></label>
                     <button type="submit">{t('admin.changeWho', { name: a.full_name })}</button>
                   </form>
@@ -120,6 +122,8 @@ export default function AdminPage() {
             <select name="station" defaultValue=""><option value="">{t('admin.noneOption')}</option>
               {stations.map((s) => <option key={s.id} value={s.id}>{s.name}, {s.district} ({s.state_code})</option>)}</select>
           </label>
+          <label>{t('admin.gender')} <select name="gender" defaultValue=""><option value="">{t('admin.noneOption')}</option>
+            {['female', 'male', 'other'].map((g) => <option key={g} value={g}>{t.code('adminGender', g)}</option>)}</select></label>
           <label>{t('admin.username')} <input name="username" required pattern="[a-z0-9._\-]{3,40}" autoComplete="off" /></label>
           <label>{t('admin.firstPassword')} <input name="password" type="password" required minLength={12} autoComplete="new-password" /></label>
           <label>{t('admin.firstPasswordAgain')} <input name="repeat" type="password" required minLength={12} autoComplete="new-password" /></label>

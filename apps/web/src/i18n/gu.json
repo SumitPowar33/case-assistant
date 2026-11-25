@@ -1647,5 +1647,20 @@
  "calls.kind.missing_person": "ગુમ વ્યક્તિ",
  "calls.kind.fire_medical": "આગ કે તબીબી કટોકટી",
  "calls.kind.dispute": "વિવાદ",
- "calls.kind.other": "અન્ય"
+ "calls.kind.other": "અન્ય",
+ "pocso.takenBy": "નિવેદન લેનાર અધિકારી (પોક્સો 24: મહિલા અધિકારી)",
+ "pocso.statementUsed": "બાળકનું જે એક નોંધાયેલું નિવેદન આના આધારે છે (બીજું નિવેદન લેવાતું નથી)",
+ "pocso.takenByDone": "{officer} દ્વારા લેવાયું",
+ "pocso.womanYes": "મહિલા અધિકારી તરીકે નોંધાયેલ",
+ "pocso.womanNo": "મહિલા અધિકારી તરીકે નોંધાયેલ નથી (રાજ્ય એડમિન ખાતા પર તે નક્કી કરે છે)",
+ "pocso.statementShown": "બાળકના {time} ના નોંધાયેલા નિવેદન પર આધારિત",
+ "admin.gender": "લિંગ (વૈકલ્પિક; માત્ર પોક્સો 24 નું નિવેદન મહિલા અધિકારીએ લીધું તે તપાસવા)",
+ "adminGender.female": "મહિલા",
+ "adminGender.male": "પુરુષ",
+ "adminGender.other": "અન્ય",
+ "server.pocsoNeedsOfficer": "નિવેદન લેનાર અધિકારીનું નામ લખો (પોક્સો 24: મહિલા અધિકારી).",
+ "server.pocsoOnlyPlace": "માત્ર બાળકના સ્થળે લીધેલું નિવેદન જ કોણે લીધું તે જણાવે છે.",
+ "server.pocsoOfficerStation": "અધિકારી આ જ પોલીસ સ્ટેશનમાં નિયુક્ત હોવા જોઈએ.",
+ "server.pocsoOnlyStatement": "માત્ર નિવેદનનું પગલું નોંધાયેલા નિવેદનનું નામ આપે છે.",
+ "server.pocsoChildStatement": "નિવેદન આ એફઆઈઆરના કોઈ બાળ પીડિતનું હોવું જોઈએ."
 }
