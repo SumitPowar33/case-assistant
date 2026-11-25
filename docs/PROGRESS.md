@@ -86,6 +86,7 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
+In progress: item 15, Incoming 112 events screen (session 133, started 23:30 IST)
 **SUMIT'S PRIORITY (25 Nov 2026; comes before the 16 Nov list below and the one in the session prompt):** build item 15 first, in this order, keeping every rule in CLAUDE.md:
 1. The Incoming 112 events screen (docs/AI-AND-SCREENS-PLAN.md section 6): until the state's ERSS interface exists, a manual entry form at the station (time received, place, kind of call, vehicle sent, caller as given; fictional data only), the duty officer acknowledges it, and one click opens a complaint at the front desk or a general diary entry from it; kept as written, logged, a new screen goes in apps/web/src/screens.ts screensFor; permissions from packs/*/roles.json. Leave a clear place for the ERSS feed later; do not invent its format.
 2. The POCSO left-overs of item 15: the one recorded statement of the child reused (no second statement form), and the woman officer check for the POCSO s.24 statement (needs the officer's gender on the account: add it as an optional, admin-set field; if that needs Sumit's decision, take the safer reversible choice and record it under "Decisions taken for Sumit").
