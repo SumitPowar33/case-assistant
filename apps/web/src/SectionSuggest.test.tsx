@@ -186,3 +186,16 @@ test('a section by hand takes the first law when none is chosen, and a refusal i
   expect(await screen.findByRole('alert')).toBeTruthy()
   expect(calls.find((c) => c.url.endsWith('/sections/own'))!.body).toMatchObject({ act: 'BNS' })
 })
+
+test('a suggested charge graver than every section on the FIR comes first and says so, with its punishment', async () => {
+  const murder = { playbook_id: 'murder', charge_id: 'murder', act: 'BNS', law: 'BNS 103(1)', label: 'Murder', ingredients: [ing('death')], in_fir: false, punishment: 'death', graver: true }
+  stub({ list: { status: 200, body: { law: 'unknown', sections: [], charges: [...CHARGES.map((c) => ({ ...c, punishment: 'less_than_10_years', graver: false })), murder], acts: ['BNS'] } },
+    generate: draft(JSON.stringify([ANSWER[1], { charge: 'murder/murder', ingredients: [{ id: 'death', quote: 'Rs 40,000 went out of my account' }] }])) })
+  show()
+  fireEvent.click(await screen.findByRole('button', { name: 'Suggest sections with AI' }))
+  const cards = await screen.findAllByRole('listitem', { name: /BNS/ })
+  expect(cards[0].getAttribute('aria-label')).toBe('BNS 103(1)')
+  expect(within(card('BNS 103(1)')).getByText('Graver than the sections on the FIR')).toBeTruthy()
+  expect(within(card('BNS 103(1)')).getByText('death')).toBeTruthy()
+  expect(within(card('BNS 319(2)')).queryByText('Graver than the sections on the FIR')).toBeNull()
+})

@@ -49,9 +49,10 @@ def test_an_officer_corrects_and_saves_a_scanned_reply_read_by_the_ocr(admin_web
         expect(box).to_have_value(READ)
         shots = Path(__file__).resolve().parents[2] / "apps/core/target/screens"   # to compare with board 4 (build output, not kept)
         shots.mkdir(parents=True, exist_ok=True)
-        form.screenshot(path=str(shots / "reply-scan-1280.png"))
+        # the open form is a panel at the screen edge (index.css); the details element itself has no box
+        form.locator(".record-form").screenshot(path=str(shots / "reply-scan-1280.png"))
         page.set_viewport_size({"width": 390, "height": 844})
-        form.screenshot(path=str(shots / "reply-scan-390.png"))
+        form.locator(".record-form").screenshot(path=str(shots / "reply-scan-390.png"))
         assert page.evaluate("document.documentElement.scrollWidth") <= 390   # nothing wider than a phone
         page.set_viewport_size({"width": 1280, "height": 900})
         box.fill(CORRECTED)

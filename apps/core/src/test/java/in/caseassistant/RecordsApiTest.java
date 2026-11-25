@@ -334,6 +334,15 @@ class RecordsApiTest {
     }
 
     @Test
+    void aSeizureOrASignatureCannotBeInTheFuture() throws Exception {
+        String later = java.time.OffsetDateTime.now().plusHours(2).toString();
+        send("/evidence", "{\"label\":\"E-09\",\"description\":\"Fictional phone\",\"kind\":\"physical\",\"seizedAt\":\"" + later + "\",\"seizureMemo\":\"SM-9\"}", 400);
+        String item = idOf(send("/evidence", "{\"label\":\"E-09\",\"description\":\"Fictional phone\",\"kind\":\"electronic\",\"seizedAt\":\"2026-10-02T10:00:00Z\",\"seizureMemo\":\"SM-9\",\"sha256\":\"" + SHA + "\"}", 201));
+        send("/evidence/" + item + "/certificates", "{\"part\":\"A\",\"signerName\":\"Fictional Signer\",\"deviceType\":\"phone\",\"hashAlgo\":\"SHA256\",\"hashValue\":\"" + SHA
+                + "\",\"signedAt\":\"" + later + "\",\"place\":\"Testpur\"}", 400);
+    }
+
+    @Test
     void noticeNeedsSignerToBeSentAndReplyChecksSetStatus() throws Exception {
         String n = "{\"kind\":\"BNSS_94\",\"addressee\":\"Fictional Bank Nodal Officer\",\"itemsRequested\":[\"statement\",\"Part B certificate\"],\"body\":\"Please produce.\"%s}";
         send("/notices", n.formatted(",\"status\":\"sent\""), 400); // sent without an issue date

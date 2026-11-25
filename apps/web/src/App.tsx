@@ -1,7 +1,9 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { Fragment, useEffect, useState, useSyncExternalStore } from 'react'
 import FirList from './FirList'
 import Dashboard from './Dashboard'
-import { PARTS, PART_LABEL, isPart } from './firParts'
+import { isPart } from './firParts'
+import { screensFor, type Group } from './screens'
+import { HelpChat, Tour } from './Guide'
 import FirDetail from './FirDetail'
 import TypePage from './TypePage'
 import SettingsPage from './SettingsPage'
@@ -26,6 +28,12 @@ import { REVIEWED, SCREEN_LANGS, ScreenLangContext, translate, type Key } from '
 import { LANGS, TypingContext, type TypingLang } from './typing'
 import { fmt } from './formats'
 
+const GROUP_HEAD: Record<Group, Key | null> = { main: null, case: 'nav.groupCase', station: 'nav.groupStation', tools: 'nav.groupTools', admin: 'nav.admin' }
+// the tour starts by itself once per user on this browser; storage may be missing (private window), then it is simply offered
+const tourKey = (userId: string) => `tour-seen:${userId}`
+function tourSeen(userId: string) { try { return localStorage.getItem(tourKey(userId)) === '1' } catch { return true } }
+function markTourSeen(userId: string) { try { localStorage.setItem(tourKey(userId), '1') } catch { /* nothing kept */ } }
+
 export default function App() {
   const [hash, setHash] = useState(window.location.hash)
   const [lang, setLang] = useState<TypingLang>('en')
@@ -40,17 +48,29 @@ export default function App() {
   const firId = firMatch?.[1]
   const firPart = isPart(firMatch?.[2]) ? firMatch?.[2] : undefined
   const complaintId = /^#\/complaints\/([\w-]+)$/.exec(hash)?.[1]
-  const admin = session?.user.permissions?.includes('admin.manage') ?? false
-  const supervisor = session?.user.permissions?.includes('chargesheet.approve') ?? false
-  const auditor = session?.user.permissions?.includes('audit.read_protected') ?? false
-  const actingGrantor = session?.user.permissions?.includes('acting.grant') ?? false
-  const packWork = (session?.user.permissions?.includes('pack.propose') || session?.user.permissions?.includes('pack.approve')) ?? false
+  const screens = session ? screensFor(session.user, firId) : []
+  const caseLinks = screens.filter((sc) => sc.group === 'case')
+  const [guide, setGuide] = useState<'help' | 'tour' | null>(null)
+  const userId = session?.user.id
+  useEffect(() => { setGuide(userId && !tourSeen(userId) ? 'tour' : null) }, [userId])
+  function endTour() { if (userId) markTourSeen(userId); setGuide(null) }
   // the signed-in user's screen language (kept on the server); before sign-in, the one chosen on this page
   const [chosen, setChosen] = useState('en')
   const [langError, setLangError] = useState('')
   const screen = session?.user.ui_language && SCREEN_LANGS.includes(session.user.ui_language) ? session.user.ui_language : chosen
   setMessageLanguage(screen)   // during render, so the first loads of the screens below already use it
   useEffect(() => { document.documentElement.lang = screen }, [screen])
+  // An open form panel (index.css) closes on Escape, and after a save: every form is reset only once its save succeeded
+  useEffect(() => {
+    const close = (panel: Element | null | undefined) => {
+      if (panel instanceof HTMLDetailsElement && panel.open) { panel.open = false; panel.querySelector('summary')?.focus() }
+    }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') close(document.querySelector('details[open]:has(> .record-form)')) }
+    const saved = (e: Event) => { if ((e.target as Element).matches('.record-form')) close((e.target as Element).parentElement) }
+    document.addEventListener('keydown', esc)
+    document.addEventListener('reset', saved, true)
+    return () => { document.removeEventListener('keydown', esc); document.removeEventListener('reset', saved, true) }
+  }, [])
   // signed out: the sign-in card stands alone in the middle of the screen (index.css, .signed-out)
   useEffect(() => { document.body.classList.toggle('signed-out', !session) }, [session])
   const t = (key: Key) => translate(screen, key)
@@ -70,35 +90,13 @@ export default function App() {
         <button type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="header-menu" onClick={() => setMenuOpen(!menuOpen)}>{t('header.menu')}</button>
         <div id="header-menu" className={menuOpen ? 'header-menu open' : 'header-menu'}>
         {session && <nav aria-label={t('nav.main')} onClick={() => setMenuOpen(false)}>
-          {link('#/', t('nav.dashboard'))}
-          {link('#/firs', t('nav.firs'))}
-          {session.user.station_id && link('#/front-desk', t('nav.frontDesk'))}
-          {firId && <>
-            <div className="nav-group">{t('nav.groupCase')}</div>
-            {link(`#/firs/${firId}`, t('nav.wholeCase'))}
-            {PARTS.map((p) => <span key={p}>{link(`#/firs/${firId}/${p}`, t(PART_LABEL[p]))}</span>)}
-          </>}
-          <div className="nav-group">{t('nav.groupStation')}</div>
-          {link('#/policies', t('nav.policies'))}
-          {session.user.can_import && link('#/import', t('nav.import'))}
-          {session.user.station_id && link('#/property', t('nav.property'))}
-          {session.user.station_id && link('#/expert', t('nav.expert'))}
-          {session.user.station_id && link('#/court', t('nav.court'))}
-          {session.user.station_id && link('#/roster', t('nav.roster'))}
-          {supervisor && link('#/supervisor', t('nav.supervisor'))}
-          {auditor && link('#/reads', t('nav.reads'))}
-          {auditor && link('#/audit', t('nav.audit'))}
-          {packWork && link('#/state-setup', t('nav.state'))}
-          {actingGrantor && link('#/acting', t('nav.acting'))}
-          <div className="nav-group">{t('nav.groupTools')}</div>
-          {link('#/type', t('nav.type'))}
-          {link('#/laws', t('nav.laws'))}
-          {link('#/password', t('nav.password'))}
-          {admin && <>
-            <div className="nav-group">{t('nav.admin')}</div>
-            {link('#/admin', t('nav.admin'))}
-            {link('#/settings', t('nav.settings'))}
-          </>}
+          {screens.map((sc, i) => {
+            const head = GROUP_HEAD[sc.group] && screens[i - 1]?.group !== sc.group && <div className="nav-group">{t(GROUP_HEAD[sc.group]!)}</div>
+            // the open case's parts are their own group in the sidebar, as on the board (docs/DESIGN.md, Frame)
+            if (sc.group === 'case') return head ? <nav key="case" aria-label={t('nav.groupCase')}>{head}
+              {caseLinks.map((c) => <Fragment key={c.href}>{link(c.href, t(c.label))}</Fragment>)}</nav> : null
+            return <Fragment key={sc.href}>{head}{link(sc.href, t(sc.label))}</Fragment>
+          })}
         </nav>}
         <label>{t('header.screenLanguage')}
           <select value={screen} onChange={(e) => void chooseScreen(e.target.value)}>
@@ -121,7 +119,13 @@ export default function App() {
       <div className="topstrip">
         <span className="chip demo-chip">{t('app.tagline')}</span>
         {session?.user.acting?.map((a) => <span key={a.role} className="chip demo-chip" role="status">{t('acting.banner').replace('{role}', a.role.toUpperCase()).replace('{date}', fmt(a.ends_at))}</span>)}
+        {session && <span className="guide-actions">
+          <button type="button" onClick={() => setGuide('tour')}>{t('help.tour')}</button>
+          <button type="button" aria-expanded={guide === 'help'} onClick={() => setGuide(guide === 'help' ? null : 'help')}>{t('help.open')}</button>
+        </span>}
       </div>
+      {session && guide === 'tour' && <Tour screens={screens} onClose={endTour} />}
+      {session && guide === 'help' && <HelpChat screens={screens} here={here} onClose={() => setGuide(null)} onTour={() => setGuide('tour')} />}
       <main>{!session ? <LoginPage /> : firId ? <FirDetail key={firId} id={firId} only={firPart} /> : complaintId ? <ComplaintPage id={complaintId} /> : hash === '#/front-desk' ? <FrontDeskPage /> : hash === '#/type' ? <TypePage /> : hash === '#/settings' ? <SettingsPage /> : hash === '#/password' ? <PasswordPage /> : hash === '#/admin' ? <AdminPage /> : hash === '#/import' ? <ImportPage /> : hash === '#/policies' ? <PoliciesPage /> : hash === '#/reads' ? <ReadsPage /> : hash === '#/audit' ? <AuditPage /> : hash === '#/state-setup' ? <StatePage /> : hash === '#/acting' ? <ActingPage /> : hash === '#/supervisor' ? <Supervisor /> : hash === '#/property' ? <Property /> : hash === '#/expert' ? <ExpertRequests /> : hash === '#/court' ? <Court /> : hash === '#/roster' ? <DutyRoster /> : hash === '#/laws' ? <LawFinder /> : hash === '#/firs' ? <FirList /> : <Dashboard />}</main>
     </TypingContext.Provider>
     </ScreenLangContext.Provider>

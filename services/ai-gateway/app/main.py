@@ -134,8 +134,8 @@ def refused_question(feature: str, prompt: str) -> str | None:
 # feature that reads a case names the FIR (its id, as case_ref) and the core app says whether the officer is on its case team
 # and whether its victim's identity is protected (BNS 72, BNS 124). The features below send the FIR text or statements, so
 # they are refused on a protected case. case_qa is still allowed there (question 1 of session 92), victim_update,
-# notice_draft and supervisor_brief send no victim details; law_explain reads no case.
-NO_CASE_FEATURES = {"law_explain"}
+# notice_draft and supervisor_brief send no victim details; law_explain and app_help (the app's own screens) read no case.
+NO_CASE_FEATURES = {"law_explain", "app_help"}
 NOT_ON_PROTECTED = {"fir_extract", "section_suggest", "statement_translate", "statement_compare", "fact_conflicts", "reply_check", "chargesheet_draft"}
 COMPLAINT_FEATURES = {"fir_extract"}   # the facts of a signed complaint (A1 at the front desk)
 UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")

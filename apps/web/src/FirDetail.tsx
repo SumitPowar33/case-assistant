@@ -5,12 +5,16 @@ import CaseDiary from './CaseDiary'
 import AskCaseFile from './AskCaseFile'
 import { AiUseCase } from './AiUse'
 import MoneyTrail from './MoneyTrail'
+import Cdr from './Cdr'
+import Freezes from './Freezes'
 import Statements from './Statements'
 import Search from './Search'
 import FactCheck from './FactCheck'
+import EarlierRecords from './EarlierRecords'
 import SectionSuggest from './SectionSuggest'
 import SectionReport from './SectionReport'
 import FinalReport from './FinalReport'
+import CourtPaper from './CourtPaper'
 import Notices from './Notices'
 import Certificates from './Certificates'
 import Arrests from './Arrests'
@@ -29,7 +33,7 @@ import { PARTS, PART_LABEL, type Part } from './firParts'
 type Fir = { id: string; fir_year: number; fir_no: number; registered_at: string; occurrence_from: string | null; occurrence_to: string | null; is_zero_fir: boolean; contents_original: string | null; contents_withheld: boolean; victim_protected: boolean; case_team: boolean; action_taken: string; io_name: string | null; sections: { act: string; section: string }[] }
 type Person = { id: string; role: string; label: string; display_name: string; age_years: number | null; identity_masked: boolean }
 type Deadline = { kind: string; due_on: string; basis: string }
-type Evidence = { id: string; label: string; kind: string; sha256: string | null; court_ready: boolean }
+type Evidence = { id: string; label: string; kind: string; description: string | null; sha256: string | null; court_ready: boolean }
 
 /** A deadline kind from the case_deadline view; a notice reply comes as notice_reply:<addressee>. */
 function deadlineLabel(t: ReturnType<typeof useT>, kind: string) {
@@ -76,12 +80,13 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
         </div>
         <div className="chips">{fir.sections.map((s) => <span key={s.act + s.section} className="chip c-info">{s.act} {s.section}</span>)}</div>
       </div>
+      {/* desktop: the parts are in the sidebar (App.tsx); a phone keeps this picker */}
       <label className="fir-parts">{t('fir.partShow')}{' '}
         <select value={part} onChange={(e) => setPart(e.target.value as Part)}>
           {PARTS.map((p) => <option key={p} value={p}>{t(PART_LABEL[p])}</option>)}
         </select>
       </label>
-      <div className={only ? 'fir-body one-part' : 'fir-body'}>
+      <div className="fir-body one-part">
       <div className={shown('case')}>
         <section>
         <IoAssignment firId={id} ioName={fir.io_name} version={version} onSaved={saved} />
@@ -94,11 +99,15 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
         {fir.case_team && fir.contents_original && <SectionSuggest firId={id} text={fir.contents_original} victimProtected={fir.victim_protected} version={version} onSaved={saved} />}
         {fir.case_team && <SectionReport firId={id} fir={fir} version={version} onSaved={saved} />}
       </div>
+      {!fir.case_team ? PARTS.filter((p) => p !== 'case').map((p) => (
+        <div key={p} className={shown(p)}><section><h2>{t(PART_LABEL[p])}</h2><p>{t('fir.teamOnly')}</p></section></div>
+      )) : <>
       <div className={shown('people')}>
         <section>
           <h2>{t('fir.people')}</h2>
           {peopleError ? <p role="alert">{peopleError}</p> : !people ? <p>{t('common.loading')}</p> : people.length ? <ul>{people.map((p) => (
-            <li key={p.id}>{p.label} ({t.code('person', p.role)}){p.age_years ? `, ${p.age_years}` : ''}: {p.display_name}{p.identity_masked ? ` (${t('fir.identityProtected')})` : ''}</li>
+            <li key={p.id}>{p.label} ({t.code('person', p.role)}){p.age_years ? `, ${p.age_years}` : ''}: {p.display_name}{p.identity_masked ? ` (${t('fir.identityProtected')})` : ''}
+              {(p.role === 'accused' || p.role === 'suspect') && <EarlierRecords firId={id} personId={p.id} label={p.label} />}</li>
           ))}</ul> : <p>{t('common.noneYet')}</p>}
           <AddPersonForm firId={id} onSaved={saved} />
         </section>
@@ -120,6 +129,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
             <li key={e.id} className="card"><strong>{e.label}</strong> ({t.code('evidenceKind', e.kind)})
               {e.kind === 'electronic' && <> <span className={`chip ${e.court_ready ? 'c-ok' : 'c-warn'}`}>{t(e.court_ready ? 'evidence.courtReady' : 'evidence.notCourtReady')}</span></>}
               {e.sha256 && <> · <code title={e.sha256}>{e.sha256.slice(0, 4)}…{e.sha256.slice(-4)}</code></>}
+              {e.description && <div className="sub">{e.description}</div>}
               {e.kind === 'electronic' && <Certificates firId={id} item={e} onSaved={saved} />}</li>
           ))}</ul>}
         </Section>
@@ -128,10 +138,12 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
       <div className={shown('notices')}><Notices firId={id} fir={fir} victimProtected={fir.victim_protected} /></div>
       <div className={shown('readiness')}><Readiness key={version} firId={id} people={people ?? []} /></div>
       <div className={shown('statements')}><Statements key={version} firId={id} firText={fir.contents_original ?? ''} victimProtected={fir.victim_protected} /></div>
-      <div className={shown('money')}><MoneyTrail key={version} firId={id} /></div>
-      <div className={shown('finalReport')}><FinalReport key={version} firId={id} me={currentSession()?.user.id ?? ''} text={fir.contents_original} victimProtected={fir.victim_protected} /></div>
+      <div className={shown('money')}><MoneyTrail key={version} firId={id} /><Freezes key={`f${version}`} firId={id} /></div>
+      <div className={shown('cdr')}><Cdr firId={id} version={version} /></div>
+      <div className={shown('finalReport')}><FinalReport key={version} firId={id} me={currentSession()?.user.id ?? ''} text={fir.contents_original} victimProtected={fir.victim_protected} /><CourtPaper key={`p${version}`} firId={id} /></div>
       <div className={shown('diary')}><CaseDiary firId={id} />{part === 'diary' && <AiUseCase firId={id} />}</div>
       <div className={shown('ask')}>{part === 'ask' && <AskCaseFile firId={id} />}</div>
+      </>}
       </div>
     </>
   )

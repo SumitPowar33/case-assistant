@@ -6,7 +6,7 @@ import { setSession, type Session } from './api'
 
 const io: Session = { token: 'tok-io', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional Rao', rank: 'SI', role: 'io', station_id: 's1', permissions: ['fir.register', 'case.lead'], case_scope: 'none' } }
 
-const fir = { id: 'f1', fir_year: 2026, fir_no: 7, registered_at: '2026-09-10T10:00:00Z', is_zero_fir: false, action_taken: 'registered', sexual_offence: false, contents_original: 'Fictional complaint text', sections: [{ act: 'BNS', section: '318' }] }
+const fir = { id: 'f1', fir_year: 2026, fir_no: 7, registered_at: '2026-09-10T10:00:00Z', is_zero_fir: false, action_taken: 'registered', sexual_offence: false, contents_original: 'Fictional complaint text', sections: [{ act: 'BNS', section: '318' }], case_team: true }
 const routes: Record<string, unknown> = {
   '/api/firs?limit=51&offset=0': [fir],
   '/api/firs/f1': fir,
@@ -38,6 +38,26 @@ test('lists FIRs with a link to the detail page', async () => {
   mockApi()
   render(<App />)
   expect((await screen.findByRole('link', { name: '7/2026' })).getAttribute('href')).toBe('#/firs/f1')
+})
+
+test('a form panel closes on Escape and after a save, with the focus back on its opening line; other keys leave it open', async () => {
+  mockApi()
+  window.location.hash = '#/firs/f1/evidence'
+  render(<App />)
+  await screen.findByText(/not court-ready yet/)
+  const panel = document.querySelector<HTMLDetailsElement>('.fir-part.shown details:has(> .record-form)')!
+  panel.open = true
+  fireEvent.keyDown(document, { key: 'Enter' })
+  expect(panel.open).toBe(true)
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(panel.open).toBe(false)
+  expect(document.activeElement).toBe(panel.querySelector('summary'))
+  fireEvent.keyDown(document, { key: 'Escape' })   // nothing open: nothing happens
+  panel.open = true
+  panel.querySelector('form')!.reset()   // a save that succeeded resets its form
+  expect(panel.open).toBe(false)
+  const other = document.createElement('form'); document.body.append(other); other.reset()   // a form outside a panel: nothing to close
+  other.remove()
 })
 
 test('detail shows people with protected identity, deadlines and evidence', async () => {
@@ -257,9 +277,11 @@ test('a part of the case opens as its own page from the sidebar; the whole case 
   window.location.hash = '#/firs/f1/evidence'
   render(<App />)
   expect(await screen.findByText(/not court-ready yet/)).toBeTruthy()
-  const nav = within(screen.getByRole('navigation', { name: 'Main' }))
-  expect(nav.getByRole('link', { name: 'Evidence' }).getAttribute('aria-current')).toBe('page')
-  expect(nav.getByRole('link', { name: 'Whole case file' }).getAttribute('href')).toBe('#/firs/f1')
+  const parts = within(screen.getByRole('navigation', { name: 'This case' }))   // its own group inside the sidebar
+  expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: 'Evidence' })).toBeTruthy()
+  expect(parts.getByRole('link', { name: 'Evidence' }).getAttribute('aria-current')).toBe('page')
+  expect(parts.getAllByRole('link')).toHaveLength(17)
+  expect(parts.getByRole('link', { name: 'Whole case file' }).getAttribute('href')).toBe('#/firs/f1')
   expect(document.querySelector('.fir-body')!.className).toBe('fir-body one-part')
 })
 
@@ -366,4 +388,33 @@ test('the Acting charge link shows only to a holder of the acting.grant permissi
   render(<App />)
   await screen.findByRole('link', { name: '7/2026' })
   expect(screen.queryByRole('link', { name: 'Acting charge' })).toBeNull()
+})
+
+test('the tour starts by itself once per user on this browser; the top bar starts it again and opens the help chat', async () => {
+  mockApi()
+  const kept = new Map<string, string>()
+  vi.stubGlobal('localStorage', { getItem: (k: string) => kept.get(k) ?? null, setItem: (k: string, v: string) => { kept.set(k, v) } })
+  const { unmount } = render(<App />)
+  expect(await screen.findByRole('dialog', { name: 'Welcome to Case Assistant' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'End the tour' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  unmount()
+  render(<App />)
+  await screen.findByRole('link', { name: '7/2026' })
+  expect(screen.queryByRole('dialog')).toBeNull()   // seen: not again by itself
+  fireEvent.click(screen.getByRole('button', { name: 'Help' }))
+  expect(screen.getByRole('dialog', { name: 'Ask how to use the app' })).toBeTruthy()
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Take the tour' }))
+  expect(screen.getByRole('dialog', { name: 'Welcome to Case Assistant' })).toBeTruthy()
+})
+
+test('without browser storage the tour is only offered, never forced', async () => {
+  mockApi()
+  vi.stubGlobal('localStorage', { getItem: () => { throw new Error('blocked') }, setItem: () => { throw new Error('blocked') } })
+  render(<App />)
+  await screen.findByRole('link', { name: '7/2026' })
+  expect(screen.queryByRole('dialog')).toBeNull()
+  fireEvent.click(screen.getAllByRole('button', { name: 'Take the tour' })[0])
+  fireEvent.click(screen.getByRole('button', { name: 'End the tour' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
 })

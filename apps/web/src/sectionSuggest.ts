@@ -7,7 +7,9 @@
 import { jsonList, locate } from './factCheck'
 
 export const SECTION_PROMPT_VERSION = 'section_suggest/playbook@1'
-export type Charge = { playbook_id: string; charge_id: string; act: string; law: string; label: string; ingredients: { id: string; text: string }[]; in_fir: boolean }
+// punishment: its class in the packs' punishment table (null when not listed); graver: heavier than every section already on the FIR
+export type Charge = { playbook_id: string; charge_id: string; act: string; law: string; label: string; ingredients: { id: string; text: string }[]; in_fir: boolean
+  punishment?: string | null; graver?: boolean }
 export type Met = { id: string; quote: string; at: number }
 export type Suggestion = { charge: Charge; met: Met[] }
 export type SuggestRead = { kind: 'suggestions'; suggestions: Suggestion[]; dropped: number } | { kind: 'unreadable' }
@@ -51,4 +53,10 @@ export function readSuggestions(draft: string, text: string, charges: Charge[]):
   }
   const suggestions = charges.filter((c) => found.has(key(c))).map((charge) => ({ charge, met: found.get(key(charge))! }))
   return { kind: 'suggestions', suggestions, dropped }
+}
+
+/** The suggestions with every charge graver than the FIR's sections first (the officer sees what the FIR may be missing first); otherwise in their order. */
+export function graverFirst(read: SuggestRead): SuggestRead {
+  if (read.kind !== 'suggestions') return read
+  return { ...read, suggestions: [...read.suggestions].sort((a, b) => Number(!!b.charge.graver) - Number(!!a.charge.graver)) }
 }

@@ -4,6 +4,7 @@ question goes to the gateway, which refuses and logs it, a question the file has
 reaches the gateway with the matching passage, shows the passage as the source, and the verdict is written to the audit log.
 The case diary part then counts the AI use of the case. The meaning search runs too, with the gateway's offline embedder: the question and the pieces are embedded, the core keeps the
 vectors, and the next question embeds only itself. Fictional data only."""
+from conftest import no_tour
 from playwright.sync_api import expect, sync_playwright
 
 from test_admin_scripts import admin_web  # noqa: F401  (the fixture: core with the demo case, gateway, web app)
@@ -16,7 +17,7 @@ def test_an_officer_asks_the_case_file(admin_web):  # noqa: F811
     embeds = []   # what each embedding call was for: the question, or the pieces of the case file
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = no_tour(browser.new_page(viewport={"width": 1280, "height": 900}))
         page.set_default_timeout(15000)
         page.on("request", lambda r: sent.append(r.url.rsplit("/", 1)[-1]) if "/ai/v1/" in r.url else None)
         page.on("request", lambda r: embeds.append(r.post_data_json["kind"]) if r.url.endswith("/ai/v1/embed") else None)

@@ -53,6 +53,7 @@ Screens the board does not have (kept, in the same look): Policies, Load data, P
 Change password.
 
 ## Differences on purpose
+- A form opened from its button is a panel from the right (one field to a row), not a box inside the page; the board draws forms inline.
 - Fonts: Noto, not Plex (above).
 - The board's numbers and names are examples; the app shows only what the case file holds. A board panel whose data the
   app does not have yet is left out rather than faked.

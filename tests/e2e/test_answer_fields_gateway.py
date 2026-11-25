@@ -8,7 +8,7 @@ import sys
 
 from playwright.sync_api import expect, sync_playwright
 
-from conftest import ROOT
+from conftest import ROOT, no_tour
 from test_admin_scripts import admin_web  # noqa: F401  (the fixture: core with the demo case, gateway, web app)
 from test_answer_fields_live import missing_fields, url_pattern
 from test_load_data import sign_in
@@ -30,7 +30,7 @@ def test_every_field_a_screen_expects_is_in_the_gateways_real_answer(admin_web):
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = no_tour(browser.new_page(viewport={"width": 1280, "height": 900}))
         page.set_default_timeout(15000)
         page.on("response", keep)
         page.goto(web)
@@ -44,7 +44,7 @@ def test_every_field_a_screen_expects_is_in_the_gateways_real_answer(admin_web):
         page.get_by_role("button", name="Sign out").click()
 
         sign_in(page, "io.adminui", demo["accounts"]["io.adminui"])
-        page.evaluate(f"location.hash = '#/firs/{demo['fir_id']}'")
+        page.evaluate(f"location.hash = '#/firs/{demo['fir_id']}/notices'")   # the Notices part of the case file
         notices = page.locator("section", has=page.get_by_role("heading", name="Notices", exact=True))
         notices.locator("summary", has_text="Write a notice").click()
         notices.get_by_label("To", exact=True).fill("Fictional Bank Ltd, nodal officer")

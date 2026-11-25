@@ -5,6 +5,7 @@ model's answer in place of its draft: the two sections the FIR already has, IT A
 words, and a charge that is not in the playbooks. The IO adds IT Act 66D with a reason; the core keeps it with the
 gateway's request, the FIR's chips and the case diary show it, and the decision reaches the gateway's log. Fictional
 data only."""
+from conftest import no_tour
 import json
 
 from playwright.sync_api import expect, sync_playwright
@@ -27,7 +28,7 @@ def test_an_officer_adds_a_section_the_ai_suggested_from_the_playbook(admin_web)
     sent = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = no_tour(browser.new_page(viewport={"width": 1280, "height": 900}))
         page.set_default_timeout(15000)
         page.on("request", lambda r: sent.append(r.url.rsplit("/", 1)[-1]) if "/ai/v1/" in r.url else None)
         page.goto(web)
