@@ -353,6 +353,23 @@ test('the Duty roster link is for accounts of a station and opens the roster at 
   expect(await screen.findByRole('heading', { name: 'Duty roster' })).toBeTruthy()
 })
 
+test('the 112 events link is for accounts of a station and opens the list at #/calls-112', async () => {
+  mockApi()
+  Object.assign(routes, { ['/api/calls-112?stationId=' + io.user.station_id]: { rows: [], can_handle: false } })
+  const nav = () => within(screen.getByRole('navigation', { name: 'Main' }))
+  const { unmount } = render(<App />)
+  expect(nav().getByRole('link', { name: '112 events' }).getAttribute('href')).toBe('#/calls-112')
+  unmount()
+  setSession({ ...io, user: { ...io.user, station_id: null } })
+  const second = render(<App />)
+  expect(nav().queryByRole('link', { name: '112 events' })).toBeNull()
+  second.unmount()
+  setSession(io)
+  window.location.hash = '#/calls-112'
+  render(<App />)
+  expect(await screen.findByRole('heading', { name: 'Incoming 112 events' })).toBeTruthy()
+})
+
 test('the Old to new law link is for every signed-in account and opens the finder at #/laws', async () => {
   mockApi()
   Object.assign(routes, { '/api/law-finder': { status: 'draft', note: '', entries: [] } })

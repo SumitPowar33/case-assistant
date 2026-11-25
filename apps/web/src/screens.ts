@@ -36,6 +36,7 @@ export function screensFor(user: User, firId?: string): Screen[] {
     ...s('#/property', 'nav.property', 'prop.intro', 'station', ['prop'], atStation),
     ...s('#/expert', 'nav.expert', 'exp.intro', 'station', ['exp'], atStation),
     ...s('#/court', 'nav.court', 'court.intro', 'station', ['court'], atStation),
+    ...s('#/calls-112', 'nav.calls', 'calls.intro', 'station', ['calls'], atStation),
     ...s('#/roster', 'nav.roster', 'roster.intro', 'station', ['roster'], atStation),
     ...s('#/supervisor', 'nav.supervisor', 'sup.intro', 'station', ['sup'], has('chargesheet.approve')),
     ...s('#/reads', 'nav.reads', 'reads.intro', 'station', ['reads'], has('audit.read_protected')),

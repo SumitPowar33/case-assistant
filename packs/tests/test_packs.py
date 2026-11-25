@@ -375,6 +375,14 @@ def test_the_duty_roster_is_written_by_a_station_role_and_never_by_a_role_withou
     assert all(roles[c]["case_scope"] == "station" for c in writers)
 
 
+def test_112_events_are_handled_by_the_front_desk_and_the_officer_in_charge_only():
+    """Item 15: the duty officer (front desk, SHO) writes, acknowledges and opens a station's 112 events; both may register FIRs."""
+    roles = json.loads((ROOT / "IN/roles.json").read_text(encoding="utf-8"))["roles"]
+    handlers = {c for c, r in roles.items() if "call112.handle" in r["permissions"]}
+    assert handlers == {"front_desk", "sho"}
+    assert all("fir.register" in roles[c]["permissions"] for c in handlers)   # opening one as a complaint needs it
+
+
 def test_state_laws_are_named_by_state_modules_only_once_and_never_a_national_act():
     # Modules.java refuses the same at start-up; V57 refuses it in the database
     seen = {}

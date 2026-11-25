@@ -14,6 +14,7 @@
     "pack.approve": "Approve or send back a pack change proposed for the user's own state (never one's own; the state comes from the user's police station)",
     "acting.grant": "Give an officer of a station in the user's reach (district or state, by the role) a temporary role that the role marks as acting.allowed, with a reason and an end date of at most 90 days; end it early (never one's own)",
     "roster.manage": "Write the duty roster of a police station in the user's reach (station scope: their own station; shifts, posts, weekly offs and leave) and take an entry back with a reason",
+    "call112.handle": "Write down, acknowledge and open (as a complaint or a general diary entry) the 112 events of the user's own police station (the duty officer)",
     "acting.allowed": "A role an officer of the station may hold for a limited time while its holder is away (acting charge, BNSS 2(1)(r)); only a holder of acting.grant gives it"
   },
   "roles": {
@@ -32,7 +33,8 @@
       "case_scope": "none",
       "permissions": [
         "fir.register",
-        "fir.read_station"
+        "fir.read_station",
+        "call112.handle"
       ]
     },
     "sho": {
@@ -47,6 +49,7 @@
         "chargesheet.approve",
         "audit.read_protected",
         "roster.manage",
+        "call112.handle",
         "acting.allowed"
       ]
     },
