@@ -48,8 +48,7 @@ export default function App() {
   const firPart = isPart(firMatch?.[2]) ? firMatch?.[2] : undefined
   const complaintId = /^#\/complaints\/([\w-]+)$/.exec(hash)?.[1]
   const screens = session ? screensFor(session.user, firId) : []
-  // the menu names the case file once; its parts are tabs on the FIR screen (the tour and the help chat still know each part)
-  const menu = screens.filter((sc) => sc.group !== 'case' || sc.label === 'nav.wholeCase')
+  const caseLinks = screens.filter((sc) => sc.group === 'case')
   const [guide, setGuide] = useState<'help' | 'tour' | null>(null)
   const userId = session?.user.id
   useEffect(() => { setGuide(userId && !tourSeen(userId) ? 'tour' : null) }, [userId])
@@ -60,6 +59,17 @@ export default function App() {
   const screen = session?.user.ui_language && SCREEN_LANGS.includes(session.user.ui_language) ? session.user.ui_language : chosen
   setMessageLanguage(screen)   // during render, so the first loads of the screens below already use it
   useEffect(() => { document.documentElement.lang = screen }, [screen])
+  // An open form panel (index.css) closes on Escape, and after a save: every form is reset only once its save succeeded
+  useEffect(() => {
+    const close = (panel: Element | null | undefined) => {
+      if (panel instanceof HTMLDetailsElement && panel.open) { panel.open = false; panel.querySelector('summary')?.focus() }
+    }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') close(document.querySelector('details[open]:has(> .record-form)')) }
+    const saved = (e: Event) => { if ((e.target as Element).matches('.record-form')) close((e.target as Element).parentElement) }
+    document.addEventListener('keydown', esc)
+    document.addEventListener('reset', saved, true)
+    return () => { document.removeEventListener('keydown', esc); document.removeEventListener('reset', saved, true) }
+  }, [])
   // signed out: the sign-in card stands alone in the middle of the screen (index.css, .signed-out)
   useEffect(() => { document.body.classList.toggle('signed-out', !session) }, [session])
   const t = (key: Key) => translate(screen, key)
@@ -79,10 +89,13 @@ export default function App() {
         <button type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="header-menu" onClick={() => setMenuOpen(!menuOpen)}>{t('header.menu')}</button>
         <div id="header-menu" className={menuOpen ? 'header-menu open' : 'header-menu'}>
         {session && <nav aria-label={t('nav.main')} onClick={() => setMenuOpen(false)}>
-          {menu.map((sc, i) => <Fragment key={sc.href}>
-            {GROUP_HEAD[sc.group] && menu[i - 1]?.group !== sc.group && <div className="nav-group">{t(GROUP_HEAD[sc.group]!)}</div>}
-            {link(sc.href, t(sc.label))}
-          </Fragment>)}
+          {screens.map((sc, i) => {
+            const head = GROUP_HEAD[sc.group] && screens[i - 1]?.group !== sc.group && <div className="nav-group">{t(GROUP_HEAD[sc.group]!)}</div>
+            // the open case's parts are their own group in the sidebar, as on the board (docs/DESIGN.md, Frame)
+            if (sc.group === 'case') return head ? <nav key="case" aria-label={t('nav.groupCase')}>{head}
+              {caseLinks.map((c) => <Fragment key={c.href}>{link(c.href, t(c.label))}</Fragment>)}</nav> : null
+            return <Fragment key={sc.href}>{head}{link(sc.href, t(sc.label))}</Fragment>
+          })}
         </nav>}
         <label>{t('header.screenLanguage')}
           <select value={screen} onChange={(e) => void chooseScreen(e.target.value)}>

@@ -177,6 +177,19 @@ Done in session 60 (2 Nov, Sumit present from 17:32 IST): the AI and screens pla
 18. **Printed papers in the court format** (plan section 8): FIR copy, BNSS 94 notice, arrest memo, seizure memo, 63(4) certificate, diary page, chargesheet. Informant's copy done (session 60).
 Real-time screens (plan section 10) after these, in that order.
 
+## 19 Nov 2026, case screen look (Sumit: the tabs and the form in the middle did not look good)
+- The parts of an open case are a "This case" group in the sidebar, as on the board's Frame (the wrapping pill tabs are gone); a phone keeps the "Show" picker. The content column starts beside the sidebar instead of floating in the middle.
+- A form opened from its button (`details` holding a `.record-form`: the shared `Form` and the screens' own) is a panel from the right, one field to a row, Save kept in reach at the bottom, the page dimmed behind. A click outside it, its head (with ✕) or Escape (App.tsx) closes it; the shared `Form` closes it after a save. Phone: the panel takes the whole screen. CSS only on the existing markup, so the browser tests' selectors stay.
+- Not changed: forms that are always open on a part (Money trail's transfer and hold, Statements, Final report, Case diary) stay in the page. Focus is not held inside the panel (Tab can leave it); a real `dialog` would hold it but needs every form's markup changed.
+- Screenshots compared with the Frame board (desktop 1440 and 390 px): Evidence and Money trail.
+
+## 25 Nov 2026, layout check of every screen and form
+- `tests/e2e/test_layout.py`: the IO's every menu screen and case part on the demo case, at 1440 and 390 px; nothing out of the page, each form panel inside the screen with its title in its head, fields inside, labels naming a field, Save in view. Content inside a box that scrolls sideways (a wide table on a phone) is allowed.
+- Bug it found: a long panel title (closure report; on a phone the two arrest corrections) wrapped below the panel's 64 px head. Fix: the head is 72 px (`--head`), the title 16/20 px, so two lines (three in a longer language) fit.
+- The dev database `caseapp_dev` had V55-V57 applied from older drafts (checksums differ), so the core would not start; it was renamed `caseapp_dev_old_20261112` and a new one made with the demo case. Drop the old one when not needed.
+- A nightly cloud scheduled task (01:30 IST) runs `test_layout.py` and opens a PR into `ui/case-tabs` when it fails.
+- Not checked: the layout test opens the forms of the demo case only (forms shown only in other states, e.g. after a chargesheet, are not opened); other roles' screens (SP, admin) are not in it.
+
 ## 17 Nov 2026, session 107 (02:05 IST scheduled run, last of the night, Sumit away)
 Started from `setup/seed` at 6825ee6 in a new container (Postgres started, `caseapp` role and the two databases made, gateway requirements, `npm ci`). The `add_repo` tool was not offered in this run, but the clone already pointed at the repository and `git fetch` worked. Baseline: the first seven suites PASS; the e2e suite failed only because the new diary check was written while the baseline ran against the older build (fixed by the final run below). Sumit's priority list: items 1 and 2 were already done, so this session built items 3 and 4.
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, test, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { ScreenLangContext } from './i18n'
 import FirDetail from './FirDetail'
 import { setSession } from './api'
@@ -194,14 +194,13 @@ test('the AI use of the case is counted on the case diary part only, and read ag
   expect(asked()).toContain('/ai/v1/ai-use?case_ref=f1')
 })
 
-test('someone outside the case team sees the case details and, on every other part, that only the case team sees it; tabs name every part', async () => {
+test('someone outside the case team sees the case details and, on every other part, that only the case team sees it; the picker names every part', async () => {
   stub({ '/firs/f1': { ...fir, case_team: false, victim_protected: false } })
   render(<FirDetail id="f1" only="people" />)
   expect(await screen.findByText('Fictional complaint words')).toBeTruthy()
   expect(screen.getAllByText('Only the case team sees this part of the case.').length).toBe(15)
   expect(screen.queryByText(/The server answered/)).toBeNull()
-  const tabs = screen.getByRole('navigation', { name: 'This case' })
-  expect(within(tabs).getAllByRole('link')).toHaveLength(16)
-  expect(within(tabs).getByRole('link', { name: 'People' }).getAttribute('aria-current')).toBe('page')
-  expect(within(tabs).getByRole('link', { name: 'Call records' }).getAttribute('href')).toBe('#/firs/f1/cdr')
+  const picker = screen.getByRole('combobox', { name: /Show/ }) as HTMLSelectElement
+  expect(picker.options).toHaveLength(16)
+  expect(picker.value).toBe('people')
 })

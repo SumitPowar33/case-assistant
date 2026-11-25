@@ -54,6 +54,6 @@ def test_a_pack_change_is_proposed_by_one_person_and_decided_by_another(core, pa
     # an IO has no link and the server refuses the list
     page.get_by_role("button", name="Sign out").click()
     sign_in(page, "io.stp", accounts["io.stp"])
-    expect(page.locator("#header-menu nav").get_by_role("link", name="State setup")).to_have_count(0)
+    expect(page.locator("#header-menu > nav").get_by_role("link", name="State setup")).to_have_count(0)
     page.goto(base + "#/state-setup")
     expect(page.get_by_role("alert")).to_be_visible()

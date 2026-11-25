@@ -40,6 +40,26 @@ test('lists FIRs with a link to the detail page', async () => {
   expect((await screen.findByRole('link', { name: '7/2026' })).getAttribute('href')).toBe('#/firs/f1')
 })
 
+test('a form panel closes on Escape and after a save, with the focus back on its opening line; other keys leave it open', async () => {
+  mockApi()
+  window.location.hash = '#/firs/f1/evidence'
+  render(<App />)
+  await screen.findByText(/not court-ready yet/)
+  const panel = document.querySelector<HTMLDetailsElement>('.fir-part.shown details:has(> .record-form)')!
+  panel.open = true
+  fireEvent.keyDown(document, { key: 'Enter' })
+  expect(panel.open).toBe(true)
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(panel.open).toBe(false)
+  expect(document.activeElement).toBe(panel.querySelector('summary'))
+  fireEvent.keyDown(document, { key: 'Escape' })   // nothing open: nothing happens
+  panel.open = true
+  panel.querySelector('form')!.reset()   // a save that succeeded resets its form
+  expect(panel.open).toBe(false)
+  const other = document.createElement('form'); document.body.append(other); other.reset()   // a form outside a panel: nothing to close
+  other.remove()
+})
+
 test('detail shows people with protected identity, deadlines and evidence', async () => {
   mockApi()
   window.location.hash = '#/firs/f1'
@@ -257,10 +277,11 @@ test('a part of the case opens as its own page from the sidebar; the whole case 
   window.location.hash = '#/firs/f1/evidence'
   render(<App />)
   expect(await screen.findByText(/not court-ready yet/)).toBeTruthy()
-  const nav = within(screen.getByRole('navigation', { name: 'Main' }))
-  expect(nav.queryByRole('link', { name: 'Evidence' })).toBeNull()   // the parts are tabs on the case screen, not menu entries
-  expect(within(screen.getByRole('navigation', { name: 'This case' })).getByRole('link', { name: 'Evidence' }).getAttribute('aria-current')).toBe('page')
-  expect(nav.getByRole('link', { name: 'Whole case file' }).getAttribute('href')).toBe('#/firs/f1')
+  const parts = within(screen.getByRole('navigation', { name: 'This case' }))   // its own group inside the sidebar
+  expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: 'Evidence' })).toBeTruthy()
+  expect(parts.getByRole('link', { name: 'Evidence' }).getAttribute('aria-current')).toBe('page')
+  expect(parts.getAllByRole('link')).toHaveLength(17)
+  expect(parts.getByRole('link', { name: 'Whole case file' }).getAttribute('href')).toBe('#/firs/f1')
   expect(document.querySelector('.fir-body')!.className).toBe('fir-body one-part')
 })
 

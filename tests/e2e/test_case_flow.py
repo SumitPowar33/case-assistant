@@ -69,6 +69,7 @@ def test_an_io_registers_an_fir_adds_the_accused_records_the_arrest_and_sees_the
 
     # a witness is added and her statement is kept as said; the tracker then shows her as recorded (BNSS 180)
     tab(page, "People")
+    person = form(page, "Add a person")   # the panel closed after the first save
     person.get_by_label("Role").select_option("witness")
     person.get_by_label("Label").fill("W1")
     person.get_by_label("Full name (leave empty if not known)").fill("Fictional Witness One")
