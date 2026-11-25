@@ -36,6 +36,10 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 25. **Opening a 112 event as a general diary entry copies only time, place, kind and vehicle** (session 133). The station's general diary (the GD of the FIR import) had no table, so V70 adds `general_diary_entry` (numbered per station, kept as written). The entry never carries the caller or the details, so it cannot leak a victim; the event itself keeps them. No screen lists the diary yet. Reverse it by naming what the entry should hold.
 26. **Only the front desk and the SHO (also as acting SHO) handle 112 events; every officer of the station reads them** (session 133, permission `call112.handle`). Both already register FIRs, which opening as a complaint needs. Reverse it by naming the roles in `packs/IN/roles.json`.
 
+27. **An officer's gender is an optional field that only an admin sets, used only for the POCSO 24 check** (session 134, question 1 of session 133, unanswered). `app_user.gender` (female, male, other), set when an admin adds the account or changes it (with the reason that every change needs); never cleared by a later change, not on the sign-in token, not shown to other officers (the POCSO screen only says "recorded as a woman officer" or "not recorded as a woman officer"). Reverse it by telling the next session (drop the column, the check becomes a reminder).
+28. **The POCSO 24 statement must name the officer who took it, and an officer not recorded as a woman is a "high" readiness gap** (`pocso-woman-officer`, session 134). The officer is picked from the FIR's station. An officer with no gender set also gives the gap (the app knows only what the admin recorded), and like every gap it can be accepted in writing with a reason (no woman officer at the station that day). The app does not refuse the step: refusing could stop a statement that must be taken at once. Old records of the step without an officer show the same gap.
+29. **A second statement of a child victim in a POCSO case is a "high" readiness gap** (`pocso-repeat-statement`, session 134). The statement forms are not blocked (a statement may need correcting, and the Statements part keeps statements as written); the gap asks to reuse the first or to accept the second in writing with a reason. The POCSO 24 and Magistrate steps can name the child's one recorded statement (`pocso_step.statement_id`, V71: a statement of a child victim of the same FIR); only the time and the way it was recorded are shown, never its words.
+
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
 ## 2 Nov 2026, decisions on the open questions (Sumit: "research and resolve the answers yourself", session 55)
@@ -92,7 +96,7 @@ Answers to the open questions from sessions 13, 18 and 25:
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
 **SUMIT'S PRIORITY (25 Nov 2026; comes before the 16 Nov list below and the one in the session prompt):** build item 15 first, in this order, keeping every rule in CLAUDE.md:
 1. DONE (session 133, V70, `#/calls-112`; the diary entries have no list screen yet, see its entry). The Incoming 112 events screen (docs/AI-AND-SCREENS-PLAN.md section 6): until the state's ERSS interface exists, a manual entry form at the station (time received, place, kind of call, vehicle sent, caller as given; fictional data only), the duty officer acknowledges it, and one click opens a complaint at the front desk or a general diary entry from it; kept as written, logged, a new screen goes in apps/web/src/screens.ts screensFor; permissions from packs/*/roles.json. Leave a clear place for the ERSS feed later; do not invent its format.
-2. The POCSO left-overs of item 15: the one recorded statement of the child reused (no second statement form), and the woman officer check for the POCSO s.24 statement (needs the officer's gender on the account: add it as an optional, admin-set field; if that needs Sumit's decision, take the safer reversible choice and record it under "Decisions taken for Sumit").
+2. DONE (session 134, V71): the POCSO left-overs of item 15: the one recorded statement of the child reused (no second statement form), and the woman officer check for the POCSO s.24 statement with an optional, admin-set gender on the account (decisions 27 to 29).
 3. Then continue with the earlier lists.
 UI design and layout (colours, spacing, typography, the look of forms and the dashboard) belong to the nightly UI design session (19:05 IST, branches ui/design-*); build sessions make new screens with the existing shared classes and do not restyle existing screens, so the two do not collide.
 
@@ -115,6 +119,7 @@ Done in session 131 (25 Nov, 02:05 IST scheduled run, last of the night, Sumit a
 Done in session 130 (24 to 25 Nov, scheduled run, Sumit away): item 18, third paper: the BNSS 94 notice printed in the court format from the Notices part (web only).
 Done in session 129 (24 Nov, scheduled run, Sumit away): item 18, second paper: the seizure memo printed from the Property screen (web only).
 Done in session 128 (24 Nov, 02:05 IST scheduled run, last of the night, Sumit away): item 18, first paper: the arrest memo printed in the court format (no migration, web only).
+Done in session 134 (26 Nov, scheduled run, last of the night, Sumit away): item 15 left-overs: officer gender (admin-set), the woman-officer check and the child's one recorded statement reused (V71).
 Done in session 127 (23 to 24 Nov, scheduled nightly run, Sumit away): item 16, first part: the station duty roster (V66, `#/roster`).
 Done in session 126 (23 Nov, scheduled run, Sumit away): item 15: golden-hour checklists for missing child, kidnapping for ransom and custodial death; POCSO steps in the case diary and on the Dashboard's red list. No migration.
 Done in session 125 (23 Nov, 02:05 IST weekend run, last of the night, Sumit away): item 3, MPID Act 3 punishment class (decision 19), no MH roles (decision 20); item 15, the POCSO section and the POCSO steps in the readiness check (decision 21). No migration.
@@ -256,6 +261,34 @@ Questions for Sumit:
 - Session 125 (02:05 run, last of the night): priority 8 started. Item 3: MPID Act 3 gets the 60-day class in a draft MH punishment table, no MH roles of its own. Item 15: a child victim's FIR without a POCSO section, and each POCSO step not recorded, are gaps of the readiness check. No migration.
 - `scripts/test-all.sh` at the end of session 125: all 8 suites PASS. Coverage: core 99.06% lines / 96.70% branches, web unchanged (no web change; 99.97 / 97.63 / 98.89 in session 124), gateway 99%.
 - Open questions: session 124's 1 (OCR on protected cases), session 123's 1 and 3, and session 125's 1 to 3 below.
+
+## 26 Nov 2026, session 134 (02:05 IST scheduled run, last of the night, Sumit away)
+Started from `setup/seed` (0a248bd, session 133's notes). The clone was on `master`; `git fetch` and `checkout` worked (`add_repo` is not offered in this container, as in earlier sessions). PostgreSQL started, role `caseapp` and both databases made, gateway requirements, `psycopg` and `npm ci` installed (the first install missed `fastapi`; the first baseline was stopped and run again). Baseline `scripts/test-all.sh`: 7 of 8 PASS; the web suite failed only on the stale `coverage/.tmp` folder of the stopped first run (as in session 122) and passed alone (99.87 / 97.08 / 98.88). The priority lists of 16 Nov (priorities 1 to 7) and 25 Nov (112 events) are done or wait for Sumit or a model download, so this session took item 2 of the 25 Nov list: the POCSO left-overs of item 15.
+
+**Item 15 left-overs: the woman-officer check and the child's one recorded statement (V71):**
+- Migration V71: `app_user.gender` (female, male, other; optional), `pocso_step.taken_by` and `pocso_step.statement_id`. The step trigger now refuses a `taken_by` on any step but the POCSO 24 one, a `statement_id` on any step but the two statement steps, and a statement that is not one of a child victim of the same FIR.
+- Core: `PocsoController`: recording the POCSO 24 step needs `takenBy` (an active officer of the FIR's station, 400 otherwise); either statement step may carry `statementId`. `GET .../pocso` returns who took each step (`taken_by_name`, `woman_officer`: true, false or null, never the gender itself), the statement a step relies on (id, time, medium), the station's officers and the child's recorded statements (no words). `ReadinessController`: gap `pocso-woman-officer` (the latest POCSO 24 record names no officer recorded as a woman) and gap `pocso-repeat-statement` (a child victim has more than one statement). `AdminController`: `gender` on a new account and on a change (not cleared by a change without it, logged as "gender set"), shown on the account list.
+- Web: the POCSO step form shows the officer picker for the POCSO 24 step and the statement picker for the two statement steps; each done step shows who took it (a red or green chip: recorded as a woman officer or not) and the statement it relies on. The admin screen's add and change forms have a Gender field. 15 new screen texts in all 11 catalogs (ten are draft translations, unreviewed).
+- Tests: `test_pocso_woman_officer.py` (9 database tests), `PocsoApiTest` (2 new, one old updated), `AdminApiTest` (1), `MigrationTest` to 71, `PocsoSteps.test.tsx` (2), `AdminPage.test.tsx` (1), e2e `test_pocso_steps.py` extended (the IO names the officer, the screen says "not recorded as a woman officer", the readiness gap shows).
+
+`scripts/test-all.sh` at the end: all 8 suites PASS (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e). Coverage: core 99.20% lines / 96.41% branches (`PocsoController` 1 branch missed of 42; the two lines missed in `ReadinessController` are older code), web 99.87 / 97.08 / 98.88, gateway gate held. No gate raised (no 2-point rise).
+
+Skipped / not checked: the screens were not looked at by eye (no screenshot; the e2e opens them and the layout test of the UI session covers the forms of the demo case only). The mutation scripts were not rerun on V71. The "woman doctor" for the medical examination (POCSO 27) is not checked (no doctor record exists). No tests for older code were added: the full suite takes about 20 minutes here and the remaining time went on it.
+
+Next: item 18 (the FIR copy and the chargesheet with enclosure lists, as court-format papers), item 16 left-overs, the real-time screens (the station board with open 112 events), item 3's Marathi playbook texts when a reviewer is named, the general diary list screen if Sumit wants it.
+
+Decisions taken for Sumit: 27, 28 and 29 above.
+
+Questions for Sumit:
+1. Should an officer not recorded as a woman be refused at the POCSO 24 step (as now: only a gap that can be accepted in writing with a reason)?
+2. Which of these is more useful next: the FIR copy paper, or the chargesheet with enclosure lists (session 132's question 2 is still open; the FIR copy is the default)?
+3. Still open: sessions 123 to 133 (see their entries).
+
+## Tonight in short (26 Nov, sessions 133 and 134)
+- Session 133: the Incoming 112 events screen (V70). Session 134 (02:05 run, last of the night): the POCSO left-overs (V71): an optional admin-set officer gender, the woman-officer check and the child's one recorded statement reused.
+- `scripts/test-all.sh` at the end of session 134: all 8 suites PASS. Coverage: core 99.20% lines / 96.41% branches, web 99.87 / 97.08 / 98.88, gateway gate held.
+- Blocked: the real embedding and speech models (huggingface.co is not reachable from the build container), SMS (needs a state gateway), Marathi playbook texts (need a named reviewer).
+- Open questions: session 134's 1 and 2 and the older ones listed in each entry.
 
 ## 26 Nov 2026, session 133 (scheduled run, Sumit away)
 Started from `setup/seed` (the clone was on `master`; `git fetch` and `checkout` worked, `add_repo` was not needed). PostgreSQL started, role `caseapp` and the two databases made, gateway and web packages installed. Baseline `scripts/test-all.sh`: all 8 suites PASS. Priorities 1 to 7 of the 16 Nov list are done or wait for Sumit or a model download, so this session took the first item of the newer 25 Nov list: the Incoming 112 events screen (item 15).
