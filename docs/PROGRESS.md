@@ -45,6 +45,8 @@ Working branch: `setup/seed` (open a PR to `master` when ready: https://github.c
 32. **The FIR copy of a protected case, or of a case with a masked person, carries no names, places or text** (session 136, item 18). The server also leaves out the informant and the reason for the action taken; the paper says why and that the signed record goes to the court under cover. Reverse it by telling the next session (one condition in `FirCopyController`), best with the full copy logged as a protected read.
 33. **The FIR copy is the report as registered, for the case team** (session 136). It lists the sections at registration (later ones are only counted), the first IO and the signed complaint or the complainants. It lists no accused, because the app does not record who was named at registration. Printing is not logged. The front desk still gives the informant's copy from the complaint screen. Reverse it by naming what to add.
 34. **A statement written down from a recording keeps only the id of the gateway's request** (session 136, V73), so the screen can say how it was written down. No audio and no machine draft are stored. Such a statement is saved as audio or video, not as taken in writing. Reverse it by telling the next session.
+35. **One case's audit log can also be printed as a court paper** (session 137, default for question 2 of session 135). The paper is in English, holds the same entries as the CSV file, carries the FIR number and station on every page and has a signature block. It needs the same reason, and each paper taken is logged as an export like a file. Reverse it by telling the next session (remove the button, or ask for the paper in the state's language).
+36. **The Audit log is one list with these filters: Everything, AI drafts and decisions, Protected details read, Gap accepted (with withdrawals), Case audit exported, Record checks (earlier records and call records), Admin change** (session 137, board 20). If the AI gateway cannot answer, the screen says the AI entries are missing and still shows the others. Reverse it by naming the filters you want.
 
 Nightly sessions: 21:05, 23:35 and 02:05 IST. Weekend sessions on Saturday and Sunday 21:05.
 
@@ -100,7 +102,6 @@ Answers to the open questions from sessions 13, 18 and 25:
 4. First state pack: **Maharashtra (MH)**, with Marathi forms, deadlines and playbooks. It may only add to or tighten the national (IN) pack.
 
 Next (replaces the "Next" list of session 25; a session finishing an item removes it here)
-In progress: item 14 priority 3 left-overs, one filtered Audit log list and the printed export (session 137, started 02:05 IST)
 **SUMIT'S PRIORITY (25 Nov 2026; comes before the 16 Nov list below and the one in the session prompt):** build item 15 first, in this order, keeping every rule in CLAUDE.md:
 1. DONE (session 133, V70, `#/calls-112`; the diary entries have no list screen yet, see its entry). The Incoming 112 events screen (docs/AI-AND-SCREENS-PLAN.md section 6): until the state's ERSS interface exists, a manual entry form at the station (time received, place, kind of call, vehicle sent, caller as given; fictional data only), the duty officer acknowledges it, and one click opens a complaint at the front desk or a general diary entry from it; kept as written, logged, a new screen goes in apps/web/src/screens.ts screensFor; permissions from packs/*/roles.json. Leave a clear place for the ERSS feed later; do not invent its format.
 2. DONE (session 134, V71): the POCSO left-overs of item 15: the one recorded statement of the child reused (no second statement form), and the woman officer check for the POCSO s.24 statement with an optional, admin-set gender on the account (decisions 27 to 29).
@@ -110,7 +111,7 @@ UI design and layout (colours, spacing, typography, the look of forms and the da
 **SUMIT'S PRIORITY (16 Nov 2026; replaces "the first item under Next"): AI features and RAG first, then the rest of the Next list.** Build the first unfinished item of this order, keeping every rule of CLAUDE.md and the five AI rules of docs/AI-AND-SCREENS-PLAN.md section 2:
 1. Item 17, Ask the case file as real RAG: embeddings behind the gateway on the state's own server, vectors in PostgreSQL, hybrid with BM25 (DONE in session 106, see its entry and "Decisions taken for Sumit"); open a source on click, "note in case diary", questions in Hindi and Marathi, the answers scored on the evaluation set (DONE, session 106). Left of item 17: the real model's download and tuning (deployment step), a monthly run of the set with a real model (bank replies are searchable since session 111).
 2. A8: the AI explanation in the Old law to new law finder (board 18) (already DONE in session 98; check only that it is on the board's screen).
-3. DONE (session 107, counts only; see its entry): the AI's drafts and decisions in the Audit log (gateway read routes, board 20), and the "AI use in this case" counts (A9). The list of AI events with who and which case on the Audit screen and the export of one case's log (DONE, session 135, V72). Readable names for readiness gaps in the log and the export (DONE, session 136). Left: one filtered list as on board 20 (now two tables), the export as a printed court paper.
+3. DONE (session 107, counts only; see its entry): the AI's drafts and decisions in the Audit log (gateway read routes, board 20), and the "AI use in this case" counts (A9). The list of AI events with who and which case on the Audit screen and the export of one case's log (DONE, session 135, V72). Readable names for readiness gaps in the log and the export (DONE, session 136). One filtered list as on board 20 and the export also as a printed court paper (DONE, session 137). Priority 3 is finished.
 4. DONE (session 107, draft word lists): Hindi and Marathi guards for the guilt, truth, prediction, opinion and rating refusals (A5, A6, A9). Left: a Marathi-speaking prosecutor's review of the words; other Indian scripts still rely on the model's safety text.
 5. DONE: the rest of A3: "differences to clarify" (session 108) and audio transcription with an on-premises speech model with an offline stand-in (session 109). Keeping which statements came from a recording (DONE, session 136, V73). Left: the real model's download and word-error check (`docs/DEPLOY-TRANSCRIPTION.md`).
 6. DONE (session 110): the rest of A6: drafting also from the evidence register, notices, 63(4) certificates, search/seizure memos, expert requests and the money trail, and one paragraph per charge ingredient linked to the readiness check. Left: the particulars table and court print (item 18), a Marathi-speaking prosecutor's review (drafting from saved bank replies is in since A4's reply is saved, V59).
@@ -127,6 +128,7 @@ Done in session 130 (24 to 25 Nov, scheduled run, Sumit away): item 18, third pa
 Done in session 129 (24 Nov, scheduled run, Sumit away): item 18, second paper: the seizure memo printed from the Property screen (web only).
 Done in session 128 (24 Nov, 02:05 IST scheduled run, last of the night, Sumit away): item 18, first paper: the arrest memo printed in the court format (no migration, web only).
 Done in session 134 (26 Nov, scheduled run, last of the night, Sumit away): item 15 left-overs: officer gender (admin-set), the woman-officer check and the child's one recorded statement reused (V71).
+Done in session 137 (27 Nov, 02:05 IST scheduled run, last of the night, Sumit away): 16 Nov priority 3 finished: one filtered Audit log list and one case's export as a court paper; a flaky gateway test and two AI output guards fixed; tests for older code.
 Done in session 136 (26 to 27 Nov, 23:35 IST scheduled run, Sumit away): readiness gaps named in words in the Audit log; statements written from a recording marked (V73); the FIR copy as a court paper and the FIR number on every page of long papers.
 Done in session 135 (26 Nov, 21:05 IST scheduled run, Sumit away): 16 Nov priority 3 left-overs: the AI entries on the Audit screen and one case's export (V72); two server errors turned into plain refusals.
 Done in session 127 (23 to 24 Nov, scheduled nightly run, Sumit away): item 16, first part: the station duty roster (V66, `#/roster`).
@@ -270,6 +272,44 @@ Questions for Sumit:
 - Session 125 (02:05 run, last of the night): priority 8 started. Item 3: MPID Act 3 gets the 60-day class in a draft MH punishment table, no MH roles of its own. Item 15: a child victim's FIR without a POCSO section, and each POCSO step not recorded, are gaps of the readiness check. No migration.
 - `scripts/test-all.sh` at the end of session 125: all 8 suites PASS. Coverage: core 99.06% lines / 96.70% branches, web unchanged (no web change; 99.97 / 97.63 / 98.89 in session 124), gateway 99%.
 - Open questions: session 124's 1 (OCR on protected cases), session 123's 1 and 3, and session 125's 1 to 3 below.
+
+## Tonight in short (26 to 27 Nov: sessions 135, 136 and 137)
+- Session 135 (21:05): the AI's entries on the Audit screen and the export of one case's log as a CSV file, kept in the log (V72); two server errors turned into plain refusals.
+- Session 136 (23:35): an accepted readiness gap is named in words; statements written down from a recording are marked (V73); the FIR copy as a court paper, and the FIR number on every page of long papers.
+- Session 137 (02:05, last of the night): the Audit log is one filtered list; one case's export can be printed as a court paper; priority 3 is finished. A flaky test and a gap in two AI output guards fixed; tests added for older code.
+- `scripts/test-all.sh` at the end of session 137: all 8 suites PASS. Coverage: core 99.02% lines / 97.40% branches, web 99.98% statements / 97.78% branches / 98.94% functions, gateway 99%.
+- Blocked: the real embedding and speech models (the model download is not reachable from the build container), SMS (needs a state gateway), Marathi playbook texts and guard words (need a named reviewer).
+- Open questions: session 137's 1 and 2 below, session 136's 1 to 3, session 135's 1, session 134's 1, and the earlier ones from session 123 on.
+
+## 27 Nov 2026, session 137 (02:05 IST scheduled run, last of the night, Sumit away)
+Started from `setup/seed` (session 136's notes). `add_repo` was not offered, as in earlier sessions; the repository was already there and `git fetch` and `git push` worked. PostgreSQL started, role `caseapp` and the databases made, packages installed. Baseline `scripts/test-all.sh` on a clean copy: all 8 suites PASS (core 99.02% lines / 96.74% branches). The "In progress" line was pushed first and is removed now. Priority 1's open parts wait for a model download, so this session finished priority 3.
+
+**One filtered Audit log list (board 20):** the station's entries and the AI's entries are one list, newest first, with filter buttons and the AI result filter on the AI view. `GET /api/audit-log` takes `kind` (one or more) and narrows before paging, so a filtered page is full; an unknown kind is refused. 11 catalogs updated (ten are draft translations, unreviewed).
+
+**One case's export as a court paper:** "Print as a court paper" beside "Save the file". The paper and the CSV are made from one source (`caseExport` in `auditCsv.ts`). The browser test checks that every printed page carries the FIR number and station and that nothing else of the screen is printed.
+
+**Bugs fixed, each with a test:**
+- A gateway test could fail by chance: it searched a log row for "4417", which a random hash can spell. It now searches for the masked account and the bank's name.
+- The officer-rating guard (Supervisor briefing) and the promise guard (victim letter) did not fold the text first, so a word with an invisible character or a look-alike letter in it got through. Both now fold it as the guilt guard does.
+
+**Time left: tests for older code.**
+- Core: a short `AUTH_SECRET` is refused; bad vector numbers keep nothing; duty roster notes, dates and leave; who may not change a policy; blank reasons and languages; an account without a password cannot set one; CSV line ends.
+- Gateway: the core unreachable during an embedding is refused and logged; a call with no safety text sends none.
+- Web: mutation testing of the eight files that check AI answers and make the audit export gave 86.4% (808 of 940 caught, 4 timed out, 128 survived, run before the new tests). New tests cover the length limits of quotes, values and topics, and how numbers, dates and places are compared in "Documents disagree".
+
+`scripts/test-all.sh` at the end: all 8 suites PASS (repo rules, packs, xlit, ai-gateway, web, database rules, core, e2e). Coverage: core 99.02% lines / 97.40% branches (96.74% at the baseline), web 99.98% statements / 97.78% branches / 98.94% functions, gateway 99%. No gate raised (no 2-point rise).
+
+Screens: the Audit log at desktop and 390 px and the printed paper were looked at; differences from board 20 are in `docs/DESIGN.md`.
+
+Skipped / not checked / risks: the paper was not tried on a real printer. The new translations are unreviewed. In the merged list, an entry that arrives while the officer pages through it can show twice. The station's case list is still sent whole. The mutation score was not measured again after the new tests. The SQL mutation scripts and the core's PIT run were not run on V71 to V73. The remaining survivors (mostly trimming of the AI's ids and a few other length limits) are not covered.
+
+Next: item 18's chargesheet enclosure lists; item 16 left-overs (shift hours from the state pack, swaps, the court-date clash warning, the duty officer on the front desk and Dashboard, 112 calls to the beat officer); the real-time screens; item 3's Marathi playbook texts when a reviewer is named.
+
+Decisions taken for Sumit: 35 and 36 above.
+
+Questions for Sumit:
+1. Should the printed audit paper be in the state's language? It is in English now, like the CSV file.
+2. Which next: the chargesheet's enclosure lists (the default) or the duty roster left-overs?
 
 ## 26 Nov 2026, session 136 (23:35 IST scheduled run, Sumit away)
 Started from `setup/seed` (session 135's notes). The clone was on `master`; `git fetch` and `checkout` worked (`add_repo` is not offered in this container, as in earlier sessions). PostgreSQL started, role `caseapp` and both databases made, packages installed. Baseline `scripts/test-all.sh` on a clean copy: all 8 suites PASS. The "In progress" line was pushed first and is removed now. Priority 1's open parts wait for a model download, so this session took one left-over each of priorities 3 and 5, then item 18's FIR copy (the default of session 135's question 3, ahead of item 16's left-overs). Priority 3's other two left-overs (one filtered list, a printed export) are still open.
