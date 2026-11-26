@@ -129,6 +129,20 @@ class DutyRosterApiTest {
     }
 
     @Test
+    void aNoteIsKeptWithoutOuterSpacesABlankOneNotAtAllAndAnEmptyStartDayMeansToday() throws Exception {
+        String made = entry(station, io1, today, "leave", null, null);
+        call(post("/api/duty-roster"), sho, made.replace("}", ",\"note\":\"  Fictional family function  \"}")).andExpect(status().isCreated());
+        call(post("/api/duty-roster"), sho, entry(station, io2, today, "weekly_off", null, null).replace("}", ",\"note\":\"   \"}")).andExpect(status().isCreated());
+        var answer = json.readTree(call(get("/api/duty-roster?stationId=" + station + "&from="), io, null).andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(answer.get("from").asText()).isEqualTo(today.toString());
+        assertThat(answer.get("rows").get(0).get("note").asText()).isEqualTo("Fictional family function");
+        assertThat(answer.get("rows").get(1).get("note").isNull()).isTrue();
+        assertThat(answer.get("now").get("on_duty")).isEmpty();   // leave and a weekly off put nobody on duty
+        call(get("/api/duty-roster?stationId=" + station + "&from=tomorrow"), io, null).andExpect(status().isBadRequest());
+        call(post("/api/duty-roster"), sho, entry(station, shoId, today, "leave", "morning", "beat")).andExpect(status().isBadRequest());
+    }
+
+    @Test
     void validationAndClashes() throws Exception {
         call(post("/api/duty-roster"), sho, entry(station, io1, today.minusDays(1), "duty", "morning", "beat")).andExpect(status().isBadRequest());
         call(post("/api/duty-roster"), sho, entry(station, io1, today.plusDays(61), "duty", "morning", "beat")).andExpect(status().isBadRequest());

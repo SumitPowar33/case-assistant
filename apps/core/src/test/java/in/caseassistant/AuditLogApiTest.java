@@ -107,6 +107,9 @@ class AuditLogApiTest {
         // no kind named: everything, as before
         mvc.perform(get(url + "&kind=").header("Authorization", TestAuth.bearer(tokens, sho)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(4));
+        // an empty name beside a real one is not a kind of its own
+        mvc.perform(get(url + "&kind=&kind=override").header("Authorization", TestAuth.bearer(tokens, sho)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
         mvc.perform(get(url + "&kind=override&kind=nothing").header("Authorization", TestAuth.bearer(tokens, sho)))
                 .andExpect(status().isBadRequest()).andExpect(status().reason("No such kind of audit entry."));
         // a filter opens no other station's log

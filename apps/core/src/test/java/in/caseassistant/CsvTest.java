@@ -20,6 +20,14 @@ class CsvTest {
     }
 
     @Test
+    void readsEveryKindOfLineEndAndAQuoteThatClosesAtTheVeryEnd() {
+        assertThat(Csv.parse("a,b\r1,2\r")).containsExactly(List.of("a", "b"), List.of("1", "2"));        // carriage returns only
+        assertThat(Csv.parse("a,b\r\n1,\"2\"")).containsExactly(List.of("a", "b"), List.of("1", "2"));
+        assertThat(Csv.parse("a,b\n\"x\"\"\",y")).containsExactly(List.of("a", "b"), List.of("x\"", "y"));
+        assertThat(Csv.parse("")).isEmpty();
+    }
+
+    @Test
     void anOpenQuoteIsAnError() {
         assertThatThrownBy(() -> Csv.parse("a,b\n\"x,y")).isInstanceOf(IllegalArgumentException.class);
     }

@@ -142,6 +142,16 @@ class SearchApiTest {
     }
 
     @Test
+    void aBlankReasonIsNoReasonAndAMemoThatSealedNothingIsKept() throws Exception {
+        String one = "[{\"name\":\"Fictional Neighbour\",\"address\":\"Fictional lane 1\"}]";
+        write(io, memo(at(1, 7), at(1, 8), one, "          ", CLIP, "[]")).andExpect(status().isBadRequest());
+        write(io, memo(at(1, 7), at(1, 8), TWO, "   ", CLIP, "[]").replace(",\"items\":[]", "")).andExpect(status().isCreated());
+        var row = db.sql("select no_witness_reason from search_seizure").query().singleRow();
+        assertThat(row.get("no_witness_reason")).isNull();
+        assertThat(db.sql("select count(*) from evidence_item").query(Long.class).single()).isZero();
+    }
+
+    @Test
     void anItemIsCheckedAndARefusedItemLeavesNothingBehind() throws Exception {
         write(io, memo(at(1, 7), at(1, 8), TWO, null, CLIP, "[{\"label\":\"E-05\",\"description\":\"Fictional laptop\",\"kind\":\"electronic\"}]"))
                 .andExpect(status().isBadRequest()).andExpect(status().reason("An electronic item needs the SHA-256 taken at seizure."));

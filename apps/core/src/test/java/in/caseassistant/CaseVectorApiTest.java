@@ -132,6 +132,16 @@ class CaseVectorApiTest {
         mvc.perform(get("/api/firs/" + fir + "/case-file/vectors?model=m%20x").header("Authorization", io)).andExpect(status().isBadRequest());
     }
 
+    /** A vector with a missing or endless number would make every ranking of the case wrong: nothing of such a call is kept. */
+    @Test
+    void aVectorWithSomethingThatIsNotANumberKeepsNothingOfTheCall() throws Exception {
+        String good = "{\"hash\":\"" + H1 + "\",\"vec\":[1,2]}";
+        for (String bad : new String[] {"[1,null]", "[1e999,2]", "[1,-1e999]", "[\"NaN\",2]"}) {
+            keep(io, fir, "m/1", "[]", "[" + good + ",{\"hash\":\"" + H2 + "\",\"vec\":" + bad + "}]", 400);
+        }
+        assertThat(db.sql("select count(*) from case_passage_vector").query(Long.class).single()).isZero();
+    }
+
     @Test
     void onlyTheCaseTeamReadsOrWrites() throws Exception {
         keep(io, fir, "m/1", "[\"" + H1 + "\"]", "[{\"hash\":\"" + H1 + "\",\"vec\":[1]}]", 200);

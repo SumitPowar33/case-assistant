@@ -220,6 +220,11 @@ class PolicyApiTest {
                 .param(s1).query(UUID.class).single();
         assertThat(controller.mayManage(gone, "station", "IN", null, s1)).isFalse();
         assertThat(controller.mayManage(UUID.randomUUID(), "state", "IN", null, null)).isFalse();
+        // an officer in charge of another state's station sets nothing here, even naming this station; nor does one posted nowhere
+        String foreignSho = user("sho", other, "Fictional Far SHO");
+        set(foreignSho, "station", s1, null, "victim_update_days", 20).andExpect(status().isForbidden());
+        UUID unposted = db.sql("insert into app_user (full_name, rank, role) values ('Fictional Unposted SHO','Insp','sho') returning id").query(UUID.class).single();
+        assertThat(controller.mayManage(unposted, "station", "IN", null, s1)).isFalse();
         // a role that may set policies but has no station-or-district reach (platform admin has the admin right, so use an io) is refused
         assertThat(controller.mayManage(db.sql("select id from app_user where full_name = 'Fictional IO'").query(UUID.class).single(), "station", "IN", null, s1)).isFalse();
     }

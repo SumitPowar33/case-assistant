@@ -99,6 +99,7 @@ class ComplaintApiTest {
         send(clerk, "PUT", "/api/complaints/" + c, fix).andExpect(status().isNoContent());
         send(clerk, "POST", "/api/firs", fir(c)).andExpect(status().isConflict());                       // not signed yet
         send(clerk, "POST", "/api/complaints/" + c + "/sign", Map.of()).andExpect(status().isBadRequest());  // read over in which language?
+        send(clerk, "POST", "/api/complaints/" + c + "/sign", Map.of("readBackLanguage", "  ")).andExpect(status().isBadRequest());
         send(clerk, "POST", "/api/complaints/" + c + "/sign", Map.of("readBackLanguage", "mr")).andExpect(status().isNoContent());
         send(clerk, "POST", "/api/complaints/" + c + "/sign", Map.of("readBackLanguage", "mr")).andExpect(status().isConflict());
         send(clerk, "PUT", "/api/complaints/" + c, fix).andExpect(status().isConflict());                   // signed text stays

@@ -200,6 +200,17 @@ class AuthApiTest {
                 .containsExactly("ok", "wrong_current_password", "password_changed", "wrong_password", "ok");
     }
 
+    /** An account that signs in some other way (no password kept) cannot be given one by whoever holds its token. */
+    @Test
+    void anAccountWithoutAPasswordCannotSetOneThroughThePasswordRoute() throws Exception {
+        UUID none = db.sql("insert into app_user (full_name, rank, role, username) values ('Fictional No Password','Admin','state_admin','no.password') returning id")
+                .query(UUID.class).single();
+        mvc.perform(post("/api/me/password").header("Authorization", TestAuth.bearer(tokens, none)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"anything-at-all-1\",\"newPassword\":\"fictional-new-pass-7\"}")).andExpect(status().isForbidden());
+        assertThat(db.sql("select password_hash from app_user where id = ?").param(none).query(String.class).optional()).isEmpty();
+        login("no.password", "fictional-new-pass-7", 401);
+    }
+
     /** A stolen token cannot be used to guess the password: wrong current passwords lock the change route and the sign-in alike. */
     @Test
     void guessingTheCurrentPasswordLocksTheChangeAndTheSignIn() throws Exception {
