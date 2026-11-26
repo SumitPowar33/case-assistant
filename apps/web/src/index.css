@@ -20,15 +20,15 @@
   --focus: #2B6CD4;         /* the keyboard ring: 5:1 on white and on the ground */
   /* status pairs (background / ink, each 6:1 or more); colour never alone, a chip always has a word */
   --crit-bg: #FBE7E5; --crit: #9B1C13; --crit-line: #F3C9C4; --crit-soft: #FFF8F7;
-  --warn-bg: #FDF0DC; --warn: #8A4B06; --warn-ink: #6E3B05;
+  --warn-bg: #FDF0DC; --warn: #8A4B06; --warn-ink: #6E3B05; --warn-line: #F1D5AA;
   --ok-bg: #E6F4EC; --ok: #155D35;
   --info-bg: #E3ECF7; --info: #163B6B;
   --neu-bg: #EEF1F4; --neu: #3B4754;
   --ai-bg: #EEE9FA; --ai: #4B2E91; --ai-line: #D9CCF2; --ai-soft: #F8F5FE;
   --quote: var(--surface-2);
 
-  /* type scale (px): 12 caption, 13 label, 14 control and table, 15 body, 17 section title, 20 figure, 26 page title, 30 tile */
-  --fs-xs: 12px; --fs-sm: 13px; --fs-md: 14px; --fs-body: 15px; --fs-lg: 17px; --fs-xl: 20px; --fs-2xl: 26px; --fs-3xl: 30px;
+  /* type scale (px): 11 group and calendar caps, 12 caption, 13 label, 14 control and table, 15 body, 17 section title, 20 figure, 26 page title, 30 tile */
+  --fs-2xs: 11px; --fs-xs: 12px; --fs-sm: 13px; --fs-md: 14px; --fs-body: 15px; --fs-lg: 17px; --fs-xl: 20px; --fs-2xl: 26px; --fs-3xl: 30px;
   --lh-tight: 1.25; --lh-snug: 1.35; --lh-body: 1.5;
   --fw-semi: 600; --fw-bold: 700;
   --tracking-caps: .05em;
@@ -83,7 +83,7 @@ nav { display: flex; flex-direction: column; gap: 1px; }
 header nav a { display: flex; align-items: center; min-height: var(--control); padding: 0 var(--sp-3); border-radius: var(--r-md); color: var(--text-2); text-decoration: none; font-size: var(--fs-md); }
 header nav a:hover { background: var(--hover); color: var(--text); }
 header nav a[aria-current="page"] { background: var(--selected); color: var(--primary-dark); font-weight: var(--fw-semi); }
-.nav-group { font-size: 11px; font-weight: var(--fw-semi); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; padding: var(--sp-3) var(--sp-3) var(--sp-1); }
+.nav-group { font-size: var(--fs-2xs); font-weight: var(--fw-semi); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; padding: var(--sp-3) var(--sp-3) var(--sp-1); }
 .header-menu label { display: grid; gap: var(--sp-1); font-size: var(--fs-xs); font-weight: var(--fw-semi); color: var(--muted); padding: 0 6px; }
 .header-menu select { min-height: 36px; font-size: var(--fs-sm); width: 100%; }
 .who { margin-top: auto; border-top: 1px solid var(--line); padding: 14px 6px 0; font-size: var(--fs-sm); display: grid; gap: 2px; }
@@ -182,27 +182,55 @@ legend { padding: 0 var(--sp-1); font-weight: var(--fw-semi); font-size: var(--f
 p.chip { border-radius: var(--r-lg); padding: var(--sp-1) var(--sp-3); }
 .chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 
-/* ---- dashboard (board 1) ---- */
+/* ---- dashboard (board 1): figures, then what needs the officer, the coming dates beside it, then their FIRs ---- */
 .page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sp-4); }
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-4); }
-.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--sp-4) 18px; box-shadow: var(--shadow-1); }
-.tile div:first-child { font-size: var(--fs-sm); color: var(--muted); }
-.tile div:last-child { font-size: var(--fs-3xl); font-weight: var(--fw-bold); line-height: var(--lh-tight); margin-top: var(--sp-1); font-variant-numeric: tabular-nums; }
-.two-col { display: flex; flex-wrap: wrap; gap: var(--sp-5); align-items: flex-start; }
-.two-col > :first-child { flex: 999 1 520px; min-width: 0; }
-.two-col > :last-child { flex: 1 1 300px; min-width: 0; }
+/* the label on top, the figure at the bottom, so the figures line up when a label takes two lines */
+.tile { display: flex; flex-direction: column; justify-content: space-between; gap: var(--sp-2); background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: var(--sp-4) var(--sp-5); box-shadow: var(--shadow-1); }
+.tile div:first-child { font-size: var(--fs-sm); color: var(--muted); line-height: var(--lh-snug); }
+.tile div:last-child { font-size: var(--fs-3xl); font-weight: var(--fw-bold); line-height: var(--lh-tight); font-variant-numeric: tabular-nums; }
+/* a figure that asks for action also marks its tile with a line of its colour along the top (the figure is red too) */
+.tile:has(.late) { box-shadow: inset 0 3px 0 var(--crit), var(--shadow-1); }
+.dash-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); gap: var(--sp-5); align-items: start; }
 section.flush { padding: 0; }
-section.flush > h2 { padding: 18px var(--sp-5); margin: 0; border-bottom: 1px solid var(--line-soft); }
+section.flush > h2, .list-head { padding: var(--sp-4) var(--sp-5); margin: 0; border-bottom: 1px solid var(--line-soft); }
 .row { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--line-soft); }
 .row:last-child { border-bottom: 0; }
 .row > div { flex: 1 1 260px; min-width: 0; }
-.dates { list-style: none; margin: 0; padding: var(--sp-2) var(--sp-5) var(--sp-4); }
-.dates li { display: flex; gap: 14px; padding: var(--sp-3) 0; margin: 0; border-bottom: 1px solid var(--line-soft); }
+.row .sub, .dates .sub { font-size: var(--fs-sm); color: var(--muted); }
+.row.empty, .cases > .empty { margin: 0; padding: var(--sp-6) var(--sp-5); color: var(--muted); text-align: center; }
+/* what needs the officer: the chips in one column, the case and step in the next, the button at the end, row under row */
+.attention { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
+.attention > * { grid-column: 1 / -1; }
+.attention > .row:not(.empty) { display: grid; grid-template-columns: subgrid; gap: var(--sp-1) var(--sp-4); }
+.attention > .row > .chip { justify-self: start; }
+.attention > .row strong { display: block; line-height: var(--lh-snug); }
+/* the most urgent step's button is the one main action of the screen */
+.attention > .row:first-of-type > .btn { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.attention > .row:first-of-type > .btn:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+/* the coming dates: a small calendar leaf per date, red within 3 days, amber within 7 */
+.dates { list-style: none; margin: 0; padding: var(--sp-1) var(--sp-5) var(--sp-2); }
+.dates li { display: flex; align-items: flex-start; gap: var(--sp-4); padding: var(--sp-3) 0; margin: 0; border-bottom: 1px solid var(--line-soft); }
 .dates li:last-child { border-bottom: 0; }
-.date { width: 52px; flex: none; text-align: center; }
-.date small { display: block; font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase; }
-.date b { font-size: var(--fs-xl); }
-.date.late small, .date.late b, .late { color: var(--crit); }
+.dates strong { display: block; font-size: var(--fs-md); line-height: var(--lh-snug); }
+.date { width: 48px; flex: none; text-align: center; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.date small { display: block; font-size: var(--fs-2xs); font-weight: var(--fw-semi); letter-spacing: var(--tracking-caps); line-height: var(--lh-body); color: var(--muted);
+  text-transform: uppercase; background: var(--surface-2); border-bottom: 1px solid var(--line-soft); }
+.date b { display: block; font-size: var(--fs-xl); line-height: var(--lh-body); padding-bottom: 2px; font-variant-numeric: tabular-nums; }
+.date.crit { border-color: var(--crit-line); } .date.crit small { background: var(--crit-bg); color: var(--crit); border-color: var(--crit-line); } .date.crit b { color: var(--crit); }
+.date.warn { border-color: var(--warn-line); } .date.warn small { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-line); } .date.warn b { color: var(--warn); }
+.late { color: var(--crit); }
+/* the FIRs as one card on the dashboard: its title and "Register" in the head, the table flush with the card's edges */
+section.cases { overflow: hidden; }
+.list-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-4); }
+.list-head h2 { margin: 0; }
+.list-head details { margin: 0; }
+.cases table.cards { border: 0; border-radius: 0; box-shadow: none; }
+.cases table.cards th:first-child, .cases table.cards td:first-child { padding-left: var(--sp-5); }
+.cases table.cards th:last-child, .cases table.cards td:last-child { padding-right: var(--sp-5); }
+.cases > nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--line-soft); }
+@media (max-width: 64rem) { .dash-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* ---- readiness (board 9) ---- */
 .ingredients { list-style: none; padding: 0; margin: 0; }
@@ -354,10 +382,20 @@ body { overflow-wrap: break-word; }
   .topstrip { padding: 4px 16px; }
   .guide { left: 16px; right: 16px; bottom: 16px; width: auto; max-height: 70vh; }
   main { padding: 16px 16px 40px; }
-  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  .tile { padding: 10px; }
-  .tile div:first-child { font-size: 12px; }
-  .tile div:last-child { font-size: 22px; }
+  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); }
+  .tile { padding: var(--sp-3); gap: var(--sp-1); }
+  .tile div:first-child { font-size: var(--fs-xs); line-height: var(--lh-tight); }
+  .tile div:last-child { font-size: var(--fs-2xl); }
+  /* dashboard on a phone: chip above the case, the button beside both; the FIRs are cards on the ground */
+  section.flush > h2, .list-head { padding: var(--sp-3) var(--sp-4); }
+  .row, .dates { padding-left: var(--sp-4); padding-right: var(--sp-4); }
+  .attention { display: block; }
+  .attention > .row:not(.empty) { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "chip btn" "text btn"; gap: var(--sp-2) var(--sp-3); }
+  .attention > .row > .chip { grid-area: chip; } .attention > .row > div { grid-area: text; } .attention > .row > .btn { grid-area: btn; }
+  main section.cases { overflow: visible; background: none; border: 0; box-shadow: none; }
+  .cases > .list-head { padding: 0; border: 0; }
+  .cases table.cards td:first-child, .cases table.cards td:last-child { padding-left: 0; padding-right: 0; }
+  .cases > .empty, .cases > nav { padding-left: 0; padding-right: 0; border: 0; }
   main section, .card { padding: 14px 14px; }
   button, .btn, select, input:not([type=checkbox]):not([type=radio]), summary, .menu-toggle { min-height: var(--touch); }
   input[type=checkbox], input[type=radio] { width: 24px; height: 24px; }

@@ -40,8 +40,8 @@ export default function Dashboard() {
           <div className="tile"><div>{t('dash.tileWeek')}</div><div className={data.due_in_7_days ? 'late' : ''}>{data.due_in_7_days}</div></div>
           <div className="tile"><div>{t('dash.tileNotices')}</div><div>{data.notices_waiting}</div></div>
         </div>
-        <div className="two-col">
-          <section className="flush" aria-labelledby="attention">
+        <div className="dash-grid">
+          <section className="flush attention" aria-labelledby="attention">
             <h2 id="attention">{t('dash.attention')}</h2>
             {(data.pocso_open ?? []).map((c) => (
               <div className="row" key={c.fir_id}>
@@ -50,7 +50,7 @@ export default function Dashboard() {
                 <a className="btn" href={`#/firs/${c.fir_id}/deadlines`}>{t('dash.open')}</a>
               </div>
             ))}
-            {soon.length === 0 && !data.pocso_open?.length ? <p className="row">{t('dash.nothing')}</p> : soon.map((d, i) => {
+            {soon.length === 0 && !data.pocso_open?.length ? <p className="row empty">{t('dash.nothing')}</p> : soon.map((d, i) => {
               const u = urgency(d.days_left)
               return (
                 <div className="row" key={i}>
@@ -64,14 +64,14 @@ export default function Dashboard() {
               )
             })}
           </section>
-          <section className="flush" aria-labelledby="upcoming">
+          <section className="flush coming" aria-labelledby="upcoming">
             <h2 id="upcoming">{t('dash.upcoming')}</h2>
-            {data.deadlines.length === 0 ? <p className="row">{t('dash.nothing')}</p> : <ol className="dates">
+            {data.deadlines.length === 0 ? <p className="row empty">{t('dash.nothing')}</p> : <ol className="dates">
               {data.deadlines.slice(0, 6).map((d, i) => {
                 const day = new Date(d.due_on + 'T00:00:00')
                 return (
                   <li key={i}>
-                    <div className={d.days_left < 0 ? 'date late' : 'date'}>
+                    <div className={`date ${d.days_left <= 3 ? 'crit' : d.days_left <= 7 ? 'warn' : ''}`}>
                       <small>{day.toLocaleDateString(document.documentElement.lang || 'en', { month: 'short' })}</small><b>{day.getDate()}</b>
                     </div>
                     <div><strong>{kind(d)}</strong><div className="sub">{t('fir.title', { no: d.fir_no, year: d.fir_year })} · {left(d.days_left)}</div></div>
@@ -82,7 +82,7 @@ export default function Dashboard() {
           </section>
         </div>
       </>}
-      <FirList />
+      <FirList inCard />
       <p className="note">{t('dash.note')}</p>
     </>
   )

@@ -23,11 +23,11 @@ never written inline. The tokens keep the board's colours and give each a role.
 | Scrim | `--scrim` (text colour at 45 %) | the page dimmed behind a side panel |
 
 Status pairs (background / ink, each 6:1 or more): critical `#FBE7E5/#9B1C13` (border `--crit-line`, soft box
-`--crit-soft`), warning `#FDF0DC/#8A4B06` (`--warn-ink` `#6E3B05` for the demo chip), ok `#E6F4EC/#155D35`, info
+`--crit-soft`), warning `#FDF0DC/#8A4B06` (border `--warn-line`, `--warn-ink` `#6E3B05` for the demo chip), ok `#E6F4EC/#155D35`, info
 `#E3ECF7/#163B6B`, neutral `#EEF1F4/#3B4754`, AI `#EEE9FA/#4B2E91` (border `--ai-line`, draft box `--ai-soft`).
 Colour never carries meaning alone: the chip always has a word.
 
-**Type** (`--fs-*`): 12 caption and table head (`xs`), 13 label (`sm`), 14 control and table (`md`), 15 body (`body`),
+**Type** (`--fs-*`): 11 menu group and calendar month, in capitals (`2xs`), 12 caption and table head (`xs`), 13 label (`sm`), 14 control and table (`md`), 15 body (`body`),
 17 section title h2 (`lg`), 20 figure (`xl`), 26 page title h1 (`2xl`), 30 dashboard tile (`3xl`). Line heights
 `--lh-tight` 1.25 (titles, buttons), `--lh-snug` 1.35 (fields, h2), `--lh-body` 1.5. Weights 600 (`--fw-semi`) and 700
 (`--fw-bold`). Numbers in tables and tiles are tabular. The board uses IBM Plex Sans; the app keeps **Noto Sans**
@@ -50,6 +50,18 @@ phone; 20 px between the cards of a screen.
   and AI chips carry a hairline border of their colour.
 - Tables: head in `--surface-2`, 12 px capitals in `--muted`; rows divided by `--line-soft`; the row under the pointer
   in `--surface-2`; `table.cards` is a card (and one card per row on a phone).
+
+## Dashboard (board 1, `Dashboard.tsx`)
+- Page head: the date, "Welcome, ..." (h1) and one sentence with the count due in 7 days.
+- Tiles: label on top, figure at the bottom (figures line up when a label wraps); a figure that asks for action is red
+  and its tile carries a 3 px red line along the top.
+- Two columns from 1024 px up (`.dash-grid`: the rest and 300–360 px), one below. "Needs your attention" lines up its
+  chips, texts and buttons in three columns (CSS subgrid); the first line's button is the screen's one primary button.
+  "Coming deadlines" draws each date as a small calendar leaf, red within 3 days and amber within 7 (the words "n days
+  left" say it too).
+- "FIRs" is one card (`FirList inCard`, `section.cases`): an h2 and "Register a new FIR" in its head, the table flush
+  with the card's edges. On a phone the card goes and its rows are the usual row cards.
+- Empty lists say so in one muted, centred line (`.empty`).
 
 ## Frame (every signed-in screen)
 - Left sidebar (white, 220–248 px): the "CA" tile, "Case Assistant" and the user's station; the menu in groups; at the
