@@ -141,6 +141,28 @@ class AdminApiTest {
     }
 
     @Test
+    void anOfficersGenderIsOptionalSetOnlyByTheAdminAndNeverClearedByALaterChange() throws Exception {
+        post(admin, "/api/users", """
+                {"username":"si.gender","password":"%s","fullName":"SI Gender","rank":"SI","role":"io","stationId":"%s","gender":"woman"}"""
+                .formatted(IO_PW, station)).andExpect(status().isBadRequest());
+        UUID io = createIo();      // none given
+        assertThat(db.sql("select gender from app_user where id = ?").param(io).query(String.class).optional()).isEmpty();
+        var put = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/users/" + io).header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON);
+        String same = "\"role\":\"io\",\"rank\":\"SI\",\"stationId\":\"" + station + "\",\"reason\":\"Fictional record update 9\"";
+        mvc.perform(put.content("{" + same + "}")).andExpect(status().isConflict());                              // nothing to change
+        mvc.perform(put.content("{" + same + ",\"gender\":\"girl\"}")).andExpect(status().isBadRequest());
+        mvc.perform(put.content("{" + same + ",\"gender\":\"female\"}")).andExpect(status().isOk()).andExpect(jsonPath("$.changed").value("gender set"));
+        mvc.perform(put.content("{" + same + ",\"gender\":\"female\"}")).andExpect(status().isConflict());   // already set
+        mvc.perform(put.content("{" + same.replace("\"SI\"", "\"PSI\"") + "}")).andExpect(status().isOk());   // a later promotion keeps it
+        assertThat(db.sql("select gender from app_user where id = ?").param(io).query(String.class).single()).isEqualTo("female");
+        mvc.perform(get("/api/users").header("Authorization", admin)).andExpect(jsonPath("$[?(@.id == '" + io + "')].gender").value("female"));
+        post(admin, "/api/users", """
+                {"username":"si.gender2","password":"%s","fullName":"SI Gender Two","rank":"SI","role":"io","stationId":"%s","gender":"male"}"""
+                .formatted(IO_PW, station)).andExpect(status().isCreated());
+    }
+
+    @Test
     void disablingEndsTokensForGoodAndEnablingNeedsAFreshSignIn() throws Exception {
         UUID io = createIo();
         String old = "Bearer " + token("si.fictional", IO_PW);

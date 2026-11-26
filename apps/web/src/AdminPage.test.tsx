@@ -234,3 +234,25 @@ test('a fresh installation says so: no stations, no admin changes and no sign-in
     Object.assign(lists, before)
   }
 })
+
+test('an officer\'s gender is optional: sent only when chosen, when an account is added and when it is changed', async () => {
+  const writes = stub({ status: 201, body: { id: 'u9', changed: 'gender set', firsAsIo: 0 } })
+  render(<AdminPage />)
+  const form = (await screen.findByText('Add an account')).closest('details')!
+  type('Full name', 'PSI Demo', within(form))
+  type('Rank', 'PSI', within(form))
+  type(/^Username/, 'psi.demo', within(form))
+  type(/^First password \(/, 'fictional-pass-123', within(form))
+  type('First password again', 'fictional-pass-123', within(form))
+  fireEvent.change(within(form).getByLabelText('Police station', { exact: false }), { target: { value: 's1' } })
+  fireEvent.change(within(form).getByLabelText(/^Gender/), { target: { value: 'female' } })
+  fireEvent.click(within(form).getByRole('button', { name: 'Create account' }))
+  await screen.findByRole('status')
+  expect((writes[0].body as { gender?: string }).gender).toBe('female')
+  const row = screen.getByText('SI Fictional (SI)').closest('tr')!
+  fireEvent.change(within(row).getByLabelText(/^Gender/), { target: { value: 'male' } })
+  type(/^Reason \(for example/, 'Fictional record update 9', within(row))
+  fireEvent.click(within(row).getByRole('button', { name: 'Change SI Fictional' }))
+  await vi.waitFor(() => expect(writes).toHaveLength(2))
+  expect(writes[1].body).toMatchObject({ role: 'io', gender: 'male' })
+})

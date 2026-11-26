@@ -22,7 +22,12 @@ function stub(body: unknown, write: { status: number; body: unknown } = { status
 }
 
 const step = (step: string, basis: string, due: string | null, done: string | null = null) =>
-  ({ step, basis, limit_hours: due ? 24 : null, due_at: due, done_at: done, recorded_by_name: done ? 'SI Fictional' : null })
+  ({ step, basis, limit_hours: due ? 24 : null, due_at: due, done_at: done, recorded_by_name: done ? 'SI Fictional' : null,
+    taken_by_name: null, woman_officer: null, statement_id: null, statement_at: null, statement_medium: null })
+const extra = {
+  officers: [{ id: 'o1', full_name: 'SI Fictional Woman', rank: 'SI' }, { id: 'o2', full_name: 'HC Fictional Man', rank: 'HC' }],
+  child_statements: [{ id: 'c1', recorded_at: '2026-10-01T09:00:00Z', medium: 'video' }],
+}
 const steps = [
   step('cwc_court_report', 'POCSO 19(6)', '2026-10-02T04:30:00Z', '2026-10-01T10:30:00Z'),
   step('medical_examination', 'POCSO 27; BNSS 184(1)', '2026-10-02T04:30:00Z'),
@@ -42,7 +47,7 @@ test('nothing is shown for a case that is not a POCSO case', async () => {
 })
 
 test('each step is shown with its law, open steps red with their due time or no limit, done steps with when and who', async () => {
-  stub({ pocso: true, steps })
+  stub({ pocso: true, steps, ...extra })
   render(<PocsoSteps firId="f1" version={0} onSaved={() => {}} />)
   expect(await screen.findByRole('heading', { name: 'POCSO case: steps the law asks for' })).toBeTruthy()
   const items = screen.getAllByRole('listitem')
@@ -59,7 +64,7 @@ test('each step is shown with its law, open steps red with their due time or no 
 })
 
 test('a step done is recorded in India time, the first open step chosen first; a refusal is shown', async () => {
-  const writes = stub({ pocso: true, steps })
+  const writes = stub({ pocso: true, steps, ...extra })
   const saved = vi.fn()
   render(<PocsoSteps firId="f1" version={0} onSaved={saved} />)
   const form = (await screen.findByText('Record a step done')).closest('details')!
@@ -91,10 +96,43 @@ test('with every step done the first step is chosen; a failed load is shown', as
 })
 
 test('in Marathi the steps and the form are in Marathi', async () => {
-  stub({ pocso: true, steps })
+  stub({ pocso: true, steps, ...extra })
   render(<ScreenLangContext.Provider value="mr"><PocsoSteps firId="f1" version={0} onSaved={() => {}} /></ScreenLangContext.Provider>)
   expect(await screen.findByText('पोक्सो प्रकरण: कायद्याने सांगितलेल्या पायऱ्या')).toBeTruthy()
   expect(screen.getByText('पूर्ण झालेली पायरी नोंदवा')).toBeTruthy()
   expect(screen.getAllByText('उघडी')).toHaveLength(5)
   expect(screen.getByRole('option', { name: 'दंडाधिकाऱ्यांसमोर जबाब' })).toBeTruthy()
+})
+
+test('the statement at the child\'s place names the officer who took it and the child\'s one recorded statement it relies on', async () => {
+  const writes = stub({ pocso: true, steps, ...extra })
+  const saved = vi.fn()
+  render(<PocsoSteps firId="f1" version={0} onSaved={saved} />)
+  const form = (await screen.findByText('Record a step done')).closest('details')!
+  expect(within(form).queryByLabelText(/Officer who took the statement/)).toBeNull()     // not for the first open step
+  expect(within(form).queryByLabelText(/one recorded statement/)).toBeNull()
+  fireEvent.change(within(form).getByLabelText('Step'), { target: { value: 'statement_chosen_place' } })
+  fireEvent.change(within(form).getByLabelText(/Officer who took the statement/), { target: { value: 'o1' } })
+  fireEvent.change(within(form).getByLabelText(/one recorded statement/), { target: { value: 'c1' } })
+  fireEvent.change(within(form).getByLabelText('Done at'), { target: { value: '2026-10-01T18:15' } })
+  fireEvent.click(within(form).getByRole('button', { name: 'Save' }))
+  await vi.waitFor(() => expect(saved).toHaveBeenCalled())
+  expect(writes[0].body).toEqual({ step: 'statement_chosen_place', doneAt: '2026-10-01T18:15:00+05:30', takenBy: 'o1', statementId: 'c1' })
+  // the Magistrate's statement may rely on the same statement but names no officer
+  fireEvent.change(within(form).getByLabelText('Step'), { target: { value: 'magistrate_statement' } })
+  expect(within(form).queryByLabelText(/Officer who took the statement/)).toBeNull()
+  expect(within(form).getByLabelText(/one recorded statement/)).toBeTruthy()
+})
+
+test('a statement step is shown with who took it, red unless recorded as a woman officer, and the statement it relies on', async () => {
+  const done = (o: Record<string, unknown>) => ({ ...step('statement_chosen_place', 'POCSO 24', null, '2026-10-01T10:30:00Z'), ...o })
+  stub({ pocso: true, steps: [done({ taken_by_name: 'HC Fictional Man', woman_officer: false }),
+    done({ step: 'magistrate_statement', taken_by_name: 'SI Fictional Woman', woman_officer: true, statement_id: 'c1', statement_at: '2026-10-01T09:00:00Z', statement_medium: 'video' })],
+    officers: [], child_statements: [] })
+  render(<PocsoSteps firId="f1" version={0} onSaved={() => {}} />)
+  const items = await screen.findAllByRole('listitem')
+  expect(items[0].textContent).toContain('Taken by HC Fictional Man')
+  expect(within(items[0]).getByText(/not recorded as a woman officer/).className).toContain('c-crit')
+  expect(within(items[1]).getByText('recorded as a woman officer').className).toContain('c-ok')
+  expect(items[1].textContent).toContain('Relies on the child\'s recorded statement of 1 Oct 2026, 2:30 pm IST (Video)')
 })

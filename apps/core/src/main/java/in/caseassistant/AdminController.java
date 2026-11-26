@@ -32,12 +32,13 @@ class AdminController {
                    @NotBlank @Size(min = 12, max = 200) String password, @NotBlank @Size(max = 200) String fullName,
                    @NotBlank @Size(max = 60) String rank,
                    @NotBlank @Pattern(regexp = "[a-z][a-z_]{1,29}") String role,
-                   UUID stationId) {}
+                   UUID stationId, @Pattern(regexp = "female|male|other") String gender) {}
 
     record Reason(@NotBlank @Size(min = 10, max = 2000) String reason) {}
 
     record Change(@NotBlank @Pattern(regexp = "[a-z][a-z_]{1,29}") String role,
-                  @NotBlank @Size(max = 60) String rank, UUID stationId, @NotBlank @Size(min = 10, max = 2000) String reason) {}
+                  @NotBlank @Size(max = 60) String rank, UUID stationId, @NotBlank @Size(min = 10, max = 2000) String reason,
+                  @Pattern(regexp = "female|male|other") String gender) {}
 
     record NewStation(@NotBlank @Pattern(regexp = "[A-Z]{2,3}") String stateCode, @NotBlank @Size(max = 120) String district,
                       @NotBlank @Size(max = 200) String name, @Size(max = 40) String cctnsCode) {}
@@ -142,7 +143,7 @@ class AdminController {
     List<Map<String, Object>> users(@AuthenticationPrincipal Jwt jwt) {
         String scope = scope(requireAdmin(jwt));
         var rows = db.sql("""
-                select u.id, u.username, u.full_name, u.rank, u.role, u.station_id, s.name as station_name, d.name as district, u.active
+                select u.id, u.username, u.full_name, u.rank, u.role, u.station_id, s.name as station_name, d.name as district, u.active, u.gender
                 from app_user u left join police_station s on s.id = u.station_id left join district d on d.id = s.district_id
                 where (?::text is null or s.state_code = ?) order by u.active desc, u.full_name""")
                 .params(scope, scope).query().listOfRows();
@@ -163,9 +164,9 @@ class AdminController {
         requireStation(u.role, u.stationId);
         requireStationInScope(scope(me), u.stationId);
         UUID id = db.sql("""
-                insert into app_user (username, password_hash, full_name, rank, role, station_id)
-                values (?,?,?,?,?,?) returning id""")
-                .params(u.username, passwords.encode(u.password), u.fullName.trim(), u.rank.trim(), u.role, u.stationId)
+                insert into app_user (username, password_hash, full_name, rank, role, station_id, gender)
+                values (?,?,?,?,?,?,?) returning id""")
+                .params(u.username, passwords.encode(u.password), u.fullName.trim(), u.rank.trim(), u.role, u.stationId, u.gender)
                 .query(UUID.class).single();
         log(me, "user_created", id, null, null);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", id));
@@ -220,7 +221,7 @@ class AdminController {
         requireStation(c.role, station);
         requireStationInScope(scope, station);
         var old = db.sql("""
-                select u.role, u.rank, u.station_id, s.name as station_name from app_user u
+                select u.role, u.rank, u.station_id, u.gender, s.name as station_name from app_user u
                 left join police_station s on s.id = u.station_id where u.id = ? for update of u""")
                 .param(id).query().listOfRows().stream().findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such account."));
@@ -233,9 +234,12 @@ class AdminController {
         if (!java.util.Objects.equals(old.get("station_id"), station))
             detail.add("station " + java.util.Objects.requireNonNullElse(old.get("station_name"), "none") + " to "
                     + java.util.Objects.requireNonNullElse(newStationName, "none"));
+        // a gender is only ever set or changed here, never cleared; no gender in the request leaves it as it is
+        String gender = c.gender == null ? (String) old.get("gender") : c.gender;
+        if (!java.util.Objects.equals(old.get("gender"), gender)) detail.add("gender set");
         if (detail.isEmpty()) throw new ResponseStatusException(HttpStatus.CONFLICT, "Nothing to change.");
-        db.sql("update app_user set role = ?, rank = ?, station_id = ?, password_changed_at = clock_timestamp() where id = ?")
-                .params(c.role, c.rank.trim(), station, id).update();
+        db.sql("update app_user set role = ?, rank = ?, station_id = ?, gender = ?, password_changed_at = clock_timestamp() where id = ?")
+                .params(c.role, c.rank.trim(), station, gender, id).update();
         log(me, "user_changed", id, null, c.reason, String.join("; ", detail));
         if (!java.util.Objects.equals(old.get("station_id"), station)) endActingCharges(me, id, "Officer moved: " + c.reason.trim());
         long firsAsIo = db.sql("select count(*) from fir where io_id = ?").param(id).query(Long.class).single();

@@ -166,8 +166,13 @@ class CaseTeam {
 
     /** Registering an FIR or taking a complaint: users with "fir.register" posted at that station. */
     boolean canRegisterAt(UUID userId, UUID stationId) {
+        return holdsAtOwnStation(userId, "fir.register", stationId);
+    }
+
+    /** A permission held (as own role or acting charge) by an active user who is posted at that very station. */
+    boolean holdsAtOwnStation(UUID userId, String permission, UUID stationId) {
         return userId != null && stationId != null && db.sql("select exists (select 1 from app_user u where u.id = ? and u.active and u.station_id = ? and "
-                + holds("u", roles.with("fir.register")) + ")").params(userId, stationId).query(Boolean.class).single();
+                + holds("u", roles.with(permission)) + ")").params(userId, stationId).query(Boolean.class).single();
     }
 
     void requireStationStaff(UUID userId, UUID stationId) {

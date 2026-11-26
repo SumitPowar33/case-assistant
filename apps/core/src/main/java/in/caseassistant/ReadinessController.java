@@ -334,6 +334,24 @@ class ReadinessController {
             if (!done.contains((String) st[0]))
                 gaps.add(gap("pocso-step:" + st[0], "high", POCSO_STEP_TEXT.get((String) st[0]) + " is not recorded yet (" + st[1]
                         + "; Deadlines, POCSO case steps).", overrides));
+        // POCSO 24: the statement at the child's place is taken by a woman officer. The latest record of the step counts;
+        // the app knows only what the admin has set on the account, so an officer with no gender set is also a gap.
+        var place = db.sql("""
+                select coalesce(u.gender = 'female', false) as woman from pocso_step p left join app_user u on u.id = p.taken_by
+                where p.fir_id = ? and p.step = 'statement_chosen_place' order by p.recorded_at desc limit 1""")
+                .param(firId).query().listOfRows().stream().findFirst().orElse(null);
+        if (place != null && !(Boolean) place.get("woman"))
+            gaps.add(gap("pocso-woman-officer", "high", "The child's statement at the child's place is not recorded as taken by a woman officer"
+                    + " (POCSO 24). Record the step again with the woman officer who took it (the state admin sets an officer's gender on the account),"
+                    + " or accept this in writing with the reason.", overrides));
+        // the child is not asked to repeat the account: one recorded statement, reused
+        long repeated = db.sql("""
+                select count(*) from (select w.person_id from witness_statement w join person p on p.id = w.person_id
+                where w.fir_id = ? and p.role = 'victim' and p.age_years < 18 group by w.person_id having count(*) > 1) x""")
+                .param(firId).query(Long.class).single();
+        if (repeated > 0)
+            gaps.add(gap("pocso-repeat-statement", "high", "More than one statement is recorded for a child victim. The child is not to be asked to repeat"
+                    + " the account: reuse the first recorded statement, or accept this in writing with the reason (for example, the first was unclear).", overrides));
         return gaps;
     }
 

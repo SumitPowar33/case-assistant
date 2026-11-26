@@ -22,7 +22,7 @@ class PocsoApiTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcClient db;
     @Autowired org.springframework.security.oauth2.jwt.JwtEncoder tokens;
-    UUID fir;
+    UUID fir, ioId, ioStation;
     String io, sho, outsider, frontDesk;
 
     @BeforeEach
@@ -31,7 +31,8 @@ class PocsoApiTest {
         db.sql("insert into state_pack (code, name, version, languages) values ('IN','National','1',array['en'])").update();
         UUID station = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','Testpur'),'Testpur City') returning id")
                 .query(UUID.class).single();
-        UUID ioId = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'SI Fictional Woman','SI','io') returning id")
+        ioStation = station;
+        ioId = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'SI Fictional Woman','SI','io') returning id")
                 .param(station).query(UUID.class).single();
         io = TestAuth.bearer(tokens, ioId);
         fir = db.sql("""
@@ -187,7 +188,77 @@ class PocsoApiTest {
         mvc.perform(get("/api/dashboard").header("Authorization", io)).andExpect(jsonPath("$.pocso_open[0].open_steps").value(5));
         mvc.perform(get("/api/dashboard").header("Authorization", outsider)).andExpect(jsonPath("$.pocso_open.length()").value(0));   // not on the team
         for (String st : new String[] {"cwc_court_report", "medical_examination", "statement_chosen_place", "magistrate_statement", "interim_compensation"})
-            record(io, "{\"step\":\"" + st + "\",\"doneAt\":\"2026-10-01T18:00:00+05:30\"}").andExpect(status().isCreated());
+            record(io, "{\"step\":\"" + st + "\",\"doneAt\":\"2026-10-01T18:00:00+05:30\",\"takenBy\":" + (st.equals("statement_chosen_place") ? "\"" + ioId + "\"" : "null") + "}")
+                    .andExpect(status().isCreated());
         mvc.perform(get("/api/dashboard").header("Authorization", io)).andExpect(jsonPath("$.pocso_open.length()").value(0));
+    }
+
+    UUID childStatement(String role, int age) {
+        UUID person = db.sql("insert into person (fir_id, role, label, identity_known, age_years) values (?, ?, 'V1', false, ?) returning id")
+                .params(fir, role, age).query(UUID.class).single();
+        return db.sql("insert into witness_statement (fir_id, person_id, recorded_by, language, medium, original_text) values (?,?,?,'mr','video','Fictional words of the child') returning id")
+                .params(fir, person, ioId).query(UUID.class).single();
+    }
+
+    @Test
+    void theStatementAtTheChildsPlaceNamesTheOfficerAndTheReadinessCheckWantsAWomanOfficerFromTheRecord() throws Exception {
+        pocsoSection();
+        String at = "\"doneAt\":\"2026-10-01T18:00:00+05:30\"";
+        record(io, "{\"step\":\"statement_chosen_place\"," + at + "}").andExpect(status().isBadRequest())
+                .andExpect(status().reason("Name the officer who took the statement (POCSO 24: a woman officer)."));
+        record(io, "{\"step\":\"medical_examination\"," + at + ",\"takenBy\":\"" + ioId + "\"}").andExpect(status().isBadRequest())
+                .andExpect(status().reason("Only the statement at the child's place names who took it."));
+        UUID other = db.sql("insert into police_station (state_code, district_id, name) values ('IN',district_id_of('IN','Testpur'),'Other PS') returning id")
+                .query(UUID.class).single();
+        UUID away = db.sql("insert into app_user (station_id, full_name, rank, role, gender) values (?,'SI Fictional Away','SI','io','female') returning id")
+                .param(other).query(UUID.class).single();
+        record(io, "{\"step\":\"statement_chosen_place\"," + at + ",\"takenBy\":\"" + away + "\"}").andExpect(status().isBadRequest())
+                .andExpect(status().reason("The officer must be posted at this police station."));
+        // no gender on the account: a gap, and the screen is told "not recorded as a woman" without any gender being sent
+        record(io, "{\"step\":\"statement_chosen_place\"," + at + ",\"takenBy\":\"" + ioId + "\"}").andExpect(status().isCreated());
+        mvc.perform(get("/api/firs/" + fir + "/pocso").header("Authorization", io))
+                .andExpect(jsonPath("$.steps[2].taken_by_name").value("SI Fictional Woman")).andExpect(jsonPath("$.steps[2].woman_officer").value(false))
+                .andExpect(jsonPath("$.officers.length()").value(4)).andExpect(jsonPath("$.officers[0].gender").doesNotExist())
+                .andExpect(jsonPath("$.steps[0].taken_by_name").doesNotExist()).andExpect(jsonPath("$.steps[0].woman_officer").doesNotExist());
+        mvc.perform(get(readiness()).header("Authorization", io))
+                .andExpect(jsonPath("$.gaps[?(@.key == 'pocso-woman-officer')].severity").value("high"))
+                .andExpect(jsonPath("$.gaps[?(@.key == 'pocso-step:statement_chosen_place')]").isEmpty());
+        db.sql("update app_user set gender = 'male' where id = ?").param(ioId).update();
+        mvc.perform(get(readiness()).header("Authorization", io)).andExpect(jsonPath("$.gaps[?(@.key == 'pocso-woman-officer')]").isNotEmpty());
+        // the gap can be accepted in writing; once the admin has set the gender (or the step is recorded again with a woman) it is gone
+        db.sql("update app_user set gender = 'female' where id = ?").param(ioId).update();
+        mvc.perform(get(readiness()).header("Authorization", io)).andExpect(jsonPath("$.gaps[?(@.key == 'pocso-woman-officer')]").isEmpty());
+        mvc.perform(get("/api/firs/" + fir + "/pocso").header("Authorization", io)).andExpect(jsonPath("$.steps[2].woman_officer").value(true));
+        // the latest record counts: recorded again with an officer who is not a woman
+        UUID man = db.sql("insert into app_user (station_id, full_name, rank, role, gender) values (?,'SI Fictional Man','SI','io','male') returning id")
+                .param(ioStation).query(UUID.class).single();
+        record(io, "{\"step\":\"statement_chosen_place\"," + at + ",\"takenBy\":\"" + man + "\"}").andExpect(status().isCreated());
+        mvc.perform(get(readiness()).header("Authorization", io)).andExpect(jsonPath("$.gaps[?(@.key == 'pocso-woman-officer')]").isNotEmpty());
+        mvc.perform(post(readiness() + "/overrides").header("Authorization", io).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"gapKey\":\"pocso-woman-officer\",\"reason\":\"No woman officer at the station that day; a woman doctor was present\"}"))
+                .andExpect(status().isCreated());
+        mvc.perform(get(readiness()).header("Authorization", io)).andExpect(jsonPath("$.gaps[?(@.key == 'pocso-woman-officer')].override.reason").isNotEmpty());
+    }
+
+    @Test
+    void aStepReusesTheChildsOneRecordedStatementAndASecondStatementIsAGap() throws Exception {
+        pocsoSection();
+        UUID first = childStatement("victim", 12);
+        String at = "\"doneAt\":\"2026-10-01T18:00:00+05:30\"";
+        record(io, "{\"step\":\"magistrate_statement\"," + at + ",\"statementId\":\"" + first + "\"}").andExpect(status().isCreated());
+        record(io, "{\"step\":\"support_person\"," + at + ",\"statementId\":\"" + first + "\"}").andExpect(status().isBadRequest())
+                .andExpect(status().reason("Only a statement step names the recorded statement."));
+        record(io, "{\"step\":\"magistrate_statement\"," + at + ",\"statementId\":\"" + UUID.randomUUID() + "\"}").andExpect(status().isBadRequest())
+                .andExpect(status().reason("The statement must be one of a child victim of this FIR."));
+        record(io, "{\"step\":\"magistrate_statement\"," + at + ",\"statementId\":\"" + childStatement("witness", 10) + "\"}").andExpect(status().isBadRequest());
+        mvc.perform(get("/api/firs/" + fir + "/pocso").header("Authorization", io))
+                .andExpect(jsonPath("$.steps[3].statement_id").value(first.toString())).andExpect(jsonPath("$.steps[3].statement_medium").value("video"))
+                .andExpect(jsonPath("$.child_statements.length()").value(1)).andExpect(jsonPath("$.child_statements[0].original_text").doesNotExist());
+        mvc.perform(get(readiness()).header("Authorization", io)).andExpect(jsonPath("$.gaps[?(@.key == 'pocso-repeat-statement')]").isEmpty());
+        // a second statement of the same child: the child is asked to repeat the account
+        UUID child = db.sql("select person_id from witness_statement where id = ?").param(first).query(UUID.class).single();
+        db.sql("insert into witness_statement (fir_id, person_id, recorded_by, language, medium, original_text) values (?,?,?,'mr','written','Fictional second statement')")
+                .params(fir, child, ioId).update();
+        mvc.perform(get(readiness()).header("Authorization", io)).andExpect(jsonPath("$.gaps[?(@.key == 'pocso-repeat-statement')].severity").value("high"));
     }
 }
