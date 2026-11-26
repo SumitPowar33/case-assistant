@@ -47,3 +47,44 @@ test('an unsigned report prints as a draft', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Print for the court' }))
   expect(await screen.findByText('DRAFT · NOT SIGNED')).toBeTruthy()
 })
+
+test('what is not recorded shows as a dash or "name not known", a victim who informed is the informant, custody reads as it stands', async () => {
+  stub({
+    head: { ...head, approved_by: 'PI Fictional Head', approved_rank: null, signed_rank: null, signed_at: null, court: null, district: '' },
+    property: [{ label: 'E5', kind: 'electronic', description: 'Fictional file', seized_at: '2026-11-13T07:15:00Z', seal_no: null, sha256: 'abc123' }],
+    people: [
+      person({ role: 'accused', label: null, masked: true, name: null, parentage: null, age_years: null, gender: null, address: null, sent_up: true }),
+      person({ role: 'accused', label: 'A2', name: 'Fictional Bailed', arrested_at: '2026-11-13T07:10:00Z', released_on: '2026-11-14', sent_up: true }),
+      person({ role: 'suspect', label: 'S1', name: null }),
+      person({ role: 'victim', label: 'V1', name: null, parentage: 'D/o Fictional Mother', has_statement: false }),
+      person({ label: null, name: 'Fictional Bystander' }),
+    ] })
+  render(<CourtPaper firId="f1" />)
+  fireEvent.click(screen.getByRole('button', { name: 'Print for the court' }))
+  const paper = await screen.findByRole('article', { name: 'Final report (charge-sheet)' })
+  expect(within(paper).getByText('In the court of —')).toBeTruthy()
+  expect(within(paper).getByText(/District: — · Police station/)).toBeTruthy()
+  expect(within(paper).getByText('Fictional file (SHA-256 abc123)')).toBeTruthy()
+  expect(within(paper).getByText('(identity protected, BNS 72)', { exact: false, selector: 'td' })).toBeTruthy()
+  expect(within(paper).getByText('not arrested')).toBeTruthy()
+  expect(within(paper).getByText(/^arrested .*; released 2026-11-14$/)).toBeTruthy()
+  expect(within(paper).getByText(/Accused not sent up for trial: S1 name not known/)).toBeTruthy()
+  expect(within(paper).getByText(/name not known, D\/o Fictional Mother/)).toBeTruthy()
+  expect(within(paper).getByText('Fictional Bystander')).toBeTruthy()
+  expect(within(paper).getByText(/PI Fictional Head \(—\)/)).toBeTruthy()
+  expect(within(paper).getByText(/SI Fictional \(—\)$/)).toBeTruthy()
+})
+
+test('with no one recorded the lists show a dash, and a refused request shows why instead of a paper', async () => {
+  stub({ head: { ...head, approved_by: null, signed_by: null, status: null }, people: [], property: [] })
+  const view = render(<CourtPaper firId="f1" />)
+  fireEvent.click(screen.getByRole('button', { name: 'Print for the court' }))
+  const paper = await screen.findByRole('article', { name: 'Final report (charge-sheet)' })
+  expect(within(paper).getByText(/Complainant or informant: —/)).toBeTruthy()
+  view.unmount()
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 403, json: async () => ({ error: 'Not your case (fictional refusal)' }) })))
+  render(<CourtPaper firId="f1" />)
+  fireEvent.click(screen.getByRole('button', { name: 'Print for the court' }))
+  expect((await screen.findByRole('alert')).textContent).toBeTruthy()
+  expect(screen.queryByRole('article')).toBeNull()
+})
