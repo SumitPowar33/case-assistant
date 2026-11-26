@@ -42,7 +42,9 @@ def test_the_scan_is_read_as_a_draft_and_logged_without_its_text():
     row = store.audit_rows(1)[0]
     assert row["action"] == "ai_transcribe" and row["feature"] == "reply_scan" and row["case_ref"] == CASE
     assert row["detail"]["file_sha256"] == hashlib.sha256(REPLY).hexdigest() and row["detail"]["kind"] == "png"
-    assert row["detail"]["request_id"] == out["request_id"] and "4417" not in str(row)
+    assert row["detail"]["request_id"] == out["request_id"]
+    # words of the reply that no random id or hash in the row can spell by chance ("4417" alone once did, and failed the run)
+    assert "XXXX4417" not in str(row) and "Fictional Bank" not in str(row)
     assert store.verify_chain()
 
 

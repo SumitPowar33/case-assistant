@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import main as gateway_main
+from app.auth import CoreUnavailable
 from app.embedder import EmbedderError, FakeEmbedder, LocalEmbedder, from_env
 from app.main import create_app
 from app.store import Store
@@ -166,3 +167,17 @@ def test_the_backend_is_chosen_by_the_environment(monkeypatch):
     monkeypatch.setenv("EMBED_BACKEND", "local")
     monkeypatch.setenv("EMBED_MODEL", "x/y")
     assert from_env().name == "x/y"
+
+
+def test_a_core_that_cannot_answer_for_the_case_gives_503_no_vector_and_a_logged_refusal(monkeypatch):
+    class Down:
+        def __init__(self, *a, **k): pass
+
+        def __call__(self, token, case_ref, kind="fir"):
+            raise CoreUnavailable("the core app does not answer")
+
+    monkeypatch.setattr(gateway_main, "CaseCheck", Down)
+    c, store = client()
+    r = c.post("/v1/embed", json={"case_ref": CASE, "texts": ["a b"]})
+    assert r.status_code == 503 and "does not answer" in r.json()["detail"] and "vectors" not in r.json()
+    assert store.audit_rows(1)[0]["action"] == "ai_refused"

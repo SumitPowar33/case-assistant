@@ -1009,3 +1009,19 @@ def test_the_fold_keeps_ordinary_text():
     from app.main import fold_question
     assert fold_question("खरं बोलतो का? When was A1 arrested?") == "खरं बोलतो का? When was A1 arrested?"
     assert fold_question("ज़िम्मेदार") == fold_question("ज़िम्मेदार")
+
+
+def test_a_request_without_a_system_text_sends_no_empty_instruction():
+    sent = []
+
+    def answer(body):
+        def handler(r):
+            sent.append(json.loads(r.content))
+            return httpx.Response(200, json=body)
+        return handler
+
+    claude = ClaudeProvider("k", mock_client(answer({"content": [{"type": "text", "text": "Fictional"}]})))
+    gemini = GeminiProvider("k", mock_client(answer({"candidates": [{"content": {"parts": [{"text": "Fictional"}]}}]})))
+    for provider in (claude, gemini):
+        assert provider.complete(model="m", system="", prompt="Fictional prompt", max_tokens=50).text == "Fictional"
+    assert "system" not in sent[0] and "systemInstruction" not in sent[1]
