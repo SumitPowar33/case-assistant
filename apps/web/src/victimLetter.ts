@@ -5,6 +5,7 @@
 // opinion on guilt or truthfulness, or promises an outcome, is not shown; a number that is not in the facts is listed
 // for the officer to look at. Change LETTER_PROMPT_VERSION whenever the prompt text changes (the gateway logs it).
 import { judges } from './chargesheetDraft'
+import { foldQuestion } from './askFile'
 import { LANGUAGE_NAMES, numbers } from './statementTranslate'
 
 export const LETTER_PROMPT_VERSION = 'victim_update/letter@1'
@@ -54,7 +55,7 @@ export function readLetter(answer: string, f: Facts): Letter {
   const text = answer.trim()
   if (!text || text.length > MAX_LETTER) return { kind: 'empty' }
   if (judges(text)) return { kind: 'refused', why: 'opinion' }
-  if (PROMISE.test(text)) return { kind: 'refused', why: 'promise' }
+  if (PROMISE.test(foldQuestion(text))) return { kind: 'refused', why: 'promise' }
   const r = ist(f.registered)
   const known = new Set([f.firNo, f.firYear, r.day, r.month, r.year].map(String))
   const odd = [...new Set(numbers(text).map((n) => String(Number(n))).filter((n) => !known.has(n)))]

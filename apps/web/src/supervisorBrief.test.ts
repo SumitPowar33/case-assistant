@@ -156,3 +156,10 @@ test('rating, blaming and predicting words are caught in Hindi and Marathi; plai
   for (const s of ['आरोपपत्र ६ दिन में देय है।', 'आरोपपत्र ६ दिवसांत द्यायचे आहे.', 'नया जांच अधिकारी नियुक्त करना है।'])
     expect(rates(s), s).toBe(false)
 })
+
+test('a rating word is caught through invisible characters and look-alike letters, as a judging word is', () => {
+  // zero-width space and soft hyphen inside the word; a Cyrillic "а" in place of the Latin one
+  for (const s of ['The officer was neg​ligent.', 'The work is care­less.', 'The officer is lаzy.']) {
+    expect(rates(s), s).toBe(true)
+  }
+})

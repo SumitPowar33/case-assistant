@@ -37,3 +37,11 @@ test('a letter used as drafted is accepted, one the officer changed is edited', 
   expect(decisionFor('Dear sir.', '  Dear sir. ')).toBe('accepted')
   expect(decisionFor('Dear sir.', 'Dear madam.')).toBe('edited')
 })
+
+test('a promise is caught through invisible characters and look-alike letters; the letter itself is shown as drafted', () => {
+  for (const s of ['We guaran​tee a result.', 'The person will be arrеsted soon.', 'You will get your mоney back.']) {
+    expect(readLetter(s, facts), s).toEqual({ kind: 'refused', why: 'promise' })
+  }
+  const plain = 'The inquiry is go​ing on.'
+  expect(readLetter(plain, facts)).toMatchObject({ kind: 'letter', text: plain })
+})
