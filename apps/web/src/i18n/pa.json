@@ -1691,5 +1691,14 @@
  "auditx.saved": "{file} ਸੰਭਾਲੀ ਗਈ।",
  "auditx.withheld": "ਅਧਿਕਾਰੀਆਂ ਦੇ ਲਿਖੇ ਕਾਰਨ ਛੱਡ ਦਿੱਤੇ ਗਏ ਹਨ, ਕਿਉਂਕਿ ਇਹ ਮਾਮਲਾ ਪੀੜਤ ਦੀ ਪਛਾਣ ਦੀ ਰਾਖੀ ਕਰਦਾ ਹੈ ਅਤੇ ਤੁਸੀਂ ਇਸ ਦੀ ਕੇਸ ਟੀਮ ਵਿੱਚ ਨਹੀਂ ਹੋ।",
  "server.auditNoFir": "ਅਜਿਹੀ ਕੋਈ FIR ਨਹੀਂ।",
- "server.auditReason": "ਲਿਖੋ ਕਿ ਕਿਸ ਅਦਾਲਤ ਜਾਂ ਜਾਂਚ ਨੇ ਨਿਰਯਾਤ ਮੰਗਿਆ (10 ਤੋਂ 500 ਅੱਖਰ)।"
+ "server.auditReason": "ਲਿਖੋ ਕਿ ਕਿਸ ਅਦਾਲਤ ਜਾਂ ਜਾਂਚ ਨੇ ਨਿਰਯਾਤ ਮੰਗਿਆ (10 ਤੋਂ 500 ਅੱਖਰ)।",
+ "audit.gap.ingredient": "ਇੱਕ ਤੱਤ ਲਈ ਕੋਈ ਸਬੂਤ ਨਹੀਂ ਜੋੜਿਆ ਗਿਆ",
+ "audit.gap.second-link": "ਦੂਜੀ ਕੜੀ ਤੋਂ ਬਿਨਾਂ ਖਾਤਾ ਧਾਰਕ",
+ "audit.gap.certificate": "ਪੂਰੇ BSA 63(4) ਸਰਟੀਫਿਕੇਟ ਤੋਂ ਬਿਨਾਂ ਇਲੈਕਟ੍ਰਾਨਿਕ ਸਬੂਤ",
+ "audit.gap.notice-certificate": "BSA 63(4) ਸਰਟੀਫਿਕੇਟ ਤੋਂ ਬਿਨਾਂ ਜਵਾਬ, ਇਸ ਤਾਰੀਖ ਦੇ ਨੋਟਿਸ ਦਾ",
+ "audit.gap.section-report": "ਜੋੜੀ ਗਈ ਧਾਰਾ ਦੀ ਰਿਪੋਰਟ ਹਾਲੇ ਮੈਜਿਸਟਰੇਟ ਨੂੰ ਨਹੀਂ ਭੇਜੀ ਗਈ",
+ "audit.gap.pocso-section": "ਐਫਆਈਆਰ ਵਿੱਚ POCSO ਐਕਟ ਦੀ ਧਾਰਾ ਨਹੀਂ ਹੈ",
+ "audit.gap.pocso-step": "POCSO ਕਦਮ ਦਰਜ ਨਹੀਂ",
+ "audit.gap.pocso-woman-officer": "ਬੱਚੇ ਦਾ ਬਿਆਨ ਮਹਿਲਾ ਅਧਿਕਾਰੀ ਵੱਲੋਂ ਲਿਆ ਗਿਆ ਦਰਜ ਨਹੀਂ",
+ "audit.gap.pocso-repeat-statement": "ਬਾਲ ਪੀੜਤ ਦੇ ਇੱਕ ਤੋਂ ਵੱਧ ਬਿਆਨ ਦਰਜ"
 }

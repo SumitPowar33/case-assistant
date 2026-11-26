@@ -1691,5 +1691,14 @@
  "auditx.saved": "Saved {file}.",
  "auditx.withheld": "The officers' written reasons are left out, because this case protects the victim's identity and you are not on its case team.",
  "server.auditNoFir": "No such FIR.",
- "server.auditReason": "Write which court or inquiry asked for the export (10 to 500 characters)."
+ "server.auditReason": "Write which court or inquiry asked for the export (10 to 500 characters).",
+ "audit.gap.ingredient": "No evidence linked for an ingredient",
+ "audit.gap.second-link": "Account holder without a second link",
+ "audit.gap.certificate": "Electronic evidence without a complete BSA 63(4) certificate",
+ "audit.gap.notice-certificate": "Reply without a BSA 63(4) certificate, to the notice of",
+ "audit.gap.section-report": "Added section not yet reported to the Magistrate",
+ "audit.gap.pocso-section": "POCSO Act section missing from the FIR",
+ "audit.gap.pocso-step": "POCSO step not recorded",
+ "audit.gap.pocso-woman-officer": "Child's statement not recorded as taken by a woman officer",
+ "audit.gap.pocso-repeat-statement": "More than one statement recorded for a child victim"
 }

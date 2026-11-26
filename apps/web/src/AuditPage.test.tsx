@@ -9,7 +9,7 @@ beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'sho.one',
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); setSession(null) })
 
 const stations = [{ id: 's1', state_code: 'IN', district: 'Demo District', name: 'Demo Cyber PS' }, { id: 's2', state_code: 'IN', district: 'Other District', name: 'Demo Far PS' }]
-const entry = (kind: string, what: string, extra = {}) => ({ kind, at: '2026-11-01T10:00:00Z', who_name: 'SI Fictional Asha', who_rank: 'SI', what, reason: null, fir_id: null, fir_ref: null, ...extra })
+const entry = (kind: string, what: string, extra = {}) => ({ kind, at: '2026-11-01T10:00:00Z', who_name: 'SI Fictional Asha', who_rank: 'SI', what, reason: null, about: null, fir_id: null, fir_ref: null, ...extra })
 
 function stub(answer: (url: string) => { status: number; body: unknown }) {
   const urls: string[] = []
@@ -28,7 +28,7 @@ function stub(answer: (url: string) => { status: number; body: unknown }) {
 test('one table shows reads, accepted gaps and admin changes with kind, reason and a link to the case', async () => {
   const urls = stub(() => ({ status: 200, body: [
     entry('protected_read', 'fir_text', { fir_id: 'f1', fir_ref: '2026/7' }),
-    entry('override', 'ingredient:cheating/delivery', { reason: 'Fictional reason to accept', fir_id: 'f1', fir_ref: '2026/7' }),
+    entry('override', 'ingredient:cheating/delivery', { reason: 'Fictional reason to accept', about: 'Property was delivered (BNS 318(4))', fir_id: 'f1', fir_ref: '2026/7' }),
     entry('override_withdrawn', 'ingredient:cheating/delivery', { reason: 'Fictional withdrawal' }),
     entry('admin_action', 'user_disabled', { reason: 'Fictional reason: left the force' }),
     entry('audit_export', 'case', { reason: 'Fictional court asked', fir_id: 'f1', fir_ref: '2026/7' }),
@@ -40,6 +40,10 @@ test('one table shows reads, accepted gaps and admin changes with kind, reason a
   expect(rows[1].textContent).toContain('FIR text')
   expect(within(rows[1]).getByRole('link', { name: 'FIR 2026/7' }).getAttribute('href')).toBe('#/firs/f1')
   expect(rows[2].textContent).toContain('Gap accepted')
+  // the gap is named in words, not by its stored key
+  expect(rows[2].textContent).toContain('No evidence linked for an ingredient: Property was delivered (BNS 318(4))')
+  expect(rows[2].textContent).not.toContain('ingredient:cheating')
+  expect(rows[3].textContent).toContain('No evidence linked for an ingredient (ingredient:cheating/delivery)')
   expect(rows[2].textContent).toContain('Fictional reason to accept')
   expect(rows[3].textContent).toContain('Acceptance withdrawn')
   expect(rows[4].textContent).toContain('Admin change')

@@ -2,7 +2,7 @@
 // in time order, as CSV. Written in English; times in India time.
 import { translateCode } from './i18n'
 
-export type CaseEntry = { kind: string; at: string; who_name: string; who_rank: string; what: string; reason: string | null }
+export type CaseEntry = { kind: string; at: string; who_name: string; who_rank: string; what: string; reason: string | null; about: string | null }
 export type AiEntry = { seq: number; at: string; actor: string; result: string; feature: string; label: string; provider: string | null; model: string | null; question_refused: string | null }
 export type Person = { id: string; full_name: string; rank: string }
 export type ExportAnswer = { fir_ref: string; station_name: string; exported_by_name: string; exported_by_rank: string; reasons_withheld: boolean; rows: CaseEntry[] }
@@ -17,7 +17,24 @@ export function csvCell(value: string): string {
 /** "2026-11-26 21:05:09 IST": unambiguous in any spreadsheet, whatever the computer's clock zone is. */
 export const courtTime = (iso: string) => new Date(Date.parse(iso) + 330 * 60_000).toISOString().slice(0, 19).replace('T', ' ') + ' IST'
 
-const appDetail = (r: CaseEntry) => r.kind === 'protected_read' ? translateCode('en', 'reads.what', r.what) : r.kind === 'audit_export' ? '' : r.what
+/** The gaps that are about one record or step; without what they were about, the stored key is shown beside their name. */
+const ABOUT_ONE = ['ingredient', 'second-link', 'certificate', 'notice-certificate', 'section-report', 'pocso-step']
+
+/** An accepted readiness gap in words: the kind of its stored key ("certificate:<id>") and what the server says it was
+ *  about (a label, a day, a section, a POCSO step, an ingredient). A kind no catalog knows shows its key. */
+export function gapName(lang: string, key: string, about: string | null): string {
+  const kind = key.split(':')[0]
+  const name = translateCode(lang, 'audit.gap', kind)
+  if (name === kind) return key
+  if (about) return `${name}: ${kind === 'pocso-step' ? translateCode(lang, 'pocsoStep', about) : about}`
+  return ABOUT_ONE.includes(kind) ? `${name} (${key})` : name
+}
+
+// the file also keeps a gap's stored key, so an entry can be matched with the database
+const appDetail = (r: CaseEntry) => r.kind === 'protected_read' ? translateCode('en', 'reads.what', r.what) : r.kind === 'audit_export' ? ''
+  : r.kind.startsWith('override') ? withKey(gapName('en', r.what, r.about), r.what) : r.what
+
+const withKey = (name: string, key: string) => name.includes(key) ? name : `${name} [${key}]`
 
 const aiDetail = (e: AiEntry) => [e.label, e.model && `model ${e.provider ? `${e.provider} ` : ''}${e.model}`,
   e.question_refused && `question about ${e.question_refused}`].filter(Boolean).join('; ')

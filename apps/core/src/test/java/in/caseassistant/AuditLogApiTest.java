@@ -21,6 +21,7 @@ class AuditLogApiTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcClient db;
     @Autowired JwtEncoder tokens;
+    @Autowired Playbooks playbooks;
     UUID station, other, io, sho, otherSho, fir, otherFir;
 
     UUID user(String role, UUID st, String name) {
@@ -229,5 +230,52 @@ class AuditLogApiTest {
         var team = json(export(sho, fir, "Fictional court asked for it").andReturn().getResponse().getContentAsString());
         assertThat(team.get("reasons_withheld").asBoolean()).isFalse();
         assertThat(team.toString()).contains("Fictional reason naming a person");
+    }
+
+    @Test
+    void anAcceptedGapSaysWhatItWasAboutByLabelAndNeverByName() throws Exception {
+        db.sql("insert into case_playbook (fir_id, playbook_id, playbook_version, chosen_by) values (?, 'cyber-fraud', '1', ?)").params(fir, io).update();
+        UUID holder = db.sql("insert into person (fir_id, role, label, full_name) values (?,'accused','A2','Fictional Holder Name') returning id")
+                .param(fir).query(UUID.class).single();
+        UUID item = db.sql("""
+                insert into evidence_item (fir_id, label, description, kind, seized_at, seizure_memo, sha256)
+                values (?, '7/E-01', 'Fictional phone description', 'electronic', '2026-10-02T10:00Z', 'SM-1', repeat('a', 64)) returning id""")
+                .param(fir).query(UUID.class).single();
+        UUID notice = db.sql("""
+                insert into notice (fir_id, kind, addressee, items_requested, body, status, signed_by, issued_at, reply_due_on)
+                values (?, 'BNSS_94', 'Fictional Bank', array['statement'], 'Fictional notice body', 'sent', ?, '2026-10-03T20:00Z', '2026-10-10') returning id""")
+                .params(fir, io).query(UUID.class).single();
+        // the stored key of each kind of gap, and what the log says it was about
+        var expected = new java.util.LinkedHashMap<String, String>();
+        expected.put("second-link:" + holder, "A2");
+        expected.put("certificate:" + item, "7/E-01");
+        expected.put("notice-certificate:" + notice, "4 Oct 2026"); // 20:00 UTC is already the next day in India
+        expected.put("section-report:IT Act 66D", "IT Act 66D");
+        expected.put("pocso-step:support_person", "support_person");
+        expected.put("pocso-section", null);
+        expected.put("certificate:" + UUID.randomUUID(), null); // the record is gone: the key alone is left
+        expected.put("ingredient:no-such/charge", null);
+        for (String key : expected.keySet())
+            db.sql("insert into readiness_override (fir_id, gap_key, reason, decided_by) values (?,?,'Fictional reason to accept',?)").params(fir, key, sho).update();
+        var charge = playbooks.get("cyber-fraud").orElseThrow().charges().get(0);
+        String ingredientKey = "ingredient:" + charge.id() + "/" + charge.ingredients().get(0).id();
+        db.sql("insert into readiness_override (fir_id, gap_key, reason, decided_by) values (?,?,'Fictional reason to accept',?)").params(fir, ingredientKey, sho).update();
+        expected.put(ingredientKey, charge.ingredients().get(0).text() + " (" + charge.law() + ")");
+        // a row that is not a gap says nothing more
+        db.sql("insert into protected_read (reader, station_id, fir_id, fir_ref, what) values (?,?,?,'2026/7','people')").params(io, station, fir).update();
+
+        for (String body : new String[] {log(sho, station), export(sho, fir, "Fictional court asked for it").andReturn().getResponse().getContentAsString()}) {
+            var parsed = json(body);
+            var rows = parsed.isArray() ? parsed : parsed.get("rows");
+            var about = new java.util.HashMap<String, String>();
+            rows.forEach(r -> {
+                assertThat(r.has("about")).isTrue();
+                assertThat(r.has("playbook_id")).isFalse();
+                about.put(r.get("what").asText(), r.get("about").isNull() ? null : r.get("about").asText());
+            });
+            expected.forEach((key, value) -> assertThat(about).containsEntry(key, value));
+            assertThat(about).containsEntry("people", null);
+            assertThat(body).doesNotContain("Holder Name").doesNotContain("phone description").doesNotContain("Fictional Bank");
+        }
     }
 }

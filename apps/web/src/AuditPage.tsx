@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import { currentSession } from './api'
 import { AiEvents, CaseExport, type CaseRef } from './AuditAi'
 import { AiUseState } from './AiUse'
+import { gapName } from './auditCsv'
 import { fmt } from './formats'
-import { useT } from './i18n'
+import { ScreenLangContext, useT } from './i18n'
 import { useLoad } from './useLoad'
 
 type Station = { id: string; district: string; name: string }
-type Entry = { kind: string; at: string; who_name: string; who_rank: string; what: string; reason: string | null; fir_id: string | null; fir_ref: string | null }
+type Entry = { kind: string; at: string; who_name: string; who_rank: string; what: string; reason: string | null; about: string | null; fir_id: string | null; fir_ref: string | null }
 
 const PAGE = 100
 
@@ -57,13 +58,15 @@ function Station({ station }: { station: string }) {
 
 function Log({ station }: { station: string }) {
   const t = useT()
+  const lang = useContext(ScreenLangContext)
   const [offset, setOffset] = useState(0)
   const log = useLoad<Entry[]>(`/audit-log?stationId=${station}&limit=${PAGE}&offset=${offset}`)
   if (log.error) return <p role="alert">{log.error}</p>
   if (!log.data) return <p>{t('common.loading')}</p>
   const rows = log.data
   const what = (r: Entry) => r.kind === 'protected_read' ? t.code('reads.what', r.what)
-    : r.kind === 'admin_action' ? t.code('admin.action', r.what) : r.kind === 'audit_export' ? t('audit.what.case') : r.what
+    : r.kind === 'admin_action' ? t.code('admin.action', r.what) : r.kind === 'audit_export' ? t('audit.what.case')
+    : r.kind.startsWith('override') ? gapName(lang, r.what, r.about) : r.what
   return (
     <>
       {rows.length === 0 ? <p>{t('audit.none')}</p> : (

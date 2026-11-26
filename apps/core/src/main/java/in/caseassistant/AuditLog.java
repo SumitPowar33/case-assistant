@@ -36,10 +36,12 @@ class AuditLog {
     static final int MOST_PEOPLE = 200;
     private final JdbcClient db;
     private final CaseTeam team;
+    private final Playbooks playbooks;
 
-    AuditLog(JdbcClient db, CaseTeam team) {
+    AuditLog(JdbcClient db, CaseTeam team, Playbooks playbooks) {
         this.db = db;
         this.team = team;
+        this.playbooks = playbooks;
     }
 
     record Export(@NotNull UUID firId, @NotBlank String reason) {}
@@ -50,9 +52,9 @@ class AuditLog {
         if (limit < 1 || limit > 200 || offset < 0)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be 1 to 200 and offset 0 or more");
         requireAuditor(jwt, stationId);
-        return db.sql("select * from (" + entries("r.station_id = :st", "f.station_id = :st", "e.station_id = :st", "a.station_id = :st or t.station_id = :st")
-                        + ") x order by at desc, kind limit :lim offset :off")
-                .param("st", stationId).param("lim", limit).param("off", offset).query().listOfRows();
+        return named(db.sql(described(entries("r.station_id = :st", "f.station_id = :st", "e.station_id = :st", "a.station_id = :st or t.station_id = :st"))
+                        + " order by at desc, kind limit :lim offset :off")
+                .param("st", stationId).param("lim", limit).param("off", offset).query().listOfRows());
     }
 
     /**
@@ -109,8 +111,8 @@ class AuditLog {
         db.sql("insert into audit_export (exported_by, station_id, fir_id, fir_ref, reason) values (?,?,?,?,?)")
                 .params(who, fir.get("station_id"), e.firId, fir.get("ref"), reason).update();
         boolean withheld = team.identityProtected(e.firId) && !team.includes(who, e.firId);
-        var rows = db.sql("select * from (" + entries("r.fir_id = :fir or r.complaint_id in (select id from complaint where fir_id = :fir)",
-                "f.id = :fir", "e.fir_id = :fir", "false") + ") x order by at, kind").param("fir", e.firId).query().listOfRows();
+        var rows = named(db.sql(described(entries("r.fir_id = :fir or r.complaint_id in (select id from complaint where fir_id = :fir)",
+                "f.id = :fir", "e.fir_id = :fir", "false")) + " order by at, kind").param("fir", e.firId).query().listOfRows());
         if (withheld) rows.forEach(r -> r.put("reason", null));
         var by = db.sql("select full_name, rank from app_user where id = ?").param(who).query().singleRow();
         return Map.of("fir_ref", fir.get("ref"), "station_name", fir.get("station_name"), "exported_by_name", by.get("full_name"),
@@ -120,6 +122,34 @@ class AuditLog {
     private void requireAuditor(Jwt jwt, UUID stationId) {
         if (!team.canAt(CaseTeam.user(jwt), ProtectedReads.PERMISSION, stationId))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only those who audit this police station see its audit log.");
+    }
+
+    /**
+     * The entries with "about": what the stored key of an accepted readiness gap points at, in words that name nobody (an
+     * account holder or an evidence item by its label, a notice by the day it was issued, a section, a POCSO step; the
+     * playbook's ingredient text is added by {@link #named}). Null for every other entry, and when the record is gone.
+     */
+    private static String described(String entries) {
+        return """
+                select x.*, case when x.kind in ('override', 'override_withdrawn') then coalesce(
+                    (select p.label from person p where p.fir_id = x.fir_id and x.what = 'second-link:' || p.id),
+                    (select i.label from evidence_item i where i.fir_id = x.fir_id and x.what = 'certificate:' || i.id),
+                    (select to_char(ist_date(n.issued_at), 'FMDD Mon YYYY') from notice n where n.fir_id = x.fir_id and x.what = 'notice-certificate:' || n.id),
+                    case when x.what like 'section-report:%%' then substr(x.what, length('section-report:') + 1)
+                         when x.what like 'pocso-step:%%' then substr(x.what, length('pocso-step:') + 1) end) end as about,
+                  (select c.playbook_id from case_playbook c where c.fir_id = x.fir_id) as playbook_id
+                from (%s) x""".formatted(entries);
+    }
+
+    /** Adds the ingredient's text to an accepted "ingredient:charge/ingredient" gap, from the case's playbook first. */
+    private List<Map<String, Object>> named(List<Map<String, Object>> rows) {
+        for (var r : rows) {
+            String playbook = (String) r.remove("playbook_id");
+            String what = (String) r.get("what");
+            if (((String) r.get("kind")).startsWith("override") && what.startsWith("ingredient:"))
+                r.put("about", playbooks.ingredientText(playbook, what.substring("ingredient:".length())).orElse(null));
+        }
+        return rows;
     }
 
     /** The rows of every audit table, each narrowed by its own condition: a station's log, or one case's export. */

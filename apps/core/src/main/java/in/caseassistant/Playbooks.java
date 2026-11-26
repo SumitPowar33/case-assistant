@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.HashMap;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Component;
@@ -116,6 +117,15 @@ class Playbooks {
 
     Optional<Playbook> get(String id) {
         return Optional.ofNullable(byId.get(id));
+    }
+
+    /** "Ingredient text (law)" for "charge/ingredient", from the named playbook if it has it, else from any playbook. */
+    Optional<String> ingredientText(String preferred, String chargeAndIngredient) {
+        return Stream.concat(Stream.ofNullable(preferred == null ? null : byId.get(preferred)), byId.values().stream())
+                .flatMap(p -> p.charges().stream())
+                .flatMap(c -> c.ingredients().stream().filter(i -> (c.id() + "/" + i.id()).equals(chargeAndIngredient))
+                        .map(i -> i.text() + " (" + c.law() + ")"))
+                .findFirst();
     }
 
     /** The module a playbook comes from ("IN" or a state code). */

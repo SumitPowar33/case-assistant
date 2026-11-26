@@ -6,7 +6,7 @@ import csv
 import io
 import re
 
-from conftest import ROOT, no_tour
+from conftest import ROOT, Api, no_tour
 from playwright.sync_api import expect, sync_playwright
 
 from test_admin_scripts import admin_web  # noqa: F401  (the fixture: core with the demo case, gateway, web app)
@@ -46,6 +46,13 @@ def test_the_station_head_sees_the_ai_entries_and_saves_one_cases_audit(admin_we
         expect(page.get_by_role("link", name="Audit log")).to_have_count(0)
         page.get_by_role("button", name="Sign out").click()
 
+        # the IO also accepts one readiness gap in writing, so the log has a gap to name in words
+        api = Api(web)
+        status, body = api.call("POST", f"/api/firs/{demo['fir_id']}/readiness/overrides",
+                                {"gapKey": "ingredient:cheating/deception", "reason": "Fictional reason: the statement is awaited"},
+                                api.token("io.adminui", demo["accounts"]["io.adminui"]))
+        assert status == 201, body
+
         sign_in(page, "sho.adminui", demo["accounts"]["sho.adminui"])
         page.evaluate("location.hash = '#/audit'")
         table = page.get_by_role("table", name="AI entries on this station's cases, newest first")
@@ -57,6 +64,9 @@ def test_the_station_head_sees_the_ai_entries_and_saves_one_cases_audit(admin_we
         expect(asked).to_contain_text("fake-1")
         expect(asked.get_by_role("link", name=re.compile(r"^FIR "))).to_have_attribute("href", f"#/firs/{demo['fir_id']}")
         assert "How much money" not in table.inner_text() and "Is the caller" not in table.inner_text()
+        gap = "No evidence linked for an ingredient: The victim was deceived (BNS 318(4))"
+        station_log = page.get_by_role("table", name="Audit log of this police station, newest first")
+        expect(station_log.get_by_role("row").filter(has_text="Gap accepted")).to_contain_text(gap)
         page.get_by_label("Show").select_option("refused")
         expect(table.get_by_role("row")).to_have_count(2)   # the head and the refused question
         page.screenshot(path=shots / "audit-ai-1280.png", full_page=True)
@@ -73,6 +83,7 @@ def test_the_station_head_sees_the_ai_entries_and_saves_one_cases_audit(admin_we
         assert ai == [("SI Fictional Investigator", "AI: asked"), ("SI Fictional Investigator", "AI: accepted"), ("SI Fictional Investigator", "AI: refused")]
         assert entries[-1][4] == "Case audit exported" and entries[-1][6] == "Fictional Sessions Court asked for the record"
         assert [r[0] for r in entries] == sorted(r[0] for r in entries)
+        assert [r[5] for r in entries if r[4] == "Gap accepted"] == [f"{gap} [ingredient:cheating/deception]"]
         assert "How much money" not in text and "Fictional Account Holder" not in text
         expect(page.get_by_text(f"Saved {got.value.suggested_filename}.")).to_be_visible()
         log = page.get_by_role("table", name="Audit log of this police station, newest first")

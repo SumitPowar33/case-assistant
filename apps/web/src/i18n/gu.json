@@ -1691,5 +1691,14 @@
  "auditx.saved": "{file} સાચવી.",
  "auditx.withheld": "અધિકારીઓએ લખેલાં કારણો છોડી દેવાયાં છે, કારણ કે આ કેસ પીડિતની ઓળખ સુરક્ષિત રાખે છે અને તમે તેની કેસ ટીમમાં નથી.",
  "server.auditNoFir": "આવી કોઈ FIR નથી.",
- "server.auditReason": "કઈ અદાલત કે તપાસે નિકાસ માગી તે લખો (10 થી 500 અક્ષરો)."
+ "server.auditReason": "કઈ અદાલત કે તપાસે નિકાસ માગી તે લખો (10 થી 500 અક્ષરો).",
+ "audit.gap.ingredient": "એક ઘટક માટે કોઈ પુરાવો જોડાયેલો નથી",
+ "audit.gap.second-link": "બીજી કડી વિનાનો ખાતાધારક",
+ "audit.gap.certificate": "પૂર્ણ BSA 63(4) પ્રમાણપત્ર વિનાનો ઇલેક્ટ્રોનિક પુરાવો",
+ "audit.gap.notice-certificate": "BSA 63(4) પ્રમાણપત્ર વિનાનો જવાબ, આ તારીખની નોટિસનો",
+ "audit.gap.section-report": "ઉમેરેલી કલમનો અહેવાલ હજી મેજિસ્ટ્રેટને મોકલાયો નથી",
+ "audit.gap.pocso-section": "એફઆઈઆરમાં POCSO અધિનિયમની કલમ નથી",
+ "audit.gap.pocso-step": "POCSO પગલું નોંધાયું નથી",
+ "audit.gap.pocso-woman-officer": "બાળકનું નિવેદન મહિલા અધિકારીએ લીધું હોવાની નોંધ નથી",
+ "audit.gap.pocso-repeat-statement": "બાળ પીડિતનાં એકથી વધુ નિવેદન નોંધાયેલાં"
 }
