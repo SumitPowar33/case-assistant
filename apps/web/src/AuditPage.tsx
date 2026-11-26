@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { currentSession } from './api'
+import { AiEvents, CaseExport, type CaseRef } from './AuditAi'
 import { AiUseState } from './AiUse'
 import { fmt } from './formats'
 import { useT } from './i18n'
@@ -12,8 +13,9 @@ const PAGE = 100
 
 /**
  * The audit log of one police station on one screen (board 20): reads of protected victim details, readiness gaps a
- * person accepted (and withdrew) with a reason, and the admin's changes. Newest first, a page at a time. The server
- * decides who may see a station's log and answers with its own reason.
+ * person accepted (and withdrew) with a reason, exports and the admin's changes, newest first, a page at a time; then the
+ * AI's drafts and decisions on the station's cases (kept by the AI gateway) and the export of one case. The servers
+ * decide who may see a station's log and answer with their own reason.
  */
 export default function AuditPage() {
   const t = useT()
@@ -29,8 +31,26 @@ export default function AuditPage() {
       <label>{t('common.policeStation')} <select value={station ?? ''} onChange={(e) => setChosen(e.target.value)}>
         {stations.data.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.district})</option>)}
       </select></label>
-      {station ? <Log key={station} station={station} /> : <p>{t('audit.none')}</p>}
+      {station ? <Station key={station} station={station} /> : <p>{t('audit.none')}</p>}
       <AiUseState />
+    </>
+  )
+}
+
+/** One station's log, the AI's entries on its cases and the export of one case; the cases are read once for both. */
+function Station({ station }: { station: string }) {
+  const t = useT()
+  const cases = useLoad<CaseRef[]>(`/audit-log/cases?stationId=${station}`)
+  const [exports, setExports] = useState(0)
+  return (
+    <>
+      <Log key={exports} station={station} />
+      {/* a refused station says why above; without its cases there is nothing to name the AI entries by */}
+      {cases.data && <>
+        <AiEvents station={station} cases={cases.data} />
+        <CaseExport station={station} cases={cases.data} onDone={() => setExports((n) => n + 1)} />
+      </>}
+      {cases.error && <p role="status">{t('aiev.noCases', { error: cases.error })}</p>}
     </>
   )
 }
@@ -42,6 +62,8 @@ function Log({ station }: { station: string }) {
   if (log.error) return <p role="alert">{log.error}</p>
   if (!log.data) return <p>{t('common.loading')}</p>
   const rows = log.data
+  const what = (r: Entry) => r.kind === 'protected_read' ? t.code('reads.what', r.what)
+    : r.kind === 'admin_action' ? t.code('admin.action', r.what) : r.kind === 'audit_export' ? t('audit.what.case') : r.what
   return (
     <>
       {rows.length === 0 ? <p>{t('audit.none')}</p> : (
@@ -53,7 +75,7 @@ function Log({ station }: { station: string }) {
               <td data-label={t('reads.colWhen')}>{fmt(r.at)}</td>
               <td data-label={t('reads.colWho')}>{r.who_name} ({r.who_rank})</td>
               <td data-label={t('audit.colKind')}>{t.code('audit.kind', r.kind)}</td>
-              <td data-label={t('reads.colWhat')}>{r.kind === 'protected_read' ? t.code('reads.what', r.what) : r.what}</td>
+              <td data-label={t('reads.colWhat')}>{what(r)}</td>
               <td data-label={t('audit.colReason')}>{r.reason}</td>
               <td data-label={t('reads.colCase')}>{r.fir_id && <a href={`#/firs/${r.fir_id}`}>{t('reads.fir', { ref: r.fir_ref ?? '' })}</a>}</td>
             </tr>

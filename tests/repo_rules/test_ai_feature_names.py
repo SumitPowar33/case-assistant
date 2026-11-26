@@ -22,3 +22,12 @@ def test_every_gateway_feature_has_its_name_in_the_screen_catalogs_and_no_other(
     features = gateway_features()
     names = {k.split(".", 1)[1]: v for k, v in json.loads(CATALOG.read_text(encoding="utf-8")).items() if k.startswith("aiFeature.")}
     assert names == features
+
+
+def test_the_on_premises_helpers_shown_in_the_audit_list_are_named_in_the_catalogs_too():
+    """`aiLocal.<id>`: the gateway's helpers that are no provider feature. "embed" never shows in that list."""
+    tree = ast.parse((ROOT / "services/ai-gateway/app/store.py").read_text(encoding="utf-8"))
+    local = next(ast.literal_eval(n.value) for n in tree.body if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", None) == "LOCAL_LABELS")
+    names = {k.split(".", 1)[1]: v for k, v in json.loads(CATALOG.read_text(encoding="utf-8")).items() if k.startswith("aiLocal.")}
+    assert names == {k: v for k, v in local.items() if k != "embed"}
+

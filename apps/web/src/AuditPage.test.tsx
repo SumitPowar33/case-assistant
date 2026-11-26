@@ -16,6 +16,9 @@ function stub(answer: (url: string) => { status: number; body: unknown }) {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     urls.push(url)
     if (url === '/api/stations') return { ok: true, status: 200, json: async () => stations }
+    // the cases, the AI entries and the state's counts have their own tests (AuditAi.test.tsx); here they are empty
+    if (url.startsWith('/api/audit-log/cases') && !url.includes('s2')) return { ok: true, status: 200, json: async () => [] }
+    if (url.startsWith('/ai/v1/ai-events')) return { ok: true, status: 200, json: async () => ({ events: [] }) }
     const a = answer(url)
     return { ok: a.status < 300, status: a.status, json: async () => a.body }
   }))
@@ -28,10 +31,11 @@ test('one table shows reads, accepted gaps and admin changes with kind, reason a
     entry('override', 'ingredient:cheating/delivery', { reason: 'Fictional reason to accept', fir_id: 'f1', fir_ref: '2026/7' }),
     entry('override_withdrawn', 'ingredient:cheating/delivery', { reason: 'Fictional withdrawal' }),
     entry('admin_action', 'user_disabled', { reason: 'Fictional reason: left the force' }),
+    entry('audit_export', 'case', { reason: 'Fictional court asked', fir_id: 'f1', fir_ref: '2026/7' }),
   ] }))
   render(<AuditPage />)
   const rows = within(await screen.findByRole('table', { name: 'Audit log of this police station, newest first' })).getAllByRole('row')
-  expect(rows).toHaveLength(5)
+  expect(rows).toHaveLength(6)
   expect(rows[1].textContent).toContain('Protected details read')
   expect(rows[1].textContent).toContain('FIR text')
   expect(within(rows[1]).getByRole('link', { name: 'FIR 2026/7' }).getAttribute('href')).toBe('#/firs/f1')
@@ -39,7 +43,10 @@ test('one table shows reads, accepted gaps and admin changes with kind, reason a
   expect(rows[2].textContent).toContain('Fictional reason to accept')
   expect(rows[3].textContent).toContain('Acceptance withdrawn')
   expect(rows[4].textContent).toContain('Admin change')
-  expect(rows[4].textContent).toContain('user_disabled')
+  expect(rows[4].textContent).toContain('Account disabled')
+  expect(rows[5].textContent).toContain('Case audit exported')
+  expect(rows[5].textContent).toContain('Audit entries of one case')
+  expect(rows[5].textContent).toContain('Fictional court asked')
   expect(urls).toContain('/api/audit-log?stationId=s1&limit=100&offset=0')
   expect(screen.queryByRole('button', { name: 'Older' })).toBeNull()
 })
@@ -57,6 +64,9 @@ test('an empty log says so; another station shows the server refusal, not the ro
   fireEvent.change(screen.getByLabelText('Police station'), { target: { value: 's2' } })
   expect((await screen.findByRole('alert')).textContent).toContain('403')
   expect(screen.queryByRole('table')).toBeNull()
+  // without the station's cases there are no AI entries and no export, and the screen says so
+  expect(await screen.findByText(/The AI entries cannot be shown: .*403/)).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: 'AI drafts and decisions on this station\'s cases' })).toBeNull()
 })
 
 test('an account without a station starts on the first station; no station at all says so; a refused station list is shown', async () => {
