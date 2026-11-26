@@ -1700,5 +1700,7 @@
  "audit.gap.pocso-section": "એફઆઈઆરમાં POCSO અધિનિયમની કલમ નથી",
  "audit.gap.pocso-step": "POCSO પગલું નોંધાયું નથી",
  "audit.gap.pocso-woman-officer": "બાળકનું નિવેદન મહિલા અધિકારીએ લીધું હોવાની નોંધ નથી",
- "audit.gap.pocso-repeat-statement": "બાળ પીડિતનાં એકથી વધુ નિવેદન નોંધાયેલાં"
+ "audit.gap.pocso-repeat-statement": "બાળ પીડિતનાં એકથી વધુ નિવેદન નોંધાયેલાં",
+ "transcribe.from": "આ સર્વરના વાણી મૉડલે રેકોર્ડિંગ પરથી લખ્યું, પછી અધિકારીએ તપાસ્યું",
+ "server.statementFromRecording": "રેકોર્ડિંગ પરથી લખેલું નિવેદન ઑડિયો અથવા વીડિયો તરીકે સાચવવામાં આવે છે."
 }

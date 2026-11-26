@@ -9,7 +9,7 @@ import StatementCompare from './StatementCompare'
 import { MAX_TRANSLATION, TRANSLATE_PROMPT_VERSION, readTranslation, translatePrompt, type Draft } from './statementTranslate'
 
 type Witness = { person_id: string; role: string; label: string | null; name: string | null; statements: number }
-type Statement = { id: string; label: string | null; name: string | null; masked: boolean; recorded_at: string; recorded_by_name: string; language: string; medium: string; original_text: string
+type Statement = { id: string; label: string | null; name: string | null; masked: boolean; recorded_at: string; recorded_by_name: string; language: string; medium: string; original_text: string; from_recording: boolean
   translated_text: string | null; translation_corrected: boolean | null; translation_checked_at: string | null; translation_checked_by_name: string | null }
 type Request = { request_id: string; draft: string; provider: string; model: string }
 type Asked = { request: Request; read: Draft; text: string }
@@ -141,6 +141,7 @@ export default function Statements({ firId, firText = '', victimProtected = fals
     setHearing(true)
     try {
       const out = await aiUpload<{ request_id: string; text: string }>(`/v1/transcribe?case_ref=${encodeURIComponent(firId)}&language=${encodeURIComponent(lang)}`, file)
+      await decide('rejected', 'replaced by the draft of another recording')
       setHeard({ id: out.request_id, text: out.text })
       setText(out.text)
     } catch (err) { setError((err as Error).message) }
@@ -150,7 +151,8 @@ export default function Statements({ firId, firText = '', victimProtected = fals
     e.preventDefault()
     setError('')
     try {
-      await send(`/firs/${firId}/statements`, 'POST', { personId: person || witnesses[0].person_id, language: lang, medium, text })
+      await send(`/firs/${firId}/statements`, 'POST', { personId: person || witnesses[0].person_id, language: lang, medium, text,
+        transcriptRequest: heard?.id })
       await decide(text.trim() === heard?.text.trim() ? 'accepted' : 'edited', 'recording written down and saved')
       setText('')
       setVersion((v) => v + 1)
@@ -166,7 +168,7 @@ export default function Statements({ firId, firText = '', victimProtected = fals
           <label>{t('statement.person')} <select value={person || witnesses[0].person_id} onChange={(e) => setPerson(e.target.value)}>
             {witnesses.map((w) => <option key={w.person_id} value={w.person_id}>{who(w)}</option>)}
           </select></label>
-          <label>{t('statement.medium')} <select value={medium} onChange={(e) => setMedium(e.target.value)}>
+          <label>{t('statement.medium')} <select value={medium} disabled={!!heard} onChange={(e) => setMedium(e.target.value)}>
             {['written', 'audio', 'video'].map((m) => <option key={m} value={m}>{t.code('statementMedium', m)}</option>)}
           </select></label>
           {medium === 'audio' && <div>
@@ -183,7 +185,8 @@ export default function Statements({ firId, firText = '', victimProtected = fals
           <li key={s.id} className="card">
             <strong>{who(s)}</strong> <span className="chip c-neu">{s.language.toUpperCase()}</span>
             <p lang={s.language} style={{ whiteSpace: 'pre-wrap' }}>{s.original_text}</p>
-            <p className="note">{t('statement.meta', { time: fmt(s.recorded_at), name: s.recorded_by_name, medium: t.code('statementMedium', s.medium) })}</p>
+            <p className="note">{t('statement.meta', { time: fmt(s.recorded_at), name: s.recorded_by_name, medium: t.code('statementMedium', s.medium) })}
+              {s.from_recording && <> · {t('transcribe.from')}</>}</p>
             <Translation firId={firId} s={s} victimProtected={victimProtected} onSaved={() => setVersion((v) => v + 1)} />
           </li>
         ))}</ul>}

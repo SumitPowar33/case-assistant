@@ -1700,5 +1700,7 @@
  "audit.gap.pocso-section": "ଏଫଆଇଆରରେ POCSO ଆଇନର ଧାରା ନାହିଁ",
  "audit.gap.pocso-step": "POCSO ପଦକ୍ଷେପ ଲିପିବଦ୍ଧ ହୋଇନାହିଁ",
  "audit.gap.pocso-woman-officer": "ଶିଶୁର ବୟାନ ମହିଳା ଅଧିକାରୀ ନେଇଥିବା ଲିପିବଦ୍ଧ ନାହିଁ",
- "audit.gap.pocso-repeat-statement": "ଶିଶୁ ପୀଡ଼ିତଙ୍କ ଏକାଧିକ ବୟାନ ଲିପିବଦ୍ଧ"
+ "audit.gap.pocso-repeat-statement": "ଶିଶୁ ପୀଡ଼ିତଙ୍କ ଏକାଧିକ ବୟାନ ଲିପିବଦ୍ଧ",
+ "transcribe.from": "ଏହି ସର୍ଭରର ବାକ୍ ମଡେଲ ରେକର୍ଡିଂରୁ ଲେଖିଛି, ତା’ପରେ ଅଧିକାରୀ ଯାଞ୍ଚ କରିଛନ୍ତି",
+ "server.statementFromRecording": "ରେକର୍ଡିଂରୁ ଲେଖାଯାଇଥିବା ବୟାନ ଅଡିଓ କିମ୍ବା ଭିଡିଓ ଭାବେ ସଞ୍ଚୟ ହୁଏ।"
 }

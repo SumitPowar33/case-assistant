@@ -81,6 +81,29 @@ class StatementApiTest {
     }
 
     @Test
+    void aStatementWrittenDownFromARecordingKeepsTheRequestAndSaysSo() throws Exception {
+        UUID son = person(fir, "witness", "W1", "Fictional Son");
+        UUID request = UUID.randomUUID();
+        var body = new java.util.HashMap<String, Object>(Map.of("personId", son.toString(), "language", "mr", "medium", "audio",
+                "text", "Fictional words checked by the officer", "transcriptRequest", request.toString()));
+        record(io, fir, son, "Fictional words typed by the officer").andExpect(status().isCreated());
+        var post = post("/api/firs/" + fir + "/statements").header("Authorization", io).contentType(MediaType.APPLICATION_JSON);
+        mvc.perform(post.content(json.writeValueAsString(body))).andExpect(status().isCreated());
+        mvc.perform(get("/api/firs/" + fir + "/statements").header("Authorization", io)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.statements[0].from_recording").value(true))
+                .andExpect(jsonPath("$.statements[1].from_recording").value(false));
+        assertThat(db.sql("select transcript_request from witness_statement where transcript_request is not null").query(UUID.class).single()).isEqualTo(request);
+        // a statement taken in writing has no recording, and a request id is an id
+        body.put("medium", "written");
+        mvc.perform(post.content(json.writeValueAsString(body))).andExpect(status().isBadRequest())
+                .andExpect(status().reason("A statement written down from a recording is saved as audio or video."));
+        body.put("medium", "audio");
+        body.put("transcriptRequest", "not-an-id");
+        mvc.perform(post.content(json.writeValueAsString(body))).andExpect(status().isBadRequest());
+        assertThat(db.sql("select count(*) from witness_statement").query(Long.class).single()).isEqualTo(2);
+    }
+
+    @Test
     void onlyAPersonOfThisCaseWhoIsNotAnAccusedHasAStatement() throws Exception {
         UUID accused = person(fir, "accused", "A1", "Fictional Accused");
         UUID other = person(fir(2), "witness", "W1", "Fictional Other");

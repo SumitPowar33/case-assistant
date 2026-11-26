@@ -1700,5 +1700,7 @@
  "audit.gap.pocso-section": "POCSO Act section missing from the FIR",
  "audit.gap.pocso-step": "POCSO step not recorded",
  "audit.gap.pocso-woman-officer": "Child's statement not recorded as taken by a woman officer",
- "audit.gap.pocso-repeat-statement": "More than one statement recorded for a child victim"
+ "audit.gap.pocso-repeat-statement": "More than one statement recorded for a child victim",
+ "transcribe.from": "Written down from the recording by the speech model on this server, then checked by the officer",
+ "server.statementFromRecording": "A statement written down from a recording is saved as audio or video."
 }

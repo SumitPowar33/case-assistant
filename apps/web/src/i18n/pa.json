@@ -1700,5 +1700,7 @@
  "audit.gap.pocso-section": "ਐਫਆਈਆਰ ਵਿੱਚ POCSO ਐਕਟ ਦੀ ਧਾਰਾ ਨਹੀਂ ਹੈ",
  "audit.gap.pocso-step": "POCSO ਕਦਮ ਦਰਜ ਨਹੀਂ",
  "audit.gap.pocso-woman-officer": "ਬੱਚੇ ਦਾ ਬਿਆਨ ਮਹਿਲਾ ਅਧਿਕਾਰੀ ਵੱਲੋਂ ਲਿਆ ਗਿਆ ਦਰਜ ਨਹੀਂ",
- "audit.gap.pocso-repeat-statement": "ਬਾਲ ਪੀੜਤ ਦੇ ਇੱਕ ਤੋਂ ਵੱਧ ਬਿਆਨ ਦਰਜ"
+ "audit.gap.pocso-repeat-statement": "ਬਾਲ ਪੀੜਤ ਦੇ ਇੱਕ ਤੋਂ ਵੱਧ ਬਿਆਨ ਦਰਜ",
+ "transcribe.from": "ਇਸ ਸਰਵਰ ਦੇ ਬੋਲੀ ਮਾਡਲ ਨੇ ਰਿਕਾਰਡਿੰਗ ਤੋਂ ਲਿਖਿਆ, ਫਿਰ ਅਧਿਕਾਰੀ ਨੇ ਜਾਂਚਿਆ",
+ "server.statementFromRecording": "ਰਿਕਾਰਡਿੰਗ ਤੋਂ ਲਿਖਿਆ ਬਿਆਨ ਆਡੀਓ ਜਾਂ ਵੀਡੀਓ ਵਜੋਂ ਸੰਭਾਲਿਆ ਜਾਂਦਾ ਹੈ।"
 }

@@ -1700,5 +1700,7 @@
  "audit.gap.pocso-section": "एफआईआर में POCSO अधिनियम की धारा नहीं है",
  "audit.gap.pocso-step": "POCSO का चरण दर्ज नहीं",
  "audit.gap.pocso-woman-officer": "बच्चे का बयान महिला अधिकारी द्वारा लिया गया दर्ज नहीं",
- "audit.gap.pocso-repeat-statement": "बाल पीड़ित के एक से अधिक बयान दर्ज"
+ "audit.gap.pocso-repeat-statement": "बाल पीड़ित के एक से अधिक बयान दर्ज",
+ "transcribe.from": "इस सर्वर के वाक् मॉडल ने रिकॉर्डिंग से लिखा, फिर अधिकारी ने जाँचा",
+ "server.statementFromRecording": "रिकॉर्डिंग से लिखा गया बयान ऑडियो या वीडियो के रूप में सहेजा जाता है।"
 }

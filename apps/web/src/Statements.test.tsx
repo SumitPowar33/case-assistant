@@ -13,7 +13,7 @@ const data = {
     { person_id: 'p1', role: 'witness', label: 'W1', name: 'Fictional Son', statements: 1 },
     { person_id: 'p2', role: 'witness', label: 'W2', name: 'Fictional Nodal Officer', statements: 0 },
   ],
-  statements: [{ id: 's1', person_id: 'p1', label: 'W1', name: 'Fictional Son', recorded_at: '2026-11-02T04:30:00Z', recorded_by_name: 'SI Fictional', language: 'mr', medium: 'video', original_text: 'बाबा व्हिडिओ कॉलवर होते.' }],
+  statements: [{ id: 's1', person_id: 'p1', label: 'W1', name: 'Fictional Son', recorded_at: '2026-11-02T04:30:00Z', recorded_by_name: 'SI Fictional', language: 'mr', medium: 'video', original_text: 'बाबा व्हिडिओ कॉलवर होते.', from_recording: false }],
 }
 
 function stub(write: { status: number; body: unknown } = { status: 201, body: {} }, load: unknown = data) {
@@ -227,8 +227,10 @@ test('a recording is written down as a draft, corrected, saved, and the decision
   fireEvent.change(field, { target: { value: 'I was at home at nine in the evening.' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save statement' }))
   await vi.waitFor(() => expect(calls.some((c) => c.url === '/ai/v1/decisions')).toBe(true))
-  expect(calls.find((c) => c.url === '/api/firs/f1/statements' && c.method === 'POST')).toMatchObject({ body: { medium: 'audio', text: 'I was at home at nine in the evening.' } })
+  expect(calls.find((c) => c.url === '/api/firs/f1/statements' && c.method === 'POST')).toMatchObject({ body: { medium: 'audio', text: 'I was at home at nine in the evening.', transcriptRequest: 'r1' } })
   expect(calls.find((c) => c.url === '/ai/v1/decisions')).toMatchObject({ body: { request_id: 'r1', decision: 'edited', feature: 'statement_transcribe', case_ref: 'f1' } })
+  // how it was recorded can be changed again once the draft is saved or discarded
+  await vi.waitFor(() => expect((screen.getByLabelText('How it was recorded') as HTMLSelectElement).disabled).toBe(false))
   // a second recording, discarded
   fireEvent.change(screen.getByLabelText(/Write down a recording/), { target: { files: [new File(['y'], 'b.m4a')] } })
   fireEvent.click(await screen.findByRole('button', { name: 'Discard the draft' }))
@@ -262,4 +264,36 @@ test('a draft saved as it was written is accepted; no file, or a refusal by the 
   fireEvent.click(screen.getByRole('button', { name: 'Save statement' }))
   await vi.waitFor(() => expect(calls.some((c) => c.url === '/ai/v1/decisions')).toBe(true))
   expect(calls.find((c) => c.url === '/ai/v1/decisions')?.body).toMatchObject({ request_id: 'r9', decision: 'accepted' })
+})
+
+test('while a draft of a recording is held it is saved as that recording; another recording logs the first draft as rejected', async () => {
+  const calls: { url: string; method: string; body?: Record<string, unknown> }[] = []
+  let transcribed = 0
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    calls.push({ url, method: init?.method ?? 'GET', body: init?.body instanceof Blob || !init?.body ? undefined : JSON.parse(init.body as string) })
+    if (url.startsWith('/ai/v1/transcribe')) return { ok: true, status: 200, json: async () => ({ request_id: `r${++transcribed}`, text: `Draft ${transcribed}.` }) }
+    if (init?.method === 'POST') return { ok: true, status: 201, json: async () => ({}) }
+    return { ok: true, status: 200, json: async () => ({ ...data, statements: [{ ...data.statements[0], from_recording: true }] }) }
+  }))
+  render(<Statements firId="f1" />)
+  // a saved statement that began as the model's draft says so
+  expect(await screen.findByText(/Written down from the recording by the speech model on this server/)).toBeTruthy()
+  const medium = screen.getByLabelText('How it was recorded') as HTMLSelectElement
+  fireEvent.change(medium, { target: { value: 'audio' } })
+  fireEvent.change(screen.getByLabelText(/Write down a recording/), { target: { files: [new File(['x'], 'a.m4a')] } })
+  await screen.findByDisplayValue('Draft 1.')
+  expect(medium.disabled).toBe(true)
+  fireEvent.change(screen.getByLabelText(/Write down a recording/), { target: { files: [new File(['y'], 'b.m4a')] } })
+  await screen.findByDisplayValue('Draft 2.')
+  expect(calls.filter((c) => c.url === '/ai/v1/decisions').map((c) => [c.body!.request_id, c.body!.decision])).toEqual([['r1', 'rejected']])
+  fireEvent.click(screen.getByRole('button', { name: 'Save statement' }))
+  await vi.waitFor(() => expect(calls.filter((c) => c.url === '/ai/v1/decisions')).toHaveLength(2))
+  expect(calls.find((c) => c.url === '/api/firs/f1/statements' && c.method === 'POST')!.body).toMatchObject({ medium: 'audio', transcriptRequest: 'r2' })
+  // a statement typed afterwards carries no recording
+  await vi.waitFor(() => expect(medium.disabled).toBe(false))
+  fireEvent.change(medium, { target: { value: 'written' } })
+  fireEvent.change(screen.getByLabelText('The statement, in the words and language spoken'), { target: { value: 'Typed words.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save statement' }))
+  await vi.waitFor(() => expect(calls.filter((c) => c.url === '/api/firs/f1/statements' && c.method === 'POST')).toHaveLength(2))
+  expect(calls.filter((c) => c.url === '/api/firs/f1/statements' && c.method === 'POST')[1].body).not.toHaveProperty('transcriptRequest')
 })

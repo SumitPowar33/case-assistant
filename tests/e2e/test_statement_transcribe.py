@@ -1,7 +1,8 @@
 """A recorded statement written down (A3, priority 5) in a real browser against the real core and the real gateway with the
 offline speech stand-in (a recording whose bytes are text "says" that text). The IO picks the recording on the Statements
 part, reads the draft in the statement box, corrects it and saves; the statement is the corrected text, the gateway's log
-holds the recording's hash and the decision, and neither the recording nor the text. Fictional data only."""
+holds the recording's hash and the decision, and neither the recording nor the text. The saved statement is shown as
+written down from a recording (V73). Fictional data only."""
 import sys
 from pathlib import Path
 
@@ -41,6 +42,7 @@ def test_an_officer_corrects_and_saves_a_recording_written_down_by_the_speech_mo
         box.fill(SPOKEN + " My brother was with me.")
         page.get_by_role("button", name="Save statement").click()
         expect(page.get_by_text(SPOKEN + " My brother was with me.")).to_be_visible()
+        expect(page.get_by_text("Written down from the recording by the speech model on this server, then checked by the officer")).to_be_visible()
         for _ in range(50):   # the decision is sent just after the save answers
             if "decisions" in sent:
                 break
@@ -49,7 +51,7 @@ def test_an_officer_corrects_and_saves_a_recording_written_down_by_the_speech_mo
         expect(page.get_by_role("alert")).to_have_count(0)
         browser.close()
     saved = core.call("GET", f"{case}/statements", token=io)["statements"]
-    assert [(s["medium"], s["original_text"]) for s in saved] == [("audio", SPOKEN + " My brother was with me.")]
+    assert [(s["medium"], s["original_text"], s["from_recording"]) for s in saved] == [("audio", SPOKEN + " My brother was with me.", True)]
     # the gateway's own count for the case: one recording asked, one decision (edited), no text anywhere
     import json, urllib.request
     req = urllib.request.Request(f"{web}/ai/v1/ai-use?case_ref={demo['fir_id']}", headers={"Authorization": f"Bearer {io}"})

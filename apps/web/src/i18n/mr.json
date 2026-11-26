@@ -1700,5 +1700,7 @@
  "audit.gap.pocso-section": "एफआयआरमध्ये POCSO कायद्याचे कलम नाही",
  "audit.gap.pocso-step": "POCSO चा टप्पा नोंदवलेला नाही",
  "audit.gap.pocso-woman-officer": "बालकाचा जबाब महिला अधिकाऱ्याने घेतल्याची नोंद नाही",
- "audit.gap.pocso-repeat-statement": "बाल पीडिताचे एकापेक्षा अधिक जबाब नोंदलेले"
+ "audit.gap.pocso-repeat-statement": "बाल पीडिताचे एकापेक्षा अधिक जबाब नोंदलेले",
+ "transcribe.from": "या सर्व्हरवरील वाणी मॉडेलने ध्वनिमुद्रणावरून लिहिले, नंतर अधिकाऱ्याने तपासले",
+ "server.statementFromRecording": "ध्वनिमुद्रणावरून लिहिलेला जबाब ऑडिओ किंवा व्हिडिओ म्हणून जतन केला जातो."
 }

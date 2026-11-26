@@ -1700,5 +1700,7 @@
  "audit.gap.pocso-section": "ఎఫ్‌ఐఆర్‌లో POCSO చట్టం సెక్షన్ లేదు",
  "audit.gap.pocso-step": "POCSO దశ నమోదు కాలేదు",
  "audit.gap.pocso-woman-officer": "బాలుడి వాంగ్మూలం మహిళా అధికారి తీసుకున్నట్లు నమోదు లేదు",
- "audit.gap.pocso-repeat-statement": "బాల బాధితుల ఒకటి కంటే ఎక్కువ వాంగ్మూలాలు నమోదు"
+ "audit.gap.pocso-repeat-statement": "బాల బాధితుల ఒకటి కంటే ఎక్కువ వాంగ్మూలాలు నమోదు",
+ "transcribe.from": "ఈ సర్వర్‌లోని ప్రసంగ మోడల్ రికార్డింగ్ నుండి రాసింది, తర్వాత అధికారి పరిశీలించారు",
+ "server.statementFromRecording": "రికార్డింగ్ నుండి రాసిన వాంగ్మూలం ఆడియో లేదా వీడియోగా భద్రపరచబడుతుంది."
 }

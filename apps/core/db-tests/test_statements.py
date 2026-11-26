@@ -36,3 +36,18 @@ def test_a_statement_is_checked_and_kept_as_said(db):
         db.execute("UPDATE witness_statement SET original_text='quietly changed' WHERE id=%s", (s,))
     with pytest.raises(REFUSED):
         db.execute("DELETE FROM witness_statement WHERE id=%s", (s,))
+
+
+def test_a_statement_from_a_recording_keeps_the_request_and_is_not_one_taken_in_writing(db):
+    st, io, fir = seed_case(db)
+    w = _person(db, fir, "witness", "W1")
+    sql = ("INSERT INTO witness_statement(fir_id,person_id,recorded_by,language,medium,original_text,transcript_request) "
+           "VALUES (%s,%s,%s,'mr',%s,'Fictional words as said',%s) RETURNING id")
+    request = "00000000-0000-0000-0000-0000000000a1"
+    for medium in ("audio", "video"):
+        one(db, sql, fir, w, io, medium, request)
+    one(db, sql, fir, w, io, "written", None)
+    with pytest.raises(REFUSED):
+        db.execute(sql, (fir, w, io, "written", request))
+    with pytest.raises(REFUSED):   # kept with the rest of the statement
+        db.execute("UPDATE witness_statement SET transcript_request = NULL")

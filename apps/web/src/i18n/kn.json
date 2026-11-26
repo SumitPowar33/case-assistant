@@ -1700,5 +1700,7 @@
  "audit.gap.pocso-section": "ಎಫ್‌ಐಆರ್‌ನಲ್ಲಿ POCSO ಕಾಯ್ದೆಯ ಕಲಂ ಇಲ್ಲ",
  "audit.gap.pocso-step": "POCSO ಹಂತ ದಾಖಲಾಗಿಲ್ಲ",
  "audit.gap.pocso-woman-officer": "ಮಗುವಿನ ಹೇಳಿಕೆಯನ್ನು ಮಹಿಳಾ ಅಧಿಕಾರಿ ಪಡೆದ ದಾಖಲೆ ಇಲ್ಲ",
- "audit.gap.pocso-repeat-statement": "ಬಾಲ ಸಂತ್ರಸ್ತರ ಒಂದಕ್ಕಿಂತ ಹೆಚ್ಚು ಹೇಳಿಕೆಗಳು ದಾಖಲಾಗಿವೆ"
+ "audit.gap.pocso-repeat-statement": "ಬಾಲ ಸಂತ್ರಸ್ತರ ಒಂದಕ್ಕಿಂತ ಹೆಚ್ಚು ಹೇಳಿಕೆಗಳು ದಾಖಲಾಗಿವೆ",
+ "transcribe.from": "ಈ ಸರ್ವರ್‌ನ ಧ್ವನಿ ಮಾದರಿ ರೆಕಾರ್ಡಿಂಗ್‌ನಿಂದ ಬರೆದಿದೆ, ನಂತರ ಅಧಿಕಾರಿ ಪರಿಶೀಲಿಸಿದ್ದಾರೆ",
+ "server.statementFromRecording": "ರೆಕಾರ್ಡಿಂಗ್‌ನಿಂದ ಬರೆದ ಹೇಳಿಕೆಯನ್ನು ಆಡಿಯೋ ಅಥವಾ ವೀಡಿಯೊ ಎಂದು ಉಳಿಸಲಾಗುತ್ತದೆ."
 }

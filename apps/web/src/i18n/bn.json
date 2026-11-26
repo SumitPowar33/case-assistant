@@ -1700,5 +1700,7 @@
  "audit.gap.pocso-section": "এফআইআরে POCSO আইনের ধারা নেই",
  "audit.gap.pocso-step": "POCSO ধাপ নথিভুক্ত নয়",
  "audit.gap.pocso-woman-officer": "শিশুর বিবৃতি মহিলা অফিসার নিয়েছেন বলে নথিভুক্ত নয়",
- "audit.gap.pocso-repeat-statement": "শিশু ভুক্তভোগীর একাধিক বিবৃতি নথিভুক্ত"
+ "audit.gap.pocso-repeat-statement": "শিশু ভুক্তভোগীর একাধিক বিবৃতি নথিভুক্ত",
+ "transcribe.from": "এই সার্ভারের বাক্ মডেল রেকর্ডিং থেকে লিখেছে, তারপর অফিসার যাচাই করেছেন",
+ "server.statementFromRecording": "রেকর্ডিং থেকে লেখা বিবৃতি অডিও বা ভিডিও হিসেবে সংরক্ষণ করা হয়।"
 }
