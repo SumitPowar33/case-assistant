@@ -50,12 +50,52 @@ sidebar, (g) the remaining screens one by one; then a review pass from (b).
 | Area | State | Branch / PR |
 |---|---|---|
 | (a) Design tokens and base components | done 25 Nov 2026 | `ui/design-20261125` |
-| (b) Dashboard | **next** | |
-| (c) Forms | to do | |
+| (b) Dashboard | done 26 Nov 2026 | `ui/design-20261126` (built on `ui/design-20261125`, not yet merged) |
+| (c) Forms | **next** | |
 | (d) Lists and tables | to do | |
 | (e) Case screen | to do | |
 | (f) Sign-in, header, sidebar | to do | |
 | (g) Remaining screens | to do | |
+
+### 26 Nov 2026: (b) Dashboard
+Branch `ui/design-20261126` starts from `ui/design-20261125` (area a, PR not yet merged) with `setup/seed` merged in.
+Looked at the dashboard at 1440 and 390 px on the demo case and beside board 1 (`docs/design/shots/2026-11-26/before-*`,
+`after-*`).
+
+What was weak:
+1. Two h1s: the FIR list brought its own page title ("FIRs", 26 px) into the dashboard, so the lower half read as a
+   second page; its table and "Register a new FIR" floated on the ground with no card, unlike everything above.
+2. "Needs your attention": each line was its own flex row, so chips, titles and buttons did not line up from line to
+   line; every Open button was secondary, so nothing said which step comes first (the board makes it primary).
+3. "Coming deadlines": the column was 300 px wide at most, titles took three lines; the dates were bare numbers, red
+   only when overdue, so a date 3 days away looked the same as one 3 months away.
+4. Tiles: on a phone a label on two lines pushed its figure down, so the three figures did not line up; the urgent tile
+   was told apart only by its red figure.
+5. Phone: the attention line stacked chip, title and a small Open button in three rows; empty lists were plain text in
+   the row style. Spacing used 18 px and other numbers off the 4 px scale.
+
+What changed (`index.css` dashboard block, `Dashboard.tsx` class names, `FirList.tsx` `inCard`; DESIGN.md "Dashboard"):
+- The FIRs are one card on the dashboard: an h2 and "Register a new FIR" in its head, the table flush with its edges;
+  the FIRs screen itself is unchanged. On a phone the card goes and its rows stay the usual row cards.
+- Attention lines share three columns (CSS subgrid); the first line's button is the primary one. On a phone the chip is
+  above the text and the button beside both.
+- Coming deadlines are 300–360 px wide; each date is a calendar leaf, red within 3 days and amber within 7 (the text
+  "n days left" says it too); the two columns become one below 1024 px.
+- Tiles: label on top, figure at the bottom; a tile whose figure is red has a 3 px red line along its top.
+- Empty lists: one muted, centred line. New tokens `--warn-line` and `--fs-2xs` (11 px; the menu group labels use it).
+
+Nothing a screen does or says changed: every label, role and text the tests read is the same.
+
+Tests: `scripts/test-all.sh` all PASS before and after; `test_layout.py` and `test_phone.py` pass; gates unchanged.
+
+Skipped / not checked: the deadline's basis is shown as its code (`BNSS_94`) as before (a text change, not design);
+the board's "Critical gaps open" tile and the page-head buttons are features the dashboard does not have; checked in
+English only, at 1440 and 390 px, with the demo case's one FIR (a long list was not seen).
+
+Questions for Sumit:
+1. The first "Open" in Needs your attention is now a filled blue button (the board does this). Keep, or all alike?
+2. Coming dates are amber within 7 days and red within 3. Are those the right limits for you?
+3. On the dashboard the FIR list keeps the name "FIRs"; the board calls it "My cases". Rename it (all 11 languages)?
 
 ### 25 Nov 2026: (a) tokens and base components
 Looked at the dashboard, FIR list, case details, evidence (with the Add evidence panel open), readiness check, front
