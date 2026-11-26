@@ -59,3 +59,13 @@ test('a topic that says who lies or is believable is dropped, in English, Hindi 
   expect(r).toMatchObject({ kind: 'differences', dropped: 4 })
   if (r.kind === 'differences') expect(r.differences.map((d) => d.topic)).toEqual(['date of payment'])
 })
+
+test('a quote of 500 characters and a topic of 200 are the most taken; a source id may carry spaces', () => {
+  const two = [{ ...sources[0], text: 'x'.repeat(600) }, { ...sources[1], text: `${'y'.repeat(600)} ${'z '.repeat(250).trim().replace(/ /g, '   ')}` }]
+  const one = (quoteA: string, quoteB: string, topic: number) =>
+    readDifferences(JSON.stringify([entry(side(` ${two[0].id} `, quoteA), side(two[1].id, quoteB), 't'.repeat(topic))]), two)
+  expect(one('x'.repeat(500), 'y'.repeat(500), 200)).toMatchObject({ dropped: 0, differences: [{}] })
+  expect(one('x'.repeat(501), 'y'.repeat(500), 200)).toMatchObject({ dropped: 1, differences: [] })
+  expect(one('x'.repeat(500), 'y'.repeat(500), 201)).toMatchObject({ dropped: 1, differences: [] })
+  expect(one('x'.repeat(500), 'z '.repeat(200).trim(), 200)).toMatchObject({ dropped: 1, differences: [] })
+})

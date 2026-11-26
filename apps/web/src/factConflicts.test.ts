@@ -78,3 +78,35 @@ test('an amount with paise is held by its quote; at most twenty conflicts; an em
   // a value without a digit is not held by a number's quote
   expect(readConflicts(JSON.stringify([entry(side('FIR', 'nine lakh', 'Rs 9,80,000'), side('D1', 'Rs 8,90,000', 'Rs 8,90,000'))]), list)).toMatchObject({ dropped: 1 })
 })
+
+test('a number other than an amount is held and compared by all its digits, not its first group', () => {
+  const two = sources('The caller used phone 9800000001.', [{ kind: 'reply', title: 'Reply of Demo Telecom', text: 'The number is 98000 00002.' }])
+  const a = side('FIR', '98000 00001', 'phone 9800000001'), b = side('D1', '98000 00002', 'number is 98000 00002')
+  expect(readConflicts(JSON.stringify([entry(a, b, 'phone', 'caller number')]), two)).toMatchObject({ kind: 'conflicts', dropped: 0, conflicts: [{ kind: 'phone' }] })
+  // the quote holds only the first group of this value: it is not held
+  const wrong = side('FIR', '98000 99999', 'phone 9800000001')
+  expect(readConflicts(JSON.stringify([entry(wrong, b, 'phone', 'caller number')]), two)).toMatchObject({ conflicts: [], dropped: 1 })
+})
+
+test('paise count, and two dates or places that differ in one part only are two values', () => {
+  const two = sources('Rs 980,000.00 was sent on 21 August from Demo Nagar.', [{ kind: 'reply', title: 'Reply', text: 'Rs 980,000.05 was sent on 22 August from Demo Pur on 21 April.' }])
+  const pair = (kind: string, a: string, b: string) => entry(side('FIR', a, a), side('D1', b, b), kind, 'one fact')
+  const read = readConflicts(JSON.stringify([pair('amount', 'Rs 980,000.00', 'Rs 980,000.05'), pair('date', '21 August', '22 August'), pair('date', '21 August', '21 April'), pair('place', 'Demo Nagar', 'Demo Pur')]), two)
+  expect(read).toMatchObject({ kind: 'conflicts', dropped: 0 })
+  expect(read.kind === 'conflicts' && read.conflicts).toHaveLength(4)
+})
+
+test('a quote of 500 characters, a value of 200 and a topic of 200 are the most taken; a source id may carry spaces', () => {
+  const long = 'x'.repeat(600)
+  const two = sources(`Place ${long}`, [{ kind: 'reply', title: 'Reply', text: `Place ${'y'.repeat(600)}` }])
+  const one = (valueA: number, quoteA: number, topic: number, sourceA = 'FIR') =>
+    readConflicts(JSON.stringify([entry(side(sourceA, 'x'.repeat(valueA), 'x'.repeat(quoteA)), side(' d1 ', 'y'.repeat(200), 'y'.repeat(500)), 'place', 't'.repeat(topic))]), two)
+  expect(one(200, 500, 200, ' fir ')).toMatchObject({ dropped: 0, conflicts: [{ a: { source: 'FIR' }, b: { source: 'D1' } }] })
+  expect(one(201, 500, 200)).toMatchObject({ dropped: 1 })
+  expect(one(200, 501, 200)).toMatchObject({ dropped: 1 })
+  expect(one(200, 500, 201)).toMatchObject({ dropped: 1 })
+  // a quote that grows past 500 characters once it is found in the text (a line break counted as one space) is not taken
+  const spread = sources(`Place ${'x '.repeat(250).trim().replace(/ /g, '   ')}`, [{ kind: 'reply', title: 'Reply', text: 'Place Demo Pur' }])
+  const grown = entry(side('FIR', 'x', 'x '.repeat(200).trim()), side('D1', 'Demo Pur', 'Demo Pur'), 'place', 'place')
+  expect(readConflicts(JSON.stringify([grown]), spread)).toMatchObject({ conflicts: [], dropped: 1 })
+})

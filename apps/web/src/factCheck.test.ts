@@ -74,3 +74,15 @@ test('at most 40 facts are shown', () => {
   expect(r.kind === 'facts' && r.facts.length).toBe(40)
   expect(r.kind === 'facts' && r.dropped).toBe(0)
 })
+
+test('a quote of 500 characters and a value of 200 are the most taken; a bracket in a sentence is not read as the list', () => {
+  const text = `Place ${'x'.repeat(600)} end. ${'z '.repeat(250).trim().replace(/ /g, '   ')}`
+  const one = (value: number, quote: string) => readFacts(draft([{ kind: 'place', value: 'x'.repeat(value), quote }]), text)
+  expect(one(200, 'x'.repeat(500))).toMatchObject({ dropped: 0, facts: [{ kind: 'place' }] })
+  expect(one(201, 'x'.repeat(500))).toMatchObject({ dropped: 1, facts: [] })
+  expect(one(200, 'x'.repeat(501))).toMatchObject({ dropped: 1, facts: [] })
+  // found only with the extra spaces counted as one, and then longer than 500 characters in the text itself
+  expect(readFacts(draft([{ kind: 'place', value: 'z', quote: 'z '.repeat(200).trim() }]), text)).toMatchObject({ dropped: 1, facts: [] })
+  expect(readFacts(`The list [see below] follows: ${draft([{ kind: ' Place ', value: ' x ', quote: 'Place x' }])}`, text)).toMatchObject({ kind: 'facts', facts: [{ kind: 'place', value: 'x' }] })
+  expect(readFacts('Nothing to list [none].', text)).toEqual({ kind: 'unreadable' })
+})
