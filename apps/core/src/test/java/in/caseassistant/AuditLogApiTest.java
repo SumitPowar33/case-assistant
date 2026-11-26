@@ -96,4 +96,138 @@ class AuditLogApiTest {
         for (String bad : new String[] {"&limit=0", "&limit=201", "&offset=-1"})
             mvc.perform(get(url + bad).header("Authorization", TestAuth.bearer(tokens, sho))).andExpect(status().isBadRequest());
     }
+
+    String as(UUID who) {
+        return TestAuth.bearer(tokens, who);
+    }
+
+    /** A complaint at the desk with the text and time of the test's FIRs, so an FIR may be registered from it. */
+    UUID complaint(UUID st, UUID by) {
+        return db.sql("""
+                insert into complaint (station_id, received_at, mode, informant_name, kind, text_original, text_language, recorded_by)
+                values (?, '2026-10-01T09:00Z', 'written', 'Fictional Informant', 'other_crime', 'Fictional complaint text', 'en', ?) returning id""")
+                .params(st, by).query(UUID.class).single();
+    }
+
+    /** The complaint signed by the informant and the FIR registered from it. */
+    void registeredAs(UUID complaint, UUID firId, UUID by) {
+        db.sql("update complaint set signed_at = now(), signed_recorded_by = ?, outcome = 'fir', fir_id = ?, outcome_at = now(), outcome_by = ? where id = ?")
+                .params(by, firId, by, complaint).update();
+    }
+
+    com.fasterxml.jackson.databind.JsonNode json(String body) throws Exception {
+        return new com.fasterxml.jackson.databind.ObjectMapper().readTree(body);
+    }
+
+    @Test
+    void theCasesOfAStationAreNumbersOnlyForItsAuditorsAndTheAiGatewayAsksWithTheOfficersToken() throws Exception {
+        UUID second = fir(station, 12, io);
+        UUID waiting = complaint(station, sho);
+        UUID registered = complaint(station, sho);
+        registeredAs(registered, fir, sho);
+        complaint(other, otherSho);
+        var all = json(mvc.perform(get("/api/audit-log/cases?stationId=" + station).header("Authorization", as(sho))).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+        java.util.List<String> got = new java.util.ArrayList<>();
+        all.forEach(r -> got.add(r.get("kind").asText() + " " + r.get("id").asText() + " " + r.get("ref").asText("-")));
+        // the newest FIR first, a complaint beside the FIR it became, the one still waiting at the end
+        assertThat(got).containsExactly("fir " + second + " 2026/12", "fir " + fir + " 2026/7", "complaint " + registered + " 2026/7", "complaint " + waiting + " -");
+        assertThat(all.toString()).doesNotContain("Fictional complaint").doesNotContain("Informant").doesNotContain(otherFir.toString());
+        // one case: the FIR and the complaint it came from
+        var one = json(mvc.perform(get("/api/audit-log/cases?stationId=" + station + "&firId=" + fir).header("Authorization", as(sho))).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+        assertThat(one).hasSize(2);
+        mvc.perform(get("/api/audit-log/cases?stationId=" + station + "&firId=" + otherFir).header("Authorization", as(sho))).andExpect(status().isNotFound());
+        for (UUID who : new UUID[] {io, otherSho, user("front_desk", station, "HC Fictional Clerk")})
+            mvc.perform(get("/api/audit-log/cases?stationId=" + station).header("Authorization", as(who))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/audit-log/cases?stationId=" + station)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/audit-log/cases").header("Authorization", as(sho))).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void officersAreNamedOnlyForAnAuditorAndOnlyWithinTheStationsState() throws Exception {
+        db.sql("insert into state_pack (code, name, version, languages) values ('MH','Maharashtra','1',array['mr'])").update();
+        UUID far = db.sql("insert into police_station (state_code, district_id, name) values ('MH', district_id_of('MH','Farpur'), 'Fictional Far PS') returning id").query(UUID.class).single();
+        UUID stranger = user("io", far, "SI Fictional Stranger");
+        UUID colleague = user("io", other, "SI Fictional Colleague");
+        String url = "/api/audit-log/people?stationId=" + station + "&id=" + io + "&id=" + colleague + "&id=" + stranger + "&id=" + UUID.randomUUID();
+        String body = mvc.perform(get(url).header("Authorization", as(sho))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(json(body)).hasSize(2);
+        assertThat(body).contains("SI Fictional Asha").contains("SI Fictional Colleague").doesNotContain("Stranger").doesNotContain("role").doesNotContain("username");
+        mvc.perform(get(url).header("Authorization", as(io))).andExpect(status().isForbidden());
+        mvc.perform(get(url).header("Authorization", as(otherSho))).andExpect(status().isForbidden());
+        mvc.perform(get(url)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/audit-log/people?stationId=" + station).header("Authorization", as(sho))).andExpect(status().isBadRequest());
+        String many = "/api/audit-log/people?stationId=" + station + "&id=" + java.util.stream.Stream.generate(() -> UUID.randomUUID().toString()).limit(201)
+                .collect(java.util.stream.Collectors.joining("&id="));
+        mvc.perform(get(many).header("Authorization", as(sho))).andExpect(status().isBadRequest());
+    }
+
+    org.springframework.test.web.servlet.ResultActions export(UUID who, UUID firId, String reason) throws Exception {
+        return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/audit-log/exports")
+                .header("Authorization", as(who)).contentType("application/json")
+                .content("{\"firId\":\"" + firId + "\",\"reason\":\"" + reason + "\"}"));
+    }
+
+    long exports() {
+        return db.sql("select count(*) from audit_export").query(Long.class).single();
+    }
+
+    @Test
+    void anExportHoldsOneCaseOldestFirstAndIsItselfInTheLog() throws Exception {
+        UUID registered = complaint(station, sho);
+        registeredAs(registered, fir, sho);
+        db.sql("insert into protected_read (reader, station_id, fir_id, fir_ref, what, at) values (?,?,?,'2026/7','fir_text', now() - interval '3 hours')").params(io, station, fir).update();
+        db.sql("insert into protected_read (reader, station_id, complaint_id, what, at) values (?,?,?,'complaint', now() - interval '4 hours')").params(sho, station, registered).update();
+        db.sql("insert into readiness_override (fir_id, gap_key, reason, decided_by) values (?, 'ingredient:cheating/delivery', 'Fictional reason to accept', ?)").params(fir, sho).update();
+        UUID second = fir(station, 12, io);
+        db.sql("insert into readiness_override (fir_id, gap_key, reason, decided_by) values (?, 'ingredient:other/x', 'Fictional second-case reason', ?)").params(second, sho).update();
+        db.sql("insert into admin_action (actor_id, action, user_id, reason) values (?, 'user_disabled', ?, 'Fictional admin reason here')").params(sho, io).update();
+
+        var out = json(export(sho, fir, "  Fictional Sessions Court asked  ").andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(out.get("fir_ref").asText()).isEqualTo("2026/7");
+        assertThat(out.get("station_name").asText()).isEqualTo("Fictional Testpur City PS");
+        assertThat(out.get("exported_by_name").asText()).isEqualTo("Insp Fictional SHO");
+        assertThat(out.get("reasons_withheld").asBoolean()).isFalse();
+        java.util.List<String> kinds = new java.util.ArrayList<>();
+        out.get("rows").forEach(r -> kinds.add(r.get("kind").asText() + " " + r.get("what").asText()));
+        assertThat(kinds).containsExactly("protected_read complaint", "protected_read fir_text", "override ingredient:cheating/delivery", "audit_export case");
+        assertThat(out.get("rows").get(3).get("reason").asText()).isEqualTo("Fictional Sessions Court asked");
+        assertThat(out.toString()).doesNotContain("second-case").doesNotContain("admin reason");
+        // the station's log shows the export, and a second export holds the first
+        assertThat(log(sho, station)).contains("audit_export").contains("Fictional Sessions Court asked");
+        assertThat(json(export(sho, fir, "Fictional second request").andReturn().getResponse().getContentAsString()).get("rows")).hasSize(5);
+        assertThat(exports()).isEqualTo(2);
+    }
+
+    @Test
+    void onlyAnAuditorOfTheStationExportsItsCaseAndNeedsAReason() throws Exception {
+        for (UUID who : new UUID[] {io, otherSho, user("front_desk", station, "HC Fictional Clerk")})
+            export(who, fir, "Fictional court asked for it").andExpect(status().isNotFound());
+        export(sho, UUID.randomUUID(), "Fictional court asked for it").andExpect(status().isNotFound());
+        export(sho, fir, "short    ").andExpect(status().isBadRequest());
+        export(sho, fir, "x".repeat(501)).andExpect(status().isBadRequest());
+        export(sho, fir, "   ").andExpect(status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/audit-log/exports")
+                .contentType("application/json").content("{}")).andExpect(status().isUnauthorized());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/audit-log/exports")
+                .header("Authorization", as(sho)).contentType("application/json").content("{}")).andExpect(status().isBadRequest());
+        assertThat(exports()).isZero();
+    }
+
+    @Test
+    void onAProtectedCaseSomeoneOutsideTheCaseTeamGetsNoWrittenReasons() throws Exception {
+        db.sql("update fir set sexual_offence = true where id = ?").param(fir).update();
+        db.sql("insert into readiness_override (fir_id, gap_key, reason, decided_by) values (?, 'certificate:x', 'Fictional reason naming a person', ?)").params(fir, sho).update();
+        db.sql("insert into state_pack (code, name, version, languages) values ('MH','Maharashtra','1',array['mr'])").update();
+        // the platform admin audits every station but is on no case team
+        UUID platform = db.sql("insert into app_user (full_name, rank, role, username) values ('Fictional Platform Admin','Admin','state_admin','platform') returning id").query(UUID.class).single();
+        var outside = json(export(platform, fir, "Fictional inquiry asked").andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(outside.get("reasons_withheld").asBoolean()).isTrue();
+        assertThat(outside.get("rows")).hasSize(2);
+        outside.get("rows").forEach(r -> assertThat(r.get("reason").isNull()).isTrue());
+        var team = json(export(sho, fir, "Fictional court asked for it").andReturn().getResponse().getContentAsString());
+        assertThat(team.get("reasons_withheld").asBoolean()).isFalse();
+        assertThat(team.toString()).contains("Fictional reason naming a person");
+    }
 }
