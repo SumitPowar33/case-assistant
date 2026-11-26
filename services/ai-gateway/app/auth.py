@@ -162,3 +162,37 @@ class CaseCheck:
         if not isinstance(out, dict) or not isinstance(out.get("victim_protected"), bool):
             raise CoreUnavailable(f"core app gave no usable answer to the case check ({r.status_code})")
         return out
+
+
+class NotAuditor(LookupError):
+    pass
+
+
+class StationCases:
+    """Asks the core app, with the officer's own token, which cases of a police station they may audit
+    (GET /api/audit-log/cases: the station's FIRs and complaints, numbers only; 403 without the audit permission at that
+    station). The gateway keeps no station for a case, so its audit entries are shown only for the cases in this answer.
+    Anything but a clear answer refuses (fails closed)."""
+
+    def __init__(self, base_url: str, client: httpx.Client | None = None):
+        self.url = base_url.rstrip("/") + "/api/audit-log/cases"
+        self.client = client or httpx.Client(timeout=15.0)
+
+    def __call__(self, token: str, station_id: str, fir_id: str | None = None) -> list[str]:
+        """The ids of those cases, in lower case."""
+        params = {"stationId": station_id, **({"firId": fir_id} if fir_id else {})}
+        try:
+            r = self.client.get(self.url, params=params, headers={"Authorization": "Bearer " + token})
+        except httpx.HTTPError as e:
+            raise CoreUnavailable("cannot reach the core app to list the station's cases") from e
+        if r.status_code == 403:
+            raise NotAuditor("only those who audit this police station see its AI entries")
+        if r.status_code == 404:
+            raise CaseNotOpen("no such case at this police station")
+        try:
+            out = r.json() if r.status_code == 200 else None
+        except ValueError:
+            out = None
+        if not isinstance(out, list) or not all(isinstance(c, dict) and isinstance(c.get("id"), str) for c in out):
+            raise CoreUnavailable(f"core app gave no usable list of the station's cases ({r.status_code})")
+        return [c["id"].lower() for c in out]

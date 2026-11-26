@@ -28,12 +28,12 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from .auth import CaseCheck, CaseNotOpen, ChainAnchor, CoreCheck, CoreUnavailable, TokenError, verify
+from .auth import CaseCheck, CaseNotOpen, ChainAnchor, CoreCheck, CoreUnavailable, NotAuditor, StationCases, TokenError, verify
 from .embedder import EmbedderError, from_env as embedder_from_env
 from .transcriber import TranscriberError, from_env as transcriber_from_env
 from .scanreader import ScanReaderError, from_env as scanreader_from_env, kind_of
 from .providers import ClaudeProvider, FakeProvider, GeminiProvider, Provider, ProviderError
-from .store import DEFAULT_MODELS, FEATURES, PROVIDERS, Store
+from .store import DEFAULT_MODELS, EVENT_RESULTS, FEATURES, PROVIDERS, Store
 
 # Change SAFETY_VERSION whenever SAFETY_SYSTEM changes, so the audit log shows which rules a draft was made under.
 SAFETY_VERSION = "safety-1"
@@ -188,7 +188,8 @@ class SettingIn(BaseModel):
 
 
 def create_app(store: Store | None = None, providers: dict[str, Provider] | None = None,
-               auth_secret: str | None = None, core_check=None, anchor=None, case_check=None, embedder=None, transcriber=None, scanreader=None) -> FastAPI:
+               auth_secret: str | None = None, core_check=None, anchor=None, case_check=None, embedder=None, transcriber=None, scanreader=None,
+               station_cases=None) -> FastAPI:
     secret = auth_secret if auth_secret is not None else os.environ.get("AUTH_SECRET", "")
     if len(secret) < 32:
         raise RuntimeError("AUTH_SECRET must be set (at least 32 characters, the same value as the core app)")
@@ -196,6 +197,8 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
     core_check = core_check or CoreCheck(os.environ.get("CORE_URL", "http://localhost:8080"))
     # whether the officer may send this case's text (see NOT_ON_PROTECTED)
     case_check = case_check or CaseCheck(os.environ.get("CORE_URL", "http://localhost:8080"))
+    # which cases of a station the user may audit (the AI entries on the Audit log screen)
+    station_cases = station_cases or StationCases(os.environ.get("CORE_URL", "http://localhost:8080"))
     # the chain head is also kept in the core app's database (auth.ChainAnchor)
     anchor = anchor or ChainAnchor(os.environ.get("CORE_URL", "http://localhost:8080"), secret)
     store = store or Store(os.environ.get("AI_GATEWAY_DB", "ai-gateway.sqlite3"), os.environ.get("AI_AUDIT_KEY") or None)
@@ -272,6 +275,8 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
     @app.post("/v1/generate")
     def generate(body: GenerateIn, u: dict = Depends(user)):
         request_id = str(uuid.uuid4())
+        if body.feature in NO_CASE_FEATURES:
+            body.case_ref = None   # nothing of a case is read, so the log must not put the request in any case's entries
 
         def refuse(status: int, message: str, headers: dict | None = None, **detail):
             # every refusal is logged, with who asked and why it was refused (the text itself is not kept)
@@ -483,6 +488,28 @@ def create_app(store: Store | None = None, providers: dict[str, Provider] | None
         days = min(max(days, 1), 366)
         since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
         return {"days": days, "features": store.ai_use(None, u["state"], since)}
+
+    @app.get("/v1/ai-events")
+    def ai_events(station_id: str, fir_id: str | None = None, result: str | None = None, limit: int = 100, offset: int = 0,
+                  u: dict = Depends(user)):
+        """The AI drafts and decisions on one police station's cases, or on one of its FIRs, newest first (board 20): when,
+        which officer, which feature, what became of it and which model; never any text. For those who audit the station:
+        the permission from the packs here, and the core app says whether it reaches this station and which cases it has."""
+        if "audit.read_protected" not in u["permissions"]:
+            raise HTTPException(403, "your role cannot read the audit log")
+        if not UUID_RE.match(station_id) or (fir_id is not None and not UUID_RE.match(fir_id)):
+            raise HTTPException(422, "name the police station and the FIR by their ids")
+        if result is not None and result not in EVENT_RESULTS:
+            raise HTTPException(422, "result must be one of " + ", ".join(EVENT_RESULTS))
+        try:
+            cases = station_cases(u["token"], station_id, fir_id)
+        except NotAuditor as e:
+            raise HTTPException(403, str(e))
+        except CaseNotOpen as e:
+            raise HTTPException(404, str(e))
+        except CoreUnavailable as e:
+            raise HTTPException(503, str(e))
+        return {"events": store.events_of(cases, result, min(max(limit, 1), 200), max(offset, 0))}
 
     @app.get("/v1/audit")
     def audit(limit: int = 100, u: dict = Depends(admin)):

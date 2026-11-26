@@ -40,6 +40,8 @@ AUDIT_ACTIONS = {"ai_request", "ai_embed", "ai_transcribe", "ai_error", "ai_refu
 # audit action -> the column of the "AI use" counts
 USE_COLUMNS = {"ai_request": "asked", "ai_transcribe": "asked", "accepted": "accepted", "edited": "edited", "rejected": "rejected", "ai_refused": "refused",
                "ai_error": "failed", "ai_embed": "embedded"}
+# the results an audit list can be narrowed to ("AI use" columns without the embedding calls)
+EVENT_RESULTS = ("asked", "accepted", "edited", "rejected", "refused", "failed")
 # on-premises helpers that are not providers' features (no settings row): label for the AI use counts
 LOCAL_LABELS = {"embed": "Search the case file by meaning", "statement_transcribe": "Write down a recording (speech model on this server)",
                 "reply_scan": "Read a scanned reply (OCR on this server)"}
@@ -190,6 +192,23 @@ class Store:
         return [{"at": at, "feature": f, "label": FEATURES.get(f) or LOCAL_LABELS.get(f, f), "action": a} for at, f, a in self.db.execute(
             "SELECT at, feature, action FROM audit WHERE case_ref = ? AND action IN ('ai_request','ai_transcribe','ai_error','ai_refused','accepted','edited','rejected') "
             "ORDER BY seq DESC LIMIT ?", (case_ref, limit))]
+
+    def events_of(self, case_ids: list[str], result: str | None = None, limit: int = 100, offset: int = 0) -> list[dict]:
+        """The AI drafts, decisions, refusals and failures logged for these cases (not the embedding calls), newest first,
+        with who (the officer's id) and which model. Never any text: no prompt, answer, note or refusal message."""
+        actions = [a for a, column in USE_COLUMNS.items() if column in EVENT_RESULTS and result in (None, column)]
+        marks = ",".join("?" * len(actions))
+        out = []
+        for seq, at, actor, action, feature, case_ref, detail in self.db.execute(
+                f"SELECT seq, at, actor, action, feature, lower(case_ref), detail FROM audit WHERE action IN ({marks}) "
+                "AND lower(case_ref) IN (SELECT value FROM json_each(?)) ORDER BY seq DESC LIMIT ? OFFSET ?",
+                (*actions, json.dumps([c.lower() for c in case_ids]), limit, offset)):
+            d = json.loads(detail)
+            out.append({"seq": seq, "at": at, "actor": actor, "result": USE_COLUMNS[action], "feature": feature,
+                        # a refused request may name anything as its feature, so an unknown name is not a label
+                        "label": FEATURES.get(feature) or LOCAL_LABELS.get(feature, "Unknown feature"), "case_id": case_ref,
+                        "provider": d.get("provider"), "model": d.get("model"), "question_refused": d.get("question_refused")})
+        return out
 
     def head(self) -> tuple[int, str] | None:
         """The last row's sequence number and hash (None before the first row)."""
