@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -34,6 +35,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 class AuditLog {
     static final int MOST_PEOPLE = 200;
+    /** The kinds the log can be narrowed to: the ones {@link #entries} writes. */
+    private static final Set<String> KINDS = Set.of("protected_read", "override", "override_withdrawn", "involvement_search", "cdr_read",
+            "audit_export", "admin_action");
     private final JdbcClient db;
     private final CaseTeam team;
     private final Playbooks playbooks;
@@ -46,15 +50,22 @@ class AuditLog {
 
     record Export(@NotNull UUID firId, @NotBlank String reason) {}
 
+    /** The station's log, newest first. With {@code kind} (one or more): only those entries, narrowed before paging. */
     @GetMapping("/api/audit-log")
     List<Map<String, Object>> list(@AuthenticationPrincipal Jwt jwt, @RequestParam UUID stationId,
-            @RequestParam(defaultValue = "100") int limit, @RequestParam(defaultValue = "0") int offset) {
+            @RequestParam(defaultValue = "100") int limit, @RequestParam(defaultValue = "0") int offset,
+            @RequestParam(name = "kind", required = false) List<String> kinds) {
         if (limit < 1 || limit > 200 || offset < 0)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be 1 to 200 and offset 0 or more");
         requireAuditor(jwt, stationId);
-        return named(db.sql(described(entries("r.station_id = :st", "f.station_id = :st", "e.station_id = :st", "a.station_id = :st or t.station_id = :st"))
-                        + " order by at desc, kind limit :lim offset :off")
-                .param("st", stationId).param("lim", limit).param("off", offset).query().listOfRows());
+        List<String> wanted = kinds == null ? List.of() : kinds.stream().filter(k -> !k.isEmpty()).toList();
+        if (!wanted.stream().allMatch(KINDS::contains))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such kind of audit entry.");
+        var sql = db.sql(described(entries("r.station_id = :st", "f.station_id = :st", "e.station_id = :st", "a.station_id = :st or t.station_id = :st"))
+                        + (wanted.isEmpty() ? "" : " where x.kind in (:kinds)") + " order by at desc, kind limit :lim offset :off")
+                .param("st", stationId).param("lim", limit).param("off", offset);
+        if (!wanted.isEmpty()) sql = sql.param("kinds", wanted);
+        return named(sql.query().listOfRows());
     }
 
     /**

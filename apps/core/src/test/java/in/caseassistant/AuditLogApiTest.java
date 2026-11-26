@@ -88,6 +88,33 @@ class AuditLogApiTest {
     }
 
     @Test
+    void theLogIsNarrowedToTheKindsAskedForBeforeItIsPaged() throws Exception {
+        db.sql("insert into protected_read (reader, station_id, fir_id, fir_ref, what, at) values (?,?,?,'2026/7','people', now() - interval '3 hours')").params(io, station, fir).update();
+        db.sql("insert into readiness_override (fir_id, gap_key, reason, decided_by, decided_at, withdrawn_at, withdrawn_by, withdrawn_reason) values (?, 'certificate:x', 'Fictional first reason', ?, now() - interval '2 hours', now() - interval '1 hour', ?, 'Fictional withdrawal reason')")
+                .params(fir, sho, sho).update();
+        db.sql("insert into admin_action (actor_id, action, user_id, reason) values (?, 'user_disabled', ?, 'Fictional reason: left the force')").params(sho, io).update();
+        String url = "/api/audit-log?stationId=" + station;
+        mvc.perform(get(url + "&kind=override&kind=override_withdrawn").header("Authorization", TestAuth.bearer(tokens, sho)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].kind").value("override_withdrawn")).andExpect(jsonPath("$[1].kind").value("override"));
+        // the one read is older than the three other entries: it is still the first of its own kind
+        mvc.perform(get(url + "&kind=protected_read&limit=1").header("Authorization", TestAuth.bearer(tokens, sho)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].kind").value("protected_read"));
+        mvc.perform(get(url + "&kind=override&limit=1&offset=1").header("Authorization", TestAuth.bearer(tokens, sho)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get(url + "&kind=audit_export&kind=cdr_read&kind=involvement_search").header("Authorization", TestAuth.bearer(tokens, sho)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        // no kind named: everything, as before
+        mvc.perform(get(url + "&kind=").header("Authorization", TestAuth.bearer(tokens, sho)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(4));
+        mvc.perform(get(url + "&kind=override&kind=nothing").header("Authorization", TestAuth.bearer(tokens, sho)))
+                .andExpect(status().isBadRequest()).andExpect(status().reason("No such kind of audit entry."));
+        // a filter opens no other station's log
+        mvc.perform(get(url + "&kind=override").header("Authorization", TestAuth.bearer(tokens, otherSho))).andExpect(status().isForbidden());
+        mvc.perform(get(url + "&kind=override").header("Authorization", TestAuth.bearer(tokens, io))).andExpect(status().isForbidden());
+    }
+
+    @Test
     void onlyThoseWhoAuditTheStationReadIt() throws Exception {
         String url = "/api/audit-log?stationId=" + station;
         for (UUID who : new UUID[] {io, otherSho, user("front_desk", station, "HC Fictional Clerk")})

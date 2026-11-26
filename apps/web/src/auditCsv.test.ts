@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { auditCsv, courtTime, csvCell, gapName, type ExportAnswer } from './auditCsv'
+import { auditCsv, courtTime, csvCell, gapName, type ExportAnswer, newestFirst } from './auditCsv'
 
 // Fictional data only.
 const row = (kind: string, at: string, what: string, reason: string | null = null, about: string | null = null) => ({ kind, at, who_name: 'SI Fictional Asha', who_rank: 'SI', what, reason, about })
@@ -65,4 +65,23 @@ test('an accepted gap is named in words with what it was about; without that the
     row('override', '2026-11-04T10:00:00Z', 'later-kind:7')] }, [], [], '2026-11-26T10:00:01Z')
   expect(csv).toContain('"No evidence linked for an ingredient: Fictional ingredient (BNS 318(4)) [ingredient:cheating/delivery]"')
   expect(csv).toContain('"Gap accepted","later-kind:7",')
+})
+
+test('two newest-first lists are joined newest first, cut to a page, and each list is counted from its own start', () => {
+  const at = (...days: number[]) => days.map((d) => ({ at: `2026-11-${String(d).padStart(2, '0')}T10:00:00Z` }))
+  const days = (r: ReturnType<typeof newestFirst<{ at: string }, { at: string }>>) => r.rows.map((x) => `${x.app ? 'a' : 'g'}${(x.app ?? x.ai).at.slice(8, 10)}`)
+  const joined = newestFirst(at(9, 5, 1), at(8, 5, 2), 4)
+  // the same second: the application's entry first
+  expect(days(joined)).toEqual(['a09', 'g08', 'a05', 'g05'])
+  expect([joined.first, joined.second]).toEqual([2, 2])
+  // the gateway writes its offset as +00:00 and keeps whole seconds
+  expect(days(newestFirst([{ at: '2026-11-02T10:00:00.5Z' }], [{ at: '2026-11-02T10:00:01+00:00' }], 5))).toEqual(['g02', 'a02'])
+  expect(newestFirst([], at(3), 5)).toMatchObject({ first: 0, second: 1 })
+  expect(newestFirst(at(3), [], 5)).toMatchObject({ first: 1, second: 0 })
+  expect(newestFirst([], [], 5).rows).toEqual([])
+})
+
+test('a record check is exported as the core wrote it', () => {
+  const csv = auditCsv({ ...answer, rows: [row('cdr_read', '2026-11-01T10:00:00Z', '2')] }, [], [], '2026-11-26T10:00:00Z')
+  expect(csv).toContain('"Call records viewed","2",""')
 })

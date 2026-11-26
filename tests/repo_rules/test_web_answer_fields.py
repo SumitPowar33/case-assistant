@@ -100,7 +100,8 @@ def read_types():
             if literal is None:
                 imported = re.search(r"import\s+(?:type\s+)?\{[^}]*\b" + re.escape(t) + r"\b[^}]*\}\s+from\s+'\./(\w+)'", text)
                 if imported:
-                    literal = type_literal(t, (path.parent / (imported[1] + ".tsx")).read_text(encoding="utf-8")) if (path.parent / (imported[1] + ".tsx")).exists() else None
+                    module = next((f for f in (path.parent / (imported[1] + ext) for ext in (".tsx", ".ts")) if f.exists()), None)
+                    literal = type_literal(t, module.read_text(encoding="utf-8")) if module else None
             assert literal, f"{path.name}: the type {t} read from {m['url']} was not found"
             out.append((path.name, m["url"], literal, text))
     return out

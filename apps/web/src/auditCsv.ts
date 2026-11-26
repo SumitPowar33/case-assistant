@@ -1,5 +1,5 @@
-// The file given to a court or an inquiry for one case (board 20): the application's audit entries and the AI gateway's,
-// in time order, as CSV. Written in English; times in India time.
+// The audit log's pure parts (board 20): the station's list joined from the application's entries and the AI gateway's,
+// and what is given to a court or an inquiry for one case, as CSV or on paper, written in English; times in India time.
 import { translateCode } from './i18n'
 
 export type CaseEntry = { kind: string; at: string; who_name: string; who_rank: string; what: string; reason: string | null; about: string | null }
@@ -39,28 +39,54 @@ const withKey = (name: string, key: string) => name.includes(key) ? name : `${na
 const aiDetail = (e: AiEntry) => [e.label, e.model && `model ${e.provider ? `${e.provider} ` : ''}${e.model}`,
   e.question_refused && `question about ${e.question_refused}`].filter(Boolean).join('; ')
 
-export function auditCsv(answer: ExportAnswer, ai: AiEntry[], people: Person[], exportedAt: string): string {
+/** Two lists that are each newest first, joined newest first and cut to a page. Neither list's own order is changed, so
+ *  how many were taken of each is where the next page of each begins. */
+export function newestFirst<A extends { at: string }, B extends { at: string }>(first: A[], second: B[], size: number) {
+  const rows: ({ app: A; ai?: undefined } | { app?: undefined; ai: B })[] = []
+  let a = 0
+  let b = 0
+  while (rows.length < size && (a < first.length || b < second.length)) {
+    if (a < first.length && (b >= second.length || Date.parse(first[a].at) >= Date.parse(second[b].at))) rows.push({ app: first[a++] })
+    else rows.push({ ai: second[b++] })
+  }
+  return { rows, first: a, second: b }
+}
+
+/** One case's export, as the file and the court paper both give it: the particulars, the notes and the entries of the
+ *  application and the AI gateway in time order. */
+export function caseExport(answer: ExportAnswer, ai: AiEntry[], people: Person[], exportedAt: string) {
   const names = new Map(people.map((p) => [p.id, p]))
-  const rows = [
-    ...answer.rows.map((r) => ({ at: r.at, cells: ['Application', r.who_name, r.who_rank, translateCode('en', 'audit.kind', r.kind), appDetail(r), r.reason ?? ''] })),
+  const entries = [
+    ...answer.rows.map((r) => ({ at: r.at, by: 'Application', officer: r.who_name, rank: r.who_rank, entry: translateCode('en', 'audit.kind', r.kind), detail: appDetail(r), reason: r.reason ?? '' })),
     // the gateway answers newest first and keeps whole seconds: its own numbering gives the order within one
     ...[...ai].sort((a, b) => a.seq - b.seq).map((e) => {
       const who = names.get(e.actor)
-      return { at: e.at, cells: ['AI gateway', who?.full_name ?? `Account ${e.actor}`, who?.rank ?? '', `AI: ${e.result}`, aiDetail(e), ''] }
+      return { at: e.at, by: 'AI gateway', officer: who?.full_name ?? `Account ${e.actor}`, rank: who?.rank ?? '', entry: `AI: ${e.result}`, detail: aiDetail(e), reason: '' }
     }),
   ].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
-  const lines = [
-    ['Audit entries of one case'],
+  const particulars: [string, string][] = [
     ['FIR', answer.fir_ref],
     ['Police station', answer.station_name],
     ['Exported by', `${answer.exported_by_name} (${answer.exported_by_rank})`],
     ['Exported on', courtTime(exportedAt)],
-    ['Entries', String(rows.length)],
-    ...(answer.reasons_withheld ? [['Note', "The officers' written reasons are left out: this case protects the victim's identity and the person exporting is not on its case team."]] : []),
-    ['Note', 'The AI gateway keeps no question or answer text, so none is here.'],
+    ['Entries', String(entries.length)],
+  ]
+  const notes = [
+    ...(answer.reasons_withheld ? ["The officers' written reasons are left out: this case protects the victim's identity and the person exporting is not on its case team."] : []),
+    'The AI gateway keeps no question or answer text, so none is here.',
+  ]
+  return { particulars, notes, entries }
+}
+
+export function auditCsv(answer: ExportAnswer, ai: AiEntry[], people: Person[], exportedAt: string): string {
+  const { particulars, notes, entries } = caseExport(answer, ai, people, exportedAt)
+  const lines = [
+    ['Audit entries of one case'],
+    ...particulars,
+    ...notes.map((n) => ['Note', n]),
     [],
     ['Time', 'Recorded by', 'Officer', 'Rank', 'Entry', 'Detail', 'Reason'],
-    ...rows.map((r) => [courtTime(r.at), ...r.cells]),
+    ...entries.map((e) => [courtTime(e.at), e.by, e.officer, e.rank, e.entry, e.detail, e.reason]),
   ]
   // the byte order mark makes a spreadsheet read the file as UTF-8 (names and reasons in Indian scripts)
   return '﻿' + lines.map((l) => l.map(csvCell).join(',')).join('\r\n') + '\r\n'

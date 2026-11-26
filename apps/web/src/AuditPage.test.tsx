@@ -68,9 +68,9 @@ test('an empty log says so; another station shows the server refusal, not the ro
   fireEvent.change(screen.getByLabelText('Police station'), { target: { value: 's2' } })
   expect((await screen.findByRole('alert')).textContent).toContain('403')
   expect(screen.queryByRole('table')).toBeNull()
-  // without the station's cases there are no AI entries and no export, and the screen says so
-  expect(await screen.findByText(/The AI entries cannot be shown: .*403/)).toBeTruthy()
-  expect(screen.queryByRole('heading', { name: 'AI drafts and decisions on this station\'s cases' })).toBeNull()
+  // without the station's cases there is no export, and the screen says so
+  expect(await screen.findByText(/One case cannot be exported here: .*403/)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Save the file' })).toBeNull()
 })
 
 test('an account without a station starts on the first station; no station at all says so; a refused station list is shown', async () => {
