@@ -4,11 +4,12 @@ import { send } from './api'
 import { fmt } from './formats'
 import { useLoad } from './useLoad'
 import { useT } from './i18n'
+import PaperPages from './PaperPages'
 
 type Entry = { at: string; text: string; author_name: string }
 type Event = { at: string; what: string; detail: string | null }
 type Day = { diary_date: string; page_no: number | null }
-type Page = { date: string; today: boolean; page: { page_no: number; closed_at: string; closed_by_name: string } | null; entries: Entry[]; events: Event[]; days: Day[] }
+type Page = { fir_no: number; fir_year: number; station: string; date: string; today: boolean; page: { page_no: number; closed_at: string; closed_by_name: string } | null; entries: Entry[]; events: Event[]; days: Day[] }
 
 const time = (iso: string) => new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' })
 const NEEDS = ['diary.need1', 'diary.need2', 'diary.need3', 'diary.need4', 'diary.need5'] as const
@@ -55,11 +56,13 @@ export default function CaseDiary({ firId }: { firId: string }) {
         {error && <p role="alert">{error}</p>}
         <button type="button" onClick={() => setPaper((p) => !p)} aria-pressed={paper}>{t('diary.paperShow')}</button>
         {paper && <article className="print-copy court-paper" aria-label={t('diary.paperLabel')}>
+          <PaperPages head={t('paper.running', { no: data.fir_no, year: data.fir_year, station: data.station })}>
           <h2>{t('diary.paperTitle')}</h2>
           <p>{t('diary.paperDate', { date: data.date })}{data.page ? ` · ${t('diary.paperPage', { n: data.page.page_no, time: fmt(data.page.closed_at) })}` : ''}</p>
           {!data.page && <p className="paper-draft">{t('diary.paperOpen')}</p>}
           <ol className="paper-items">{lines.map((l, i) => <li key={i}>{time(l.at)} · {l.text} {l.officer ? `— ${l.by}` : t('diary.paperApp')}</li>)}</ol>
           <div className="paper-signs"><p>{t('diary.paperSign')}</p></div>
+          </PaperPages>
           <button type="button" className="no-print" onClick={() => window.print()}>{t('diary.paperPrint')}</button>
         </article>}
         {open && <form className="record-form" onSubmit={(e) => { e.preventDefault(); void act(async () => { await send(`/firs/${firId}/diary`, 'POST', { text }); setText('') }) }}>

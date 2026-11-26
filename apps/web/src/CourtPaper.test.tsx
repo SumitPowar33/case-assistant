@@ -29,6 +29,7 @@ test('the paper is filled from the file in the court form, a protected victim on
   render(<CourtPaper firId="f1" />)
   fireEvent.click(screen.getByRole('button', { name: 'Print for the court' }))
   const paper = await screen.findByRole('article', { name: 'Final report (charge-sheet)' })
+  expect(paper.querySelector('thead')!.textContent).toBe('FIR 3/2026 · Fictional Demo PS')   // repeated on every printed page
   expect(within(paper).getByText('In the court of Fictional JMFC Court')).toBeTruthy()
   expect(within(paper).getByText(/District: Demo District · Police station: Fictional Demo PS · Year: 2026 · FIR no.: 3/)).toBeTruthy()
   expect(within(paper).getByText(/Final report no.: CS-03\/2026/)).toBeTruthy()

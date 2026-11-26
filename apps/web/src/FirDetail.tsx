@@ -15,6 +15,7 @@ import SectionSuggest from './SectionSuggest'
 import SectionReport from './SectionReport'
 import FinalReport from './FinalReport'
 import CourtPaper from './CourtPaper'
+import FirCopy from './FirCopy'
 import Notices from './Notices'
 import Certificates from './Certificates'
 import Arrests from './Arrests'
@@ -98,6 +99,7 @@ export default function FirDetail({ id, only }: { id: string; only?: Part }) {
         {fir.case_team && fir.contents_original && <FactCheck firId={id} text={fir.contents_original} victimProtected={fir.victim_protected} />}
         {fir.case_team && fir.contents_original && <SectionSuggest firId={id} text={fir.contents_original} victimProtected={fir.victim_protected} version={version} onSaved={saved} />}
         {fir.case_team && <SectionReport firId={id} fir={fir} version={version} onSaved={saved} />}
+        {fir.case_team && <FirCopy key={`c${version}`} firId={id} />}
       </div>
       {!fir.case_team ? PARTS.filter((p) => p !== 'case').map((p) => (
         <div key={p} className={shown(p)}><section><h2>{t(PART_LABEL[p])}</h2><p>{t('fir.teamOnly')}</p></section></div>

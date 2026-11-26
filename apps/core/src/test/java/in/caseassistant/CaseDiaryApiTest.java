@@ -66,6 +66,8 @@ class CaseDiaryApiTest {
         db.sql("insert into notice (fir_id, kind, addressee, items_requested, body, issued_at, reply_due_on, status, signed_by) values (?, 'BNSS_94', 'Nodal Officer, Fictional Bank', array['Fictional statement'], 'Fictional body', now(), current_date + 7, 'sent', ?)").params(fir, ioId).update();
         mvc.perform(get("/api/firs/" + fir + "/diary").header("Authorization", io)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.today").value(true)).andExpect(jsonPath("$.page").value((Object) null))
+                .andExpect(jsonPath("$.fir_no").value(1)).andExpect(jsonPath("$.fir_year").value(2026))   // the head of the page on paper
+                .andExpect(jsonPath("$.station").value("Fictional North PS"))
                 .andExpect(jsonPath("$.entries[0].text").value(org.hamcrest.Matchers.startsWith("Visited the fictional bank")))
                 .andExpect(jsonPath("$.entries[0].author_name").value("Fictional io"))
                 .andExpect(jsonPath("$.events[0].what").value("notice_sent"))       // the app's own step, not typed again

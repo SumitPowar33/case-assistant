@@ -9,7 +9,7 @@ beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'si.fictio
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); setSession(null) })
 
 const today = {
-  date: '2026-11-02', today: true, page: null,
+  fir_no: 7, fir_year: 2026, station: 'Fictional North PS', date: '2026-11-02', today: true, page: null,
   entries: [{ at: '2026-11-02T04:30:00Z', text: 'Visited the fictional bank branch.', author_name: 'SI Fictional' }],
   events: [{ at: '2026-11-02T05:35:00Z', what: 'notice_sent', detail: 'BNSS_94 · Nodal Officer, Fictional Bank' }],
   days: [{ diary_date: '2026-11-02', page_no: null }, { diary_date: '2026-11-01', page_no: 1 }],
@@ -72,6 +72,7 @@ test('a day can be shown as a court-format paper: date, page, entries in time or
   await screen.findByText('Visited the fictional bank branch.')
   fireEvent.click(screen.getByRole('button', { name: 'Show this page as paper' }))
   const paper = screen.getByLabelText('Case diary page, paper copy')
+  expect(paper.querySelector('thead')!.textContent).toBe('FIR 7/2026 · Fictional North PS')   // repeated on every printed page
   expect(paper.textContent).toContain('Case diary (BNSS 192)')
   expect(paper.textContent).toContain('Date: 2026-11-02')
   expect(paper.textContent).toContain('This page is not closed yet (draft).')

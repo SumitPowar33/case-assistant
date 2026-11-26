@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { get } from './api'
 import { fmt } from './formats'
 import { useT } from './i18n'
+import PaperPages from './PaperPages'
 
 type Head = { fir_no: number; fir_year: number; registered_at: string; station: string; district: string | null; state: string; io_name: string | null; io_rank: string | null
   sections: string; status: string | null; facts_text: string | null; evidence_text: string | null; approved_by: string | null; approved_rank: string | null
@@ -45,6 +46,7 @@ export default function CourtPaper({ firId }: { firId: string }) {
       <button type="button" onClick={() => void open()}>{t('paper.print')}</button>
       {error && <p role="alert">{error}</p>}
       {h && paper && <article className="print-copy court-paper" aria-label={t('paper.heading')}>
+        <PaperPages head={t('paper.running', { no: h.fir_no, year: h.fir_year, station: h.station })}>
         {h.status !== 'signed' && <p className="paper-draft">{t('paper.draft')}</p>}
         <h2>{t('paper.heading')}</h2>
         <p className="paper-sub">{t('paper.under')}</p>
@@ -74,6 +76,7 @@ export default function CourtPaper({ firId }: { firId: string }) {
           <p>{t('paper.forwarded')}<br />{h.approved_by ? `${h.approved_by} (${dash(h.approved_rank)})` : '—'}</p>
           <p>{t('paper.signedIo')}<br />{h.signed_by ? `${h.signed_by} (${dash(h.signed_rank)})${h.signed_at ? `, ${fmt(h.signed_at)}` : ''}` : '—'}</p>
         </div>
+        </PaperPages>
       </article>}
     </section>
   )

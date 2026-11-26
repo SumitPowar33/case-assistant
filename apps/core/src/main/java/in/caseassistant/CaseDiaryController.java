@@ -75,6 +75,9 @@ class CaseDiaryController {
                 .params(firId, firId, firId).query().listOfRows();
         if (!entries.isEmpty() && team.identityProtected(firId)) reads.fir(me, firId, "diary");
         var out = new LinkedHashMap<String, Object>();
+        // the case the page belongs to, for the head of the page on paper
+        out.putAll(db.sql("select f.fir_no, f.fir_year, s.name as station from fir f join police_station s on s.id = f.station_id where f.id = ?")
+                .param(firId).query().singleRow());
         out.put("date", day);
         out.put("today", day.equals(today()));
         out.put("page", closed.isEmpty() ? null : closed.get(0));

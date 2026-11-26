@@ -65,4 +65,7 @@ Every paper the app prints follows the courts' format (Supreme Court circular of
 1.5 line spacing, quotations 12 pt single-spaced, margins 4 cm left and right and 2 cm top and bottom, black on white,
 heading centred in bold capitals, numbered paragraphs in the order of the state's form, the officer's name, rank and
 signature block at the end. `index.css` (`@page`, `.print-copy`) holds it; a new paper reuses `.print-copy`.
+A paper that may run over several pages is wrapped in `PaperPages.tsx`: the FIR number and police station are the head of
+a layout table, which the browser repeats on every printed page (the final report, the FIR copy, the case diary page;
+`tests/e2e/test_fir_copy.py` reads the PDF page by page).
 Plan and list of papers: `docs/AI-AND-SCREENS-PLAN.md` section 8.

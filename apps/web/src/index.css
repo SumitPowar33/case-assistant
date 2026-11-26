@@ -197,6 +197,12 @@ details[open] > .record-form > button[type=submit]:last-of-type { position: stic
 .paper-draft { text-align: center; font-weight: 700; letter-spacing: .3em; border: 2px solid currentColor; padding: 4px; margin: 0 0 12px; }
 .paper-signs { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 24px; margin-top: 40px; }
 @media print { .court-paper th, .court-paper td { border-color: #000; font-size: 12pt; } .court-paper { border: 0; padding: 0; } }
+/* a long paper with its FIR number on every page: a browser repeats a table's head on each printed page (PaperPages.tsx) */
+.court-paper table.paper-running { display: table; width: 100%; font-size: inherit; margin: 0; }
+.court-paper .paper-running > thead > tr > td, .court-paper .paper-running > tbody > tr > td { border: 0; padding: 0; }
+.court-paper .paper-running > thead > tr > td { text-align: right; padding-bottom: 8px; color: var(--text-2); }
+@media print { .court-paper .paper-running > thead > tr > td, .court-paper .paper-running > tbody > tr > td { font-size: inherit; }
+  .court-paper .paper-running > thead > tr > td { font-size: 10pt; color: #000; } }
 
 .ai-draft { border: 1px solid #D9CCF2; border-radius: 10px; padding: 12px 14px; background: #F8F5FE; }
 .ai-draft pre { white-space: pre-wrap; font: inherit; }
@@ -242,7 +248,8 @@ details[open] > .record-form > button[type=submit]:last-of-type { position: stic
   .print-copy blockquote { font-size: 12pt; line-height: 1.15; background: none; border: 0; padding: 0 0 0 1cm; white-space: pre-wrap; }
   .print-copy, .print-copy section { border: 0; background: none; box-shadow: none; padding: 0; }
   /* only the paper: everything else takes no space, so no blank pages follow it */
-  header, .topstrip, .no-print, main > :not(.print-copy):not(:has(.print-copy)), :has(~ .print-copy), .print-copy ~ * { display: none !important; }
+  header, .topstrip, .no-print, main > :not(.print-copy):not(:has(.print-copy)), main :has(.print-copy) > :not(.print-copy):not(:has(.print-copy)),
+  :has(~ .print-copy), .print-copy ~ * { display: none !important; }
   #root, main, main section:has(.print-copy) { display: block; padding: 0; margin: 0; border: 0; background: none; max-width: none; }
   body { background: #fff; }
   body * { visibility: hidden; }
