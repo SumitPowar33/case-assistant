@@ -383,6 +383,12 @@ class RecordsApiTest {
     }
 
     @Test
+    void aCaseAddressThatIsNoIdReadsAsNotFoundNeverAsAServerError() throws Exception {
+        for (String bad : new String[] {"not-a-case", "123", "%20" + fir})
+            mvc.perform(get(java.net.URI.create("/api/firs/" + bad + "/arrests")).header("Authorization", auth)).andExpect(status().isNotFound());
+    }
+
+    @Test
     void onlyTheCaseTeamAddsRecords() throws Exception {
         UUID station = db.sql("select station_id from fir where id = ?").param(fir).query(UUID.class).single();
         UUID clerk = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'HC Fictional Clerk','HC','front_desk') returning id")

@@ -48,8 +48,12 @@ class CdrApiTest {
     String bearer;
 
     UUID item(String label, String kind, String content) {
+        return item(label, kind, content == null ? null : content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    UUID item(String label, String kind, byte[] content) {
         return db.sql("insert into evidence_item (fir_id, label, description, kind, seized_at, seizure_memo, sha256) values (?,?,'Fictional CDR file',?,'2026-09-10T10:00Z','Fictional memo',?) returning id")
-                .params(fir, label, kind, content == null ? null : CdrController.sha256(content.getBytes(StandardCharsets.UTF_8))).query(UUID.class).single();
+                .params(fir, label, kind, content == null ? null : CdrController.sha256(content)).query(UUID.class).single();
     }
 
     ResultActions load(UUID item, String target, String content, String who) throws Exception {
@@ -116,7 +120,7 @@ class CdrApiTest {
         UUID e1 = item("E1", "electronic", ONE);
         load(e1, "9000011111", ONE + "9000011111,9000077777,04/09/2026,11:00:00,5,MOC,,\n", bearer).andExpect(status().isBadRequest())
                 .andExpect(status().reason(Matchers.containsString("not the one recorded as E1")));
-        load(item("P1", "physical", null), "9000011111", ONE, bearer).andExpect(status().isBadRequest());
+        load(item("P1", "physical", (String) null), "9000011111", ONE, bearer).andExpect(status().isBadRequest());
         load(e1, "12345", ONE, bearer).andExpect(status().isBadRequest());
         String noType = "B Party No,Date,Duration\n9000022222,03/09/2026,5\n";
         load(item("E2", "electronic", noType), "9000011111", noType, bearer).andExpect(status().isBadRequest())
@@ -150,6 +154,49 @@ class CdrApiTest {
         UUID sho = db.sql("insert into app_user (station_id, full_name, rank, role) values (?,'Insp Fictional Sho','Insp','sho') returning id").param(station).query(UUID.class).single();
         mvc.perform(get("/api/audit-log?stationId=" + station).header("Authorization", TestAuth.bearer(tokens, sho)))
                 .andExpect(jsonPath("$[?(@.kind=='cdr_read')].what").value(Matchers.hasItem("2")));
+    }
+
+    ResultActions loadRaw(UUID item, String base64) throws Exception {
+        return mvc.perform(post("/api/firs/" + fir + "/cdr").header("Authorization", bearer).contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("evidenceItemId", item, "target", "9000011111", "filename", "fictional-cdr.csv", "contentBase64", base64))));
+    }
+
+    @Test
+    void aFileThatCannotBeReadIsRefusedWithTheReasonNeverAsAServerError() throws Exception {
+        String head = "Target No,B Party No,Date,Time,Duration,Call Type\n";
+        String open = head + "9000011111,\"9000022222,03/09/2026,21:10:00,30,MOC\n";
+        load(item("Q1", "electronic", open), "9000011111", open, bearer).andExpect(status().isBadRequest())
+                .andExpect(status().reason(Matchers.containsString("A quoted value is never closed")));
+        loadRaw(item("Q2", "electronic", head), "not base64 !").andExpect(status().isBadRequest())
+                .andExpect(status().reason("The file could not be read."));
+        byte[] latin = (head + "9000011111,Fictional \u00e9,03/09/2026,21:10:00,30,MOC\n").getBytes(StandardCharsets.ISO_8859_1);
+        loadRaw(item("Q3", "electronic", latin), Base64.getEncoder().encodeToString(latin)).andExpect(status().isBadRequest())
+                .andExpect(status().reason(Matchers.containsString("not UTF-8")));
+        String huge = head + "9000011111,9000022222,03/09/2026,21:10:00,30,MOC\n".repeat(CdrController.MAX_LINES + 1);
+        load(item("Q4", "electronic", huge), "9000011111", huge, bearer).andExpect(status().isBadRequest())
+                .andExpect(status().reason(Matchers.containsString("more than 50000 records")));
+        assertThat(db.sql("select count(*) from cdr_file").query(Integer.class).single()).isZero();
+    }
+
+    @Test
+    void shortAndBlankRowsAndOverlongCellsDoNotStopAFileWithoutAnOwnNumberColumn() throws Exception {
+        String file = "B Party No,Date Time,Duration,Call Type,First Cell ID,IMEI\n"
+                + "\u2003,\u2003,,,,\n"
+                + "9000022222,2026-09-03 21:10:00,30,MOC," + "C".repeat(70) + "," + "3".repeat(25) + "\n"
+                + "9000077777,2026-09-03 22:10:00,30,MOC\n";
+        load(item("S1", "electronic", file), "9000011111", file, bearer).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.lines").value(2)).andExpect(jsonPath("$.skipped").value(0));
+        assertThat(db.sql("select coalesce(length(cell), 0) || '|' || coalesce(length(imei), 0) from cdr_call order by line").query(String.class).list())
+                .containsExactly("60|20", "0|0");
+    }
+
+    @Test
+    void aSecondLayoutAddsAnOperatorsOwnWordsAndEachRequiredFieldOnce() throws Exception {
+        var own = new CdrController(db, null, null, json);
+        own.addLayout(json.readTree("{\"fields\":{\"other\":{\"aliases\":[\"Fictional Peer\"],\"required\":true}},\"types\":{\"call_out\":[\"Fictional Out\"]}}"));
+        var required = org.springframework.test.util.ReflectionTestUtils.getField(own, "required");
+        assertThat((java.util.List<?>) required).filteredOn("other"::equals).hasSize(1);
+        assertThat(((Map<?, ?>) org.springframework.test.util.ReflectionTestUtils.getField(own, "types")).get("fictionalout")).isEqualTo("call_out");
     }
 
     @Test

@@ -43,7 +43,13 @@ class ReadAccess implements HandlerInterceptor, WebMvcConfigurer {
         String id = vars == null ? null : vars.getOrDefault("firId", vars.get("id"));
         if (id == null) return true;
         UUID me = SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof Jwt jwt ? CaseTeam.user(jwt) : null;
-        UUID fir = UUID.fromString(id);
+        UUID fir;
+        try {
+            fir = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {   // no such case; never let it on to the handler, which reads ids more loosely
+            res.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return false;
+        }
         boolean evidence = route.contains("/evidence");
         if (evidence ? team.isCustodian(me, fir) : team.includes(me, fir)) return true;
         res.sendError(HttpServletResponse.SC_NOT_FOUND);

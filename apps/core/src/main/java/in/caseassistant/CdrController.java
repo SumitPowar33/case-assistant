@@ -125,7 +125,12 @@ class CdrController {
             throw bad("The file is not UTF-8 text. Ask the operator for a CSV file.");
         }
         if (text.startsWith("﻿")) text = text.substring(1);
-        List<List<String>> rows = Csv.parse(text);
+        List<List<String>> rows;
+        try {
+            rows = Csv.parse(text);
+        } catch (IllegalArgumentException e) {
+            throw bad(e.getMessage());
+        }
         if (rows.size() < 2) throw bad("The file has no records.");
         if (rows.size() - 1 > MAX_LINES) throw bad("The file has more than " + MAX_LINES + " records; ask the operator for a shorter period.");
         Map<String, Integer> col = columns(rows.get(0));
