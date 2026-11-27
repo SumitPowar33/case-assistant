@@ -1,4 +1,6 @@
 import { useContext, useState } from 'react'
+import Enclosures from './Enclosures'
+import type { Enclosure } from './paperIndex'
 import NarrativeDraft from './NarrativeDraft'
 import TypingField from './TypingField'
 import { send } from './api'
@@ -12,6 +14,7 @@ type Event = { at: string; action: string; note: string | null; ai_request: stri
 type Data = {
   draft: Draft | null; events: Event[]; readinessChecked: boolean; openGaps: number; canApprove: boolean
   particulars: { sections: string; accused: number; witnesses: number; statements_from: number; evidence_items: number }
+  enclosures: Enclosure[]
 }
 
 const STATUS_CHIP: Record<string, string> = { draft: 'c-neu', returned: 'c-warn', submitted: 'c-info', approved: 'c-ok', signed: 'c-ok' }
@@ -37,6 +40,7 @@ export default function FinalReport({ firId, me, text, victimProtected }: { firI
   const editable = status === 'draft' || status === 'returned'
   const factsText = facts ?? d?.facts_text ?? '', evidenceText = evidence ?? d?.evidence_text ?? ''
   const p = data.particulars ?? { sections: '', accused: 0, witnesses: 0, statements_from: 0, evidence_items: 0 }, events = Array.isArray(data.events) ? data.events : []
+  const enclosures = Array.isArray(data.enclosures) ? data.enclosures : []
   const step = async (write: () => Promise<unknown>) => {
     setError('')
     try {
@@ -78,6 +82,7 @@ export default function FinalReport({ firId, me, text, victimProtected }: { firI
         </div>}
         {status === 'approved' && d?.submitted_by === me && <button type="button" onClick={() => void step(() => send(`/firs/${firId}/final-report/sign`, 'POST', null))}>{t('fr.sign')}</button>}
       </section>
+      {enclosures.length > 0 && <Enclosures list={enclosures} />}
       <section aria-labelledby="fr-history">
         <h2 id="fr-history">{t('fr.history')}</h2>
         <ul className="plain">{events.map((e, i) => (

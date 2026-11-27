@@ -76,6 +76,7 @@ class FinalReportController {
         out.put("readinessChecked", checked);
         out.put("openGaps", readiness.openGaps(firId));
         out.put("canApprove", team.canAt(me, APPROVE, stationOf(firId)));
+        out.put("enclosures", enclosures(firId, namesWithheld(firId)));
         out.put("particulars", db.sql("""
                 select (select coalesce(string_agg(act || ' ' || section, ', ' order by act, section), '') from fir_section where fir_id = :f) as sections,
                        (select count(*) from person where fir_id = :f and role = 'accused') as accused,
@@ -124,7 +125,87 @@ class FinalReportController {
         out.put("property", db.sql("""
                 select label, kind, description, seized_at, seal_no, sha256 from evidence_item where fir_id = ? order by seized_at, label""")
                 .param(firId).query().listOfRows());
+        boolean withheld = namesWithheld(firId);
+        out.put("enclosures", enclosures(firId, withheld));
+        out.put("custody", custody(firId, withheld));
+        out.put("namesWithheld", withheld);
         return out;
+    }
+
+    /** On a protected case, or with a person masked by hand, the lists that go with the report carry no free text that could name them. */
+    private boolean namesWithheld(UUID firId) {
+        return db.sql("select identity_protected_case(:f) or exists (select 1 from person where fir_id = :f and identity_masked)")
+                .param("f", firId).query(Boolean.class).single();
+    }
+
+    /**
+     * The index of what goes with the report (BNSS 193(6): documents relied on and the statements under section 180;
+     * 193(8): copies duly indexed for the accused), read from the records the app keeps. Each line says whether the paper
+     * is on file ({@code ok}), still expected ({@code wait}) or not on file ({@code missing}), and why. People are named
+     * by label only. For BNSS 193(3)(i)(h) (CrPC 173(2)(h) for an IPC FIR) a line says so when no medical report is on
+     * file in an investigation of those sections; the app does not know whose examination a medical report is of.
+     */
+    private java.util.List<Map<String, Object>> enclosures(UUID firId, boolean withheld) {
+        return db.sql("""
+                select kind, ref, detail, on_date, state, note from (
+                  select 1 as grp, 'fir' as kind, fir_no || '/' || fir_year as ref, cast(null as text) as detail, ist_date(registered_at) as on_date,
+                         'ok' as state, cast(null as text) as note, registered_at as at
+                  from fir where id = :f
+                  union all
+                  select 2, 'complaint', null, null, ist_date(signed_at), 'ok', null, signed_at from complaint where fir_id = :f and signed_at is not null
+                  union all
+                  select 3, 'statement', p.label, null, ist_date(s.recorded_at), 'ok', null, s.recorded_at
+                  from witness_statement s join person p on p.id = s.person_id where s.fir_id = :f
+                  union all
+                  select 4, 'arrest_memo', p.label, null, ist_date(a.arrested_at), 'ok', null, a.arrested_at
+                  from arrest_current a join person p on p.id = a.person_id where p.fir_id = :f
+                  union all
+                  select 5, 'search_memo', (select string_agg(e.label, ', ' order by e.label) from evidence_item e where e.search_id = s.id), null,
+                         ist_date(s.started_at), case when w.search_id is null then 'wait' else 'ok' end,
+                         case when w.search_id is null then 'recording_not_sent' end, s.started_at
+                  from search_seizure s left join search_forward w on w.search_id = s.id where s.fir_id = :f
+                  union all
+                  select 6, 'notice', kind, case when :withheld then null else addressee end, ist_date(issued_at),
+                         case when waits then 'wait' else 'ok' end,
+                         case when not waits then null when status = 'reply_incomplete' then 'reply_incomplete' else 'no_reply' end, issued_at
+                  from (select *, status <> 'complete' and kind not in ('BNSS_35_3', 'BNSS_179', 'CrPC_41A', 'CrPC_160') as waits
+                        from notice where fir_id = :f and status in ('sent', 'reply_incomplete', 'complete')) n
+                  union all
+                  select 7, 'expert_' || r.kind, (select label from evidence_item e where e.id = r.evidence_item_id),
+                         case when :withheld then null else r.sent_to end, coalesce(got.on_date, r.sent_on),
+                         case when got.on_date is null then 'wait' else 'ok' end,
+                         case when got.on_date is null then 'report_awaited' end, r.recorded_at
+                  from expert_request r
+                  left join lateral (select max(on_date) as on_date from expert_request_step s where s.request_id = r.id and s.status = 'report_received') got on true
+                  where r.fir_id = :f
+                  union all
+                  select 8, 'certificate', c.label, null,
+                         (select ist_date(max(z.signed_at)) from certificate_63_4 z where z.item_id = c.id
+                          and not exists (select 1 from certificate_63_4 n where n.supersedes = z.id)),
+                         case when c.court_ready then 'ok' else 'missing' end,
+                         case when c.court_ready then null when not c.has_part_a and not c.has_part_b then 'both_parts'
+                              when not c.has_part_a then 'part_a' when not c.has_part_b then 'part_b' else 'hash' end, e.seized_at
+                  from electronic_item_readiness c join evidence_item e on e.id = c.id where c.fir_id = :f
+                  union all
+                  select 9, 'medical_report', null, null, null, 'missing', 'no_medical', null
+                  where exists (select 1 from fir_section where fir_id = :f
+                                and ((act = 'BNS' and section_no(section) in (64, 65, 66, 67, 68, 70, 71)) or (act = 'IPC' and section_no(section) = 376)))
+                    and not exists (select 1 from expert_request r join expert_request_step s on s.request_id = r.id
+                                    where r.fir_id = :f and r.kind = 'medical' and s.status = 'report_received')
+                ) x order by grp, at, ref""")
+                .param("f", firId).param("withheld", withheld).query().listOfRows();
+    }
+
+    /** BNSS 193(3)(i)(i): the sequence of custody of each electronic device, from its seizure through every hand-over recorded. */
+    private java.util.List<Map<String, Object>> custody(UUID firId, boolean withheld) {
+        return db.sql("""
+                select e.label, e.seized_at, c.at, c.place, c.seal_intact,
+                       case when :withheld then null else c.handed_by end as handed_by,
+                       case when :withheld then null else c.received_by end as received_by,
+                       case when :withheld then null else c.location end as location
+                from evidence_item e left join custody_event c on c.item_id = e.id
+                where e.fir_id = :f and e.kind = 'electronic' order by e.label, c.at, c.id""")
+                .param("f", firId).param("withheld", withheld).query().listOfRows();
     }
 
     /** Creates the draft, or changes the words of one that is a draft or returned. */

@@ -224,6 +224,145 @@ class FinalReportApiTest {
         assertThat(db.sql("select count(*) from final_report_event where ai_request is not null").query(Long.class).single()).isZero();
     }
 
+    UUID person(String role, String label, boolean masked) {
+        return db.sql("insert into person (fir_id, role, label, full_name, identity_masked) values (?,?,?,?,?) returning id")
+                .params(fir, role, label, "Fictional " + label, masked).query(UUID.class).single();
+    }
+
+    UUID item(String label, String kind) {
+        return db.sql("insert into evidence_item (fir_id, label, description, kind, seized_at, seizure_memo, sha256) values (?,?,?,?,now() - interval '1 day','SM-1',?) returning id")
+                .params(fir, label, "Fictional " + label, kind, kind.equals("electronic") ? "a".repeat(64) : null).query(UUID.class).single();
+    }
+
+    void certificate(UUID item, String part, String hash) {
+        db.sql("insert into certificate_63_4 (item_id, part, signer_name, device_type, hash_algo, hash_value, signed_at, place) values (?,?,'Fictional Signer','Phone','SHA256',?,now(),'Fictional Demo')")
+                .params(item, part, hash).update();
+    }
+
+    UUID notice(String kind, String status, String addressee) {
+        return db.sql("insert into notice (fir_id, kind, addressee, items_requested, body, status, signed_by, issued_at) values (?,?,?,array['Statement'],'Fictional notice',?,?,case when ? = 'draft' then null else now() end) returning id")
+                .params(fir, kind, addressee, status, ioId, status).query(UUID.class).single();
+    }
+
+    /** One of every paper that goes with the report, some on file and some still expected. */
+    void aFileOfEveryPaper() {
+        UUID w = person("witness", "W1", false), a = person("accused", "A1", false);
+        db.sql("insert into complaint (station_id, received_at, mode, informant_name, kind, text_original, text_language, recorded_by, signed_at, signed_recorded_by, outcome, fir_id, outcome_at, outcome_by) select station_id, information_received_at, 'written', 'Fictional Informant', 'other', contents_original, 'en', io_id, information_received_at, io_id, 'fir', id, registered_at, io_id from fir where id = ?")
+                .params(fir).update();
+        db.sql("insert into witness_statement (fir_id, person_id, recorded_by, language, medium, original_text) values (?,?,?,'en','written','Fictional statement')").params(fir, w, ioId).update();
+        db.sql("insert into arrest (person_id, arrested_at, place, grounds, informed_name, arresting_officer, max_punishment) values (?,now() - interval '1 day','Fictional Road',array['Fictional ground'],'Fictional Relative',?,'less_than_10_years')")
+                .params(a, ioId).update();
+        UUID phone = item("E1", "electronic"), disk = item("E2", "electronic"), drive = item("E3", "electronic");
+        item("E4", "physical");
+        certificate(phone, "A", "a".repeat(64));
+        certificate(phone, "B", "a".repeat(64));
+        certificate(disk, "A", "a".repeat(64));
+        certificate(drive, "A", "b".repeat(64));
+        certificate(drive, "B", "b".repeat(64));
+        db.sql("insert into custody_event (item_id, at, handed_by, received_by, location, purpose, seal_intact, place) values (?,now() - interval '20 hours','Fictional Seizer','Fictional Keeper','Fictional malkhana','Safe keeping',true,'malkhana')").param(phone).update();
+        db.sql("insert into custody_event (item_id, at, handed_by, received_by, location, purpose, seal_intact, place) values (?,now() - interval '2 hours','Fictional Keeper','Fictional Analyst','Fictional laboratory','Examination',false,'lab')").param(phone).update();
+        notice("BNSS_94", "complete", "Fictional Bank One");
+        notice("BNSS_94", "reply_incomplete", "Fictional Bank Two");
+        notice("BNSS_94", "sent", "Fictional Bank Three");
+        notice("BNSS_35_3", "sent", "Fictional Person");
+        notice("BNSS_94", "draft", "Fictional Draft Bank");
+        UUID lab = db.sql("insert into expert_request (fir_id, kind, subject, sent_to, sent_on, evidence_item_id, recorded_by) values (?,'forensic','Phone extraction','Fictional FSL',current_date - 1,?,?) returning id")
+                .params(fir, phone, ioId).query(UUID.class).single();
+        db.sql("insert into expert_request_step (request_id, fir_id, status, on_date, recorded_by) values (?,?,'report_received',current_date,?)").params(lab, fir, ioId).update();
+        db.sql("insert into expert_request (fir_id, kind, subject, sent_to, sent_on, recorded_by) values (?,'medical','Examination','Fictional Hospital',current_date - 1,?)").params(fir, ioId).update();
+    }
+
+    @Test
+    void theIndexOfPapersSentWithTheReportSaysWhatIsOnFileExpectedAndMissing() throws Exception {
+        call(get(url("")), io, null).andExpect(jsonPath("$.enclosures.length()").value(1)).andExpect(jsonPath("$.enclosures[0].kind").value("fir"))
+                .andExpect(jsonPath("$.enclosures[0].ref").value("1/2026")).andExpect(jsonPath("$.enclosures[0].state").value("ok"));
+        aFileOfEveryPaper();
+        // a memo, its recording and its seized item are written together (V48)
+        UUID search = db.sql("""
+                with s as (insert into search_seizure (fir_id, place, grounds, started_at, ended_at, no_witness_reason, recorded_by)
+                           values (?,'Fictional House','Fictional grounds for the search',now() - interval '3 hours',now() - interval '2 hours','No witness could be had in time',?) returning id, fir_id),
+                     r as (insert into search_recording (search_id, fir_id, sha256, seconds) select id, fir_id, repeat('c', 64), 60 from s),
+                     e as (insert into evidence_item (fir_id, label, description, kind, seized_at, seizure_memo, search_id)
+                           select fir_id, 'E5', 'Fictional bag', 'physical', now() - interval '2 hours', 'SM-2', id from s)
+                select id from s""").params(fir, ioId).query(UUID.class).single();
+        String body = call(get(url("/print")), io, null).andExpect(status().isOk()).andExpect(jsonPath("$.namesWithheld").value(false))
+                .andReturn().getResponse().getContentAsString();
+        java.util.List<java.util.Map<String, Object>> rows = com.jayway.jsonpath.JsonPath.read(body, "$.enclosures");
+        assertThat(rows.stream().map(r -> r.get("kind") + "|" + r.get("ref") + "|" + r.get("detail") + "|" + r.get("state") + "|" + r.get("note"))).containsExactly(
+                "fir|1/2026|null|ok|null",
+                "complaint|null|null|ok|null",
+                "statement|W1|null|ok|null",
+                "arrest_memo|A1|null|ok|null",
+                "search_memo|E5|null|wait|recording_not_sent",
+                "notice|BNSS_94|Fictional Bank One|ok|null",
+                "notice|BNSS_94|Fictional Bank Two|wait|reply_incomplete",
+                "notice|BNSS_94|Fictional Bank Three|wait|no_reply",
+                "notice|BNSS_35_3|Fictional Person|ok|null",
+                "expert_forensic|E1|Fictional FSL|ok|null",
+                "expert_medical|null|Fictional Hospital|wait|report_awaited",
+                "certificate|E1|null|ok|null",
+                "certificate|E2|null|missing|part_b",
+                "certificate|E3|null|missing|hash");
+        // the custody of the electronic devices only, each hand-over in order; an item never handed over still has its seizure
+        call(get(url("/print")), io, null).andExpect(jsonPath("$.custody.length()").value(4))
+                .andExpect(jsonPath("$.custody[0].label").value("E1")).andExpect(jsonPath("$.custody[0].received_by").value("Fictional Keeper"))
+                .andExpect(jsonPath("$.custody[1].place").value("lab")).andExpect(jsonPath("$.custody[1].seal_intact").value(false))
+                .andExpect(jsonPath("$.custody[2].label").value("E2")).andExpect(jsonPath("$.custody[2].at").value((Object) null));
+        db.sql("insert into search_forward (search_id, fir_id, forwarded_on, forwarded_to, recorded_by) values (?,?,current_date,'Fictional Magistrate',?)").params(search, fir, ioId).update();
+        call(get(url("")), io, null).andExpect(jsonPath("$.enclosures[?(@.kind=='search_memo')].state").value("ok"))
+                .andExpect(jsonPath("$.enclosures[?(@.kind=='search_memo')].on_date").exists());
+    }
+
+    @Test
+    void onAProtectedCaseTheListsCarryNoNames() throws Exception {
+        aFileOfEveryPaper();
+        db.sql("update fir set identity_protected = true").update();
+        theListsCarryNoNames();
+    }
+
+    @Test
+    void withAPersonMaskedByHandTheListsCarryNoNames() throws Exception {
+        aFileOfEveryPaper();
+        db.sql("update person set identity_masked = true where label = 'W1'").update();
+        theListsCarryNoNames();
+    }
+
+    void theListsCarryNoNames() throws Exception {
+        String body = call(get(url("/print")), io, null).andExpect(status().isOk()).andExpect(jsonPath("$.namesWithheld").value(true))
+                .andExpect(jsonPath("$.enclosures[?(@.kind=='statement')].ref").value("W1"))
+                .andExpect(jsonPath("$.custody[1].place").value("lab"))
+                .andReturn().getResponse().getContentAsString();
+        java.util.List<Object> free = com.jayway.jsonpath.JsonPath.read(body, "$.enclosures[*].detail");
+        assertThat(free).containsOnlyNulls();
+        for (String key : new String[] {"handed_by", "received_by", "location"})
+            assertThat(com.jayway.jsonpath.JsonPath.<java.util.List<Object>>read(body, "$.custody[*]." + key)).hasSize(4).containsOnlyNulls();
+        assertThat(body).doesNotContain("Fictional Bank", "Fictional Keeper", "Fictional laboratory", "Fictional Hospital", "Fictional Informant");
+        // the Final report part's list is the same one, withheld the same way
+        call(get(url("")), io, null).andExpect(jsonPath("$.enclosures[?(@.kind=='notice')].detail").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.nullValue())));
+    }
+
+    @Test
+    void aSexualOffenceInvestigationWithoutAMedicalReportSaysSo() throws Exception {
+        String missing = "$.enclosures[?(@.kind=='medical_report')]";
+        // BNS 69 is not in the list of BNSS 193(3)(i)(h), nor is a theft
+        db.sql("insert into fir_section (fir_id, act, section) values (?,'BNS','69'), (?,'BNS','303(2)')").params(fir, fir).update();
+        call(get(url("")), io, null).andExpect(jsonPath(missing).isEmpty());
+        int no = 10;
+        for (String[] s : new String[][] {{"BNS", "64(1)"}, {"BNS", "70(2)"}, {"BNS", "71"}, {"IPC", "376(2)(n)"}, {"IPC", "376D"}}) {
+            fir = db.sql("""
+                    insert into fir (station_id, fir_year, fir_no, gd_entry_no, registered_at, information_received_at, contents_original, contents_language, action_taken, io_id)
+                    select station_id, fir_year, ?, gd_entry_no, registered_at, information_received_at, contents_original, contents_language, action_taken, io_id from fir order by fir_no limit 1 returning id""")
+                    .param(no++).query(UUID.class).single();   // a section is kept as written, so each is tried on an FIR of its own
+            db.sql("insert into fir_section (fir_id, act, section) values (?,?,?)").params(fir, s[0], s[1]).update();
+            call(get(url("")), io, null).andExpect(jsonPath(missing + ".note").value("no_medical")).andExpect(jsonPath(missing + ".state").value("missing"));
+        }
+        UUID r = db.sql("insert into expert_request (fir_id, kind, subject, sent_to, sent_on, recorded_by) values (?,'medical','Examination','Fictional Hospital',current_date - 1,?) returning id")
+                .params(fir, ioId).query(UUID.class).single();
+        call(get(url("")), io, null).andExpect(jsonPath(missing + ".note").value("no_medical"));   // asked for, not received
+        db.sql("insert into expert_request_step (request_id, fir_id, status, on_date, recorded_by) values (?,?,'report_received',current_date,?)").params(r, fir, ioId).update();
+        call(get(url("")), io, null).andExpect(jsonPath(missing).isEmpty());
+    }
+
     @Test
     void thePrintGathersTheCourtFormFromTheRecordsAndNamesAProtectedVictimOnlyByLabel() throws Exception {
         db.sql("update fir set sexual_offence = true where id = ?").param(fir).update();

@@ -83,7 +83,7 @@ phone; 20 px between the cards of a screen.
 | 7 | Field seizure on tablet | FIR part `search` (`Search.tsx`) | first version (session 76): memo, witnesses, recording hash, sealed items, forwarding; no photos, selfie, QR or offline sync |
 | 8 | Money trail and accused links | — | to build |
 | 9 | Readiness check | FIR part "Readiness check" | restyled with status chips (session 59) |
-| 10 | Draft chargesheet and sign | FIR part "Final report": draft, submit, approve or return, sign (V41); AI drafting and print to build | partly built |
+| 10 | Draft chargesheet and sign | FIR part "Final report": draft, submit, approve or return, sign (V41); AI draft (A6, session 91); court print with the custody sequence and the index of papers; "Papers that go with the report" is the board's annexures card (session 138): one line per kind, open ones named with their chip. Differences: no Export Word or PDF buttons (the browser prints), no "I have read every AI paragraph" tick (sentences are ticked one by one as they are taken), no AI paragraph shown blocked | built (sessions 66, 91, 138) |
 | 11 | Supervisor review | `#/supervisor` (permission `chargesheet.approve`): open cases by nearest deadline, open gaps, final report waiting; AI briefing per case (A9, session 100) | built (session 67; A9 session 100); the board's "AI use in this case" counts are not built (they need a gateway read route) |
 | 12 | Court and trial tracker | `#/court` (`Court.tsx`) | built (session 71): dates and witness summons; no ICJS feed, prosecutor brief or victim-update button |
 | 13 | Front desk: voice complaint, golden hour | `#/front-desk`, `#/complaints/{id}` | restyled |

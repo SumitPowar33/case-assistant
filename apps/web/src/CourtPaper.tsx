@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePaperName, type Enclosure } from './paperIndex'
 import { get } from './api'
 import { fmt } from './formats'
 import { useT } from './i18n'
@@ -10,7 +11,8 @@ type Head = { fir_no: number; fir_year: number; registered_at: string; station: 
 type Person = { role: string; label: string | null; masked: boolean; name: string | null; parentage: string | null; age_years: number | null; gender: string | null
   address: string | null; arrested_at: string | null; first_remand_on: string | null; released_on: string | null; sent_up: boolean; has_statement: boolean }
 type Item = { label: string; kind: string; description: string; seized_at: string; seal_no: string | null; sha256: string | null }
-type Paper = { head: Head; people: Person[]; property: Item[] }
+type Custody = { label: string; seized_at: string; at: string | null; place: string | null; seal_intact: boolean | null; handed_by: string | null; received_by: string | null; location: string | null }
+type Paper = { head: Head; people: Person[]; property: Item[]; enclosures: Enclosure[]; custody: Custody[]; namesWithheld: boolean }
 
 /**
  * The final report on paper for the court (GET /firs/{id}/final-report/print), in the order of the police form for a report
@@ -19,6 +21,7 @@ type Paper = { head: Head; people: Person[]; property: Item[] }
  */
 export default function CourtPaper({ firId }: { firId: string }) {
   const t = useT()
+  const paperName = usePaperName()
   const [paper, setPaper] = useState<Paper | null>(null)
   const [error, setError] = useState('')
 
@@ -39,6 +42,13 @@ export default function CourtPaper({ firId }: { firId: string }) {
   const notSentUp = paper?.people.filter((p) => (p.role === 'accused' || p.role === 'suspect') && !p.sent_up) ?? []
   const informant = paper?.people.filter((p) => p.role === 'complainant' || (p.role === 'victim' && !paper.people.some((x) => x.role === 'complainant'))) ?? []
   const witnesses = paper?.people.filter((p) => p.role !== 'accused' && p.role !== 'suspect' && p.has_statement) ?? []
+  const custody = paper?.custody ?? [], enclosures = paper?.enclosures ?? []
+  // each device begins with its seizure, then every hand-over recorded, in order
+  const sequence = custody.flatMap((c, i) => [
+    ...(custody[i - 1]?.label === c.label ? [] : [{ label: c.label, at: c.seized_at, move: t('paper.seized'), where: '', seal: null as boolean | null }]),
+    ...(c.at ? [{ label: c.label, at: c.at, move: c.handed_by || c.received_by ? t('paper.handOver', { from: dash(c.handed_by), to: dash(c.received_by) }) : t('paper.handOverPlain'),
+      where: [c.location, c.place && t.code('propPlace', c.place)].filter(Boolean).join(', '), seal: c.seal_intact }] : []),
+  ])
   return (
     <section aria-labelledby="paper-title">
       <h2 id="paper-title">{t('paper.title')}</h2>
@@ -71,6 +81,13 @@ export default function CourtPaper({ firId }: { firId: string }) {
               <tbody>{witnesses.map((p) => <tr key={p.label ?? p.name}><td>{dash(p.label)}</td><td>{who(p)}</td><td>{dash(p.parentage)}</td><td>{dash(p.age_years)} / {dash(p.gender)}</td><td>{dash(p.address)}</td></tr>)}</tbody></table> : ' —'}</li>
           <li>{t('paper.facts')}<blockquote>{dash(h.facts_text)}</blockquote></li>
           <li>{t('paper.evidence')}<blockquote>{dash(h.evidence_text)}</blockquote></li>
+          <li>{t('paper.custody')}
+            {sequence.length ? <table><thead><tr><th>{t('paper.colItem')}</th><th>{t('paper.colWhen')}</th><th>{t('paper.colHandOver')}</th><th>{t('paper.colWhere')}</th><th>{t('paper.colSealState')}</th></tr></thead>
+              <tbody>{sequence.map((c, i) => <tr key={i}><td>{c.label}</td><td>{fmt(c.at)}</td><td>{c.move}</td><td>{dash(c.where)}</td><td>{c.seal === null ? '—' : t(c.seal ? 'prop.sealOk' : 'prop.sealBroken')}</td></tr>)}</tbody></table> : ' —'}
+            {paper.namesWithheld && sequence.length > 0 && <p>{t('paper.namesWithheld')}</p>}</li>
+          <li>{t('paper.index')}
+            {enclosures.length ? <table><thead><tr><th>{t('paper.colNo')}</th><th>{t('paper.colPaper')}</th><th>{t('paper.colDated')}</th><th>{t('paper.colOnFile')}</th></tr></thead>
+              <tbody>{enclosures.map((e, i) => <tr key={i}><td>{i + 1}</td><td>{paperName(e)}</td><td style={{ whiteSpace: 'nowrap' }}>{dash(e.on_date)}</td><td>{t.code('encl.note', e.note ?? 'ok')}</td></tr>)}</tbody></table> : ' —'}</li>
         </ol>
         <div className="paper-signs">
           <p>{t('paper.forwarded')}<br />{h.approved_by ? `${h.approved_by} (${dash(h.approved_rank)})` : '—'}</p>

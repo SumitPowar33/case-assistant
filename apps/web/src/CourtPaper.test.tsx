@@ -89,3 +89,36 @@ test('with no one recorded the lists show a dash, and a refused request shows wh
   expect((await screen.findByRole('alert')).textContent).toBeTruthy()
   expect(screen.queryByRole('article')).toBeNull()
 })
+
+test('the paper carries the custody of each electronic device from its seizure on, and the index of the papers sent', async () => {
+  const move = { label: 'E1', seized_at: '2026-11-12T04:30:00Z', at: '2026-11-12T09:30:00Z', place: 'malkhana', seal_intact: true, handed_by: 'SI Fictional', received_by: 'HC Fictional Keeper', location: 'Fictional room' }
+  stub({ head, property: [], people: [], namesWithheld: false,
+    custody: [move, { ...move, at: '2026-11-13T09:30:00Z', place: null, location: null, handed_by: 'HC Fictional Keeper', received_by: null, seal_intact: false },
+      { ...move, label: 'E2', at: null, place: null, seal_intact: null, handed_by: null, received_by: null, location: null }],
+    enclosures: [{ kind: 'fir', ref: '3/2026', detail: null, on_date: '2026-11-13', state: 'ok', note: null },
+      { kind: 'certificate', ref: 'E1', detail: null, on_date: null, state: 'missing', note: 'part_b' }] })
+  render(<CourtPaper firId="f1" />)
+  fireEvent.click(screen.getByRole('button', { name: 'Print for the court' }))
+  const paper = await screen.findByRole('article', { name: 'Final report (charge-sheet)' })
+  const [custody, index] = [...paper.querySelectorAll('.paper-items table')]
+  const cells = (t: Element) => [...t.querySelectorAll(':scope > tbody > tr')].map((r) => [...r.querySelectorAll('td')].map((c) => c.textContent))
+  expect(cells(custody).map((r) => [r[0], r[2], r[3], r[4]])).toEqual([
+    ['E1', 'Seized', '—', '—'],
+    ['E1', 'Handed over by SI Fictional to HC Fictional Keeper', 'Fictional room, In malkhana', 'Seal intact'],
+    ['E1', 'Handed over by HC Fictional Keeper to —', '—', 'Seal not intact'],
+    ['E2', 'Seized', '—', '—'],
+  ])
+  expect(cells(index)).toEqual([['1', 'FIR 3/2026', '2026-11-13', 'On file'], ['2', 'BSA 63(4) certificate of item E1', '—', 'Part B missing']])
+  expect(within(paper).queryByText(/Names and places are left out/)).toBeNull()
+})
+
+test('with names withheld the paper keeps the times, places and seals, and says why the names are left out', async () => {
+  stub({ head, property: [], people: [], namesWithheld: true, enclosures: [],
+    custody: [{ label: 'E1', seized_at: '2026-11-12T04:30:00Z', at: '2026-11-12T09:30:00Z', place: 'lab', seal_intact: true, handed_by: null, received_by: null, location: null }] })
+  render(<CourtPaper firId="f1" />)
+  fireEvent.click(screen.getByRole('button', { name: 'Print for the court' }))
+  const paper = await screen.findByRole('article', { name: 'Final report (charge-sheet)' })
+  expect(within(paper).getByText('Handed over')).toBeTruthy()
+  expect(within(paper).getByText('At a lab')).toBeTruthy()
+  expect(within(paper).getByText(/Names and places are left out/)).toBeTruthy()
+})

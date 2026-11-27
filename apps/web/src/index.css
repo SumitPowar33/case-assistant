@@ -107,6 +107,7 @@ main section, .card { background: var(--surface); border: 1px solid var(--line);
 main section section { border: 0; padding: 0; border-radius: 0; box-shadow: none; }
 main section > h2:first-child, .card > h2:first-child { margin-top: 0; }
 .fir-part > section + section { margin-top: var(--sp-5); }
+.two-col > .encl { margin-block: var(--sp-5); }  /* the papers list stands apart from the draft above it and the steps below */
 main section > .card + .card { margin-top: var(--sp-4); }
 /* a card inside a card is a quiet box, not a second shadow */
 main section .card { box-shadow: none; background: var(--surface); }
@@ -288,7 +289,7 @@ details[open] > .record-form > button[type=submit]:last-of-type { position: stic
   box-shadow: 0 0 0 16px var(--surface); }
 
 /* the final report on paper for the court (CourtPaper.tsx): a preview on screen, the court's format when printed */
-.court-paper { margin-top: 16px; border: 1px solid var(--line); border-radius: 10px; padding: 20px 24px; background: var(--surface); }
+.court-paper { margin-top: 16px; border: 1px solid var(--line); border-radius: 10px; padding: 20px 24px; background: var(--surface); overflow-x: auto; }  /* on a phone a wide table (a file's hash) scrolls inside the paper, not the page */
 .court-paper h2, .paper-sub, .paper-court { text-align: center; }
 .court-paper h2 { text-transform: uppercase; margin-bottom: 4px; }
 .paper-sub { margin: 0 0 12px; color: var(--text-2); }
@@ -304,7 +305,7 @@ details[open] > .record-form > button[type=submit]:last-of-type { position: stic
 .audit-paper th, .audit-paper td { overflow-wrap: normal; }
 .audit-paper td:last-child { overflow-wrap: anywhere; }
 .audit-paper td span { white-space: nowrap; }
-@media print { .court-paper th, .court-paper td { border-color: #000; font-size: 12pt; } .court-paper { border: 0; padding: 0; } }
+@media print { .court-paper th, .court-paper td { border-color: #000; font-size: 12pt; } .court-paper { border: 0; padding: 0; overflow: visible; } }
 /* a long paper with its FIR number on every page: a browser repeats a table's head on each printed page (PaperPages.tsx) */
 .court-paper table.paper-running { display: table; width: 100%; font-size: inherit; margin: 0; }
 .court-paper .paper-running > thead > tr > td, .court-paper .paper-running > tbody > tr > td { border: 0; padding: 0; }

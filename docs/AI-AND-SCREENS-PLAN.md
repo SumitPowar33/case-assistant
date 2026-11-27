@@ -101,7 +101,8 @@ Done: the informant's copy (BNSS 173(2)), the arrest memo (BNSS 36), the seizure
 certificate, the case diary page, the final report, and the FIR copy (session 136). The foot of every page shows
 "page / pages"; the long papers (final report, FIR copy, diary page) repeat the FIR number and station at the head of
 every page.
-To do: the chargesheet's enclosure lists. Each paper uses the state's form layout once a sample form is supplied.
+The chargesheet's enclosure lists (the index of papers and the custody sequence of electronic devices) are done (session 138). Each
+paper uses the state's form layout once a sample form is supplied.
 
 ## 9. Ask the case file (RAG chatbot), and the flaws to avoid (item 17)
 Design (board 19) is right in principle. Flaws found in the board, and the fix:
