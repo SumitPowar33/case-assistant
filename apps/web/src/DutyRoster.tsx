@@ -3,9 +3,11 @@ import { currentSession, send } from './api'
 import { useT } from './i18n'
 import { useLoad } from './useLoad'
 
-type Row = { id: string; full_name: string; rank: string; on_date: string; kind: 'duty' | 'weekly_off' | 'leave'; shift: string | null; post: string | null; note: string | null }
+type Row = { id: string; officer_id: string; full_name: string; rank: string; on_date: string; kind: 'duty' | 'weekly_off' | 'leave'; shift: string | null; post: string | null; note: string | null }
 type Clash = Pick<Row, 'full_name' | 'rank' | 'on_date' | 'kind' | 'shift' | 'post'> & { officer_id: string; fir_id: string; fir_no: number; fir_year: number }
-type Roster = { rows: Row[]; now: { shift: string; on_duty: Row[] }; court_clashes?: Clash[]; can_manage: boolean }
+type Side<K extends string> = Record<`${K}_officer_id` | `${K}_name` | `${K}_rank` | `${K}_date` | `${K}_shift` | `${K}_post`, string>
+type Swap = Side<'give'> & Side<'take'> & { id: string; state: 'waiting' | 'approved' | 'refused' | 'lapsed'; reason: string | null; note: string | null; decided_by: string | null }
+type Roster = { rows: Row[]; now: { shift: string; on_duty: Row[] }; court_clashes?: Clash[]; swaps?: Swap[]; can_manage: boolean }
 type Officer = { id: string; full_name: string; rank: string }
 
 const SHIFTS = ['morning', 'evening', 'night']
@@ -52,6 +54,7 @@ export default function DutyRoster() {
         </section>
       )}
       {manage && <Add station={station} onSaved={again} />}
+      <Swaps rows={rows} swaps={roster.data.swaps ?? []} manage={manage} text={entry} onSaved={again} />
       <section aria-labelledby="roster-list">
         <h2 id="roster-list">{t('roster.list')}</h2>
         {days.length === 0 ? <p>{t('roster.none')}</p> : days.map((d) => (
@@ -127,6 +130,92 @@ function Entry({ row: r, text, manage, onSaved }: { row: Row; text: string; mana
           {error && <p role="alert">{error}</p>}
           <button type="submit">{t('roster.takeBack')}</button>
         </form>
+      )}
+    </li>
+  )
+}
+
+/** Duty swaps: an officer asks to exchange one of their own coming duties for a colleague's; the officer in charge decides. */
+function Swaps({ rows, swaps, manage, text, onSaved }: { rows: Row[]; swaps: Swap[]; manage: boolean; text: (r: Pick<Row, 'kind' | 'shift' | 'post'>) => string; onSaved: () => void }) {
+  const t = useT()
+  const [error, setError] = useState('')
+  const me = currentSession()?.user.id
+  const duties = rows.filter((r) => r.kind === 'duty')
+  const mine = duties.filter((r) => r.officer_id === me), others = duties.filter((r) => r.officer_id !== me)
+  const ask = mine.length > 0 && others.length > 0
+  if (!ask && swaps.length === 0) return null
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError('')
+    const form = e.currentTarget, f = new FormData(form)
+    try {
+      await send('/duty-roster/swaps', 'POST', { giveId: String(f.get('giveId')), takeId: String(f.get('takeId')), reason: String(f.get('reason')).trim() })
+      form.reset()
+      onSaved()
+    } catch (err) { setError((err as Error).message) }
+  }
+  const side = (name: string, rank: string, date: string, shift: string, post: string) => `${name} (${rank}), ${date}: ${text({ kind: 'duty', shift, post })}`
+  return (
+    <>
+      {ask && (
+        <form onSubmit={submit} aria-labelledby="roster-swap-ask">
+          <h2 id="roster-swap-ask">{t('roster.swapAsk')}</h2>
+          <p className="note">{t('roster.swapHelp')}</p>
+          <label>{t('roster.swapMine')} <select name="giveId" required>
+            {mine.map((r) => <option key={r.id} value={r.id}>{r.on_date}: {text(r)}</option>)}
+          </select></label>
+          <label>{t('roster.swapOther')} <select name="takeId" required>
+            {others.map((r) => <option key={r.id} value={r.id}>{side(r.full_name, r.rank, r.on_date, r.shift ?? '', r.post ?? '')}</option>)}
+          </select></label>
+          <label>{t('roster.swapReason')} <input name="reason" required minLength={10} maxLength={500} /></label>
+          {error && <p role="alert">{error}</p>}
+          <button type="submit">{t('roster.swapSend')}</button>
+        </form>
+      )}
+      {swaps.length > 0 && (
+        <section aria-labelledby="roster-swaps">
+          <h2 id="roster-swaps">{t('roster.swaps')}</h2>
+          <ul className="plain">{swaps.map((s) => (
+            <SwapCard key={s.id} swap={s} manage={manage} onSaved={onSaved} line={t('roster.swapLine', {
+              give: side(s.give_name, s.give_rank, s.give_date, s.give_shift, s.give_post),
+              take: side(s.take_name, s.take_rank, s.take_date, s.take_shift, s.take_post),
+            })} />
+          ))}</ul>
+        </section>
+      )}
+    </>
+  )
+}
+
+const SWAP_CHIP = { waiting: 'c-warn', approved: 'c-ok', refused: 'c-neu', lapsed: 'c-neu' }
+
+function SwapCard({ swap: s, line, manage, onSaved }: { swap: Swap; line: string; manage: boolean; onSaved: () => void }) {
+  const t = useT()
+  const [note, setNote] = useState('')
+  const [error, setError] = useState('')
+  async function decide(approve: boolean) {
+    setError('')
+    try {
+      await send(`/duty-roster/swaps/${s.id}/decision`, 'POST', { approve, note: note.trim() || null })
+      onSaved()
+    } catch (err) { setError((err as Error).message) }
+  }
+  return (
+    <li className="card">
+      <span className={`chip ${SWAP_CHIP[s.state]}`}>{t.code('roster.swapState', s.state)}</span>
+      <p>{line}</p>
+      {s.reason && <p>{t('roster.swapWhy', { reason: s.reason })}</p>}
+      {s.note && <p>{t('roster.swapAnswer', { note: s.note })}</p>}
+      {s.decided_by && <p className="note">{t('roster.swapDecided', { name: s.decided_by })}</p>}
+      {manage && (s.state === 'waiting' || s.state === 'lapsed') && (
+        <>
+          <label>{t('roster.swapNote')} <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} /></label>
+          {error && <p role="alert">{error}</p>}
+          <div className="chips">
+            {s.state === 'waiting' && <button type="button" className="btn-p" onClick={() => void decide(true)}>{t('roster.swapApprove')}</button>}
+            <button type="button" onClick={() => void decide(false)}>{t('roster.swapRefuse')}</button>
+          </div>
+        </>
       )}
     </li>
   )

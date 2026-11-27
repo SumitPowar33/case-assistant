@@ -1,6 +1,7 @@
 """The duty roster at work (item 16) in a real browser against the real core, on the demo station: the officer in charge
 sees that a court date falls on the investigating officer's leave (on the roster and the dashboard), the front desk sees
-who is on duty now and the 112 screen who is on beat and patrol. Fits a desktop and a phone. Fictional data only."""
+who is on duty now and the 112 screen who is on beat and patrol, and an officer's request to swap a duty is approved by
+the officer in charge. Fits a desktop and a phone. Fictional data only."""
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -29,6 +30,9 @@ def test_the_roster_warns_of_a_court_date_and_the_desk_sees_who_is_on_duty(admin
     entry(io, court_day, kind="leave")
     for shift in ("morning", "evening", "night"):
         entry(desk, today, kind="duty", shift=shift, post="beat")
+    given, taken = ((now.date() + timedelta(days=n)).isoformat() for n in (3, 4))
+    entry(io, given, kind="duty", shift="morning", post="bandobast")
+    entry(desk, taken, kind="duty", shift="night", post="patrol")
     shots = ROOT / "apps/core/target"
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -60,6 +64,30 @@ def test_the_roster_warns_of_a_court_date_and_the_desk_sees_who_is_on_duty(admin
         page.evaluate("location.hash = '#/'")
         expect(page.get_by_text(f"court date {court_day}, investigating officer not on court duty")).to_be_visible()
         shoot(page, "dashboard-court")
+
+        asker = signed_in("io.adminui")
+        asker.evaluate("location.hash = '#/roster'")
+        form = asker.get_by_role("form", name="Ask for a swap")
+        other = form.get_by_label("In exchange for")
+        other.select_option(value=other.locator("option", has_text=taken).get_attribute("value"))
+        form.get_by_label("Why (at least 10 characters)").fill("Fictional family function")
+        form.get_by_role("button", name="Send the request").click()
+        requests = asker.get_by_role("region", name="Swap requests")
+        expect(requests).to_contain_text("Waiting for the officer in charge")
+        expect(requests.get_by_role("button")).to_have_count(0)
+
+        page = signed_in("sho.adminui")
+        page.evaluate("location.hash = '#/roster'")
+        requests = page.get_by_role("region", name="Swap requests")
+        expect(requests).to_contain_text("Reason: Fictional family function")
+        shoot(page, "roster-swap")
+        page.set_viewport_size({"width": 1280, "height": 900})
+        requests.get_by_role("button", name="Approve the swap").click()
+        expect(requests).to_contain_text("Decided by")
+        expect(requests.get_by_role("button")).to_have_count(0)
+        listed = page.get_by_role("region", name="Next 31 days")
+        expect(listed.locator("article", has_text=given)).to_contain_text("HC Fictional Desk (HC): Morning (6 am to 2 pm), Bandobast")
+        expect(listed.locator("article", has_text=taken)).to_contain_text("SI Fictional Investigator (SI): Night (10 pm to 6 am), Patrolling vehicle")
 
         page = signed_in("front_desk.adminui")
         for screen, title, name in (("#/front-desk", "On duty now", "desk-duty"), ("#/calls-112", "On beat and patrol now", "calls-duty")):

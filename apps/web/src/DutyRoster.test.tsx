@@ -121,3 +121,58 @@ test('a court date the roster does not allow for is listed with the officer\'s e
   await screen.findByRole('heading', { name: 'Next 31 days' })
   expect(screen.queryByRole('heading', { name: /Court dates to check/ })).toBeNull()
 })
+
+const swap = (extra = {}) => ({ id: 'w1', state: 'waiting',
+  give_officer_id: 'u1', give_name: 'SI Fictional Asha', give_rank: 'SI', give_date: '2026-11-25', give_shift: 'morning', give_post: 'beat',
+  take_officer_id: 'o2', take_name: 'SI Fictional Bela', take_rank: 'SI', take_date: '2026-11-26', take_shift: 'night', take_post: 'lock_up',
+  reason: 'Fictional family function', note: null, decided_by: null, ...extra })
+
+test('an officer asks to exchange their own duty for a colleague\'s, and the server\'s refusal is shown', async () => {
+  let refuse = false
+  const calls = stub(roster({ can_manage: false, rows: [row({ officer_id: 'u1' }), row({ id: 'a3', officer_id: 'o2', full_name: 'SI Fictional Bela', shift: 'night', post: 'lock_up' })] }),
+    () => refuse ? { status: 409, body: { message: 'One of these duties is already in a request that waits for a decision.' } } : { status: 201, body: {} })
+  render(<DutyRoster />)
+  expect(await screen.findByRole('heading', { name: 'Ask for a swap' })).toBeTruthy()
+  expect([...(screen.getByLabelText('My duty') as HTMLSelectElement).options].map((o) => o.value)).toEqual(['a1'])
+  expect([...(screen.getByLabelText('In exchange for') as HTMLSelectElement).options].map((o) => o.value)).toEqual(['a3'])
+  fireEvent.change(screen.getByLabelText('Why (at least 10 characters)'), { target: { value: ' Fictional family function ' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send the request' }))
+  await waitFor(() => expect(calls.find((c) => c.method === 'POST')).toEqual({ url: '/api/duty-roster/swaps', method: 'POST', body: { giveId: 'a1', takeId: 'a3', reason: 'Fictional family function' } }))
+  refuse = true
+  await screen.findByRole('button', { name: 'Send the request' })
+  fireEvent.change(screen.getByLabelText('Why (at least 10 characters)'), { target: { value: 'Fictional family function' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send the request' }))
+  expect(await screen.findByText('One of these duties is already in a request that waits for a decision.')).toBeTruthy()
+})
+
+test('the officer in charge approves or refuses a waiting request; a lapsed one can only be refused', async () => {
+  let n = 0
+  const calls = stub(roster({ rows: [], swaps: [swap(), swap({ id: 'w2', state: 'lapsed' })] }),
+    () => n++ === 0 ? { status: 400, body: { message: 'Say why the swap is refused (at least 10 characters).' } } : { status: 204, body: {} })
+  render(<DutyRoster />)
+  expect(await screen.findByRole('heading', { name: 'Swap requests' })).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: 'Ask for a swap' })).toBeNull()
+  expect(screen.getByText('Waiting for the officer in charge')).toBeTruthy()
+  expect(screen.getByText('Lapsed: a duty has passed or been taken back')).toBeTruthy()
+  expect(screen.getAllByText('SI Fictional Asha (SI), 2026-11-25: Morning (6 am to 2 pm), Beat, to be exchanged for SI Fictional Bela (SI), 2026-11-26: Night (10 pm to 6 am), Lock-up guard')).toHaveLength(2)
+  expect(screen.getAllByText('Reason: Fictional family function')).toHaveLength(2)
+  expect(screen.getAllByRole('button', { name: 'Approve the swap' })).toHaveLength(1)
+  fireEvent.click(screen.getAllByRole('button', { name: 'Refuse' })[1])
+  expect(await screen.findByText('Say why the swap is refused (at least 10 characters).')).toBeTruthy()
+  expect(calls.find((c) => c.method === 'POST')).toEqual({ url: '/api/duty-roster/swaps/w2/decision', method: 'POST', body: { approve: false, note: null } })
+  fireEvent.change(screen.getAllByLabelText('Note (needed to refuse, at least 10 characters)')[0], { target: { value: ' Fictional agreed ' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Approve the swap' }))
+  await waitFor(() => expect(calls.some((c) => c.url === '/api/duty-roster/swaps/w1/decision' && JSON.stringify(c.body) === JSON.stringify({ approve: true, note: 'Fictional agreed' }))).toBe(true))
+})
+
+test('a decided request shows its answer to a reader, with nothing to press; a reason not told is not shown', async () => {
+  stub(roster({ rows: [], can_manage: false, swaps: [swap({ state: 'refused', reason: null, note: 'Fictional bandobast that day', decided_by: 'PI Fictional Chetan' }), swap({ id: 'w3', state: 'approved' }), swap({ id: 'w4' })] }))
+  render(<DutyRoster />)
+  expect(await screen.findByText('Refused')).toBeTruthy()
+  expect(screen.getByText('Approved')).toBeTruthy()
+  expect(screen.getByText('Note: Fictional bandobast that day')).toBeTruthy()
+  expect(screen.getByText('Decided by PI Fictional Chetan')).toBeTruthy()
+  expect(screen.getAllByText(/^Reason: /)).toHaveLength(2)
+  expect(screen.queryByRole('button', { name: 'Refuse' })).toBeNull()
+  expect(screen.queryByRole('heading', { name: 'Ask for a swap' })).toBeNull()
+})

@@ -225,6 +225,150 @@ class DutyRosterApiTest {
         call(post("/api/duty-roster"), sho, entry(station, shoId, today, "leave", "morning", "beat")).andExpect(status().isBadRequest());
     }
 
+    String made(UUID officer, LocalDate on, String kind, String shift, String post) throws Exception {
+        return json.readTree(call(post("/api/duty-roster"), sho, entry(station, officer, on, kind, shift, post)).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("id").asText();
+    }
+
+    static String swap(String give, String take, String reason) {
+        return "{\"giveId\":\"" + give + "\",\"takeId\":\"" + take + "\",\"reason\":\"" + reason + "\"}";
+    }
+
+    String asked(String who, String give, String take) throws Exception {
+        return json.readTree(call(post("/api/duty-roster/swaps"), who, swap(give, take, "  A family function that evening  ")).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("id").asText();
+    }
+
+    ResultActions decide(String who, String id, boolean approve, String note) throws Exception {
+        return call(post("/api/duty-roster/swaps/" + id + "/decision"), who, "{\"approve\":" + approve + (note == null ? "" : ",\"note\":\"" + note + "\"") + "}");
+    }
+
+    /** "name date shift post" of every standing entry, in the roster's order. */
+    java.util.List<String> standing() throws Exception {
+        var out = new java.util.ArrayList<String>();
+        roster(sho).get("rows").forEach(r -> out.add(r.get("full_name").asText() + " " + r.get("on_date").asText() + " " + r.get("shift").asText() + " " + r.get("post").asText()));
+        return out;
+    }
+
+    @Test
+    void anApprovedSwapExchangesTheTwoDutiesAndKeepsWhatWasThereBefore() throws Exception {
+        String mine = made(io1, today.plusDays(2), "duty", "night", "lock_up"), theirs = made(io2, today.plusDays(3), "duty", "morning", "beat");
+        String id = asked(io, mine, theirs);
+        var waiting = roster(sho).get("swaps").get(0);
+        assertThat(waiting.get("state").asText()).isEqualTo("waiting");
+        assertThat(waiting.get("give_name").asText()).isEqualTo("Fictional Asha");
+        assertThat(waiting.get("take_post").asText()).isEqualTo("beat");
+        assertThat(waiting.get("reason").asText()).isEqualTo("A family function that evening");
+        assertThat(standing()).containsExactly("Fictional Asha " + today.plusDays(2) + " night lock_up", "Fictional Bela " + today.plusDays(3) + " morning beat");   // nothing moves yet
+        decide(sho, id, true, null).andExpect(status().isNoContent());
+        assertThat(standing()).containsExactly("Fictional Bela " + today.plusDays(2) + " night lock_up", "Fictional Asha " + today.plusDays(3) + " morning beat");
+        var done = roster(io).get("swaps").get(0);
+        assertThat(done.get("state").asText()).isEqualTo("approved");
+        assertThat(done.get("decided_by").asText()).isEqualTo("Fictional Sho");
+        assertThat(db.sql("select count(*) from duty_assignment").query(Integer.class).single()).isEqualTo(4);   // the two old rows are kept, taken back
+        assertThat(db.sql("select count(*) from duty_assignment_cancel").query(Integer.class).single()).isEqualTo(2);
+        decide(sho, id, true, null).andExpect(status().isConflict());
+        decide(sho, id, false, "Changed my mind afterwards").andExpect(status().isConflict());
+    }
+
+    @Test
+    void aSwapOfTwoPostsOfTheSameShiftIsTaken() throws Exception {
+        String mine = made(io1, today.plusDays(1), "duty", "evening", "beat"), theirs = made(io2, today.plusDays(1), "duty", "evening", "court");
+        decide(sho, asked(io, mine, theirs), true, " Agreed by both ").andExpect(status().isNoContent());
+        assertThat(standing()).containsExactly("Fictional Bela " + today.plusDays(1) + " evening beat", "Fictional Asha " + today.plusDays(1) + " evening court");
+    }
+
+    @Test
+    void aRefusalNeedsANoteAndMovesNothingAndOnlyThePartiesAndTheWriterReadTheReason() throws Exception {
+        String mine = made(io1, today.plusDays(2), "duty", "night", "patrol"), theirs = made(io2, today.plusDays(3), "duty", "morning", "beat");
+        String id = asked(io, mine, theirs);
+        decide(sho, id, false, null).andExpect(status().isBadRequest());
+        decide(sho, id, false, "   no    ").andExpect(status().isBadRequest());
+        decide(sho, id, false, "Both are needed as rostered").andExpect(status().isNoContent());
+        assertThat(standing()).hasSize(2).first().isEqualTo("Fictional Asha " + today.plusDays(2) + " night patrol");
+        for (String who : new String[] {io, TestAuth.bearer(tokens, io2), sho}) {
+            var s = roster(who).get("swaps").get(0);
+            assertThat(s.get("state").asText()).isEqualTo("refused");
+            assertThat(s.get("reason").asText()).isEqualTo("A family function that evening");
+            assertThat(s.get("note").asText()).isEqualTo("Both are needed as rostered");
+        }
+        var third = roster(TestAuth.bearer(tokens, user(station, "io", "Fictional Chitra"))).get("swaps").get(0);
+        assertThat(third.get("give_name").asText()).isEqualTo("Fictional Asha");
+        assertThat(third.get("reason").isNull()).isTrue();
+        assertThat(third.get("note").isNull()).isTrue();
+    }
+
+    @Test
+    void onlyTheOfficerAsksForTheirOwnDutyAndOnlyTheOfficerInChargeDecides() throws Exception {
+        String mine = made(io1, today.plusDays(2), "duty", "night", "patrol"), theirs = made(io2, today.plusDays(3), "duty", "morning", "beat");
+        String bela = TestAuth.bearer(tokens, io2);
+        call(post("/api/duty-roster/swaps"), bela, swap(mine, theirs, "Not my duty to give")).andExpect(status().isNotFound());
+        call(post("/api/duty-roster/swaps"), sho, swap(mine, theirs, "Not my duty to give")).andExpect(status().isNotFound());
+        call(post("/api/duty-roster/swaps"), farToken, swap(mine, theirs, "From another station")).andExpect(status().isNotFound());
+        call(post("/api/duty-roster/swaps"), io, swap(UUID.randomUUID().toString(), theirs, "No such entry here")).andExpect(status().isNotFound());
+        call(post("/api/duty-roster/swaps"), io, swap(mine, UUID.randomUUID().toString(), "No such entry here")).andExpect(status().isNotFound());
+        db.sql("insert into duty_assignment (station_id, officer_id, on_date, kind, shift, post, recorded_by) values (?,?,?,'duty','morning','beat',?)")
+                .params(far, farIo, today.plusDays(3), shoId).update();
+        String farDuty = db.sql("select id from duty_assignment where station_id = ?").param(far).query(UUID.class).single().toString();
+        call(post("/api/duty-roster/swaps"), io, swap(mine, farDuty, "A duty of another station")).andExpect(status().isNotFound());
+        String second = made(io1, today.plusDays(4), "duty", "morning", "beat");
+        call(post("/api/duty-roster/swaps"), io, swap(mine, second, "Both are my own duties")).andExpect(status().isBadRequest());
+        call(post("/api/duty-roster/swaps"), io, swap(mine, theirs, "   short   ")).andExpect(status().isBadRequest());
+        call(post("/api/duty-roster/swaps"), io, swap(mine, theirs, "x".repeat(501))).andExpect(status().isBadRequest());
+        call(post("/api/duty-roster/swaps"), io, "{\"giveId\":\"" + mine + "\",\"takeId\":\"" + theirs + "\"}").andExpect(status().isBadRequest());
+        mvc.perform(post("/api/duty-roster/swaps").contentType(MediaType.APPLICATION_JSON).content(swap(mine, theirs, "No token at all here")))
+                .andExpect(status().isUnauthorized());
+        String id = asked(io, mine, theirs);
+        for (String who : new String[] {io, bela, spNear, farToken}) decide(who, id, true, null).andExpect(status().isNotFound());
+        decide(sho, UUID.randomUUID().toString(), true, null).andExpect(status().isNotFound());
+        call(post("/api/duty-roster/swaps/" + id + "/decision"), sho, "{}").andExpect(status().isBadRequest());
+        // moved away since: the officer no longer asks, and the request is not approved
+        db.sql("update app_user set station_id = ? where id = ?").params(far, io1).update();
+        call(post("/api/duty-roster/swaps"), io, swap(second, theirs, "Moved to another station")).andExpect(status().isNotFound());
+        decide(sho, id, true, null).andExpect(status().isConflict()).andExpect(status().reason(org.hamcrest.Matchers.containsString("no longer posted")));
+        assertThat(db.sql("select count(*) from duty_swap_decision").query(Integer.class).single()).isZero();
+    }
+
+    @Test
+    void aSwapThatWouldDoubleAShiftOrPutADutyOnADayOffIsRefusedWhenAskedAndWhenApproved() throws Exception {
+        String mine = made(io1, today.plusDays(2), "duty", "night", "patrol"), theirs = made(io2, today.plusDays(3), "duty", "morning", "beat");
+        String leave = made(io1, today.plusDays(3), "leave", null, null);   // the asker is on leave the day they would take
+        call(post("/api/duty-roster/swaps"), io, swap(mine, theirs, "A family function that evening")).andExpect(status().isConflict())
+                .andExpect(status().reason(org.hamcrest.Matchers.containsString("Fictional Asha already has")));
+        call(post("/api/duty-roster/" + leave + "/cancel"), sho, "{\"reason\":\"Leave not taken after all\"}").andExpect(status().isNoContent());
+        String id = asked(io, mine, theirs);
+        String clash = made(io2, today.plusDays(2), "duty", "night", "beat");   // written after the request: the other officer now has that shift
+        decide(sho, id, true, null).andExpect(status().isConflict()).andExpect(status().reason(org.hamcrest.Matchers.containsString("Fictional Bela already has")));
+        assertThat(db.sql("select count(*) from duty_swap_decision").query(Integer.class).single()).isZero();
+        call(post("/api/duty-roster/" + clash + "/cancel"), sho, "{\"reason\":\"Written by mistake earlier\"}").andExpect(status().isNoContent());
+        made(io2, today.plusDays(2), "duty", "morning", "beat");   // another shift that day is no clash
+        decide(sho, id, true, null).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void aWaitingDutyIsInOneRequestAndARequestLapsesWhenADutyIsTakenBack() throws Exception {
+        String mine = made(io1, today.plusDays(2), "duty", "night", "patrol"), theirs = made(io2, today.plusDays(3), "duty", "morning", "beat");
+        String other = made(io2, today.plusDays(4), "duty", "morning", "beat");
+        String id = asked(io, mine, theirs);
+        call(post("/api/duty-roster/swaps"), io, swap(mine, other, "The same duty asked twice")).andExpect(status().isConflict())
+                .andExpect(status().reason(org.hamcrest.Matchers.containsString("waits for a decision")));
+        call(post("/api/duty-roster/" + theirs + "/cancel"), sho, "{\"reason\":\"Sent to court that day\"}").andExpect(status().isNoContent());
+        assertThat(roster(sho).get("swaps").get(0).get("state").asText()).isEqualTo("lapsed");
+        decide(sho, id, true, null).andExpect(status().isConflict()).andExpect(status().reason(org.hamcrest.Matchers.containsString("stand on the roster")));
+        call(post("/api/duty-roster/swaps"), io, swap(mine, theirs, "A duty that was taken back")).andExpect(status().isConflict());
+        asked(io, mine, other);   // the lapsed request holds nothing
+        decide(sho, id, false, "The other duty was taken back").andExpect(status().isNoContent());   // a lapsed one may still be closed
+        assertThat(roster(sho).get("swaps")).extracting(s -> s.get("state").asText()).containsExactly("waiting", "refused");
+        // old decisions leave the list; a waiting request stays
+        db.sql("alter table duty_swap_decision disable trigger duty_swap_decision_kept").update();
+        db.sql("alter table duty_swap disable trigger duty_swap_kept").update();
+        db.sql("update duty_swap_decision set decided_at = now() - interval '40 days'").update();
+        db.sql("update duty_swap set asked_at = now() - interval '41 days'").update();
+        db.sql("alter table duty_swap_decision enable trigger duty_swap_decision_kept").update();
+        db.sql("alter table duty_swap enable trigger duty_swap_kept").update();
+        assertThat(roster(sho).get("swaps")).extracting(s -> s.get("state").asText()).containsExactly("waiting");
+    }
+
     @Test
     void validationAndClashes() throws Exception {
         call(post("/api/duty-roster"), sho, entry(station, io1, today.minusDays(1), "duty", "morning", "beat")).andExpect(status().isBadRequest());

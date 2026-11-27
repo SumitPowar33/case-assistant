@@ -52,8 +52,8 @@ On a phone the same order, one column; long screens open one part at a time.
 
 ## 5. Duty schedule per station (new, item 16)
 Built: the roster (session 127), and in session 138 the on-duty list on the front desk, the beat and patrol list on the
-112 screen and a court-date warning on the roster screen; in session 139 the same warning on the Dashboard. Not built: the
-state's own rules from its pack, swaps. **Station duty roster**: shifts (morning, evening, night), posts (station house, front
+112 screen and a court-date warning on the roster screen; in session 139 the same warning on the Dashboard and swaps with
+the SHO's approval. Not built: the state's own rules from its pack, 112 calls sent to the beat officer. **Station duty roster**: shifts (morning, evening, night), posts (station house, front
 desk, beat, patrolling vehicle, court duty, lock-up guard, bandobast), who is on which, leave and weekly off, swaps with
 the SHO's approval. Uses: the front desk sees who the duty officer is; 112 calls go to the officer on beat; the
 dashboard warns when a court date clashes with an officer's duty. Rules come from the state pack (each state's police
