@@ -18,13 +18,13 @@ never written inline. The tokens keep the board's colours and give each a role.
 | Field | `--field` `#808C99` (hover `--field-hover` `#5B6775`) | text fields, lists, check boxes: 3.4:1 on white (WCAG 1.4.11) |
 | Text | `--text` `#16202A`, `--text-2` `#3B4754`, `--muted` `#5B6775` (5.3:1 on the ground) | body; secondary; captions, hints |
 | Primary | `--primary` `#1F4E8C`, hover `--primary-dark` `#163B6B`, pressed `--primary-press` `#102C52`, `--selected` `#DCE7F5`, `--on-primary` white | the one main action, links, the selected menu item |
-| Focus | `--focus` `#2B6CD4` | the keyboard ring, 3 px with a 2 px gap; 5:1 on white and on the ground |
+| Focus | `--focus` `#2B6CD4`, `--focus-soft` (it at 18 %) | the keyboard ring, 3 px with a 2 px gap; 5:1 on white and on the ground; the soft ring around a field being typed in |
 | Hover | `--hover` `#EEF2F6` | a neutral control or menu item under the pointer |
 | Scrim | `--scrim` (text colour at 45 %) | the page dimmed behind a side panel |
 
 Status pairs (background / ink, each 6:1 or more): critical `#FBE7E5/#9B1C13` (border `--crit-line`, soft box
-`--crit-soft`), warning `#FDF0DC/#8A4B06` (border `--warn-line`, `--warn-ink` `#6E3B05` for the demo chip), ok `#E6F4EC/#155D35`, info
-`#E3ECF7/#163B6B`, neutral `#EEF1F4/#3B4754`, AI `#EEE9FA/#4B2E91` (border `--ai-line`, draft box `--ai-soft`).
+`--crit-soft`, ring of a refused field `--crit-ring`), warning `#FDF0DC/#8A4B06` (border `--warn-line`, `--warn-ink` `#6E3B05` for the demo chip), ok `#E6F4EC/#155D35`, info
+`#E3ECF7/#163B6B` (border `--info-line`, message box `--info-soft`), neutral `#EEF1F4/#3B4754`, AI `#EEE9FA/#4B2E91` (border `--ai-line`, draft box `--ai-soft`).
 Colour never carries meaning alone: the chip always has a word.
 
 **Type** (`--fs-*`): 11 menu group and calendar month, in capitals (`2xs`), 12 caption and table head (`xs`), 13 label (`sm`), 14 control and table (`md`), 15 body (`body`),
@@ -50,6 +50,26 @@ phone; 20 px between the cards of a screen.
   and AI chips carry a hairline border of their colour.
 - Tables: head in `--surface-2`, 12 px capitals in `--muted`; rows divided by `--line-soft`; the row under the pointer
   in `--surface-2`; `table.cards` is a card (and one card per row on a phone).
+
+## Forms (`index.css` "forms", `Forms.tsx` `Form`)
+- One label style everywhere (record forms, the typing field, sign-in, the tour, small inline forms): 13 px semibold
+  `--text-2` above its field, 14 px on a phone. The field's own text is in the body weight.
+- Fields: 12 px inside; while typing a `--primary` border with a soft 3 px ring (`--focus-soft`); a field the browser or
+  server refused (`:user-invalid`, `aria-invalid`) has a `--crit` border and a red ring (`--crit-ring`) only after the
+  officer touched it or pressed Save, never on a form just opened. File pickers draw their button like a small secondary
+  button. Text areas grow downwards only.
+- The typing field (`TypingField.tsx`) inside a form has the same label and text size as the other fields (it was larger).
+- Check boxes and radios: the box first, the words beside it in the body text, the whole line clickable; 44 px on a phone.
+- Help text: `small`, `.note`, `.sub` inside a form are 13 px `--muted`; a paragraph is 14 px `--text-2`.
+- Groups: an `h4` inside a form is a group title (12 px capitals, a hairline above); each repeated block (a witness, an
+  item) is a `fieldset` in `--surface-2` with its fields side by side (one to a row in a panel).
+- Messages: an error (`p[role=alert]`) is a red box with a 4 px red edge (`--crit-soft`, `--crit-line`); a confirmation
+  (`p[role=status]`) is a blue one (`--info-soft`, `--info-line`). The words always say what happened.
+- Save: the one filled button, at least 128 px wide, a little apart from the fields. A form that stands on the page by
+  itself (`main > form.record-form`, e.g. Court) is a card.
+- Side panel: 480 px from the right (the whole width on a phone), page dimmed; a 72 px head with the title (17 px bold)
+  centred on one to three lines and a 32 px close mark; 24 px sides (16 on a phone); the Save button sits in a white
+  bar with a hairline above it, always in view at the foot of the panel.
 
 ## Dashboard (board 1, `Dashboard.tsx`)
 - Page head: the date, "Welcome, ..." (h1) and one sentence with the count due in 7 days.

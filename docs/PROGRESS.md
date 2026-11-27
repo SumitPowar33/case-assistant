@@ -58,12 +58,59 @@ sidebar, (g) the remaining screens one by one; then a review pass from (b).
 | Area | State | Branch / PR |
 |---|---|---|
 | (a) Design tokens and base components | done 25 Nov 2026 | `ui/design-20261125` |
-| (b) Dashboard | done 26 Nov 2026 | `ui/design-20261126` (built on `ui/design-20261125`, not yet merged) |
-| (c) Forms | **next** | |
-| (d) Lists and tables | to do | |
+| (b) Dashboard | done 26 Nov 2026 | `ui/design-20261126` (merged) |
+| (c) Forms | done 27 Nov 2026 | `ui/design-20261127` |
+| (d) Lists and tables | **next** | |
 | (e) Case screen | to do | |
 | (f) Sign-in, header, sidebar | to do | |
 | (g) Remaining screens | to do | |
+
+### 27 Nov 2026: (c) Forms
+Branch `ui/design-20261127` from `setup/seed` (areas a and b are merged there). Looked at the Add evidence, Add a person,
+Register a new FIR and Take a complaint panels, a panel with an error, and the always-open forms of the case diary,
+search and seizure, court and password, at 1440 and 390 px on the demo case (`docs/design/shots/2026-11-27/before-*`,
+`after-*`).
+
+What was weak:
+1. Errors were plain body text (`p role=alert`) at the foot of the form: after Save the officer could not tell an error
+   from a hint, and in a long panel it sat below the fold. Confirmations (`role=status`) looked the same.
+2. Four label styles: record forms 13 px semibold, the typing field 15 px regular with a larger (17.6 px) text, sign-in
+   14 px bold, small inline forms none. The typing field also had its own margins, so its label stood further off.
+3. Side panel: the title stuck to the top of a 72 px head with 40 px empty under it; the panel's shadow bled up into the
+   head; the Save button floated on a white halo with no edge, so fields seemed to slide under nothing.
+4. No visible state between "empty" and "typing" other than the border colour; a refused field was never marked.
+5. Long forms (search and seizure) had no grouping beyond bare fieldsets with stacked fields; group headings were the
+   browser's h4. A form standing on its own (Court) floated on the grey ground with no card.
+
+What changed (`index.css` "forms" and "messages", tokens `--focus-soft`, `--crit-ring`, `--info-line`, `--info-soft`;
+DESIGN.md "Forms"; no markup changed):
+- Errors are a red box with a red edge, confirmations a blue box; both 14 px, padded, the words unchanged.
+- One label style everywhere (14 px on a phone); the typing field inside a form matches the other fields.
+- Fields: 12 px inside, a soft ring while typing, a red border and ring once the browser refuses a value (`:user-invalid`,
+  only after a touch or Save); the file picker's button is drawn; text areas resize downwards only.
+- Check boxes: the box beside its words, the whole line clickable, 44 px on a phone.
+- Groups: `h4` in a form is a small-capitals title with a hairline above; repeated blocks are tinted fieldsets with
+  their fields side by side (one to a row in a panel).
+- Panel: the title is centred in the head (one to three lines), 17 px bold, with a 32 px close mark; the head carries the
+  panel's edge shadow and nothing bleeds; the Save button sits in a white bar with a straight hairline above it.
+- A form directly on the page is a card (Court's "Start a court record").
+
+Nothing a screen does or says changed: every label, role and text the tests read is the same.
+
+Tests: `scripts/test-all.sh` all PASS before and after; `test_layout.py` and `test_phone.py` pass; gates unchanged.
+(Baseline note: a first baseline run failed the two database suites only because this session's shell had an empty
+`DATABASE_URL`; run again without it, both PASS.)
+
+Skipped / not checked: required fields are not marked (it needs a word in every language, or a mark the tests' label
+lookups would read; question 1); forms only another role sees (admin, SHO roster, supervisor) and forms shown only in
+later case states were not screenshotted (the layout test opens the demo case's forms); checked in English only.
+
+Next: (d) lists and tables (FIRs, front desk, property, court) including the phone cards.
+
+Questions for Sumit:
+1. Mark required fields? Either "(required)" after the label in all 11 languages, or "optional" on the others. Which?
+2. Confirmations (saved, logged) are now a blue box. Would you prefer green for "done"?
+3. On a phone, labels are now 14 px (13 on a desktop). Large enough in daylight, or 15?
 
 ### 26 Nov 2026: (b) Dashboard
 Branch `ui/design-20261126` starts from `ui/design-20261125` (area a, PR not yet merged) with `setup/seed` merged in.
