@@ -6,15 +6,62 @@ names and numbers in them fictional). **Every screen is built to its board and c
 committed** (CLAUDE.md, "Screens"). Where the app differs on purpose, the difference is listed at the end.
 
 ## Look (tokens, `apps/web/src/index.css` `:root`)
-- Ground `#F4F6F8`; surfaces white with a `#DDE3EA` border and 12 px radius (`.card`, every `section` of a screen).
-- Text `#16202A`, secondary `#3B4754`, muted `#5B6775`. Primary `#1F4E8C` (hover `#163B6B`), selected nav `#DCE7F5`.
-- Status chips (`.chip`): critical `#FBE7E5/#9B1C13`, warning `#FDF0DC/#8A4B06`, ok `#E6F4EC/#155D35`,
-  info `#E3ECF7/#163B6B`, neutral `#EEF1F4/#3B4754`, AI `#EEE9FA/#4B2E91`. Colour never carries meaning alone: the chip
-  always has a word.
-- Buttons 44 px high, 8 px radius: primary filled, secondary white with a `#C3CCD6` border.
-- Type: the board uses IBM Plex Sans; the app keeps **Noto Sans** (system Latin + the bundled Noto Indian scripts),
-  because Plex has no Bengali, Gurmukhi, Gujarati, Odia, Tamil, Telugu, Kannada or Malayalam. Sizes follow the board:
-  h1 26–28 px, h2 16–17 px, body 14–15 px, labels 12–13 px.
+Every colour, size, space, radius and shadow of a screen is a token; a new one is added to `:root` and to this list,
+never written inline. The tokens keep the board's colours and give each a role.
+
+**Colour roles**
+| Role | Tokens | Used for |
+|---|---|---|
+| Ground | `--ground` `#F4F6F8` | the page behind the cards |
+| Surface | `--surface` `#FFFFFF`, `--surface-2` `#F7F9FB` (sunken) | cards, panels, fields; table heads, quotes, read-only fields |
+| Lines | `--line` `#DDE3EA`, `--line-soft` `#EEF1F4`, `--line-strong` `#C3CCD6` | card borders; rows inside a card; a secondary button's border |
+| Field | `--field` `#808C99` (hover `--field-hover` `#5B6775`) | text fields, lists, check boxes: 3.4:1 on white (WCAG 1.4.11) |
+| Text | `--text` `#16202A`, `--text-2` `#3B4754`, `--muted` `#5B6775` (5.3:1 on the ground) | body; secondary; captions, hints |
+| Primary | `--primary` `#1F4E8C`, hover `--primary-dark` `#163B6B`, pressed `--primary-press` `#102C52`, `--selected` `#DCE7F5`, `--on-primary` white | the one main action, links, the selected menu item |
+| Focus | `--focus` `#2B6CD4` | the keyboard ring, 3 px with a 2 px gap; 5:1 on white and on the ground |
+| Hover | `--hover` `#EEF2F6` | a neutral control or menu item under the pointer |
+| Scrim | `--scrim` (text colour at 45 %) | the page dimmed behind a side panel |
+
+Status pairs (background / ink, each 6:1 or more): critical `#FBE7E5/#9B1C13` (border `--crit-line`, soft box
+`--crit-soft`), warning `#FDF0DC/#8A4B06` (border `--warn-line`, `--warn-ink` `#6E3B05` for the demo chip), ok `#E6F4EC/#155D35`, info
+`#E3ECF7/#163B6B`, neutral `#EEF1F4/#3B4754`, AI `#EEE9FA/#4B2E91` (border `--ai-line`, draft box `--ai-soft`).
+Colour never carries meaning alone: the chip always has a word.
+
+**Type** (`--fs-*`): 11 menu group and calendar month, in capitals (`2xs`), 12 caption and table head (`xs`), 13 label (`sm`), 14 control and table (`md`), 15 body (`body`),
+17 section title h2 (`lg`), 20 figure (`xl`), 26 page title h1 (`2xl`), 30 dashboard tile (`3xl`). Line heights
+`--lh-tight` 1.25 (titles, buttons), `--lh-snug` 1.35 (fields, h2), `--lh-body` 1.5. Weights 600 (`--fw-semi`) and 700
+(`--fw-bold`). Numbers in tables and tiles are tabular. The board uses IBM Plex Sans; the app keeps **Noto Sans**
+(system Latin + the bundled Noto Indian scripts), because Plex has no Bengali, Gurmukhi, Gujarati, Odia, Tamil, Telugu,
+Kannada or Malayalam.
+
+**Space** (`--sp-*`, 4 px steps): 4, 8, 12, 16, 20, 24, 32, 40, 48. Cards 20 x 24 px inside on a desktop, 14 px on a
+phone; 20 px between the cards of a screen.
+
+**Shape and depth**: radius `--r-sm` 6, `--r-md` 8 (controls), `--r-lg` 12 (cards), `--r-pill` (chips). Shadows
+`--shadow-1` (a card or a button on the ground, barely there), `--shadow-2` (floating: the tour, the sign-in card),
+`--shadow-3` (the side panel). A card inside a card has no shadow.
+
+**Controls**: `--control` 40 px high on a desktop, `--touch` 44 px on a phone (and every tap target there).
+- Buttons, 8 px radius: secondary (default) white with a `--line-strong` border, hover `--hover`; primary
+  (`button[type=submit]`, `.btn-p`) filled `--primary`, hover darker, pressed darkest; disabled at 55 %.
+- Text fields and lists: `--field` border, darker on hover, `--primary` while typing, `--surface-2` when read-only or
+  disabled, `--crit` when `aria-invalid`; lists draw their own chevron; check boxes and radios in `--primary`.
+- Chips (`.chip` + `.c-crit` `.c-warn` `.c-ok` `.c-info` `.c-neu` `.c-ai`): pill, 12 px semibold, 22 px high; critical
+  and AI chips carry a hairline border of their colour.
+- Tables: head in `--surface-2`, 12 px capitals in `--muted`; rows divided by `--line-soft`; the row under the pointer
+  in `--surface-2`; `table.cards` is a card (and one card per row on a phone).
+
+## Dashboard (board 1, `Dashboard.tsx`)
+- Page head: the date, "Welcome, ..." (h1) and one sentence with the count due in 7 days.
+- Tiles: label on top, figure at the bottom (figures line up when a label wraps); a figure that asks for action is red
+  and its tile carries a 3 px red line along the top.
+- Two columns from 1024 px up (`.dash-grid`: the rest and 300–360 px), one below. "Needs your attention" lines up its
+  chips, texts and buttons in three columns (CSS subgrid); the first line's button is the screen's one primary button.
+  "Coming deadlines" draws each date as a small calendar leaf, red within 3 days and amber within 7 (the words "n days
+  left" say it too).
+- "FIRs" is one card (`FirList inCard`, `section.cases`): an h2 and "Register a new FIR" in its head, the table flush
+  with the card's edges. On a phone the card goes and its rows are the usual row cards.
+- Empty lists say so in one muted, centred line (`.empty`).
 
 ## Frame (every signed-in screen)
 - Left sidebar (white, 220–248 px): the "CA" tile, "Case Assistant" and the user's station; the menu in groups; at the
@@ -55,6 +102,7 @@ Change password.
 ## Differences on purpose
 - A form opened from its button is a panel from the right (one field to a row), not a box inside the page; the board draws forms inline.
 - Fonts: Noto, not Plex (above).
+- Text-field borders are darker than the board's `#C3CCD6` (`--field` `#808C99`), and the keyboard ring is blue, not amber: the board's values are under 3:1 on white (WCAG 1.4.11). Secondary buttons keep `#C3CCD6`.
 - The board's numbers and names are examples; the app shows only what the case file holds. A board panel whose data the
   app does not have yet is left out rather than faked.
 - Words that judge are not used: the board's "Proved" in the readiness check is shown as **"Linked"** (the check says what

@@ -8,7 +8,8 @@ type Fir = { id: string; fir_year: number; fir_no: number; registered_at: string
 
 const PAGE = 50
 
-export default function FirList() {
+/** The FIRs screen; on the dashboard (inCard) the same list is one card, its title an h2 under the page's h1. */
+export default function FirList({ inCard = false }: { inCard?: boolean }) {
   const t = useT()
   const [page, setPage] = useState(0)
   // one extra row tells whether a next page exists
@@ -16,11 +17,9 @@ export default function FirList() {
   const data = rows?.slice(0, PAGE)
   if (error) return <p role="alert">{error}</p>
   if (!data) return <p>{t('common.loading')}</p>
-  return (
-    <>
-    <h1>{t('nav.firs')}</h1>
-    <NewFirForm />
-    {!data.length ? <p>{t('firs.empty')}</p> : <table className="cards">
+  const body = <>
+    {inCard ? <div className="list-head"><h2 id="firs-head">{t('nav.firs')}</h2><NewFirForm /></div> : <><h1>{t('nav.firs')}</h1><NewFirForm /></>}
+    {!data.length ? <p className="empty">{t('firs.empty')}</p> : <table className="cards">
       <caption className="visually-hidden">{t('nav.firs')}</caption>
       <thead><tr><th scope="col">{t('firs.colFir')}</th><th scope="col">{t('firs.colRegistered')}</th><th scope="col">{t('firs.colType')}</th><th scope="col">{t('firs.colAction')}</th></tr></thead>
       <tbody>
@@ -39,6 +38,6 @@ export default function FirList() {
       <span> {t('pages.page', { n: page + 1 })} </span>
       <button disabled={rows!.length <= PAGE} onClick={() => setPage(page + 1)}>{t('pages.older')}</button>
     </nav>}
-    </>
-  )
+  </>
+  return inCard ? <section className="flush cases" aria-labelledby="firs-head">{body}</section> : body
 }
