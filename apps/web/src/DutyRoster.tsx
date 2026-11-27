@@ -4,7 +4,7 @@ import { useT } from './i18n'
 import { useLoad } from './useLoad'
 
 type Row = { id: string; officer_id: string; full_name: string; rank: string; on_date: string; kind: 'duty' | 'weekly_off' | 'leave'; shift: string | null; post: string | null; note: string | null }
-type Clash = Pick<Row, 'full_name' | 'rank' | 'on_date' | 'kind' | 'shift' | 'post'> & { officer_id: string; fir_id: string; fir_no: number; fir_year: number }
+type Clash = Pick<Row, 'full_name' | 'rank' | 'on_date' | 'shift' | 'post'> & { kind: Row['kind'] | null; officer_id: string; fir_id: string; fir_no: number; fir_year: number }
 type Side<K extends string> = Record<`${K}_officer_id` | `${K}_name` | `${K}_rank` | `${K}_date` | `${K}_shift` | `${K}_post`, string>
 type Swap = Side<'give'> & Side<'take'> & { id: string; state: 'waiting' | 'approved' | 'refused' | 'lapsed'; reason: string | null; note: string | null; decided_by: string | null }
 type Roster = { rows: Row[]; now: { shift: string; on_duty: Row[] }; court_clashes?: Clash[]; swaps?: Swap[]; can_manage: boolean }
@@ -48,7 +48,8 @@ export default function DutyRoster() {
           <ul className="plain">{clashes.map((c) => (
             <li key={`${c.on_date} ${c.officer_id} ${c.fir_id}`} className="card">
               <span className="chip c-warn">{c.on_date}</span> <a href="#/court">{t('roster.courtCase', { fir: `${c.fir_no}/${c.fir_year}` })}</a>
-              <p>{t('roster.courtOfficer', { officer: `${c.full_name} (${c.rank})`, entry: entry(c) })}</p>
+              <p>{c.kind ? t('roster.courtOfficer', { officer: `${c.full_name} (${c.rank})`, entry: entry({ ...c, kind: c.kind }) })
+                : t('roster.courtNothing', { officer: `${c.full_name} (${c.rank})` })}</p>
             </li>
           ))}</ul>
         </section>

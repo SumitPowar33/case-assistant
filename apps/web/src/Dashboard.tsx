@@ -1,12 +1,13 @@
 import FirList from './FirList'
 import { currentSession } from './api'
-import { istToday } from './formats'
+import { fmt, istToday } from './formats'
 import { useLoad } from './useLoad'
 import { useT, type Key } from './i18n'
 
 type Deadline = { fir_id: string; fir_no: number; fir_year: number; kind: string; due_on: string; basis: string; days_left: number }
-type Clash = { officer_id: string; full_name: string; rank: string; on_date: string; kind: string; shift: string | null; post: string | null
+type Clash = { officer_id: string; full_name: string; rank: string; on_date: string; kind: string | null; shift: string | null; post: string | null
   fir_id: string; fir_no: number; fir_year: number }
+type Call = { id: string; place: string; kind: string; sent: { sent_at: string; to_you: boolean }[] }
 type Board = { cases: number; due_in_7_days: number; notices_waiting: number; deadlines: Deadline[]; pocso_open?: { fir_id: string; fir_no: number; fir_year: number; open_steps: number }[] }
 
 /** How urgent a deadline is, as a word and a colour (the colour never alone). */
@@ -32,7 +33,11 @@ export default function Dashboard() {
   const roster = useLoad<{ court_clashes?: Clash[] }>(user?.station_id ? `/duty-roster?stationId=${user.station_id}` : null)
   const until = istToday(Date.now() + 14 * 86_400_000)
   const clashes = roster.data?.court_clashes?.filter((c) => c.on_date <= until) ?? []
-  const entry = (c: Clash) => c.kind === 'duty' ? `${t.code('roster.shift', c.shift ?? '')}, ${t.code('roster.post', c.post ?? '')}` : t.code('roster.kind', c.kind)
+  const entry = (c: Clash & { kind: string }) => c.kind === 'duty' ? `${t.code('roster.shift', c.shift ?? '')}, ${t.code('roster.post', c.post ?? '')}` : t.code('roster.kind', c.kind)
+  const officer = (c: Clash) => `${c.full_name} (${c.rank})`
+  // item 16: 112 events sent to this officer in the last 24 hours
+  const calls = useLoad<{ rows?: Call[] }>(user?.station_id ? `/calls-112?stationId=${user.station_id}` : null)
+  const toYou = (calls.data?.rows ?? []).flatMap((c) => c.sent.filter((s) => s.to_you && Date.now() - Date.parse(s.sent_at) < 86_400_000).map((s) => ({ ...c, at: s.sent_at })))
   return (
     <>
       <div className="page-head">
@@ -44,6 +49,7 @@ export default function Dashboard() {
       </div>
       {error && <p role="alert">{error}</p>}
       {roster.error && <p role="alert">{roster.error}</p>}
+      {calls.error && <p role="alert">{calls.error}</p>}
       {data && <>
         <div className="tiles" aria-label={t('nav.dashboard')} role="group">
           <div className="tile"><div>{t('dash.tileCases')}</div><div>{data.cases}</div></div>
@@ -53,6 +59,16 @@ export default function Dashboard() {
         <div className="dash-grid">
           <section className="flush attention" aria-labelledby="attention">
             <h2 id="attention">{t('dash.attention')}</h2>
+            {toYou.map((c) => (
+              <div className="row" key={c.id}>
+                <span className="chip c-crit">{t('chip.critical')}</span>
+                <div>
+                  <strong>{t('dash.call112', { kind: t.code('calls.kind', c.kind), place: c.place })}</strong>
+                  <div className="sub">{t('calls.sentToYou', { time: fmt(c.at) })}</div>
+                </div>
+                <a className="btn" href="#/calls-112">{t('dash.open')}</a>
+              </div>
+            ))}
             {(data.pocso_open ?? []).map((c) => (
               <div className="row" key={c.fir_id}>
                 <span className="chip c-crit">{t('chip.critical')}</span>
@@ -65,12 +81,12 @@ export default function Dashboard() {
                 <span className="chip c-warn">{t('chip.action')}</span>
                 <div>
                   <strong>{t('dash.courtClash', { fir: `${c.fir_no}/${c.fir_year}`, date: c.on_date })}</strong>
-                  <div className="sub">{t('roster.courtOfficer', { officer: `${c.full_name} (${c.rank})`, entry: entry(c) })}</div>
+                  <div className="sub">{c.kind ? t('roster.courtOfficer', { officer: officer(c), entry: entry({ ...c, kind: c.kind }) }) : t('roster.courtNothing', { officer: officer(c) })}</div>
                 </div>
                 <a className="btn" href="#/roster">{t('dash.open')}</a>
               </div>
             ))}
-            {soon.length === 0 && !data.pocso_open?.length && !clashes.length ? <p className="row empty">{t('dash.nothing')}</p> : soon.map((d, i) => {
+            {soon.length === 0 && !data.pocso_open?.length && !clashes.length && !toYou.length ? <p className="row empty">{t('dash.nothing')}</p> : soon.map((d, i) => {
               const u = urgency(d.days_left)
               return (
                 <div className="row" key={i}>

@@ -8,6 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -165,6 +168,76 @@ class Call112ApiTest {
         assertThat(list(desk).get("rows").get(0).get("details").asText()).startsWith("Fictional dispute");   // the officer who wrote it
         assertThat(list(sho).get("rows").get(0).get("caller_name").asText()).isEqualTo("Fictional Caller");   // the officer in charge
         assertThat(list(sho).get("rows").get(0).get("withheld").asBoolean()).isFalse();
+    }
+
+    /** A roster entry in the shift running now (written to the table: before 6 am the running night shift is yesterday's). */
+    UUID onDutyNow(UUID officer, UUID at, String post) {
+        String[] now = DutyRosterController.shiftAt(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+        return db.sql("insert into duty_assignment (station_id, officer_id, on_date, kind, shift, post, recorded_by) values (?,?,?,'duty',?,?,?) returning id")
+                .params(at, officer, LocalDate.parse(now[1]), now[0], post, officer).query(UUID.class).single();
+    }
+
+    String to(UUID officer) {
+        return "{\"officerId\":\"" + officer + "\"}";
+    }
+
+    @Test
+    void anAcknowledgedEventIsSentToBeatAndPatrolOfficersOnDutyNowOnceEach() throws Exception {
+        UUID beat = user(station, "io", "Fictional Beat"), car = user(station, "io", "Fictional Patrol"), house = user(station, "io", "Fictional House");
+        UUID entry = onDutyNow(beat, station, "beat");
+        onDutyNow(car, station, "patrol");
+        onDutyNow(house, station, "station_house");
+        String id = add(desk, "dispute");
+        String url = "/api/calls-112/" + id + "/send";
+        call(post(url), desk, to(beat)).andExpect(status().isConflict());   // not acknowledged yet
+        call(post("/api/calls-112/" + id + "/acknowledge"), desk, null).andExpect(status().isNoContent());
+        assertThat(list(desk).get("rows").get(0).get("sent")).isEmpty();
+        call(post(url), desk, to(house)).andExpect(status().isBadRequest());
+        call(post(url), desk, to(UUID.randomUUID())).andExpect(status().isBadRequest());
+        call(post(url), desk, "{}").andExpect(status().isBadRequest());
+        call(post(url), desk, to(beat)).andExpect(status().isNoContent());
+        call(post(url), desk, to(beat)).andExpect(status().isConflict());
+        call(post("/api/calls-112/" + id + "/open"), desk, "{\"as\":\"diary\"}").andExpect(status().isCreated());
+        call(post(url), sho, to(car)).andExpect(status().isNoContent());   // more help, also after the event was opened
+
+        var sent = list(TestAuth.bearer(tokens, beat)).get("rows").get(0).get("sent");
+        assertThat(sent).extracting(s -> s.get("full_name").asText() + " " + s.get("to_you").asBoolean())
+                .containsExactly("Fictional Beat true", "Fictional Patrol false");
+        assertThat(sent.get(0).get("officer_id").asText()).isEqualTo(beat.toString());
+        assertThat(sent.get(0).get("sent_at").isNull()).isFalse();
+        var kept = db.sql("select assignment_id, sent_by from call112_sent where officer_id = ?").param(beat).query().singleRow();
+        assertThat(kept.get("assignment_id")).isEqualTo(entry);
+    }
+
+    @Test
+    void onlyTheDutyOfficerSendsAndOnlyToTheEventsStation() throws Exception {
+        UUID beat = user(station, "io", "Fictional Beat"), away = user(far, "io", "Fictional Away");
+        UUID entry = onDutyNow(beat, station, "beat");
+        onDutyNow(away, far, "beat");
+        String id = add(desk, "dispute");
+        call(post("/api/calls-112/" + id + "/acknowledge"), desk, null).andExpect(status().isNoContent());
+        String url = "/api/calls-112/" + id + "/send";
+        call(post(url), io, to(beat)).andExpect(status().isNotFound());
+        call(post(url), farDesk, to(beat)).andExpect(status().isNotFound());
+        call(post(url), TestAuth.bearer(tokens, beat), to(beat)).andExpect(status().isNotFound());
+        call(post(url), desk, to(away)).andExpect(status().isBadRequest());
+        db.sql("insert into duty_assignment_cancel (assignment_id, reason, cancelled_by) values (?, 'Written by mistake', ?)").params(entry, beat).update();
+        call(post(url), desk, to(beat)).andExpect(status().isBadRequest());
+        mvc.perform(post(url)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void anOfficerSentACallAboutAWomanSeesNoMoreThanTheRestOfTheStation() throws Exception {
+        UUID beat = user(station, "io", "Fictional Beat");
+        onDutyNow(beat, station, "beat");
+        String id = add(desk, "woman_in_distress");
+        call(post("/api/calls-112/" + id + "/acknowledge"), desk, null).andExpect(status().isNoContent());
+        call(post("/api/calls-112/" + id + "/send"), desk, to(beat)).andExpect(status().isNoContent());
+        var row = list(TestAuth.bearer(tokens, beat)).get("rows").get(0);
+        assertThat(row.get("sent").get(0).get("to_you").asBoolean()).isTrue();
+        assertThat(row.get("withheld").asBoolean()).isTrue();
+        assertThat(row.get("caller_name").isNull() && row.get("caller_contact").isNull() && row.get("details").isNull()).isTrue();
+        assertThat(row.get("place").asText()).isEqualTo("Fictional Chowk, North Road");
     }
 
     @Test

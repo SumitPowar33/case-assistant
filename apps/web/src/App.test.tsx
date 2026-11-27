@@ -17,6 +17,7 @@ const routes: Record<string, unknown> = {
   '/api/dashboard': { cases: 1, due_in_7_days: 1, notices_waiting: 0, deadlines: [{ fir_id: 'f1', fir_no: 7, fir_year: 2026, kind: 'chargesheet_custody', due_on: '2026-11-04', basis: 'BNSS 187(3)', days_left: 2 }] },
   '/api/firs/f1/evidence': [{ id: 'e1', label: 'Bank statement', kind: 'electronic', sha256: null, court_ready: false }],
   '/api/duty-roster?stationId=s1': { court_clashes: [] },   // the dashboard asks the station's roster for court dates to check
+  '/api/calls-112?stationId=s1': { rows: [], can_handle: false },   // and its 112 events, for calls sent to this officer
 }
 function mockApi() {
   const fetch = vi.fn(async (url: string, init?: RequestInit) => {

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -31,13 +33,18 @@ import org.springframework.web.server.ResponseStatusException;
  * front desk (mode phone, the text as written) or as a general diary entry of the station. A call about a woman or a
  * child in distress shows its caller and details only to the officer who wrote it and to those who supervise the
  * station, like a complaint of a protected kind at the front desk; the diary entry never carries caller or details.
+ * An acknowledged event may be sent to an officer on beat or patrol duty now (item 16, V75), to several if more help is
+ * needed. It stays in the app (no SMS, no radio) and shows that officer nothing the rest of the station does not see.
  */
 @RestController
 class Call112Controller {
     static final String HANDLE = "call112.handle";
     /** Kinds of call whose caller and details are withheld from the rest of the station. */
     static final Set<String> SENSITIVE = Set.of("woman_in_distress", "child_in_distress");
-    private static final DateTimeFormatter IST_TIME = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm").withZone(ZoneId.of("Asia/Kolkata"));
+    /** The roster posts of the officers an event can be sent to. */
+    private static final Set<String> FIELD = Set.of("beat", "patrol");
+    private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
+    private static final DateTimeFormatter IST_TIME = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm").withZone(IST);
 
     record NewEvent(@NotNull UUID stationId, @NotNull OffsetDateTime receivedAt, @NotBlank @Size(max = 300) String place,
             @NotBlank @Pattern(regexp = "crime_in_progress|violence|woman_in_distress|child_in_distress|accident|missing_person|fire_medical|dispute|other") String kind,
@@ -47,14 +54,18 @@ class Call112Controller {
     record Open(@NotBlank @Pattern(regexp = "complaint|diary") String as, String complaintKind,
             @Pattern(regexp = "[a-z]{2,3}(-[A-Za-z]{2,4})?") String textLanguage) {}
 
+    record SendTo(@NotNull UUID officerId) {}
+
     private final JdbcClient db;
     private final CaseTeam team;
     private final ComplaintKinds kinds;
+    private final DutyRosterController roster;
 
-    Call112Controller(JdbcClient db, CaseTeam team, ComplaintKinds kinds) {
+    Call112Controller(JdbcClient db, CaseTeam team, ComplaintKinds kinds, DutyRosterController roster) {
         this.db = db;
         this.team = team;
         this.kinds = kinds;
+        this.roster = roster;
     }
 
     private boolean reads(UUID me, UUID station) {
@@ -82,11 +93,17 @@ class Call112Controller {
                 left join call112_ack a on a.event_id = e.id left join app_user au on au.id = a.acknowledged_by
                 left join call112_opened o on o.event_id = e.id left join general_diary_entry g on g.id = o.diary_id
                 where e.station_id = ? order by e.received_at desc, e.id limit 100""").params(me, stationId).query().listOfRows();
+        var sent = db.sql("""
+                select s.event_id, s.officer_id, u.full_name, u.rank, s.sent_at, s.officer_id = ? as to_you
+                from call112_sent s join app_user u on u.id = s.officer_id
+                where s.event_id in (select id from call112_event where station_id = ? order by received_at desc, id limit 100)
+                order by s.sent_at, s.id""").params(me, stationId).query().listOfRows().stream().collect(Collectors.groupingBy(s -> s.get("event_id")));
         var out = rows.stream().map(r -> {
             var row = new LinkedHashMap<>(r);
             boolean withheld = SENSITIVE.contains(r.get("kind")) && !Boolean.TRUE.equals(r.get("mine")) && !supervises;
             row.remove("mine");
             row.put("withheld", withheld);
+            row.put("sent", sent.getOrDefault(r.get("id"), List.of()));
             if (withheld) { row.put("caller_name", null); row.put("caller_contact", null); row.put("details", null); }
             return row;
         }).toList();
@@ -122,6 +139,22 @@ class Call112Controller {
         if (db.sql("select exists (select 1 from call112_ack where event_id = ?)").param(id).query(Boolean.class).single())
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This event has already been acknowledged.");
         db.sql("insert into call112_ack (event_id, acknowledged_by) values (?,?)").params(id, me).update();
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/api/calls-112/{id}/send")
+    @Transactional
+    ResponseEntity<Void> send(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody SendTo to) {
+        UUID me = CaseTeam.user(jwt);
+        UUID station = (UUID) event(me, id).get("station_id");   // locks the event, so two sends to one officer queue up
+        if (!db.sql("select exists (select 1 from call112_ack where event_id = ?)").param(id).query(Boolean.class).single())
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Acknowledge the event first.");
+        var duty = roster.onDuty(station, LocalDateTime.now(IST)).stream()
+                .filter(d -> to.officerId.equals(d.get("officer_id")) && FIELD.contains((String) d.get("post"))).findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "That officer is not on beat or patrol duty now."));
+        if (db.sql("select exists (select 1 from call112_sent where event_id = ? and officer_id = ?)").params(id, to.officerId).query(Boolean.class).single())
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This event has already been sent to that officer.");
+        db.sql("insert into call112_sent (event_id, assignment_id, officer_id, sent_by) values (?,?,?,?)").params(id, duty.get("id"), to.officerId, me).update();
         return ResponseEntity.noContent().build();
     }
 

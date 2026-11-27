@@ -141,7 +141,8 @@ class DutyRosterApiTest {
         db.sql("insert into court_event (fir_id, kind, on_date, recorded_by) values (?,'other',?,?)").params(day, today.plusDays(3), io1).update();   // the same day twice: one line
         caseWithCourtDate(12, io2, today.plusDays(4));
         caseWithCourtDate(13, io1, today.plusDays(5));
-        caseWithCourtDate(14, io1, today.plusDays(6));   // nothing rostered that day: nothing to compare with
+        caseWithCourtDate(14, io1, today.plusDays(6));   // nothing rostered for the officer, the last day that is pointed out
+        caseWithCourtDate(15, io1, today.plusDays(7));   // a week or more ahead: the roster of that day is not expected yet
         put(io1, today.plusDays(3), "duty", "morning", "station_house");
         put(io1, today.plusDays(3), "duty", "evening", "beat");
         put(io2, today.plusDays(4), "leave", null, null);
@@ -150,11 +151,11 @@ class DutyRosterApiTest {
 
         var found = roster(sho).get("court_clashes");
         assertThat(found).extracting(c -> c.get("fir_no").asText() + " " + c.get("on_date").asText() + " " + c.get("kind").asText() + " " + c.get("shift").asText())
-                .containsExactly("11 " + today.plusDays(3) + " duty morning", "12 " + today.plusDays(4) + " leave null");
+                .containsExactly("11 " + today.plusDays(3) + " duty morning", "12 " + today.plusDays(4) + " leave null", "14 " + today.plusDays(6) + " null null");
         assertThat(found.get(0).get("fir_id").asText()).isEqualTo(day.toString());
         assertThat(found.get(0).get("full_name").asText()).isEqualTo("Fictional Asha");
         // an investigating officer is told of their own cases only; an officer with neither the case nor the station's FIRs, of none
-        assertThat(roster(io).get("court_clashes")).extracting(c -> c.get("fir_no").asText()).containsExactly("11");
+        assertThat(roster(io).get("court_clashes")).extracting(c -> c.get("fir_no").asText()).containsExactly("11", "14");
         UUID other = user(station, "io", "Fictional Chitra");
         assertThat(roster(TestAuth.bearer(tokens, other)).get("court_clashes")).isEmpty();
     }
@@ -174,6 +175,21 @@ class DutyRosterApiTest {
         var later = json.readTree(call(get("/api/duty-roster?stationId=" + station + "&from=" + today.plusDays(3)), sho, null).andReturn().getResponse().getContentAsString());
         assertThat(later.get("court_clashes")).isEmpty();   // a list that starts later warns of nothing before its first day
         db.sql("update fir set io_id = ? where id = (select id from fir where fir_no = 22)").param(io2).update();
+        var moved = roster(sho).get("court_clashes");   // the new officer's leave is not the old one's: nothing is rostered for them
+        assertThat(moved).hasSize(1);
+        assertThat(moved.get(0).get("officer_id").asText()).isEqualTo(io2.toString());
+        assertThat(moved.get(0).get("kind").isNull()).isTrue();
+    }
+
+    @Test
+    void aStationThatHasNotWrittenItsRosterIsNotWarnedOfEveryCourtDate() throws Exception {
+        caseWithCourtDate(41, io1, today.plusDays(2));
+        assertThat(roster(sho).get("court_clashes")).isEmpty();
+        db.sql("insert into duty_assignment (station_id, officer_id, on_date, kind, recorded_by) values (?,?,?,'leave',?)").params(station, io2, today.minusDays(1), shoId).update();
+        assertThat(roster(sho).get("court_clashes")).isEmpty();   // an old entry is not a roster in use
+        put(io2, today, "duty", "morning", "beat");
+        assertThat(roster(sho).get("court_clashes")).extracting(c -> c.get("fir_no").asText()).containsExactly("41");
+        put(io1, today.plusDays(2), "duty", "morning", "court");
         assertThat(roster(sho).get("court_clashes")).isEmpty();
     }
 

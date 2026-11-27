@@ -114,3 +114,28 @@ test('a roster that cannot be read says so, and an officer without a station ask
   expect(await screen.findByRole('group', { name: 'Dashboard' })).toBeTruthy()
   expect(calls.some((u) => u.startsWith('/api/duty-roster'))).toBe(false)
 })
+
+test('112 events sent to this officer in the last 24 hours are attention lines; older ones and those sent to others are not', async () => {
+  const ago = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString()
+  const call = (id: string, place: string, sent: object[]) => ({ id, place, kind: 'accident', sent })
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    const body = url.startsWith('/api/dashboard') ? { cases: 0, due_in_7_days: 0, notices_waiting: 0, deadlines: [] }
+      : url.startsWith('/api/calls-112') ? { rows: [call('e1', 'Fictional Chowk', [{ sent_at: ago(1), to_you: true }]), call('e2', 'Fictional Old Road', [{ sent_at: ago(25), to_you: true }]),
+        call('e3', 'Fictional Far Road', [{ sent_at: ago(1), to_you: false }])] } : []
+    return { ok: true, status: 200, json: async () => body }
+  }))
+  render(<Dashboard />)
+  const attention = await screen.findByRole('region', { name: 'Needs your attention' })
+  expect(await within(attention).findByText('112 call sent to you: Accident, Fictional Chowk')).toBeTruthy()
+  expect(within(attention).getByText(/^Sent to you on /)).toBeTruthy()
+  expect(within(attention).queryByText(/Old Road|Far Road/)).toBeNull()
+  expect(within(attention).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('#/calls-112')
+  expect(within(attention).queryByText('Nothing falls due in your cases.')).toBeNull()
+})
+
+test('a court date on a day with nothing rostered for the investigating officer says so', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => url.startsWith('/api/dashboard') ? { cases: 1, due_in_7_days: 0, notices_waiting: 0, deadlines: [] }
+    : url.startsWith('/api/duty-roster') ? { court_clashes: [clash({ kind: null })] } : [] })))
+  render(<Dashboard />)
+  expect(await screen.findByText('Investigating officer SI Fictional Rao (SI) has nothing on the roster that day')).toBeTruthy()
+})

@@ -9,8 +9,10 @@ import DutyNow from './DutyNow'
 type Row = {
   id: string; received_at: string; place: string; kind: string; vehicle: string | null; caller_name: string | null; caller_contact: string | null
   details: string | null; withheld: boolean; entered_by_name: string; acknowledged_at: string | null; acknowledged_by_name: string | null
-  complaint_id: string | null; diary_no: number | null
+  complaint_id: string | null; diary_no: number | null; sent: Sent[]
 }
+type Sent = { officer_id: string; full_name: string; rank: string; sent_at: string; to_you: boolean }
+type Officer = { officer_id: string; full_name: string; rank: string; post: string | null }
 type Calls = { rows: Row[]; can_handle: boolean }
 type Kind = { id: string; label: string }
 
@@ -21,17 +23,21 @@ const KINDS = ['crime_in_progress', 'violence', 'woman_in_distress', 'child_in_d
  * the same list will later be filled by the feed. An event is acknowledged once and opened once, as a complaint at the
  * front desk or as a general diary entry. The server decides who may write and answers with its own reason; a call about a
  * woman or a child in distress arrives with its caller and details withheld (the server sends none), and the form says
- * not to write a victim's name.
+ * not to write a victim's name. An acknowledged event can be sent to an officer on beat or patrol duty now (the roster);
+ * it is kept in the app only.
  */
 export default function Calls112() {
   const t = useT()
   const station = currentSession()?.user.station_id
   const [version, setVersion] = useState(0)
   const calls = useLoad<Calls>(`/calls-112?stationId=${station}`, version)
+  // who an event can be sent to; only the duty officer needs it
+  const roster = useLoad<{ now?: { on_duty: Officer[] } }>(calls.data?.can_handle ? `/duty-roster?stationId=${station}` : null, version)
   if (!station) return <p>{t('calls.noStation')}</p>
   if (calls.error) return <p role="alert">{calls.error}</p>
   if (!calls.data) return <p>{t('common.loading')}</p>
   const again = () => setVersion((n) => n + 1)
+  const field = roster.data?.now?.on_duty.filter((o) => o.post === 'beat' || o.post === 'patrol') ?? []
   return (
     <>
       <h1>{t('calls.title')}</h1>
@@ -40,7 +46,7 @@ export default function Calls112() {
       {calls.data.can_handle && <Add station={station} onSaved={again} />}
       <section aria-labelledby="calls-list">
         <h2 id="calls-list">{t('calls.list')}</h2>
-        {calls.data.rows.length === 0 ? <p>{t('calls.none')}</p> : <ul>{calls.data.rows.map((r) => <Event key={r.id} row={r} handle={calls.data!.can_handle} onSaved={again} />)}</ul>}
+        {calls.data.rows.length === 0 ? <p>{t('calls.none')}</p> : <ul>{calls.data.rows.map((r) => <Event key={r.id} row={r} handle={calls.data!.can_handle} field={field} onSaved={again} />)}</ul>}
       </section>
     </>
   )
@@ -80,13 +86,14 @@ function Add({ station, onSaved }: { station: string; onSaved: () => void }) {
   )
 }
 
-function Event({ row: r, handle, onSaved }: { row: Row; handle: boolean; onSaved: () => void }) {
+function Event({ row: r, handle, field, onSaved }: { row: Row; handle: boolean; field: Officer[]; onSaved: () => void }) {
   const t = useT()
   const [error, setError] = useState('')
   async function act(path: string, body?: unknown) {
     setError('')
     try { await send(path, 'POST', body); onSaved() } catch (err) { setError((err as Error).message) }
   }
+  const free = field.filter((o) => !r.sent.some((s) => s.officer_id === o.officer_id))
   return (
     <li>
       <strong>{fmt(r.received_at)}</strong>: {t.code('calls.kind', r.kind)}, {r.place}
@@ -94,12 +101,31 @@ function Event({ row: r, handle, onSaved }: { row: Row; handle: boolean; onSaved
       {r.withheld ? <p>{t('calls.withheld')}</p> : <p>{[r.caller_name, r.caller_contact].filter(Boolean).join(', ')}{r.caller_name || r.caller_contact ? ': ' : ''}{r.details}</p>}
       <p>{t('calls.enteredBy', { name: r.entered_by_name })}
         {r.acknowledged_at && <> · {t('calls.acknowledged', { name: r.acknowledged_by_name ?? '', time: fmt(r.acknowledged_at) })}</>}</p>
+      {r.sent.map((s) => <p key={s.officer_id}>{s.to_you ? <span className="chip c-warn">{t('calls.sentToYou', { time: fmt(s.sent_at) })}</span>
+        : t('calls.sentTo', { name: `${s.full_name} (${s.rank})`, time: fmt(s.sent_at) })}</p>)}
       {r.complaint_id && <p><a href={`#/complaints/${r.complaint_id}`}>{t('calls.openedComplaint')}</a></p>}
       {r.diary_no !== null && <p>{t('calls.openedDiary', { no: r.diary_no })}</p>}
       {handle && !r.acknowledged_at && <button type="button" onClick={() => act(`/calls-112/${r.id}/acknowledge`)}>{t('calls.acknowledge')}</button>}
+      {handle && r.acknowledged_at && free.length > 0 && <SendIt id={r.id} free={free} act={act} />}
       {handle && r.acknowledged_at && !r.complaint_id && r.diary_no === null && <OpenIt id={r.id} act={act} />}
       {error && <p role="alert">{error}</p>}
     </li>
+  )
+}
+
+function SendIt({ id, free, act }: { id: string; free: Officer[]; act: (path: string, body?: unknown) => Promise<void> }) {
+  const t = useT()
+  const [officer, setOfficer] = useState('')
+  const chosen = free.some((o) => o.officer_id === officer) ? officer : ''
+  return (
+    <div>
+      <label>{t('calls.toOfficer')} <select value={chosen} onChange={(e) => setOfficer(e.target.value)}>
+        <option value="">—</option>
+        {free.map((o) => <option key={o.officer_id} value={o.officer_id}>{o.full_name} ({o.rank}): {t.code('roster.post', o.post ?? '')}</option>)}
+      </select></label>
+      <button type="button" disabled={!chosen} onClick={() => act(`/calls-112/${id}/send`, { officerId: chosen })}>{t('calls.sendOfficer')}</button>
+      <p className="note">{t('calls.sendNote')}</p>
+    </div>
   )
 }
 

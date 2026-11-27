@@ -98,6 +98,8 @@ phone; 20 px between the cards of a screen.
 
 Screens the board does not have (kept, in the same look): Policies, Load data, Protected reads, Admin, AI settings,
 Change password.
+The 112 events list (`#/calls-112`) has no board either: sending an event to the beat officer (session 140) uses the
+shared field, button, note and chip classes, and the dashboard shows a sent event as a row of "Needs your attention".
 
 ## Differences on purpose
 - A form opened from its button is a panel from the right (one field to a row), not a box inside the page; the board draws forms inline.

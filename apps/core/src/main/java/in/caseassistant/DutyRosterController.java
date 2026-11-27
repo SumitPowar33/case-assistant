@@ -38,6 +38,8 @@ class DutyRosterController {
     static final String MANAGE = "roster.manage";
     private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
     private static final int MAX_DAYS = 31;
+    /** How far ahead a court date on a day with nothing rostered for the officer is pointed out (later days are not written yet). */
+    private static final int NOTHING_ROSTERED_DAYS = 7;
     /** The entries of a station (one ?) that have not been taken back. */
     private static final String ENTRIES = """
             select a.id, a.officer_id, u.full_name, u.rank, a.on_date, a.kind, a.shift, a.post, a.note
@@ -87,24 +89,28 @@ class DutyRosterController {
 
     /**
      * Court dates the roster does not allow for: a case of the station with a court date on a day its investigating officer
-     * is off, on leave or rostered with no court duty (one line for a case and day, with the day's first entry). A day
-     * with nothing rostered is not listed. Only cases the caller may open are named. Who attends is for people to decide.
+     * is off, on leave or rostered with no court duty (one line for a case and day, with the day's first entry), and, in
+     * the next seven days, a day with nothing rostered for that officer (kind null), at a station that has written its
+     * roster for today or later. Only cases the caller may open are named. Who attends is for people to decide.
      */
     private List<Map<String, Object>> courtClashes(UUID me, UUID station, LocalDate from, LocalDate before) {
+        LocalDate today = LocalDate.now(IST), week = today.plusDays(NOTHING_ROSTERED_DAYS);
         return db.sql("""
-                select distinct on (a.on_date, u.full_name, a.officer_id, fir.fir_year, fir.fir_no)
-                       a.on_date, a.officer_id, u.full_name, u.rank, a.kind, a.shift, a.post, fir.id as fir_id, fir.fir_no, fir.fir_year
-                from duty_assignment a
-                join app_user u on u.id = a.officer_id and u.active and u.station_id = a.station_id
-                join fir on fir.io_id = a.officer_id and fir.station_id = a.station_id
-                join court_event c on c.fir_id = fir.id and c.on_date = a.on_date
-                where a.station_id = ? and a.on_date >= ? and a.on_date < ?
+                select distinct on (c.on_date, u.full_name, fir.io_id, fir.fir_year, fir.fir_no)
+                       c.on_date, fir.io_id as officer_id, u.full_name, u.rank, a.kind, a.shift, a.post, fir.id as fir_id, fir.fir_no, fir.fir_year
+                from fir
+                join app_user u on u.id = fir.io_id and u.active and u.station_id = fir.station_id
+                join court_event c on c.fir_id = fir.id
+                left join duty_assignment a on a.officer_id = fir.io_id and a.on_date = c.on_date and a.station_id = fir.station_id
                   and not exists (select 1 from duty_assignment_cancel x where x.assignment_id = a.id)
-                  and not exists (select 1 from duty_assignment k where k.officer_id = a.officer_id and k.on_date = a.on_date and k.post = 'court'
+                where fir.station_id = ? and c.on_date >= ? and c.on_date < ?
+                  and (a.id is not null or c.on_date < ? and exists (select 1 from duty_assignment w where w.station_id = fir.station_id and w.on_date >= ?
+                       and not exists (select 1 from duty_assignment_cancel x where x.assignment_id = w.id)))
+                  and not exists (select 1 from duty_assignment k where k.officer_id = fir.io_id and k.on_date = c.on_date and k.post = 'court'
                                   and not exists (select 1 from duty_assignment_cancel x where x.assignment_id = k.id))
                   and""" + " " + team.canReadFirSql() + """
-                 order by a.on_date, u.full_name, a.officer_id, fir.fir_year, fir.fir_no, array_position(array['morning','evening','night'], a.shift)""")
-                .params(station, from, before, me).query().listOfRows();
+                 order by c.on_date, u.full_name, fir.io_id, fir.fir_year, fir.fir_no, array_position(array['morning','evening','night'], a.shift)""")
+                .params(station, from, before, week, today, me).query().listOfRows();
     }
 
     private boolean reads(UUID me, UUID station) {
