@@ -4,6 +4,8 @@ import { SECTION_PROMPT_VERSION, graverFirst, readSuggestions, sectionPrompt, ty
 import { fmt } from './formats'
 import { useLoad } from './useLoad'
 import { useT } from './i18n'
+import { PlaybookDraftNote, PlaybookLine } from './PlaybookText'
+import { usePlaybookTexts } from './usePlaybookTexts'
 
 type Law = 'new' | 'old' | 'spans' | 'unknown'
 type Added = { act: string; section: string; added_at: string | null; reason: string | null; chosen_by_name: string | null }
@@ -23,6 +25,7 @@ export default function SectionSuggest({ firId, text, victimProtected, version, 
   firId: string; text: string; victimProtected: boolean; version: number; onSaved: () => void
 }) {
   const t = useT()
+  const pb = usePlaybookTexts()
   const { data, error } = useLoad<Basis>(`/firs/${firId}/sections`, version)
   const [check, setCheck] = useState<Check | null>(null)
   const [busy, setBusy] = useState(false)
@@ -117,6 +120,7 @@ export default function SectionSuggest({ firId, text, victimProtected, version, 
             const c = check as Check & { read: { kind: 'suggestions' } }
             return <>
               <p><small>{t('sections.caution')}</small></p>
+              <PlaybookDraftNote texts={pb} />
               {!c.read.suggestions.length && <p>{t('sections.noneFound')}</p>}
               {c.read.dropped > 0 && <p><small>{t('sections.dropped', { n: c.read.dropped })}</small></p>}
               <ul className="plain">{c.read.suggestions.map(({ charge, met }, i) => {
@@ -125,13 +129,16 @@ export default function SectionSuggest({ firId, text, victimProtected, version, 
                 return (
                   <li key={charge.playbook_id + charge.charge_id} className="card" aria-label={charge.law}>
                     <span className="chip c-info">{charge.law}</span> <strong>{charge.label}</strong>
+                    <PlaybookLine texts={pb} en={charge.label} />
                     {charge.punishment && <> <span className="chip c-neu">{t.code('arrest.pun', charge.punishment)}</span></>}
                     {charge.graver && <> <span className="chip c-crit">{t('sections.graver')}</span><p><small>{t('sections.graverNote')}</small></p></>}
                     <p>{t('sections.mayDescribe')}</p>
                     <ul>{met.map((m) => (
-                      <li key={m.id}>{charge.ingredients.find((g) => g.id === m.id)!.text}: <small>{t('facts.from')} <q><mark className="c-ai">{m.quote}</mark></q></small></li>
+                      <li key={m.id}>{charge.ingredients.find((g) => g.id === m.id)!.text}: <small>{t('facts.from')} <q><mark className="c-ai">{m.quote}</mark></q></small>
+                        <PlaybookLine texts={pb} en={charge.ingredients.find((g) => g.id === m.id)!.text} /></li>
                     ))}</ul>
-                    {rest.length > 0 && <p><small>{t('sections.notSeen', { list: rest.map((g) => g.text).join('; ') })}</small></p>}
+                    {rest.length > 0 && <p><small>{t('sections.notSeen', { list: rest.map((g) => g.text).join('; ') })}</small>
+                      {rest.map((g) => <PlaybookLine key={g.id} texts={pb} en={g.text} />)}</p>}
                     {charge.in_fir ? <p><span className="chip c-neu">{t('sections.inFir')}</span></p>
                       : blocked(charge) ? <p><span className="chip c-warn">{t('sections.ipcApplies')}</span></p>
                       : c.choices[i] === 'open' ? <>

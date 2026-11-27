@@ -179,6 +179,7 @@
  "readiness.withdrawn": "वापस लिया गया",
  "readiness.withdrawnBy": "{what}: {detail}। {name} द्वारा वापस लिया गया: “{reason}”",
  "readiness.checks": "व्यक्ति द्वारा पुष्टि के लिए जाँचें",
+ "playbook.draftNote": "प्लेबुक के अंग्रेज़ी पाठ के नीचे आपकी भाषा की पंक्ति एक मसौदा अनुवाद है जिसकी किसी ने समीक्षा नहीं की है। अंग्रेज़ी पाठ ही मान्य है।",
  "withdrawnKind.evidence link": "साक्ष्य की कड़ी",
  "withdrawnKind.accused link": "आरोपी की कड़ी",
  "withdrawnKind.accepted gap": "स्वीकृत कमी",

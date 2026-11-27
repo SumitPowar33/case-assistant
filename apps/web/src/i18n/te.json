@@ -179,6 +179,7 @@
  "readiness.withdrawn": "ఉపసంహరించినవి",
  "readiness.withdrawnBy": "{what}: {detail}. {name} ఉపసంహరించారు: “{reason}”",
  "readiness.checks": "ఒక వ్యక్తి నిర్ధారించాల్సిన తనిఖీలు",
+ "playbook.draftNote": "ప్లేబుక్ ఆంగ్ల పాఠం కింద మీ భాషలో ఉన్న పంక్తి ఎవరూ సమీక్షించని ముసాయిదా అనువాదం. ఆంగ్ల పాఠమే చెల్లుతుంది.",
  "withdrawnKind.evidence link": "సాక్ష్యం లింక్",
  "withdrawnKind.accused link": "నిందితుడి లింక్",
  "withdrawnKind.accepted gap": "అంగీకరించిన లోపం",

@@ -179,6 +179,7 @@
  "readiness.withdrawn": "ಹಿಂಪಡೆದವು",
  "readiness.withdrawnBy": "{what}: {detail}. {name} ಹಿಂಪಡೆದರು: “{reason}”",
  "readiness.checks": "ಒಬ್ಬ ವ್ಯಕ್ತಿ ದೃಢೀಕರಿಸಬೇಕಾದ ಪರಿಶೀಲನೆಗಳು",
+ "playbook.draftNote": "ಪ್ಲೇಬುಕ್‌ನ ಇಂಗ್ಲಿಷ್ ಪಠ್ಯದ ಕೆಳಗಿರುವ ನಿಮ್ಮ ಭಾಷೆಯ ಸಾಲು ಯಾರೂ ಪರಿಶೀಲಿಸದ ಕರಡು ಅನುವಾದ. ಇಂಗ್ಲಿಷ್ ಪಠ್ಯವೇ ಮಾನ್ಯ.",
  "withdrawnKind.evidence link": "ಸಾಕ್ಷ್ಯದ ಕೊಂಡಿ",
  "withdrawnKind.accused link": "ಆರೋಪಿಯ ಕೊಂಡಿ",
  "withdrawnKind.accepted gap": "ಒಪ್ಪಿದ ಕೊರತೆ",

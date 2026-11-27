@@ -1,0 +1,28 @@
+{
+ "playbook": "cyber-fraud",
+ "language": "mr",
+ "status": "draft",
+ "review_note": "DRAFT, not reviewed. Machine-drafted Marathi of the playbook's English texts, shown under the English text, which is the one that holds. A Marathi-speaking public prosecutor must check every line against the Maharashtra Directorate of Languages' legal glossary (decision 5 of 2 Nov 2026) before an officer relies on it.",
+ "texts": {
+  "Online financial fraud: impersonation calls, 'digital arrest', UPI/app fraud, investment scams": "ऑनलाइन आर्थिक फसवणूक: तोतयेगिरीचे कॉल, 'डिजिटल अटक', UPI/ॲप फसवणूक, गुंतवणूक घोटाळे",
+  "Cheating and dishonestly inducing delivery of property": "फसवणूक करून अप्रामाणिकपणे मालमत्ता सुपूर्द करण्यास प्रवृत्त करणे",
+  "The victim was deceived": "पीडिताची फसवणूक झाली",
+  "The deception induced the victim to hand over money or property": "फसवणुकीमुळे पीडित पैसे किंवा मालमत्ता सुपूर्द करण्यास प्रवृत्त झाला",
+  "Money or property was actually delivered": "पैसे किंवा मालमत्ता प्रत्यक्षात सुपूर्द करण्यात आली",
+  "Cheating by personation": "तोतयेगिरी करून फसवणूक",
+  "The accused pretended to be someone else (for example a police or CBI officer)": "आरोपीने आपण दुसरीच कोणी व्यक्ती असल्याची बतावणी केली (उदाहरणार्थ पोलीस किंवा CBI अधिकारी)",
+  "The person claimed does not exist or did not act": "सांगितलेली व्यक्ती अस्तित्वात नाही किंवा तिने तसे काहीही केले नाही",
+  "Criminal intimidation": "फौजदारीपात्र धाकदपटशा",
+  "A threat of injury to person, reputation or property was made": "व्यक्ती, प्रतिष्ठा किंवा मालमत्तेला इजा करण्याची धमकी देण्यात आली",
+  "The threat was meant to cause alarm or make the victim act": "पीडिताला भीती वाटावी किंवा त्याने तसे वागावे या हेतूने धमकी देण्यात आली",
+  "Cheating by personation using a computer resource": "संगणक साधनाचा वापर करून तोतयेगिरीने फसवणूक",
+  "A phone, app or computer was used": "फोन, ॲप किंवा संगणक वापरण्यात आला",
+  "The accused cheated by pretending to be someone else": "आरोपीने दुसरी कोणी व्यक्ती असल्याची बतावणी करून फसवणूक केली",
+  "Criminal conspiracy": "फौजदारीपात्र कट",
+  "Two or more people agreed to commit the offence": "दोन किंवा अधिक व्यक्तींनी अपराध करण्याचे आपसात ठरवले",
+  "Money received in an account is not enough to charge the account holder. Each account-holder accused needs at least one more independent link: SIM or device, KYC photo identified, CCTV of withdrawal, login IP, or their own statement.": "खात्यात पैसे आले एवढ्यावरून खातेधारकावर आरोप ठेवता येत नाही. खातेधारक असलेल्या प्रत्येक आरोपीविरुद्ध किमान आणखी एक स्वतंत्र दुवा हवा: SIM किंवा उपकरण, ओळख पटलेला KYC फोटो, पैसे काढतानाचे CCTV, लॉगिन IP, किंवा त्याचा स्वतःचा जबाब.",
+  "Every electronic record relied on needs a BSA 63(4) certificate with Part A and Part B and a matching hash.": "आधार घेतलेल्या प्रत्येक इलेक्ट्रॉनिक अभिलेखासाठी भाग A आणि भाग B असलेले व जुळणारा हॅश असलेले BSA 63(4) प्रमाणपत्र आवश्यक आहे.",
+  "Record the statement of the bank's nodal officer who can prove the bank records in court.": "बँकेचे अभिलेख न्यायालयात सिद्ध करू शकणाऱ्या बँकेच्या नोडल अधिकाऱ्याचा जबाब नोंदवा.",
+  "Every search and seizure must be recorded by audio-video (eSakshya) with the recording linked to the seizure memo.": "प्रत्येक झडती व जप्तीचे दृक्-श्राव्य चित्रीकरण (eSakshya) झालेच पाहिजे आणि ते चित्रीकरण जप्ती पंचनाम्याशी जोडलेले असावे."
+ }
+}

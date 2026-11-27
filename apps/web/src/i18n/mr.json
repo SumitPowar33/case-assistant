@@ -179,6 +179,7 @@
  "readiness.withdrawn": "मागे घेतलेले",
  "readiness.withdrawnBy": "{what}: {detail}. {name} यांनी मागे घेतले: “{reason}”",
  "readiness.checks": "व्यक्तीने खात्री करायच्या तपासण्या",
+ "playbook.draftNote": "प्लेबुकच्या इंग्रजी मजकुराखालील तुमच्या भाषेतील ओळ हा कोणीही न तपासलेला मसुदा अनुवाद आहे. इंग्रजी मजकूरच ग्राह्य आहे.",
  "withdrawnKind.evidence link": "पुराव्याचा दुवा",
  "withdrawnKind.accused link": "आरोपीचा दुवा",
  "withdrawnKind.accepted gap": "स्वीकारलेली त्रुटी",

@@ -1,0 +1,17 @@
+{
+ "playbook": "mh-prohibition",
+ "language": "mr",
+ "status": "draft",
+ "review_note": "DRAFT, not reviewed. Machine-drafted Marathi of the playbook's English texts, shown under the English text, which is the one that holds. A Marathi-speaking public prosecutor must check every line against the Maharashtra Directorate of Languages' legal glossary (decision 5 of 2 Nov 2026) before an officer relies on it.",
+ "texts": {
+  "Maharashtra only: illicit liquor made, kept, carried or sold without a licence or permit (hooch, country liquor, liquor from another state), under the Maharashtra Prohibition Act 1949": "फक्त महाराष्ट्र: परवाना किंवा परमिटशिवाय बनवलेली, बाळगलेली, वाहून नेलेली किंवा विकलेली अवैध दारू (विषारी दारू, देशी दारू, परराज्यातील दारू), महाराष्ट्र दारूबंदी अधिनियम 1949 खाली",
+  "Illegal making, carrying, keeping or selling of liquor or another intoxicant (Maharashtra Prohibition Act 65)": "दारू किंवा अन्य मादक पदार्थ बेकायदेशीरपणे बनवणे, वाहून नेणे, बाळगणे किंवा विकणे (Maharashtra Prohibition Act 65)",
+  "The thing seized is liquor or another intoxicant as the Act defines it, shown by the Chemical Analyser's report on a sealed sample": "जप्त केलेली वस्तू अधिनियमातील व्याख्येनुसार दारू किंवा अन्य मादक पदार्थ आहे, हे सीलबंद नमुन्यावरील रासायनिक विश्लेषकाच्या अहवालाने दिसते",
+  "The accused had no licence, permit or pass for it; the excise or licensing record is checked": "आरोपीकडे त्यासाठी परवाना, परमिट किंवा पास नव्हता; उत्पादन शुल्क किंवा परवाना अभिलेख तपासला जातो",
+  "The accused made, carried, kept or sold it (the act of the accused as found by the seizure, the witnesses or the records)": "आरोपीने ती बनवली, वाहून नेली, बाळगली किंवा विकली (जप्ती, साक्षीदार किंवा अभिलेखांवरून आढळलेली आरोपीची कृती)",
+  "Draw the sample at the place of seizure in front of two independent witnesses, seal it, note the seal on the seizure memo and send it to the Chemical Analyser without delay with the chain of custody kept; the sample report is the proof of what the liquor was.": "जप्तीच्या ठिकाणी दोन स्वतंत्र पंचांसमक्ष नमुना घ्या, तो सीलबंद करा, सीलची नोंद जप्ती पंचनाम्यात करा आणि ताबा-साखळी राखून विलंब न करता रासायनिक विश्लेषकाकडे पाठवा; दारू काय होती याचा पुरावा म्हणजे नमुन्याचा अहवाल.",
+  "Every search and seizure must be recorded by audio-video (eSakshya) with the recording linked to the seizure memo.": "प्रत्येक झडती व जप्तीचे दृक्-श्राव्य चित्रीकरण (eSakshya) झालेच पाहिजे आणि ते चित्रीकरण जप्ती पंचनाम्याशी जोडलेले असावे.",
+  "Every electronic record relied on (call or chat records of the supply chain, payment records) needs a BSA 63(4) certificate with Part A and Part B and a matching hash.": "आधार घेतलेल्या प्रत्येक इलेक्ट्रॉनिक अभिलेखासाठी (पुरवठा साखळीतील कॉल किंवा चॅट नोंदी, पेमेंट नोंदी) भाग A आणि भाग B असलेले व जुळणारा हॅश असलेले BSA 63(4) प्रमाणपत्र आवश्यक आहे.",
+  "If anyone has died or been hurt by the liquor, add the national sections for it (BNS) to the FIR with the medical and post-mortem reports; this playbook does not replace them.": "दारूमुळे कोणाचा मृत्यू झाला असेल किंवा कोणाला इजा झाली असेल, तर त्यासाठीची राष्ट्रीय कलमे (BNS) वैद्यकीय व शवविच्छेदन अहवालांसह एफआयआरमध्ये जोडा; हे प्लेबुक त्यांची जागा घेत नाही."
+ }
+}

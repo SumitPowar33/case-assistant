@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { get, send } from './api'
 import { useT } from './i18n'
+import { PlaybookDraftNote, PlaybookLine } from './PlaybookText'
+import { usePlaybookTexts, type PlaybookTexts } from './usePlaybookTexts'
 
 type Linked = { id: string; linkId: string; label: string; kind: string; courtReady?: boolean; linkType?: string }
 type Holder = { personId: string; name: string; basis: string; links: Linked[] }
@@ -32,6 +34,7 @@ const shown = (t: T, e: Linked) => `${e.label}${e.kind === 'electronic' ? ` (${t
  */
 export default function Readiness({ firId, people }: { firId: string; people: Person[] }) {
   const t = useT()
+  const pb = usePlaybookTexts()
   const [report, setReport] = useState<Report>()
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
   const [evidence, setEvidence] = useState<Evidence[]>([])
@@ -54,11 +57,14 @@ export default function Readiness({ firId, people }: { firId: string; people: Pe
   }
 
   if (!report) return <section><h2>{t('readiness.title')}</h2>{error ? <p role="alert">{error}</p> : <p>{t('common.loading')}</p>}</section>
+  // the ingredient a gap is about, to show its text in the screen language under the server's English sentence
+  const gapIngredient = new Map((report.charges ?? []).flatMap((c) => c.ingredients.map((i) => [`ingredient:${c.id}/${i.id}`, i.text])))
   // the gaps with their acceptances; also shown before a playbook is chosen (a section waiting for its report, V64)
   const gapList = () => <>
     <h3>{t('readiness.gaps')}</h3>
     {report.gaps.length === 0 ? <p>{t('readiness.noGaps')}</p> : <ul className="gaps">{report.gaps.map((g) => (
       <li key={g.key}>{g.text}{' '}
+        <PlaybookLine texts={pb} en={gapIngredient.get(g.key) ?? ''} />
         {g.override ? <><small>{t('readiness.acceptedBy', { name: g.override.decidedBy, reason: g.override.reason })}</small>{' '}
           <Withdraw firId={firId} kind="overrides" id={g.override.id} what={t('readiness.acceptance')} act={act} /></> : (
           // folded like Withdraw, so a list of gaps stays short (a phone in the field); the reason is still required
@@ -77,10 +83,11 @@ export default function Readiness({ firId, people }: { firId: string; people: Pe
     <section aria-labelledby="readiness">
       <h2 id="readiness">{t('readiness.title')}</h2>
       {error && <p role="alert">{error}</p>}
+      <PlaybookDraftNote texts={pb} />
       {!report.playbook ? (<>
         <form onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/playbook`, 'PUT', { playbookId: f.get('playbook') }))}>
           <label>{t('readiness.playbookFor')}{' '}
-            <select name="playbook">{playbooks.map((p) => <option key={p.id} value={p.id}>{p.id} {p.version}: {p.appliesTo}</option>)}</select>
+            <select name="playbook">{playbooks.map((p) => <option key={p.id} value={p.id}>{p.id} {p.version}: {p.appliesTo}{pb.of(p.appliesTo) && ` · ${pb.of(p.appliesTo)}`}</option>)}</select>
           </label>{' '}<button type="submit">{t('readiness.usePlaybook')}</button>
         </form>
         {(report.gaps ?? []).length > 0 && gapList()}
@@ -97,12 +104,14 @@ export default function Readiness({ firId, people }: { firId: string; people: Pe
           {report.charges.map((c) => (
             <div key={c.id}>
               <h3>{c.law}: {c.label}</h3>
+              <PlaybookLine texts={pb} en={c.label} />
               <ul className="ingredients">{c.ingredients.map((i) => (
                 <li key={i.id}><span className={`chip ${STATUS[status(i)].chip}`}>{t(STATUS[status(i)].key)}</span><div>{i.text}:{' '}
                   {i.evidence.length
                     ? i.evidence.map((e, n) => <span key={e.linkId}>{n > 0 && ', '}{shown(t, e)}{' '}
                       <Withdraw firId={firId} kind="links" id={e.linkId} what={t('readiness.linkOf', { label: e.label })} act={act} /></span>)
                     : <em>{t('readiness.nothingLinked', { list: i.suggestedProof.join(', ').replace(/_/g, ' ') })}</em>}
+                  <PlaybookLine texts={pb} en={i.text} />
                   {evidence.length > 0 && (
                     <form className="inline" onSubmit={(e) => act(e, (f) => send(`/firs/${firId}/readiness/links`, 'POST',
                       { chargeId: c.id, ingredientId: i.id, evidenceItemId: f.get('item') }))}>
@@ -116,7 +125,7 @@ export default function Readiness({ firId, people }: { firId: string; people: Pe
             </div>
           ))}
           {report.secondLinkRule && <SecondLinks firId={firId} rule={report.secondLinkRule} holders={report.accountHolders ?? []}
-            accused={people.filter((p) => p.role === 'accused')} evidence={evidence} act={act} />}
+            accused={people.filter((p) => p.role === 'accused')} evidence={evidence} act={act} texts={pb} />}
           {!!report.sectionsNotInPlaybook?.length && <p>{t('readiness.notChecked', { list: report.sectionsNotInPlaybook.join(', ') })}</p>}
           {gapList()}
           {!!report.withdrawn?.length && <>
@@ -125,7 +134,7 @@ export default function Readiness({ firId, people }: { firId: string; people: Pe
           </>}
           {!!report.checksToConfirm?.length && <>
             <h3>{t('readiness.checks')}</h3>
-            <ul>{report.checksToConfirm.map((r) => <li key={r.id}>{r.text}</li>)}</ul>
+            <ul>{report.checksToConfirm.map((r) => <li key={r.id}>{r.text}<PlaybookLine texts={pb} en={r.text} /></li>)}</ul>
           </>}
         </>
       )}
@@ -136,15 +145,15 @@ export default function Readiness({ firId, people }: { firId: string; people: Pe
 type Act = (e: FormEvent<HTMLFormElement>, run: (form: FormData) => Promise<unknown>) => void
 
 /** Account-holder accused and the independent links recorded for each (the playbook's second-link rule). */
-function SecondLinks({ firId, rule, holders, accused, evidence, act }: {
-  firId: string; rule: { text: string; requiresAny: string[] }; holders: Holder[]; accused: Person[]; evidence: Evidence[]; act: Act
+function SecondLinks({ firId, rule, holders, accused, evidence, act, texts }: {
+  firId: string; rule: { text: string; requiresAny: string[] }; holders: Holder[]; accused: Person[]; evidence: Evidence[]; act: Act; texts: PlaybookTexts
 }) {
   const t = useT()
   const unmarked = accused.filter((p) => !holders.some((h) => h.personId === p.id))
   return (
     <div>
       <h3>{t('holders.title')}</h3>
-      <p>{rule.text}</p>
+      <p>{rule.text}<PlaybookLine texts={texts} en={rule.text} /></p>
       {holders.length === 0 ? <p>{t('holders.none')}</p> : <ul>{holders.map((h) => (
         <li key={h.personId}>{h.name} <small>({h.basis})</small>:{' '}
           {h.links.length ? h.links.map((l, n) => <span key={l.linkId}>{n > 0 && ', '}{words(l.linkType ?? '')}: {shown(t, l)}{' '}

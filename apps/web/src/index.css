@@ -78,6 +78,8 @@ header {
 .brand-tile { width: 36px; height: 36px; border-radius: 9px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; font-weight: var(--fw-bold); font-size: var(--fs-body); flex: none; }
 .brand strong { display: block; font-size: var(--fs-body); }
 .brand small { display: block; font-size: var(--fs-xs); color: var(--muted); }
+/* A playbook text in the screen language, on its own line under the English. */
+.pb-text { display: block; color: var(--muted); }
 .header-menu { display: flex; flex-direction: column; gap: 18px; flex: 1; }
 nav { display: flex; flex-direction: column; gap: 1px; }
 header nav a { display: flex; align-items: center; min-height: var(--control); padding: 0 var(--sp-3); border-radius: var(--r-md); color: var(--text-2); text-decoration: none; font-size: var(--fs-md); }

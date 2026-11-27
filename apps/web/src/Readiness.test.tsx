@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, test, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import Readiness from './Readiness'
 import { ScreenLangContext } from './i18n'
 
@@ -170,4 +170,45 @@ test('before a playbook is chosen and with no gap, only the choice is shown', as
   expect(await screen.findByRole('button', { name: 'Use this playbook' })).toBeTruthy()
   expect(screen.queryByText('No gaps found.')).toBeNull()
   expect(screen.queryByText('Gaps')).toBeNull()
+})
+
+test('in Marathi each playbook text has its draft translation under the English, which stays, with one note that nobody reviewed it', async () => {
+  const mr: Record<string, string> = { Cheating: 'फसवणूक (मसुदा)', 'The victim was deceived': 'पीडिताची फसवणूक झाली', 'Money was delivered': 'पैसे सुपूर्द झाले',
+    'Record the bank nodal officer statement.': 'नोडल अधिकाऱ्याचा जबाब नोंदवा.', 'Money alone is not enough.': 'फक्त पैसे पुरेसे नाहीत.', 'Online fraud': 'ऑनलाइन फसवणूक' }
+  const calls = mock((url) => url === '/api/playbooks/texts?language=mr' ? { status: 200, body: { status: 'draft', texts: mr } }
+    : url.endsWith('/readiness') ? { status: 200, body: { ...report, secondLinkRule: { text: 'Money alone is not enough.', requiresAny: ['sim_or_device_link'] }, accountHolders: [] } } : undefined)
+  render(<ScreenLangContext.Provider value="mr"><Readiness firId="f1" people={people} /></ScreenLangContext.Provider>)
+  expect((await screen.findByText('पीडिताची फसवणूक झाली')).getAttribute('lang')).toBe('mr')
+  expect(screen.getByText(/The victim was deceived:/)).toBeTruthy()   // the English text holds and stays
+  expect(screen.getByText('BNS 318(4): Cheating')).toBeTruthy()
+  for (const line of ['फसवणूक (मसुदा)', 'नोडल अधिकाऱ्याचा जबाब नोंदवा.', 'फक्त पैसे पुरेसे नाहीत.']) expect(screen.getByText(line)).toBeTruthy()
+  // the ingredient's text also under its gap, and no line under a gap of another kind
+  expect(screen.getAllByText('पैसे सुपूर्द झाले')).toHaveLength(2)
+  expect(screen.getByText(/E-01 is electronic evidence/).querySelector('.pb-text')).toBeNull()
+  expect(screen.getByRole('note').textContent).toMatch(/न तपासलेला मसुदा अनुवाद/)
+  expect(calls.filter((c) => c.url.startsWith('/api/playbooks/texts'))).toHaveLength(1)
+})
+
+test('a playbook to choose is named in both languages; reviewed texts carry no draft note', async () => {
+  mock((url) => url === '/api/playbooks/texts?language=mr' ? { status: 200, body: { status: 'reviewed', texts: { 'Online fraud': 'ऑनलाइन फसवणूक' } } }
+    : url === '/api/playbooks' ? { status: 200, body: [{ id: 'cyber-fraud', version: '1', status: 'draft', appliesTo: 'Online fraud' }, { id: 'other', version: '1', status: 'draft', appliesTo: 'Other cases' }] }
+      : url.endsWith('/readiness') ? { status: 200, body: { playbook: null, charges: [], gaps: [], openGaps: 0 } } : undefined)
+  render(<ScreenLangContext.Provider value="mr"><Readiness firId="f1" people={people} /></ScreenLangContext.Provider>)
+  expect(await screen.findByRole('option', { name: 'cyber-fraud 1: Online fraud · ऑनलाइन फसवणूक' })).toBeTruthy()
+  expect(screen.getByRole('option', { name: 'other 1: Other cases' })).toBeTruthy()
+  expect(screen.queryByRole('note')).toBeNull()
+})
+
+test('the English alone shows when the translations cannot be read, and English screens do not ask for them', async () => {
+  const calls = mock((url) => url.startsWith('/api/playbooks/texts') ? { status: 500, body: {} } : undefined)
+  render(<ScreenLangContext.Provider value="mr"><Readiness firId="f1" people={people} /></ScreenLangContext.Provider>)
+  expect(await screen.findByText(/The victim was deceived:/)).toBeTruthy()
+  await waitFor(() => expect(calls.some((c) => c.url.startsWith('/api/playbooks/texts'))).toBe(true))
+  expect(document.querySelector('.pb-text')).toBeNull()
+  expect(screen.queryByRole('note')).toBeNull()
+  cleanup()
+  const english = mock(() => undefined)
+  render(<Readiness firId="f1" people={people} />)
+  expect(await screen.findByText(/The victim was deceived:/)).toBeTruthy()
+  expect(english.some((c) => c.url.startsWith('/api/playbooks/texts'))).toBe(false)
 })

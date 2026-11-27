@@ -7,9 +7,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -20,10 +22,18 @@ import org.springframework.stereotype.Component;
  * playbook (IN) holds for every FIR; a state module's playbook only for FIRs of its own state, and it may name that
  * state's own laws (module.json "acts"). A state playbook may only tighten a national charge: a charge of the same law as
  * a national playbook's charge keeps every national ingredient (same id, same text, every proof) and may add more.
+ * A module may also give its playbooks' texts in another language (packs/{module}/playbook-texts), shown beside the
+ * English text, which is the one that holds.
  */
 @Component
 class Playbooks {
     record Ingredient(String id, String text, List<String> proof) {}
+
+    /** One module's translation of one playbook's shown texts, keyed by the English text itself, so a changed text loses it. */
+    record Texts(String playbook, String language, String status, Map<String, String> texts) {}
+
+    /** What the screens look translations up in; "draft" while any file in it has not been reviewed. */
+    record Translations(String status, Map<String, String> texts) {}
 
     /** The acts fir_section takes (V1), longest first so "IT Act" is not read as an act "IT". */
     static final List<String> ACTS = List.of("POCSO Act", "SC/ST Act", "NDPS Act", "Arms Act", "IT Act", "Other", "BNS", "IPC");
@@ -60,19 +70,21 @@ class Playbooks {
 
     private final Map<String, Playbook> byId = new TreeMap<>();
     private final Map<String, String> moduleOf = new TreeMap<>();
+    private final Map<String, Texts> textsById = new TreeMap<>();   // "playbook/language"
 
     @Autowired
     Playbooks(ObjectMapper json, Modules modules) throws IOException {
-        this(read(json), modules);
+        this(read(json, "playbooks", Playbook.class), modules);
+        read(json, "playbook-texts", Texts.class).forEach(file -> addTexts(file.getKey(), file.getValue()));
     }
 
-    /** module of each file, and its playbooks */
-    private static List<Map.Entry<String, Playbook>> read(ObjectMapper json) throws IOException {
-        var out = new java.util.ArrayList<Map.Entry<String, Playbook>>();
-        for (var res : new PathMatchingResourcePatternResolver().getResources("classpath*:packs/*/playbooks/*.json")) {
-            String[] path = res.getURL().getPath().split("/");   // .../packs/{module}/playbooks/{file}.json
+    /** Every file of one folder of the modules, with the module it is in. */
+    private static <T> List<Map.Entry<String, T>> read(ObjectMapper json, String folder, Class<T> type) throws IOException {
+        var out = new java.util.ArrayList<Map.Entry<String, T>>();
+        for (var res : new PathMatchingResourcePatternResolver().getResources("classpath*:packs/*/" + folder + "/*.json")) {
+            String[] path = res.getURL().getPath().split("/");   // .../packs/{module}/{folder}/{file}.json
             try (InputStream in = res.getInputStream()) {
-                out.add(Map.entry(path[path.length - 3], json.readValue(in, Playbook.class)));
+                out.add(Map.entry(path[path.length - 3], json.readValue(in, type)));
             }
         }
         return out;
@@ -101,6 +113,29 @@ class Playbooks {
                                 + i.id + "; a state playbook may only add to a national charge");
             }
         }
+    }
+
+    /** Takes a module's translation of one of its own playbooks; a text the playbook no longer shows is left out. */
+    void addTexts(String module, Texts t) {
+        Playbook pb = byId.get(t.playbook);
+        if (pb == null || !module.equals(moduleOf.get(t.playbook)))
+            throw new IllegalStateException("packs/" + module + "/playbook-texts: " + t.playbook + " is not a playbook of this module");
+        var shown = Stream.of(Stream.of(pb.appliesTo), pb.charges.stream().map(Charge::label),
+                        pb.charges.stream().flatMap(c -> c.ingredients.stream()).map(Ingredient::text), pb.rules.stream().map(Rule::text))
+                .flatMap(s -> s).collect(Collectors.toSet());
+        var texts = new TreeMap<>(t.texts);
+        texts.keySet().retainAll(shown);
+        texts.values().removeIf(String::isBlank);
+        if (textsById.putIfAbsent(t.playbook + "/" + t.language, new Texts(t.playbook, t.language, t.status, texts)) != null)
+            throw new IllegalStateException("two translations of " + t.playbook + " into " + t.language);
+    }
+
+    /** The translations into one language of the playbooks that hold for a state (all of them for no state). */
+    Translations translations(String state, String language) {
+        var files = forState(state).stream().map(pb -> textsById.get(pb.id + "/" + language)).filter(Objects::nonNull).toList();
+        var texts = new TreeMap<String, String>();
+        files.forEach(f -> texts.putAll(f.texts));
+        return new Translations(files.stream().allMatch(f -> "reviewed".equals(f.status)) ? "reviewed" : "draft", texts);
     }
 
     /** Every charge names a national act and a section ("BNS 318(4)", "IT Act 66D"), so the officer can add it to an FIR. */

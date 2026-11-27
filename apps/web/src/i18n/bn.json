@@ -179,6 +179,7 @@
  "readiness.withdrawn": "প্রত্যাহৃত",
  "readiness.withdrawnBy": "{what}: {detail}। {name} প্রত্যাহার করেছেন: “{reason}”",
  "readiness.checks": "একজন ব্যক্তির নিশ্চিত করার যাচাই",
+ "playbook.draftNote": "প্লেবুকের ইংরেজি লেখার নিচে আপনার ভাষার লাইনটি একটি খসড়া অনুবাদ, যা কেউ পর্যালোচনা করেননি। ইংরেজি লেখাটিই প্রযোজ্য।",
  "withdrawnKind.evidence link": "প্রমাণের সংযোগ",
  "withdrawnKind.accused link": "অভিযুক্তের সংযোগ",
  "withdrawnKind.accepted gap": "গৃহীত ঘাটতি",

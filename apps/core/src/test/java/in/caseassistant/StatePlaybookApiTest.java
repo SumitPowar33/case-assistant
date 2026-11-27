@@ -72,6 +72,22 @@ class StatePlaybookApiTest {
     }
 
     @Test
+    void thePlaybookTextsOfTheStateAreGivenInALanguageAsAnUnreviewedDraft() throws Exception {
+        // the packs' own files: the Marathi draft of a national ingredient and of a Maharashtra one
+        String national = "$.texts['The victim was deceived']", stateOnly = "$.texts['The accused is a member of that syndicate']";
+        mvc.perform(get("/api/playbooks/texts?language=mr").header("Authorization", mhIo)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("draft"))
+                .andExpect(jsonPath(national).value("पीडिताची फसवणूक झाली"))
+                .andExpect(jsonPath(stateOnly).value("आरोपी त्या सिंडिकेटचा सदस्य आहे"));
+        mvc.perform(get("/api/playbooks/texts?language=mr").header("Authorization", inIo))
+                .andExpect(jsonPath(national).exists()).andExpect(jsonPath(stateOnly).doesNotExist());
+        mvc.perform(get("/api/playbooks/texts?language=ta").header("Authorization", mhIo)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.texts").isEmpty());
+        mvc.perform(get("/api/playbooks/texts").header("Authorization", mhIo)).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/playbooks/texts?language=mr")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void aStatePlaybookIsChosenOnlyForAnFirOfItsState() throws Exception {
         mvc.perform(put("/api/firs/" + mhFir + "/playbook").header("Authorization", mhIo).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"playbookId\":\"mh-deposit-fraud\"}")).andExpect(status().isNoContent());

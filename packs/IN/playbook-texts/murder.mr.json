@@ -1,0 +1,20 @@
+{
+ "playbook": "murder",
+ "language": "mr",
+ "status": "draft",
+ "review_note": "DRAFT, not reviewed. Machine-drafted Marathi of the playbook's English texts, shown under the English text, which is the one that holds. A Marathi-speaking public prosecutor must check every line against the Maharashtra Directorate of Languages' legal glossary (decision 5 of 2 Nov 2026) before an officer relies on it.",
+ "texts": {
+  "Murder: death caused by an act done with the intention of causing death or an injury sufficient to cause death": "खून: मृत्यू घडवण्याच्या उद्देशाने किंवा मृत्यू घडवण्यास पुरेशी इजा करण्याच्या उद्देशाने केलेल्या कृतीमुळे झालेला मृत्यू",
+  "Murder": "खून",
+  "The victim died": "पीडिताचा मृत्यू झाला",
+  "The death was caused by the injury the act produced (homicidal, not natural or accidental)": "कृतीमुळे झालेल्या इजेमुळेच मृत्यू झाला (मनुष्यवधात्मक; नैसर्गिक किंवा अपघाती नाही)",
+  "The act that caused the death was done by the accused": "मृत्यूला कारणीभूत ठरलेली कृती आरोपीने केली",
+  "The act was done with the intention of causing death, or an injury the accused knew was likely to cause death or sufficient in the ordinary course of nature to cause death (BNS 101)": "मृत्यू घडवण्याच्या उद्देशाने, किंवा मृत्यू होण्याचा संभव आहे हे आरोपीला माहीत होते अशी किंवा निसर्गक्रमानुसार मृत्यू घडवण्यास पुरेशी इजा करण्याच्या उद्देशाने कृती करण्यात आली (BNS 101)",
+  "For an offence punishable with seven years or more, a forensic expert visits the scene to collect evidence and the process is recorded on video (BNSS 176(3)).": "सात वर्षे किंवा त्याहून अधिक शिक्षेच्या अपराधासाठी न्यायसहायक तज्ज्ञ पुरावा गोळा करण्यासाठी घटनास्थळी भेट देतो आणि ही प्रक्रिया व्हिडिओवर चित्रित केली जाते (BNSS 176(3)).",
+  "The inquest report on the body, with the witnesses who attended it, is on file and sent to the Magistrate.": "मृतदेहावरील इन्क्वेस्ट पंचनामा, त्यावेळी उपस्थित साक्षीदारांसह, फाइलमध्ये आहे आणि दंडाधिकाऱ्यांकडे पाठवला आहे.",
+  "Every search and seizure, including the recovery of the weapon, is recorded by audio-video (eSakshya) with the recording linked to the seizure memo.": "हत्याराच्या हस्तगतीसह प्रत्येक झडती व जप्तीचे दृक्-श्राव्य चित्रीकरण (eSakshya) केले जाते आणि ते चित्रीकरण जप्ती पंचनाम्याशी जोडले जाते.",
+  "A recovery made on the accused's information needs the disclosure statement, the recovery memo and two independent witnesses; only the part of the information that leads to the fact is admissible.": "आरोपीने दिलेल्या माहितीवरून झालेल्या हस्तगतीसाठी निवेदन, हस्तगत पंचनामा आणि दोन स्वतंत्र पंच आवश्यक आहेत; माहितीचा जो भाग तथ्य उघडकीस आणतो तेवढाच ग्राह्य आहे.",
+  "The weapon and the blood-stained articles stay sealed from seizure to the forensic lab and to court; every hand-over is in the property register.": "हत्यार आणि रक्ताचे डाग असलेल्या वस्तू जप्तीपासून न्यायसहायक प्रयोगशाळा आणि न्यायालयापर्यंत सीलबंद राहतात; प्रत्येक हस्तांतरण मुद्देमाल नोंदवहीत असते.",
+  "Every electronic record relied on (CCTV, call records, phone data) needs a BSA 63(4) certificate with Part A and Part B and a matching hash.": "आधार घेतलेल्या प्रत्येक इलेक्ट्रॉनिक अभिलेखासाठी (CCTV, कॉल नोंदी, फोनमधील माहिती) भाग A आणि भाग B असलेले व जुळणारा हॅश असलेले BSA 63(4) प्रमाणपत्र आवश्यक आहे."
+ }
+}

@@ -179,6 +179,7 @@
  "readiness.withdrawn": "ਵਾਪਸ ਲਏ",
  "readiness.withdrawnBy": "{what}: {detail}। {name} ਵੱਲੋਂ ਵਾਪਸ ਲਿਆ: “{reason}”",
  "readiness.checks": "ਕਿਸੇ ਵਿਅਕਤੀ ਵੱਲੋਂ ਪੁਸ਼ਟੀ ਲਈ ਜਾਂਚਾਂ",
+ "playbook.draftNote": "ਪਲੇਬੁੱਕ ਦੇ ਅੰਗਰੇਜ਼ੀ ਪਾਠ ਹੇਠਾਂ ਤੁਹਾਡੀ ਭਾਸ਼ਾ ਦੀ ਸਤਰ ਇੱਕ ਖਰੜਾ ਅਨੁਵਾਦ ਹੈ ਜਿਸ ਦੀ ਕਿਸੇ ਨੇ ਸਮੀਖਿਆ ਨਹੀਂ ਕੀਤੀ। ਅੰਗਰੇਜ਼ੀ ਪਾਠ ਹੀ ਮੰਨਣਯੋਗ ਹੈ।",
  "withdrawnKind.evidence link": "ਸਬੂਤ ਦੀ ਕੜੀ",
  "withdrawnKind.accused link": "ਮੁਲਜ਼ਮ ਦੀ ਕੜੀ",
  "withdrawnKind.accepted gap": "ਸਵੀਕਾਰ ਕੀਤੀ ਕਮੀ",

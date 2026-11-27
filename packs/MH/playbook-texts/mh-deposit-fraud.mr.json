@@ -1,0 +1,24 @@
+{
+ "playbook": "mh-deposit-fraud",
+ "language": "mr",
+ "status": "draft",
+ "review_note": "DRAFT, not reviewed. Machine-drafted Marathi of the playbook's English texts, shown under the English text, which is the one that holds. A Marathi-speaking public prosecutor must check every line against the Maharashtra Directorate of Languages' legal glossary (decision 5 of 2 Nov 2026) before an officer relies on it.",
+ "texts": {
+  "Maharashtra only: deposits or investment schemes that did not pay back (chit, 'double your money', private loans taken as deposits), under the Maharashtra Protection of Interest of Depositors (in Financial Establishments) Act 1999": "फक्त महाराष्ट्र: पैसे परत न करणाऱ्या ठेव किंवा गुंतवणूक योजना (चिट, 'पैसे दुप्पट', ठेव म्हणून घेतलेली खाजगी कर्जे), महाराष्ट्र ठेवीदारांच्या (वित्तीय आस्थापनांमधील) हितसंबंधांचे संरक्षण अधिनियम 1999 खाली",
+  "Fraudulent default by a financial establishment (MPID Act 3)": "वित्तीय आस्थापनेने कपटाने केलेली कसूर (MPID Act 3)",
+  "The money was taken by a financial establishment: a person, firm, company or association accepting deposits under a scheme or arrangement (MPID 2(d)); a private individual can be one": "पैसे वित्तीय आस्थापनेने घेतले: योजना किंवा व्यवस्थेखाली ठेवी स्वीकारणारी व्यक्ती, भागीदारी संस्था, कंपनी किंवा संघ (MPID 2(d)); खाजगी व्यक्तीही असू शकते",
+  "The money was received as a deposit, to be returned in money or kind or with a service, with or without interest, bonus or profit (MPID 2(c)); a loan can be a deposit": "पैसे ठेव म्हणून घेतले गेले, जी रोख किंवा वस्तूच्या स्वरूपात किंवा सेवेसह, व्याज, बोनस किंवा नफ्यासह किंवा त्याशिवाय परत करायची होती (MPID 2(c)); कर्जही ठेव असू शकते",
+  "The establishment fraudulently did not repay the deposit or the promised benefit when due, or fraudulently did not give the service promised": "आस्थापनेने देय झाल्यावर ठेव किंवा कबूल केलेला लाभ कपटाने परत केला नाही, किंवा कबूल केलेली सेवा कपटाने दिली नाही",
+  "The accused was a promoter, partner, director, manager or other person or employee responsible for running the establishment": "आरोपी हा आस्थापना चालवण्यास जबाबदार असलेला प्रवर्तक, भागीदार, संचालक, व्यवस्थापक किंवा अन्य व्यक्ती अथवा कर्मचारी होता",
+  "Cheating and dishonestly inducing delivery of property": "फसवणूक करून अप्रामाणिकपणे मालमत्ता सुपूर्द करण्यास प्रवृत्त करणे",
+  "The victim was deceived": "पीडिताची फसवणूक झाली",
+  "The deception induced the victim to hand over money or property": "फसवणुकीमुळे पीडित पैसे किंवा मालमत्ता सुपूर्द करण्यास प्रवृत्त झाला",
+  "Money or property was actually delivered": "पैसे किंवा मालमत्ता प्रत्यक्षात सुपूर्द करण्यात आली",
+  "Criminal conspiracy": "फौजदारीपात्र कट",
+  "Two or more people agreed to commit the offence": "दोन किंवा अधिक व्यक्तींनी अपराध करण्याचे आपसात ठरवले",
+  "List every depositor with the amount, the date and the promised return, from the establishment's records and the complaints; each amount with a certified bank record.": "आस्थापनेच्या अभिलेखांवरून आणि तक्रारींवरून प्रत्येक ठेवीदाराची रक्कम, तारीख आणि कबूल केलेला परतावा यांसह यादी करा; प्रत्येक रकमेसाठी प्रमाणित बँक नोंद घ्या.",
+  "Send the facts and the property believed to be bought with the deposits to the State Government and its Competent Authority, so that attachment can be ordered (MPID 4 and 5).": "तथ्ये आणि ठेवींमधून खरेदी केली असल्याचे समजल्या जाणाऱ्या मालमत्तेचा तपशील राज्य शासन आणि त्याच्या सक्षम प्राधिकाऱ्याकडे पाठवा, म्हणजे टाच (अटॅचमेंट) आणण्याचा आदेश देता येईल (MPID 4 आणि 5).",
+  "Every electronic record relied on needs a BSA 63(4) certificate with Part A and Part B and a matching hash.": "आधार घेतलेल्या प्रत्येक इलेक्ट्रॉनिक अभिलेखासाठी भाग A आणि भाग B असलेले व जुळणारा हॅश असलेले BSA 63(4) प्रमाणपत्र आवश्यक आहे.",
+  "Every search and seizure must be recorded by audio-video (eSakshya) with the recording linked to the seizure memo.": "प्रत्येक झडती व जप्तीचे दृक्-श्राव्य चित्रीकरण (eSakshya) झालेच पाहिजे आणि ते चित्रीकरण जप्ती पंचनाम्याशी जोडलेले असावे."
+ }
+}

@@ -2,6 +2,7 @@
 import json
 import pathlib
 import re
+import unicodedata
 
 import pytest
 
@@ -469,3 +470,44 @@ def test_cdr_layouts_are_a_draft_whose_column_names_and_call_types_each_mean_one
         assert set(layout["types"]) == {"call_out", "call_in", "sms_out", "sms_in"}
         words = [norm(w) for ws in layout["types"].values() for w in ws]
         assert len(words) == len(set(words)), f"{path}: a call type word means two things"
+
+
+def shown_texts(pb):
+    """The playbook texts a screen shows: what it applies to, the charges' labels, the ingredients and the rules."""
+    return ([pb["applies_to"]] + [c["label"] for c in pb["charges"]] + [i["text"] for c in pb["charges"] for i in c["ingredients"]]
+            + [r["text"] for r in pb["rules"]])
+
+
+def references(text):
+    """Every number (Indian-script digits read as digits) and law code of a text, so a translation cannot change a section or a day."""
+    plain = "".join(str(unicodedata.digit(ch)) if ch.isdigit() else ch for ch in text)
+    return sorted(re.findall(r"\d+|BNSS|BNS|BSA|IPC|MPID|MCOC", plain))
+
+
+def test_every_playbook_has_a_marathi_draft_of_each_shown_text_with_the_same_numbers_and_laws():
+    """packs/{module}/playbook-texts/{playbook}.{language}.json (decision 5 of 2 Nov: Marathi first, a draft until a prosecutor has
+    checked it). The key is the English text itself, so a changed playbook text can never keep an old translation."""
+    playbooks = {(p.parents[1].name, json.loads(p.read_text(encoding="utf-8"))["id"]): json.loads(p.read_text(encoding="utf-8")) for p in PLAYBOOKS}
+    marathi = set()
+    for path in sorted(ROOT.glob("*/playbook-texts/*.json")):
+        f = json.loads(path.read_text(encoding="utf-8"))
+        key = (path.parents[1].name, f["playbook"])
+        assert key in playbooks, f"{path}: no such playbook in this module"
+        assert path.name == f"{f['playbook']}.{f['language']}.json" and f["language"] in SCRIPT, path
+        assert f["status"] == "reviewed" or (f["status"] == "draft" and "not reviewed" in f["review_note"]), path
+        pb = playbooks[key]
+        assert set(f["texts"]) == set(shown_texts(pb)), f"{path}: texts out of step with the playbook"
+        for en, translated in f["texts"].items():
+            assert any(SCRIPT[f["language"]] <= ord(ch) < SCRIPT[f["language"]] + 0x80 for ch in translated), (path.name, en)
+            assert references(translated) == references(en), (path.name, en, references(en), references(translated))
+        if f["language"] == "mr":
+            marathi.add(key)
+    assert marathi == set(playbooks), "every playbook needs its Marathi draft"
+
+
+def test_the_same_english_playbook_text_has_one_marathi_translation():
+    """The screens look a translation up by the English text, over every playbook of the user's state."""
+    seen = {}
+    for path in sorted(ROOT.glob("*/playbook-texts/*.mr.json")):
+        for en, translated in json.loads(path.read_text(encoding="utf-8"))["texts"].items():
+            assert seen.setdefault(en, translated) == translated, (path.name, en)

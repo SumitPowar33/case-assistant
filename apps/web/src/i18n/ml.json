@@ -179,6 +179,7 @@
  "readiness.withdrawn": "പിൻവലിച്ചവ",
  "readiness.withdrawnBy": "{what}: {detail}. {name} പിൻവലിച്ചു: “{reason}”",
  "readiness.checks": "ഒരാൾ ഉറപ്പാക്കേണ്ട പരിശോധനകൾ",
+ "playbook.draftNote": "പ്ലേബുക്കിലെ ഇംഗ്ലീഷ് വാചകത്തിന് താഴെ നിങ്ങളുടെ ഭാഷയിലുള്ള വരി ആരും പരിശോധിച്ചിട്ടില്ലാത്ത കരട് പരിഭാഷയാണ്. ഇംഗ്ലീഷ് വാചകമാണ് സാധുവായത്.",
  "withdrawnKind.evidence link": "തെളിവ് ബന്ധം",
  "withdrawnKind.accused link": "പ്രതി ബന്ധം",
  "withdrawnKind.accepted gap": "അംഗീകരിച്ച പോരായ്മ",

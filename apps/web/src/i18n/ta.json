@@ -179,6 +179,7 @@
  "readiness.withdrawn": "திரும்பப் பெறப்பட்டவை",
  "readiness.withdrawnBy": "{what}: {detail}. {name} திரும்பப் பெற்றார்: “{reason}”",
  "readiness.checks": "ஒருவர் உறுதிசெய்ய வேண்டிய சோதனைகள்",
+ "playbook.draftNote": "பிளேபுக்கின் ஆங்கில உரைக்குக் கீழே உங்கள் மொழியில் உள்ள வரி, யாரும் சரிபார்க்காத வரைவு மொழிபெயர்ப்பு. ஆங்கில உரையே செல்லுபடியாகும்.",
  "withdrawnKind.evidence link": "சான்று இணைப்பு",
  "withdrawnKind.accused link": "குற்றம் சாட்டப்பட்டவர் இணைப்பு",
  "withdrawnKind.accepted gap": "ஏற்கப்பட்ட குறை",

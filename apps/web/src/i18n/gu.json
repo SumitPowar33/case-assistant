@@ -179,6 +179,7 @@
  "readiness.withdrawn": "પાછું ખેંચેલું",
  "readiness.withdrawnBy": "{what}: {detail}. {name} દ્વારા પાછું ખેંચ્યું: “{reason}”",
  "readiness.checks": "વ્યક્તિએ પુષ્ટિ કરવાની તપાસ",
+ "playbook.draftNote": "પ્લેબુકના અંગ્રેજી લખાણ નીચેની તમારી ભાષાની લીટી એક મુસદ્દા અનુવાદ છે જેની કોઈએ સમીક્ષા કરી નથી. અંગ્રેજી લખાણ જ માન્ય છે.",
  "withdrawnKind.evidence link": "પુરાવાની કડી",
  "withdrawnKind.accused link": "આરોપીની કડી",
  "withdrawnKind.accepted gap": "સ્વીકારેલી ખામી",

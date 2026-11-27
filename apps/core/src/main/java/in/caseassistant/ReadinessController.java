@@ -56,6 +56,12 @@ class ReadinessController {
                 "status", p.status(), "appliesTo", p.appliesTo(), "module", playbooks.module(p.id()))).toList();
     }
 
+    /** Those playbooks' texts in a language, to show beside the English (empty when no module gives any). */
+    @GetMapping("/api/playbooks/texts")
+    Playbooks.Translations texts(@AuthenticationPrincipal Jwt jwt, @RequestParam String language) {
+        return playbooks.translations(team.stateOfUser(CaseTeam.user(jwt)), language);
+    }
+
     @PutMapping("/api/firs/{firId}/playbook")
     ResponseEntity<Void> choose(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID firId, @Valid @RequestBody Choice c) {
         UUID user = CaseTeam.user(jwt);

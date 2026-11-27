@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import SectionSuggest from './SectionSuggest'
+import { ScreenLangContext, translate } from './i18n'
 import { setSession } from './api'
 
 // Fictional data only.
@@ -198,4 +199,21 @@ test('a suggested charge graver than every section on the FIR comes first and sa
   expect(within(card('BNS 103(1)')).getByText('Graver than the sections on the FIR')).toBeTruthy()
   expect(within(card('BNS 103(1)')).getByText('death')).toBeTruthy()
   expect(within(card('BNS 319(2)')).queryByText('Graver than the sections on the FIR')).toBeNull()
+})
+
+test('in Marathi a suggested charge and its ingredients carry the draft translation under the English, and the AI is still sent English', async () => {
+  const calls = stub({ generate: draft(JSON.stringify(ANSWER)) })
+  const real = globalThis.fetch
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => url === '/api/playbooks/texts?language=mr'
+    ? { ok: true, status: 200, json: async () => ({ status: 'draft', texts: { 'Personation by computer': 'संगणकाने तोतयेगिरी',
+      'The text of computer_resource': 'संगणक साधन', 'The text of personation': 'तोतयेगिरी' } }) } : real(url, init)))
+  render(<ScreenLangContext.Provider value="mr"><SectionSuggest firId="f1" text={TEXT} victimProtected={false} version={0} onSaved={() => undefined} /></ScreenLangContext.Provider>)
+  fireEvent.click(await screen.findByRole('button', { name: translate('mr', 'sections.suggest') }))
+  const it = await screen.findByRole('listitem', { name: 'IT Act 66D' })
+  for (const line of ['संगणकाने तोतयेगिरी', 'संगणक साधन', 'तोतयेगिरी']) expect(within(it).getByText(line).getAttribute('lang')).toBe('mr')
+  expect(within(it).getByText('Personation by computer')).toBeTruthy()
+  expect(screen.getByText(translate('mr', 'playbook.draftNote'))).toBeTruthy()
+  const sent = String(calls.find((c) => c.url === '/ai/v1/generate')!.body!.prompt)
+  expect(sent).toContain('The text of computer_resource')
+  expect(sent).not.toContain('संगणक')
 })

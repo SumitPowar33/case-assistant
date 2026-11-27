@@ -179,6 +179,7 @@
  "readiness.withdrawn": "ପ୍ରତ୍ୟାହୃତ",
  "readiness.withdrawnBy": "{what}: {detail}। {name} ପ୍ରତ୍ୟାହାର କଲେ: “{reason}”",
  "readiness.checks": "ଜଣେ ବ୍ୟକ୍ତି ନିଶ୍ଚିତ କରିବାକୁ ଥିବା ଯାଞ୍ଚ",
+ "playbook.draftNote": "ପ୍ଲେବୁକ୍‌ର ଇଂରାଜୀ ପାଠ୍ୟ ତଳେ ଥିବା ଆପଣଙ୍କ ଭାଷାର ଧାଡ଼ି ଏକ ଚିଠା ଅନୁବାଦ, ଯାହାକୁ କେହି ସମୀକ୍ଷା କରିନାହାନ୍ତି। ଇଂରାଜୀ ପାଠ୍ୟ ହିଁ ମାନ୍ୟ।",
  "withdrawnKind.evidence link": "ପ୍ରମାଣର ସଂଯୋଗ",
  "withdrawnKind.accused link": "ଅଭିଯୁକ୍ତଙ୍କ ସଂଯୋଗ",
  "withdrawnKind.accepted gap": "ଗୃହୀତ ତ୍ରୁଟି",

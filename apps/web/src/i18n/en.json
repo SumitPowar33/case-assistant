@@ -179,6 +179,7 @@
  "readiness.withdrawn": "Withdrawn",
  "readiness.withdrawnBy": "{what}: {detail}. Withdrawn by {name}: “{reason}”",
  "readiness.checks": "Checks for a person to confirm",
+ "playbook.draftNote": "A line in your language under a playbook's English text is a draft translation that nobody has reviewed. The English text holds.",
  "withdrawnKind.evidence link": "evidence link",
  "withdrawnKind.accused link": "accused link",
  "withdrawnKind.accepted gap": "accepted gap",

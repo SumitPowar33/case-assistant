@@ -87,4 +87,35 @@ class PlaybooksTest {
         // a national playbook is not held to another national playbook's charge
         org.assertj.core.api.Assertions.assertThatCode(() -> of("IN", book("in2", "BNS 318(4)"))).doesNotThrowAnyException();
     }
+
+    static Playbooks.Texts texts(String id, String language, String status, java.util.Map<String, String> texts) {
+        return new Playbooks.Texts(id, language, status, texts);
+    }
+
+    @Test
+    void aTranslationGivesOnlyTextsItsPlaybookShowsAndOnlyForThePlaybooksOfTheState() {
+        var pbs = of("MH", book("mh", "MPID Act 3", new Playbooks.Ingredient("i", "A state ingredient", List.of("x"))));
+        pbs.addTexts("IN", texts("national", "mr", "reviewed", java.util.Map.of("The victim was deceived", "पीडिताची फसवणूक झाली",
+                "x", "लागू", "label", " ", "A text the playbook no longer has", "जुना मजकूर")));
+        assertThat(pbs.translations("MH", "mr").status()).isEqualTo("reviewed");
+        pbs.addTexts("MH", texts("mh", "mr", "draft", java.util.Map.of("A state ingredient", "राज्य घटक")));
+        var mh = pbs.translations("MH", "mr");
+        assertThat(mh.status()).isEqualTo("draft");   // one unreviewed file makes the answer a draft
+        assertThat(mh.texts()).containsOnly(java.util.Map.entry("The victim was deceived", "पीडिताची फसवणूक झाली"),
+                java.util.Map.entry("x", "लागू"), java.util.Map.entry("A state ingredient", "राज्य घटक"));   // no blank, no stale text
+        assertThat(pbs.translations("KA", "mr").texts()).containsOnlyKeys("The victim was deceived", "x");
+        assertThat(pbs.translations(null, "mr").texts()).hasSize(3);
+        assertThat(pbs.translations("MH", "ta").texts()).isEmpty();
+    }
+
+    @Test
+    void aTranslationIsTakenOnlyFromThePlaybooksOwnModuleAndOncePerLanguage() {
+        var pbs = of("MH", book("mh", "MPID Act 3"));
+        for (var wrong : List.of(java.util.Map.entry("MH", "national"), java.util.Map.entry("IN", "mh"), java.util.Map.entry("IN", "gone")))
+            assertThatThrownBy(() -> pbs.addTexts(wrong.getKey(), texts(wrong.getValue(), "mr", "draft", java.util.Map.of())))
+                    .hasMessageContaining(wrong.getValue() + " is not a playbook of this module");
+        pbs.addTexts("MH", texts("mh", "mr", "draft", java.util.Map.of()));
+        pbs.addTexts("MH", texts("mh", "hi", "draft", java.util.Map.of()));
+        assertThatThrownBy(() -> pbs.addTexts("MH", texts("mh", "mr", "draft", java.util.Map.of()))).hasMessageContaining("two translations of mh into mr");
+    }
 }
