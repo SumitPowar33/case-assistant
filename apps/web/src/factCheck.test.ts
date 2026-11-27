@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { FACT_KINDS, FACT_PROMPT_VERSION, factPrompt, locate, readFacts } from './factCheck'
+import { FACT_KINDS, FACT_PROMPT_VERSION, factPrompt, jsonList, locate, readFacts } from './factCheck'
 
 // Fictional data only.
 const TEXT = 'On 28 October 2026 at about 10:40 a caller said he was from my bank.\nI shared a code. Rs 40,000 went out of my\naccount 004512349876 by UPI to fictional@okdemo, UTR 432109876543.'
@@ -85,4 +85,45 @@ test('a quote of 500 characters and a value of 200 are the most taken; a bracket
   expect(readFacts(draft([{ kind: 'place', value: 'z', quote: 'z '.repeat(200).trim() }]), text)).toMatchObject({ dropped: 1, facts: [] })
   expect(readFacts(`The list [see below] follows: ${draft([{ kind: ' Place ', value: ' x ', quote: 'Place x' }])}`, text)).toMatchObject({ kind: 'facts', facts: [{ kind: 'place', value: 'x' }] })
   expect(readFacts('Nothing to list [none].', text)).toEqual({ kind: 'unreadable' })
+})
+
+test('the prompt text is pinned to its version: change the version when the words change', () => {
+  expect([FACT_PROMPT_VERSION, factPrompt('Fictional text.')]).toMatchInlineSnapshot(`
+    [
+      "fir_extract/facts@1",
+      "Read the FIR text below and list the facts in it of these kinds:
+    date (of the offence or of an event), time, place, amount (money), utr (bank transaction reference), phone (a phone number), account (a bank account number), upi (a UPI id).
+    Answer with only a JSON list. Each entry is an object with three strings: "kind" (one of the kinds above), "value" (the fact, short) and "quote" (the words of the FIR text it comes from, copied exactly, character for character, at most 200 characters).
+    Rules: list only what the text says; never guess or complete a number. Do not list names of people. If the text has no fact of a kind, leave that kind out. If the text gives two different values for the same thing, list both.
+    FIR text:
+    <<<
+    Fictional text.
+    >>>",
+    ]
+  `)
+})
+
+test('a UTR or account number must stand in its quote, and a value or kind that is not a string is dropped', () => {
+  const r = readFacts(draft([
+    { kind: 'utr', value: '999999999999', quote: 'UTR 432109876543' },
+    { kind: 'account', value: '999999999999', quote: 'account 004512349876' },
+    { kind: 'place', value: 5, quote: 'my bank' },
+    { kind: 7, value: 'bank', quote: 'my bank' },
+  ]), TEXT)
+  expect(r).toMatchObject({ kind: 'facts', facts: [], dropped: 4 })
+})
+
+test('a quote longer than 500 characters is dropped even when the words it points at are short', () => {
+  const r = readFacts(draft([{ kind: 'place', value: 'bank', quote: `my${' '.repeat(600)}bank` }]), TEXT)
+  expect(r).toMatchObject({ facts: [], dropped: 1 })
+})
+
+test('the exact words win over an earlier piece that differs only in spacing', () => {
+  expect(locate('Rs  40 first, then Rs 40.', 'Rs 40')).toEqual({ at: 19, quote: 'Rs 40' })
+})
+
+test('the list of facts is taken from the answer, not an earlier bracketed number, however it is spaced', () => {
+  expect(jsonList('See note [1]: [{"a":1}]')).toEqual([{ a: 1 }])
+  expect(jsonList('See note [1]:\n[\n  {"a":1}\n]')).toEqual([{ a: 1 }])
+  expect(jsonList('Nothing found: [ ]')).toEqual([])
 })

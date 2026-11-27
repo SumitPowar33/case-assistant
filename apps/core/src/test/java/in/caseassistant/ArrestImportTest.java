@@ -133,6 +133,25 @@ class ArrestImportTest {
     }
 
     @Test
+    void withoutAReadableArrestDateTheOtherDatesAreNeitherComparedNorDropped() {
+        var r = check("arrested_at", "soon", "first_remand_on", "20/03/2026", "released_on", "01/03/2026", "max_punishment", "death");
+        assertThat(r.status()).isEqualTo("error");
+        assertThat(r.parsed()).containsEntry("arrestedAt", null).containsEntry("firstRemandOn", "2026-03-20").containsEntry("releasedOn", "2026-03-01");
+        assertThat(has(r, "warning", "first_remand_on")).as("no arrest day to count from").isFalse();
+        assertThat(has(r, "error", "first_remand_on") || has(r, "error", "released_on")).isFalse();
+    }
+
+    @Test
+    void aBasisWrittenAsOtherTheContactAndTheSourceKeyAreKeptAsGiven() {
+        var r = check("released_on", "10/03/2026", "release_basis", "Other", "informed_contact", "9000000000", "source_key", "FICT-AR-1");
+        assertThat(r.parsed()).containsEntry("releaseBasis", "other").containsEntry("informedContact", "9000000000").containsEntry("sourceKey", "FICT-AR-1");
+        assertThat(has(r, "warning", "release_basis")).isFalse();
+        assertThat(r.sourceKey()).isEqualTo("FICT-AR-1");
+        assertThat(check().sourceKey()).isNull();
+        assertThat(check().parsed()).containsEntry("informedContact", null);
+    }
+
+    @Test
     void longTextIsCutAndTheDuplicateKeyIsTheAccusedAndIstDay() {
         var r = check("place", "x".repeat(900), "grounds", "g".repeat(900));
         assertThat((String) r.parsed().get("place")).hasSize(500);

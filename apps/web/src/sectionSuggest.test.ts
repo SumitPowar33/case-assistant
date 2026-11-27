@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { readSuggestions, sectionPrompt, type Charge, graverFirst } from './sectionSuggest'
+import { readSuggestions, SECTION_PROMPT_VERSION, sectionPrompt, type Charge, graverFirst } from './sectionSuggest'
 
 // Fictional data only.
 const TEXT = 'A caller said he was from my bank. He asked me for a code sent to my phone.\nRs 40,000 went out of my account.'
@@ -73,4 +73,29 @@ test('a charge graver than every section on the FIR comes first; the others keep
   const sorted = graverFirst(read)
   expect(sorted.kind === 'suggestions' && sorted.suggestions.map((s) => s.charge.charge_id)).toEqual(['b', 'a', 'c'])
   expect(graverFirst({ kind: 'unreadable' })).toEqual({ kind: 'unreadable' })
+})
+
+test('the prompt text is pinned to its version: change the version when the words change', () => {
+  expect([SECTION_PROMPT_VERSION, sectionPrompt('Fictional text.', [charge('cheating', 'BNS 318(4)', ['deception', 'delivery'])])]).toMatchInlineSnapshot(`
+    [
+      "section_suggest/playbook@1",
+      "Below are charges, each with its legal ingredients, and an FIR text.
+    For each charge, say which of its ingredients the FIR text describes, if any. This is only about what the text says: do not decide whether anything is proved, whether anyone is guilty, or whether anyone is telling the truth.
+    Answer with only a JSON list. Each entry is an object: "charge" (the charge id as given), "ingredients" (a list of objects with "id", the ingredient id as given, and "quote", the words of the FIR text that describe it, copied exactly, character for character, at most 200 characters).
+    Rules: leave out a charge when the text describes none of its ingredients; leave out an ingredient the text does not describe; never guess. Do not name people.
+    Charges:
+    cyber-fraud/cheating: BNS 318(4), Label of cheating. Ingredients: deception: Text of deception; delivery: Text of delivery
+    FIR text:
+    <<<
+    Fictional text.
+    >>>",
+    ]
+  `)
+})
+
+test('a quote of exactly 500 characters is taken, a longer one is not', () => {
+  const long = 'y'.repeat(500)
+  const answer = (quote: string) => JSON.stringify([{ charge: 'cyber-fraud/cheating', ingredients: [ing('deception', quote)] }])
+  expect(readSuggestions(answer(long), `${long}z`, CHARGES)).toMatchObject({ suggestions: [{ met: [{ id: 'deception', quote: long, at: 0 }] }], dropped: 0 })
+  expect(readSuggestions(answer(`He${' '.repeat(600)}asked`), 'He asked', CHARGES)).toEqual({ kind: 'suggestions', suggestions: [], dropped: 1 })
 })

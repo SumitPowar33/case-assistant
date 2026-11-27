@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { conflictPrompt, readConflicts, sources } from './factConflicts'
+import { CONFLICT_PROMPT_VERSION, conflictPrompt, readConflicts, sources } from './factConflicts'
 
 // Fictional data only.
 const FIR = 'On 21 August 2026 the complainant transferred Rs 9,80,000 to A/c 50100999888777 from phone 9800000001.'
@@ -109,4 +109,63 @@ test('a quote of 500 characters, a value of 200 and a topic of 200 are the most 
   const spread = sources(`Place ${'x '.repeat(250).trim().replace(/ /g, '   ')}`, [{ kind: 'reply', title: 'Reply', text: 'Place Demo Pur' }])
   const grown = entry(side('FIR', 'x', 'x '.repeat(200).trim()), side('D1', 'Demo Pur', 'Demo Pur'), 'place', 'place')
   expect(readConflicts(JSON.stringify([grown]), spread)).toMatchObject({ conflicts: [], dropped: 1 })
+})
+
+test('the prompt text is pinned to its version: change the version when the words change', () => {
+  expect([CONFLICT_PROMPT_VERSION, conflictPrompt([{ id: 'FIR', title: 'FIR text', text: 'Fictional text.' }, { id: 'D1', title: 'Reply', text: 'Fictional reply.' }])]).toMatchInlineSnapshot(`
+    [
+      "fact_conflicts/values@1",
+      "Below are the text of a police FIR and other documents of the same case (bank and telecom replies, money transfers, evidence and memos), each marked with an id (FIR, D1, D2 ...), possibly in different languages.
+    List the facts on which two different sources give different values. A fact is one of these kinds: date, time, place, amount, utr, phone, account, upi (utr = bank transaction reference, upi = UPI id).
+    Answer with only a JSON list. Each entry is an object with: "kind" (one of the kinds), "topic" (which fact, a few words in English, e.g. "amount of the 21 August transfer"), "a" and "b". "a" and "b" are objects of two different sources: {"source": "<id>", "value": "<the value that source gives, short>", "quote": "<words of that source, copied exactly, character for character, at most 200 characters, holding the value>"}.
+    Rules: report only two values that really differ for the same fact, never a fact one source leaves out. Never guess or complete a number. Do not say which value is right, and do not name or judge any person. If there is no such fact, answer [].
+    Source FIR:
+    <<<
+    Fictional text.
+    >>>
+    Source D1:
+    <<<
+    Fictional reply.
+    >>>",
+    ]
+  `)
+})
+
+test('replies, the money trail, evidence, search memos and expert requests are sources, after the FIR', () => {
+  const all = ['reply', 'money', 'evidence', 'search', 'expert'].map((kind) => ({ kind, title: `T ${kind}`, text: 'x' }))
+  expect(sources('The FIR.', all).map((s) => `${s.id} ${s.title}`)).toEqual(['FIR FIR text', 'D1 T reply', 'D2 T money', 'D3 T evidence', 'D4 T search', 'D5 T expert'])
+})
+
+const two = (a: string, b: string) => [{ id: 'FIR', title: 'FIR text', text: a }, { id: 'D1', title: 'Reply', text: b }]
+const claim = (kind: string, a: string, b: string, topic: unknown = 'the value') =>
+  JSON.stringify([{ kind, topic, a: { source: 'FIR', value: a, quote: `A says ${a}` }, b: { source: 'D1', value: b, quote: `B says ${b}` } }])
+const read = (kind: string, a: string, b: string, topic?: unknown) => {
+  const r = readConflicts(claim(kind, a, b, topic === undefined ? 'the value' : topic), two(`A says ${a}`, `B says ${b}`))
+  return r.kind === 'conflicts' ? r.conflicts.length : -1
+}
+
+test('the same value written two ways is no conflict, for every kind', () => {
+  expect(read('amount', 'Rs 9,80,000', 'Rs 980,000.00')).toBe(0)
+  expect(read('utr', '4321-0987', '4321 0987')).toBe(0)
+  expect(read('phone', '98000-00001', '98000 00001')).toBe(0)
+  expect(read('account', 'A/c 5010-0999', '50100999')).toBe(0)
+  expect(read('date', '21 Aug.', '21 aug')).toBe(0)
+  expect(read('amount', 'Rs 9,80,000', 'Rs 8,90,000')).toBe(1)
+  expect(read('utr', '43210987', '43210988')).toBe(1)
+  expect(read('date', '21 Aug', '22 Aug')).toBe(1)
+})
+
+test('a conflict needs a topic, which is trimmed', () => {
+  expect(read('date', '21 Aug', '22 Aug', null)).toBe(0)
+  expect(read('date', '21 Aug', '22 Aug', '   ')).toBe(0)
+  const r = readConflicts(claim('date', ' 21 Aug ', '22 Aug', '  day of the transfer  '), two('A says  21 Aug ', 'B says 22 Aug'))
+  expect(r).toMatchObject({ conflicts: [{ topic: 'day of the transfer', a: { value: '21 Aug' } }] })
+})
+
+test('a side whose quote is not a string, or is over 500 characters, is dropped without an error', () => {
+  const list = two('A says 21 Aug', 'B says 22 Aug')
+  for (const quote of [7, `A${' '.repeat(600)}says 21 Aug`]) {
+    const answer = JSON.stringify([{ kind: 'date', topic: 'day', a: { source: 'FIR', value: '21 Aug', quote }, b: { source: 'D1', value: '22 Aug', quote: 'B says 22 Aug' } }])
+    expect(readConflicts(answer, list)).toEqual({ kind: 'conflicts', conflicts: [], dropped: 1 })
+  }
 })

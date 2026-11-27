@@ -159,6 +159,16 @@ class Call112ApiTest {
     }
 
     @Test
+    void aDiaryEntryOfACallWithNoVehicleNamesNone() throws Exception {
+        String body = event(station, "accident", Instant.now().minusSeconds(60)).replace("\"vehicle\":\"Fictional Van 3\",", "\"vehicle\":\"  \",");
+        String id = json.readTree(call(post("/api/calls-112"), desk, body).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
+        call(post("/api/calls-112/" + id + "/acknowledge"), desk, null).andExpect(status().isNoContent());
+        call(post("/api/calls-112/" + id + "/open"), desk, "{\"as\":\"diary\"}").andExpect(status().isCreated());
+        assertThat(db.sql("select entry_text from general_diary_entry").query(String.class).single()).contains("(accident). Caller and details").doesNotContain("vehicle");
+        assertThat(list(desk).get("rows").get(0).get("vehicle").isNull()).isTrue();
+    }
+
+    @Test
     void aCallAboutAWomanOrAChildShowsCallerAndDetailsOnlyToItsWriterAndTheSupervisors() throws Exception {
         add(desk, "woman_in_distress");
         var asIo = list(io).get("rows").get(0);
