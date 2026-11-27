@@ -26,7 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
  * posted at the station reads it (the front desk sees the duty officer); whoever holds "roster.manage" in reach of the
  * station (the SHO, also as an acting charge) writes it. Entries are kept as written; taking one back is a second row
  * with a reason. The shift hours are fixed here (morning 06-14, evening 14-22, night 22-06, the night belongs to the day
- * it began); each state's own hours from its pack, swaps and the court-date clash warning are not built yet.
+ * it began); each state's own hours from its pack and swaps are not built yet.
  * Nothing here rates an officer.
  */
 @RestController
@@ -34,6 +34,11 @@ class DutyRosterController {
     static final String MANAGE = "roster.manage";
     private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
     private static final int MAX_DAYS = 31;
+    /** The entries of a station (one ?) that have not been taken back. */
+    private static final String ENTRIES = """
+            select a.id, a.officer_id, u.full_name, u.rank, a.on_date, a.kind, a.shift, a.post, a.note
+            from duty_assignment a join app_user u on u.id = a.officer_id
+            where a.station_id = ? and not exists (select 1 from duty_assignment_cancel c where c.assignment_id = a.id)""";
 
     record NewEntry(@NotNull UUID stationId, @NotNull UUID officerId, @NotBlank String date,
             @NotBlank @Pattern(regexp = "duty|weekly_off|leave") String kind,
@@ -59,6 +64,38 @@ class DutyRosterController {
         return new String[] {"night", (h < 6 ? now.toLocalDate().minusDays(1) : now.toLocalDate()).toString()};
     }
 
+    /**
+     * Who is on duty at the station at this India time. Asked of the table itself: from midnight to 6 am the shift running
+     * is yesterday's night, which a list that starts today does not hold. An officer since moved or closed is not named.
+     */
+    List<Map<String, Object>> onDuty(UUID station, LocalDateTime now) {
+        String[] shift = shiftAt(now);
+        return db.sql(ENTRIES + " and u.active and u.station_id = a.station_id and a.kind = 'duty' and a.on_date = ? and a.shift = ? order by a.post, u.full_name, a.id")
+                .params(station, LocalDate.parse(shift[1]), shift[0]).query().listOfRows();
+    }
+
+    /**
+     * Court dates the roster does not allow for: a case of the station with a court date on a day its investigating officer
+     * is off, on leave or rostered with no court duty (one line for a case and day, with the day's first entry). A day
+     * with nothing rostered is not listed. Only cases the caller may open are named. Who attends is for people to decide.
+     */
+    private List<Map<String, Object>> courtClashes(UUID me, UUID station, LocalDate from, LocalDate before) {
+        return db.sql("""
+                select distinct on (a.on_date, u.full_name, a.officer_id, fir.fir_year, fir.fir_no)
+                       a.on_date, a.officer_id, u.full_name, u.rank, a.kind, a.shift, a.post, fir.id as fir_id, fir.fir_no, fir.fir_year
+                from duty_assignment a
+                join app_user u on u.id = a.officer_id and u.active and u.station_id = a.station_id
+                join fir on fir.io_id = a.officer_id and fir.station_id = a.station_id
+                join court_event c on c.fir_id = fir.id and c.on_date = a.on_date
+                where a.station_id = ? and a.on_date >= ? and a.on_date < ?
+                  and not exists (select 1 from duty_assignment_cancel x where x.assignment_id = a.id)
+                  and not exists (select 1 from duty_assignment k where k.officer_id = a.officer_id and k.on_date = a.on_date and k.post = 'court'
+                                  and not exists (select 1 from duty_assignment_cancel x where x.assignment_id = k.id))
+                  and""" + " " + team.canReadFirSql() + """
+                 order by a.on_date, u.full_name, a.officer_id, fir.fir_year, fir.fir_no, array_position(array['morning','evening','night'], a.shift)""")
+                .params(station, from, before, me).query().listOfRows();
+    }
+
     private boolean reads(UUID me, UUID station) {
         boolean posted = db.sql("select exists (select 1 from app_user where id = ? and active and station_id = ?)").params(me, station).query(Boolean.class).single();
         return posted || team.canAt(me, MANAGE, station);
@@ -70,16 +107,12 @@ class DutyRosterController {
         if (!reads(me, stationId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only officers of this police station, and those who run its roster, see it.");
         LocalDateTime now = LocalDateTime.now(IST);
         LocalDate start = from == null || from.isBlank() ? now.toLocalDate() : date(from);
-        List<Map<String, Object>> rows = db.sql("""
-                select a.id, a.officer_id, u.full_name, u.rank, a.on_date, a.kind, a.shift, a.post, a.note
-                from duty_assignment a join app_user u on u.id = a.officer_id
-                where a.station_id = ? and a.on_date >= ? and a.on_date < ?
-                  and not exists (select 1 from duty_assignment_cancel c where c.assignment_id = a.id)
+        List<Map<String, Object>> rows = db.sql(ENTRIES + """
+                 and a.on_date >= ? and a.on_date < ?
                 order by a.on_date, array_position(array['morning','evening','night'], a.shift) nulls last, a.post nulls last, u.full_name, a.id""")
                 .params(stationId, start, start.plusDays(MAX_DAYS)).query().listOfRows();
-        String[] shift = shiftAt(now);
-        var onDuty = rows.stream().filter(r -> "duty".equals(r.get("kind")) && shift[0].equals(r.get("shift")) && shift[1].equals(String.valueOf(r.get("on_date")))).toList();
-        return Map.of("from", start.toString(), "rows", rows, "now", Map.of("shift", shift[0], "on_duty", onDuty),
+        return Map.of("from", start.toString(), "rows", rows, "now", Map.of("shift", shiftAt(now)[0], "on_duty", onDuty(stationId, now)),
+                "court_clashes", courtClashes(me, stationId, start.isAfter(now.toLocalDate()) ? start : now.toLocalDate(), start.plusDays(MAX_DAYS)),
                 "can_manage", team.canAt(me, MANAGE, stationId));
     }
 

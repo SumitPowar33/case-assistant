@@ -106,3 +106,18 @@ test('a duty row without a shift or post still lists, and a failed officer list 
   expect(await screen.findByText('The server answered 403 for /duty-roster/options?stationId=s1')).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Save entry' })).toBeNull()
 })
+
+test('a court date the roster does not allow for is listed with the officer\'s entry, and nothing is listed otherwise', async () => {
+  const clash = (extra = {}) => ({ officer_id: 'o1', full_name: 'SI Fictional Asha', rank: 'SI', on_date: '2026-11-26', kind: 'leave', shift: null, post: null, fir_id: 'f1', fir_no: 11, fir_year: 2026, ...extra })
+  stub(roster({ court_clashes: [clash(), clash({ fir_id: 'f2', fir_no: 12, kind: 'duty', shift: 'evening', post: 'beat' })] }))
+  const { unmount } = render(<DutyRoster />)
+  expect(await screen.findByRole('heading', { name: 'Court dates to check (2)' })).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'Court date in FIR 11/2026' }).getAttribute('href')).toBe('#/court')
+  expect(screen.getByText('Investigating officer SI Fictional Asha (SI) is rostered: Leave')).toBeTruthy()
+  expect(screen.getByText('Investigating officer SI Fictional Asha (SI) is rostered: Evening (2 pm to 10 pm), Beat')).toBeTruthy()
+  unmount()
+  stub(roster({ court_clashes: [] }))
+  render(<DutyRoster />)
+  await screen.findByRole('heading', { name: 'Next 31 days' })
+  expect(screen.queryByRole('heading', { name: /Court dates to check/ })).toBeNull()
+})

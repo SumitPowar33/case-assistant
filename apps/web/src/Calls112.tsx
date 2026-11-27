@@ -4,6 +4,7 @@ import { fmt, istIso } from './formats'
 import { useT } from './i18n'
 import { LANGS } from './typing'
 import { useLoad } from './useLoad'
+import DutyNow from './DutyNow'
 
 type Row = {
   id: string; received_at: string; place: string; kind: string; vehicle: string | null; caller_name: string | null; caller_contact: string | null
@@ -35,6 +36,7 @@ export default function Calls112() {
     <>
       <h1>{t('calls.title')}</h1>
       <p>{t('calls.intro')}</p>
+      <DutyNow station={station} beat />
       {calls.data.can_handle && <Add station={station} onSaved={again} />}
       <section aria-labelledby="calls-list">
         <h2 id="calls-list">{t('calls.list')}</h2>

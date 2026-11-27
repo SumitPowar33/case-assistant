@@ -4,7 +4,8 @@ import { useT } from './i18n'
 import { useLoad } from './useLoad'
 
 type Row = { id: string; full_name: string; rank: string; on_date: string; kind: 'duty' | 'weekly_off' | 'leave'; shift: string | null; post: string | null; note: string | null }
-type Roster = { rows: Row[]; now: { shift: string; on_duty: Row[] }; can_manage: boolean }
+type Clash = Pick<Row, 'full_name' | 'rank' | 'on_date' | 'kind' | 'shift' | 'post'> & { officer_id: string; fir_id: string; fir_no: number; fir_year: number }
+type Roster = { rows: Row[]; now: { shift: string; on_duty: Row[] }; court_clashes?: Clash[]; can_manage: boolean }
 type Officer = { id: string; full_name: string; rank: string }
 
 const SHIFTS = ['morning', 'evening', 'night']
@@ -26,6 +27,8 @@ export default function DutyRoster() {
   if (!roster.data) return <p>{t('common.loading')}</p>
   const { rows, now, can_manage: manage } = roster.data
   const days = [...new Set(rows.map((r) => r.on_date))]
+  const clashes = roster.data.court_clashes ?? []
+  const entry = (r: Pick<Row, 'kind' | 'shift' | 'post'>) => r.kind === 'duty' ? `${t.code('roster.shift', r.shift ?? '')}, ${t.code('roster.post', r.post ?? '')}` : t.code('roster.kind', r.kind)
   const again = () => setVersion((n) => n + 1)
   return (
     <>
@@ -36,13 +39,25 @@ export default function DutyRoster() {
         {now.on_duty.length === 0 ? <p>{t('roster.nobody')}</p>
           : <ul>{now.on_duty.map((r) => <li key={r.id}>{r.full_name} ({r.rank}): {t.code('roster.post', r.post ?? '')}</li>)}</ul>}
       </section>
+      {clashes.length > 0 && (
+        <section aria-labelledby="roster-court">
+          <h2 id="roster-court">{t('roster.court', { count: clashes.length })}</h2>
+          <p className="note">{t('roster.courtNote')}</p>
+          <ul className="plain">{clashes.map((c) => (
+            <li key={`${c.on_date} ${c.officer_id} ${c.fir_id}`} className="card">
+              <span className="chip c-warn">{c.on_date}</span> <a href="#/court">{t('roster.courtCase', { fir: `${c.fir_no}/${c.fir_year}` })}</a>
+              <p>{t('roster.courtOfficer', { officer: `${c.full_name} (${c.rank})`, entry: entry(c) })}</p>
+            </li>
+          ))}</ul>
+        </section>
+      )}
       {manage && <Add station={station} onSaved={again} />}
       <section aria-labelledby="roster-list">
         <h2 id="roster-list">{t('roster.list')}</h2>
         {days.length === 0 ? <p>{t('roster.none')}</p> : days.map((d) => (
           <article key={d}>
             <h3>{d}</h3>
-            <ul>{rows.filter((r) => r.on_date === d).map((r) => <Entry key={r.id} row={r} manage={manage} onSaved={again} />)}</ul>
+            <ul>{rows.filter((r) => r.on_date === d).map((r) => <Entry key={r.id} row={r} text={entry(r)} manage={manage} onSaved={again} />)}</ul>
           </article>
         ))}
       </section>
@@ -91,7 +106,7 @@ function Add({ station, onSaved }: { station: string; onSaved: () => void }) {
   )
 }
 
-function Entry({ row: r, manage, onSaved }: { row: Row; manage: boolean; onSaved: () => void }) {
+function Entry({ row: r, text, manage, onSaved }: { row: Row; text: string; manage: boolean; onSaved: () => void }) {
   const t = useT()
   const [error, setError] = useState('')
   async function takeBack(e: React.FormEvent<HTMLFormElement>) {
@@ -104,7 +119,7 @@ function Entry({ row: r, manage, onSaved }: { row: Row; manage: boolean; onSaved
   }
   return (
     <li>
-      {r.full_name} ({r.rank}): {r.kind === 'duty' ? `${t.code('roster.shift', r.shift ?? '')}, ${t.code('roster.post', r.post ?? '')}` : t.code('roster.kind', r.kind)}
+      {r.full_name} ({r.rank}): {text}
       {r.note && ` (${r.note})`}
       {manage && (
         <form onSubmit={takeBack}>

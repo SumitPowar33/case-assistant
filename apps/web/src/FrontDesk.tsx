@@ -1,6 +1,7 @@
 import { useContext, useState } from 'react'
 import { currentSession, send } from './api'
 import { useLoad } from './useLoad'
+import DutyNow from './DutyNow'
 import { Form, NewFirForm } from './Forms'
 import TypingField from './TypingField'
 import { LANGS, TypingContext } from './typing'
@@ -44,6 +45,7 @@ export function FrontDeskPage() {
       <h1 id="desk-h">{t('nav.frontDesk')}</h1>
       <p className="lede">{t('desk.intro')}</p>
     </div>
+    {station && <DutyNow station={station} />}
     <section aria-labelledby="desk-h">
       <Form title={t('desk.take')} onSaved={(r) => { setWords(''); setVersion(version + 1); window.location.hash = `#/complaints/${(r as { id: string }).id}` }}
         submit={(f) => {

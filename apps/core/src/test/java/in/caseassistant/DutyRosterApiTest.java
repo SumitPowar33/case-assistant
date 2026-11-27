@@ -31,6 +31,7 @@ class DutyRosterApiTest {
     @Autowired JdbcClient db;
     @Autowired JwtEncoder tokens;
     @Autowired ObjectMapper json;
+    @Autowired DutyRosterController controller;
     UUID station, far, io1, io2, shoId, farIo;
     String sho, io, spNear, farToken;
     final LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
@@ -108,6 +109,88 @@ class DutyRosterApiTest {
         assertThat(n.get("shift").asText()).isEqualTo(now[0]);
         assertThat(n.get("on_duty")).hasSize(1);
         assertThat(n.get("on_duty").get(0).get("full_name").asText()).isEqualTo("Fictional Asha");
+    }
+
+    /** Regression: from midnight to 6 am the night shift is yesterday's, which a list that starts today does not hold. */
+    @Test
+    void inTheSmallHoursTheOfficersOfLastNightsShiftAreOnDuty() {
+        db.sql("insert into duty_assignment (station_id, officer_id, on_date, kind, shift, post, recorded_by) values (?,?,?,'duty','night','patrol',?)")
+                .params(station, io1, today.minusDays(1), shoId).update();
+        db.sql("insert into duty_assignment (station_id, officer_id, on_date, kind, shift, post, recorded_by) values (?,?,?,'duty','night','beat',?)")
+                .params(station, io2, today, shoId).update();
+        assertThat(controller.onDuty(station, today.atTime(2, 30))).extracting(r -> r.get("full_name")).containsExactly("Fictional Asha");
+        assertThat(controller.onDuty(station, today.atTime(22, 30))).extracting(r -> r.get("full_name")).containsExactly("Fictional Bela");
+        assertThat(controller.onDuty(far, today.atTime(2, 30))).isEmpty();
+    }
+
+    UUID caseWithCourtDate(int no, UUID officer, LocalDate on) {
+        UUID fir = db.sql("""
+                insert into fir (station_id, fir_year, fir_no, gd_entry_no, registered_at, information_received_at, contents_original, contents_language, action_taken, io_id)
+                values (?,2026,?,'GD-1','2026-10-01T10:00Z','2026-10-01T09:00Z','Fictional complaint','en','investigate',?) returning id""").params(station, no, officer).query(UUID.class).single();
+        db.sql("insert into court_event (fir_id, kind, on_date, court, recorded_by) values (?,'prosecution_evidence',?,'Fictional Court',?)").params(fir, on, officer).update();
+        return fir;
+    }
+
+    void put(UUID officer, LocalDate on, String kind, String shift, String post) throws Exception {
+        call(post("/api/duty-roster"), sho, entry(station, officer, on, kind, shift, post)).andExpect(status().isCreated());
+    }
+
+    @Test
+    void aCourtDateTheRosterDoesNotAllowForIsListedForThoseWhoMayOpenTheCase() throws Exception {
+        UUID day = caseWithCourtDate(11, io1, today.plusDays(3));
+        db.sql("insert into court_event (fir_id, kind, on_date, recorded_by) values (?,'other',?,?)").params(day, today.plusDays(3), io1).update();   // the same day twice: one line
+        caseWithCourtDate(12, io2, today.plusDays(4));
+        caseWithCourtDate(13, io1, today.plusDays(5));
+        caseWithCourtDate(14, io1, today.plusDays(6));   // nothing rostered that day: nothing to compare with
+        put(io1, today.plusDays(3), "duty", "morning", "station_house");
+        put(io1, today.plusDays(3), "duty", "evening", "beat");
+        put(io2, today.plusDays(4), "leave", null, null);
+        put(io1, today.plusDays(5), "duty", "morning", "beat");
+        put(io1, today.plusDays(5), "duty", "evening", "court");   // court duty that day: the date is allowed for
+
+        var found = roster(sho).get("court_clashes");
+        assertThat(found).extracting(c -> c.get("fir_no").asText() + " " + c.get("on_date").asText() + " " + c.get("kind").asText() + " " + c.get("shift").asText())
+                .containsExactly("11 " + today.plusDays(3) + " duty morning", "12 " + today.plusDays(4) + " leave null");
+        assertThat(found.get(0).get("fir_id").asText()).isEqualTo(day.toString());
+        assertThat(found.get(0).get("full_name").asText()).isEqualTo("Fictional Asha");
+        // an investigating officer is told of their own cases only; an officer with neither the case nor the station's FIRs, of none
+        assertThat(roster(io).get("court_clashes")).extracting(c -> c.get("fir_no").asText()).containsExactly("11");
+        UUID other = user(station, "io", "Fictional Chitra");
+        assertThat(roster(TestAuth.bearer(tokens, other)).get("court_clashes")).isEmpty();
+    }
+
+    @Test
+    void aPassedCourtDateATakenBackEntryAndAnOfficerWhoIsNoLongerTheCasesIoAreNoClash() throws Exception {
+        caseWithCourtDate(21, io1, today.minusDays(1));
+        db.sql("insert into duty_assignment (station_id, officer_id, on_date, kind, recorded_by) values (?,?,?,'leave',?)").params(station, io1, today.minusDays(1), shoId).update();
+        caseWithCourtDate(22, io1, today.plusDays(2));
+        String made = call(post("/api/duty-roster"), sho, entry(station, io1, today.plusDays(2), "leave", null, null)).andReturn().getResponse().getContentAsString();
+        var past = json.readTree(call(get("/api/duty-roster?stationId=" + station + "&from=" + today.minusDays(5)), sho, null).andReturn().getResponse().getContentAsString());
+        assertThat(past.get("court_clashes")).extracting(c -> c.get("fir_no").asText()).containsExactly("22");
+        call(post("/api/duty-roster/" + json.readTree(made).get("id").asText() + "/cancel"), sho, "{\"reason\":\"Leave withdrawn for court\"}").andExpect(status().isNoContent());
+        assertThat(roster(sho).get("court_clashes")).isEmpty();
+        put(io1, today.plusDays(2), "weekly_off", null, null);
+        assertThat(roster(sho).get("court_clashes")).hasSize(1);
+        var later = json.readTree(call(get("/api/duty-roster?stationId=" + station + "&from=" + today.plusDays(3)), sho, null).andReturn().getResponse().getContentAsString());
+        assertThat(later.get("court_clashes")).isEmpty();   // a list that starts later warns of nothing before its first day
+        db.sql("update fir set io_id = ? where id = (select id from fir where fir_no = 22)").param(io2).update();
+        assertThat(roster(sho).get("court_clashes")).isEmpty();
+    }
+
+    @Test
+    void anOfficerSinceMovedOrClosedIsNeitherOnDutyNorWarnedAbout() throws Exception {
+        db.sql("insert into duty_assignment (station_id, officer_id, on_date, kind, shift, post, recorded_by) values (?,?,?,'duty','morning','beat',?)")
+                .params(station, io1, today, shoId).update();
+        caseWithCourtDate(31, io1, today);
+        assertThat(controller.onDuty(station, today.atTime(9, 0))).hasSize(1);
+        assertThat(roster(sho).get("court_clashes")).hasSize(1);
+        db.sql("update app_user set station_id = ? where id = ?").params(far, io1).update();
+        assertThat(controller.onDuty(station, today.atTime(9, 0))).isEmpty();
+        assertThat(roster(sho).get("court_clashes")).isEmpty();
+        db.sql("update app_user set station_id = ?, active = false where id = ?").params(station, io1).update();
+        assertThat(controller.onDuty(station, today.atTime(9, 0))).isEmpty();
+        assertThat(roster(sho).get("court_clashes")).isEmpty();
+        assertThat(roster(sho).get("rows")).hasSize(1);   // the entry itself stays in the roster, to be taken back
     }
 
     @Test
