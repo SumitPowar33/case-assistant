@@ -1,9 +1,12 @@
 import FirList from './FirList'
 import { currentSession } from './api'
+import { istToday } from './formats'
 import { useLoad } from './useLoad'
 import { useT, type Key } from './i18n'
 
 type Deadline = { fir_id: string; fir_no: number; fir_year: number; kind: string; due_on: string; basis: string; days_left: number }
+type Clash = { officer_id: string; full_name: string; rank: string; on_date: string; kind: string; shift: string | null; post: string | null
+  fir_id: string; fir_no: number; fir_year: number }
 type Board = { cases: number; due_in_7_days: number; notices_waiting: number; deadlines: Deadline[]; pocso_open?: { fir_id: string; fir_no: number; fir_year: number; open_steps: number }[] }
 
 /** How urgent a deadline is, as a word and a colour (the colour never alone). */
@@ -24,6 +27,12 @@ export default function Dashboard() {
   const kind = (d: Deadline) => d.kind.startsWith('notice_reply:') ? t('deadline.noticeReply', { addressee: d.kind.slice('notice_reply:'.length) }) : t.code('deadline', d.kind)
   const left = (n: number) => n < 0 ? t('dash.overdue', { n: -n }) : n === 0 ? t('dash.today') : t('dash.daysLeft', { n })
   const soon = data?.deadlines.filter((d) => d.days_left <= 14) ?? []
+  // item 16: court dates of the next 14 days on a day the case's IO is not on court duty, from the station's duty roster
+  // (the server names only cases this officer may open)
+  const roster = useLoad<{ court_clashes?: Clash[] }>(user?.station_id ? `/duty-roster?stationId=${user.station_id}` : null)
+  const until = istToday(Date.now() + 14 * 86_400_000)
+  const clashes = roster.data?.court_clashes?.filter((c) => c.on_date <= until) ?? []
+  const entry = (c: Clash) => c.kind === 'duty' ? `${t.code('roster.shift', c.shift ?? '')}, ${t.code('roster.post', c.post ?? '')}` : t.code('roster.kind', c.kind)
   return (
     <>
       <div className="page-head">
@@ -34,6 +43,7 @@ export default function Dashboard() {
         </div>
       </div>
       {error && <p role="alert">{error}</p>}
+      {roster.error && <p role="alert">{roster.error}</p>}
       {data && <>
         <div className="tiles" aria-label={t('nav.dashboard')} role="group">
           <div className="tile"><div>{t('dash.tileCases')}</div><div>{data.cases}</div></div>
@@ -50,7 +60,17 @@ export default function Dashboard() {
                 <a className="btn" href={`#/firs/${c.fir_id}/deadlines`}>{t('dash.open')}</a>
               </div>
             ))}
-            {soon.length === 0 && !data.pocso_open?.length ? <p className="row empty">{t('dash.nothing')}</p> : soon.map((d, i) => {
+            {clashes.map((c) => (
+              <div className="row" key={`${c.on_date} ${c.officer_id} ${c.fir_id}`}>
+                <span className="chip c-warn">{t('chip.action')}</span>
+                <div>
+                  <strong>{t('dash.courtClash', { fir: `${c.fir_no}/${c.fir_year}`, date: c.on_date })}</strong>
+                  <div className="sub">{t('roster.courtOfficer', { officer: `${c.full_name} (${c.rank})`, entry: entry(c) })}</div>
+                </div>
+                <a className="btn" href="#/roster">{t('dash.open')}</a>
+              </div>
+            ))}
+            {soon.length === 0 && !data.pocso_open?.length && !clashes.length ? <p className="row empty">{t('dash.nothing')}</p> : soon.map((d, i) => {
               const u = urgency(d.days_left)
               return (
                 <div className="row" key={i}>

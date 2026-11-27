@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import Dashboard from './Dashboard'
 import { setSession } from './api'
+import { istToday } from './formats'
 
 // Fictional data only.
 beforeEach(() => setSession({ token: 't', user: { id: 'u1', username: 'si.fictional', full_name: 'SI Fictional Rao', rank: 'SI', role: 'io', station_id: 's1' } }))
@@ -71,4 +72,45 @@ test('a POCSO case with steps still open is listed in red with its count, linked
   expect(attention.getByText('Critical')).toBeTruthy()
   expect(attention.queryByText('Nothing falls due in your cases.')).toBeNull()
   expect(attention.getByRole('link', { name: 'Open' }).getAttribute('href')).toBe('#/firs/f9/deadlines')
+})
+
+const clash = (over: object) => ({ officer_id: 'u1', full_name: 'SI Fictional Rao', rank: 'SI', on_date: istToday(Date.now() + 2 * 86_400_000),
+  kind: 'leave', shift: null, post: null, fir_id: 'f9', fir_no: 19, fir_year: 2026, ...over })
+
+test('a court date of the next 14 days with the investigating officer not on court duty is an attention line that opens the roster', async () => {
+  const calls: string[] = []
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    calls.push(url)
+    const body = url.startsWith('/api/dashboard') ? { cases: 1, due_in_7_days: 0, notices_waiting: 0, deadlines: [] }
+      : url.startsWith('/api/duty-roster') ? { court_clashes: [clash({}), clash({ on_date: istToday(Date.now() + 14 * 86_400_000), fir_id: 'f10', fir_no: 20, kind: 'duty', shift: 'night', post: 'beat' }),
+        clash({ on_date: istToday(Date.now() + 15 * 86_400_000), fir_id: 'f11', fir_no: 21 })] } : []
+    return { ok: true, status: 200, json: async () => body }
+  }))
+  render(<Dashboard />)
+  const attention = await screen.findByRole('region', { name: 'Needs your attention' })
+  expect(await within(attention).findByText(`FIR 19/2026: court date ${istToday(Date.now() + 2 * 86_400_000)}, investigating officer not on court duty`)).toBeTruthy()
+  expect(within(attention).getByText('Investigating officer SI Fictional Rao (SI) is rostered: Leave')).toBeTruthy()
+  expect(within(attention).getByText('Investigating officer SI Fictional Rao (SI) is rostered: Night (10 pm to 6 am), Beat')).toBeTruthy()
+  expect(within(attention).queryByText(/FIR 21\/2026/)).toBeNull()   // beyond the 14 days of this list
+  expect(within(attention).getAllByRole('link', { name: 'Open' }).map((a) => a.getAttribute('href'))).toEqual(['#/roster', '#/roster'])
+  expect(within(attention).queryByText('Nothing falls due in your cases.')).toBeNull()
+  expect(calls).toContain('/api/duty-roster?stationId=s1')
+})
+
+test('a roster that cannot be read says so, and an officer without a station asks for none', async () => {
+  const calls: string[] = []
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    calls.push(url)
+    return url.startsWith('/api/duty-roster') ? { ok: false, status: 500, json: async () => ({}) }
+      : { ok: true, status: 200, json: async () => url.startsWith('/api/dashboard') ? { cases: 0, due_in_7_days: 0, notices_waiting: 0, deadlines: [] } : [] }
+  }))
+  render(<Dashboard />)
+  expect((await screen.findByRole('alert')).textContent).toContain('500')
+  expect(screen.getByRole('group', { name: 'Dashboard' })).toBeTruthy()   // the rest of the dashboard shows
+  cleanup()
+  calls.length = 0
+  setSession({ token: 't', user: { id: 'u2', username: 'admin.fictional', full_name: 'Fictional Admin', rank: 'Admin', role: 'state_admin', station_id: null } })
+  render(<Dashboard />)
+  expect(await screen.findByRole('group', { name: 'Dashboard' })).toBeTruthy()
+  expect(calls.some((u) => u.startsWith('/api/duty-roster'))).toBe(false)
 })

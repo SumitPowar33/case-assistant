@@ -1546,6 +1546,7 @@
  "diaryEvent.section_reported": "Report on added sections sent to the Magistrate",
  "diaryEvent.pocso_step": "POCSO step recorded",
  "dash.pocsoOpen": "POCSO steps still open: {n}",
+ "dash.courtClash": "FIR {fir}: court date {date}, investigating officer not on court duty",
  "nav.roster": "Duty roster",
  "roster.title": "Duty roster",
  "roster.intro": "Who is on duty at your police station, for the next 31 days. Only the officer in charge writes it; every entry is kept, and taking one back needs a reason.",
