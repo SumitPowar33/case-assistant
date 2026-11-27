@@ -110,3 +110,9 @@ test('an answer without particulars or steps still shows the page', async () => 
   render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
   expect(await screen.findByText(/Taken from the file: sections —; 0 accused/)).toBeTruthy()
 })
+
+test('the papers that go with the report are listed under it', async () => {
+  stub({ ...base, enclosures: [{ kind: 'complaint', ref: null, detail: null, on_date: null, state: 'ok', note: null }] })
+  render(<FinalReport firId="f1" me="u1" text="Fictional FIR text" victimProtected={false} />)
+  expect(await screen.findByRole('heading', { name: 'Papers that go with the report (1)' })).toBeTruthy()
+})

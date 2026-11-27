@@ -95,6 +95,8 @@ class FinalReportApiTest {
         call(post(url("/submit")), io, null).andExpect(status().isOk());
         call(post(url("/decision")), sho, "{\"decision\":\"approve\"}").andExpect(status().isOk());
         call(post(url("/sign")), otherIo, null).andExpect(status().isForbidden());
+        call(post(url("/sign")), sho, null).andExpect(status().isForbidden())                                  // approving is not signing
+                .andExpect(status().reason("The officer who submitted the report signs it."));
         call(post(url("/sign")), io, null).andExpect(status().isOk());
         call(get(url("")), sho, null).andExpect(jsonPath("$.draft.status").value("signed"))
                 .andExpect(jsonPath("$.draft.signed_by_name").value("Fictional io")).andExpect(jsonPath("$.draft.decided_by_name").value("Fictional sho"))
