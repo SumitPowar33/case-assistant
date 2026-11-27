@@ -69,6 +69,10 @@ def test_an_officer_sees_two_documents_disagree_and_notes_it_in_the_case_diary(a
         sign_in(page, "io.adminui", demo["accounts"]["io.adminui"])
         page.evaluate(f"location.hash = '#/firs/{demo['fir_id']}/case'")
         card = page.get_by_label("Documents disagree", exact=True)
+        # click only once the parts above the button are drawn: the IO history arriving moves the button down, and a click
+        # made while it moves is lost
+        expect(page.get_by_text("IO history", exact=True)).to_be_visible()
+        expect(page.get_by_text("No fact of this FIR is confirmed yet.")).to_be_visible()
         card.get_by_role("button", name="Compare the FIR with the case's documents using AI").click()
         expect(card.get_by_text("amount that went out by UPI")).to_be_visible()
         expect(card.get_by_text("a made-up amount")).to_have_count(0)
