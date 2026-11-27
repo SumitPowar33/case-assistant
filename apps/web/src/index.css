@@ -18,11 +18,12 @@
   /* brand / action */
   --primary: #1F4E8C; --primary-dark: #163B6B; --primary-press: #102C52; --selected: #DCE7F5;
   --focus: #2B6CD4;         /* the keyboard ring: 5:1 on white and on the ground */
+  --focus-soft: rgb(43 108 212 / .18);  /* the soft ring around a field being typed in */
   /* status pairs (background / ink, each 6:1 or more); colour never alone, a chip always has a word */
-  --crit-bg: #FBE7E5; --crit: #9B1C13; --crit-line: #F3C9C4; --crit-soft: #FFF8F7;
+  --crit-bg: #FBE7E5; --crit: #9B1C13; --crit-line: #F3C9C4; --crit-soft: #FFF8F7; --crit-ring: rgb(155 28 19 / .16);
   --warn-bg: #FDF0DC; --warn: #8A4B06; --warn-ink: #6E3B05; --warn-line: #F1D5AA;
   --ok-bg: #E6F4EC; --ok: #155D35;
-  --info-bg: #E3ECF7; --info: #163B6B;
+  --info-bg: #E3ECF7; --info: #163B6B; --info-line: #C9D8EE; --info-soft: #F3F7FC;
   --neu-bg: #EEF1F4; --neu: #3B4754;
   --ai-bg: #EEE9FA; --ai: #4B2E91; --ai-line: #D9CCF2; --ai-soft: #F8F5FE;
   --quote: var(--surface-2);
@@ -150,16 +151,24 @@ button[type=submit]:disabled, button[type=submit]:disabled:hover { background: v
 
 /* text fields and lists: a 3:1 border, darker under the pointer, the brand colour and the focus ring when typing */
 input:not([type=checkbox]):not([type=radio]), select, textarea {
-  border: 1px solid var(--field); border-radius: var(--r-md); padding: 6px 10px; font-size: var(--fs-md); line-height: var(--lh-snug);
-  background: var(--surface); color: var(--text); min-height: var(--control); transition: border-color .12s;
+  border: 1px solid var(--field); border-radius: var(--r-md); padding: 6px var(--sp-3); font-size: var(--fs-md); line-height: var(--lh-snug);
+  background: var(--surface); color: var(--text); min-height: var(--control); transition: border-color .12s, box-shadow .12s;
 }
 input:not([type=checkbox]):not([type=radio]):hover, select:hover, textarea:hover { border-color: var(--field-hover); }
-input:not([type=checkbox]):not([type=radio]):focus, select:focus, textarea:focus { border-color: var(--primary); }
+/* typing: the brand border and a soft ring of it, so the field being filled is plain to see (the keyboard ring is on top) */
+input:not([type=checkbox]):not([type=radio]):focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--focus-soft); }
 input:disabled, select:disabled, textarea:disabled, input[readonly] { background: var(--surface-2); color: var(--text-2); }
-input[aria-invalid=true], select[aria-invalid=true], textarea[aria-invalid=true] { border-color: var(--crit); }
+/* a field the server or the browser refused: red border, red soft ring while typing in it again (only after the officer
+   has touched it or pressed Save, never on an empty form just opened) */
+input[aria-invalid=true], select[aria-invalid=true], textarea[aria-invalid=true],
+input:not([type=checkbox]):not([type=radio]):user-invalid, select:user-invalid, textarea:user-invalid { border-color: var(--crit); }
+input:not([type=checkbox]):not([type=radio]):user-invalid:focus, select:user-invalid:focus, textarea:user-invalid:focus { box-shadow: 0 0 0 3px var(--crit-ring); }
 input[type=file] { padding: 6px; }
+input[type=file]::file-selector-button { font: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semi); color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 4px var(--sp-3); margin-right: var(--sp-3); cursor: pointer; }
+input[type=file]::file-selector-button:hover { background: var(--hover); }
 input[type=checkbox], input[type=radio] { accent-color: var(--primary); width: 18px; height: 18px; margin: 0; flex: none; }
-textarea { min-height: 80px; line-height: var(--lh-body); }
+textarea { min-height: 80px; line-height: var(--lh-body); padding-top: var(--sp-2); padding-bottom: var(--sp-2); resize: vertical; }
 /* a list shows its own chevron so it looks the same on every browser */
 select { appearance: none; padding-right: 34px; cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235B6775' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -168,8 +177,14 @@ select[multiple] { background-image: none; padding-right: 10px; }
 summary { cursor: pointer; color: var(--primary); font-weight: var(--fw-semi); font-size: var(--fs-md); padding: 6px 0; }
 summary:hover { color: var(--primary-dark); }
 details { margin: var(--sp-1) 0; }
-fieldset { border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); margin: 0; min-width: 0; }
-legend { padding: 0 var(--sp-1); font-weight: var(--fw-semi); font-size: var(--fs-sm); color: var(--text-2); }
+fieldset { border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4) var(--sp-4); margin: 0; min-width: 0; background: var(--surface-2); }
+legend { padding: 0 var(--sp-2); margin-left: calc(-1 * var(--sp-2)); font-weight: var(--fw-semi); font-size: var(--fs-sm); color: var(--text); }
+
+/* ---- messages: an error (role=alert) is a red box, a confirmation (role=status) a blue one; the words say which ---- */
+main p[role=alert], .guide p[role=alert] { padding: var(--sp-2) var(--sp-3); border: 1px solid var(--crit-line); border-left: 4px solid var(--crit); border-radius: var(--r-md);
+  background: var(--crit-soft); color: var(--crit); font-size: var(--fs-md); font-weight: var(--fw-semi); line-height: var(--lh-snug); }
+main p[role=status]:not(.chip) { padding: var(--sp-2) var(--sp-3); border: 1px solid var(--info-line); border-left: 4px solid var(--primary); border-radius: var(--r-md);
+  background: var(--info-soft); color: var(--info); font-size: var(--fs-md); line-height: var(--lh-snug); }
 
 /* ---- status chips: colour never alone, always a word ---- */
 /* a chip wraps only when it is wider than its column, never widens the page (a sentence chip in the case diary did, by 339 px on a phone) */
@@ -242,50 +257,84 @@ main ul.plain > li > .chip, main ul.plain > li > p > .chip { text-align: left; }
 .gaps > li { border: 1px solid var(--crit-line); background: var(--crit-soft); border-radius: 10px; padding: var(--sp-3) 14px; margin: 0; }
 
 /* ---- kept from before: typing, forms, AI drafts, front desk ---- */
-.typing-field { display: grid; gap: .25rem; margin: .5rem 0; }
-.typing-field textarea, .typing-field input { font: inherit; font-size: 1.1rem; padding: .5rem .6rem; }
-.suggestions { display: flex; flex-wrap: wrap; gap: .4rem; list-style: none; margin: 0; padding: 0; }
+.typing-field { display: grid; gap: var(--sp-1); margin: var(--sp-2) 0; }
+.typing-field textarea, .typing-field input { font: inherit; font-size: 1.1rem; padding: var(--sp-2) 10px; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
 .suggestions li { margin: 0; }
-.suggestions button { padding: 0 .6rem; min-height: 36px; font-weight: 400; }
+.suggestions button { padding: 0 10px; min-height: 36px; font-weight: 400; }
 .suggestions li:first-child button { font-weight: bold; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.login { display: grid; gap: .75rem; max-width: 22rem; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
-.login label { display: grid; gap: .25rem; font-weight: 600; font-size: 14px; }
-.inline { display: inline; margin-left: .5rem; }
-form.inline { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.login { display: grid; gap: var(--sp-3); max-width: 22rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--sp-6); }
+.inline { display: inline; margin-left: var(--sp-2); }
+form.inline { display: inline-flex; flex-wrap: wrap; gap: 6px var(--sp-2); align-items: center; }
+
+/* ---- forms (docs/DESIGN.md "Forms") ---- */
+/* one label style everywhere: 13 px semibold above its field, the field's own text in the body weight */
+.record-form label, .record-form .typing-field > label, .login label, .guide label, form.inline label {
+  display: grid; gap: 6px; font-weight: var(--fw-semi); font-size: var(--fs-sm); line-height: var(--lh-snug); color: var(--text-2); }
+form.inline label { display: inline-grid; }
 /* A form to record something: short fields side by side (two or three to a row on a desktop), a long text, notes,
    check boxes and the buttons across the whole row; opened from a button-like line, it sits in its own panel. */
-.record-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 14px 16px; max-width: 52rem; margin: .5rem 0 1rem; align-items: end; }
+.record-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: var(--sp-4); max-width: 52rem; margin: var(--sp-2) 0 var(--sp-4); align-items: end; }
 .record-form > :not(label), .record-form label:has(textarea), .record-form label:has(input[type=checkbox]), .record-form label:has(input[type=file]) { grid-column: 1 / -1; }
-.record-form label { display: grid; gap: 6px; font-weight: var(--fw-semi); font-size: var(--fs-sm); color: var(--text-2); }
 .record-form input:not([type=checkbox]):not([type=radio]), .record-form select, .record-form textarea { width: 100%; font-weight: 400; color: var(--text); }
-.record-form textarea { min-height: 110px; line-height: var(--lh-body); }
-.record-form label:has(input[type=checkbox]) { display: flex; gap: .5rem; align-items: center; font-weight: 400; font-size: var(--fs-md); color: var(--text); }
+.record-form textarea { min-height: 112px; }
+/* the typing field (TypingField.tsx) is one more field of the form: same label, same size as the others */
+.record-form .typing-field { margin: 0; gap: 6px; }
+.record-form .typing-field textarea, .record-form .typing-field input { font-size: var(--fs-md); padding: 6px var(--sp-3); }
+.record-form .typing-field textarea { padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
+.record-form .typing-field > button { justify-self: start; }
+/* a check box: the box first, its words beside it, the whole line to click */
+.record-form label:has(input[type=checkbox]), .record-form label:has(input[type=radio]) { display: flex; gap: 10px; align-items: flex-start; min-height: 24px; font-weight: 400; font-size: var(--fs-md); line-height: var(--lh-body); color: var(--text); cursor: pointer; }
+.record-form label:has(input[type=checkbox]) > input, .record-form label:has(input[type=radio]) > input { margin-top: 2px; }
+/* help under a field or a whole form: smaller and quieter than a label */
+.record-form p { margin: 0; color: var(--text-2); font-size: var(--fs-md); line-height: var(--lh-snug); }
+.record-form small, .record-form .note, .record-form .sub, .record-form label small { font-size: var(--fs-sm); font-weight: 400; color: var(--muted); line-height: var(--lh-snug); }
+/* the groups of a long form: a title, then a fieldset for each repeated block (a witness, an item) */
+.record-form > h3 { margin: 0; font-size: var(--fs-body); }
+.record-form > h4 { margin: var(--sp-2) 0 0; padding-top: var(--sp-4); border-top: 1px solid var(--line-soft); font-size: var(--fs-xs); font-weight: var(--fw-semi);
+  letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--muted); }
+.record-form fieldset { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: var(--sp-3) var(--sp-4); }
+.record-form fieldset > :not(label), .record-form fieldset > label:has(textarea), .record-form fieldset > label:has(input[type=checkbox]) { grid-column: 1 / -1; }
+/* buttons: Save is the filled one and stands a little apart from the fields above it; "add another" stays secondary */
 .record-form button { justify-self: start; }
 .record-form button[type=submit] { min-width: 8rem; }
-.record-form p { margin: 0; }
-details:has(> .record-form) > summary, details:has(> form) > summary { display: inline-flex; align-items: center; gap: 6px; min-height: var(--control); padding: 0 14px; box-shadow: var(--shadow-1);
+.record-form > button[type=submit]:last-of-type { margin-top: var(--sp-1); }
+.record-form > [role=alert] { margin: 0; }
+/* a form that stands on the page by itself (not in a card, not behind a button) is a card of its own */
+main > form.record-form { box-sizing: border-box; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+  padding: var(--sp-5) var(--sp-6); box-shadow: var(--shadow-1); margin: 0; }
+main > form.record-form > h2 { margin: 0; }
+/* the line that opens a form: a quiet button in the brand colour */
+details:has(> .record-form) > summary, details:has(> form) > summary { display: inline-flex; align-items: center; gap: 6px; min-height: var(--control); padding: 0 var(--sp-4); box-shadow: var(--shadow-1);
   border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--surface); }
-details:has(> .record-form) > summary:hover, details:has(> form) > summary:hover { background: var(--hover); }
+details:has(> .record-form) > summary:hover, details:has(> form) > summary:hover { background: var(--hover); border-color: var(--field); }
 details[open]:has(> form) > summary { background: var(--selected); border-color: var(--primary); }
 /* An open form is a panel from the right, one field to a row, the page dimmed behind it. The opening line becomes the
    dimmed page and the panel's head (its ::after is the white head, ::before the close mark), so a click outside the
    panel, on its head or Escape (App.tsx) closes it; nothing typed is lost, the form keeps its values while closed. */
 body:has(details[open] > .record-form) { overflow: hidden; }
-details[open]:has(> .record-form) { --panel: min(480px, 100vw); --head: 72px; }
-/* the title may take two lines (three in a longer language) inside the fixed head */
-details[open]:has(> .record-form) > summary { position: fixed; inset: 0; z-index: 20; margin: 0; border: 0; border-radius: 0;
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; box-sizing: border-box; min-height: 0; height: 100vh;
-  padding: 12px 24px 0 calc(100vw - var(--panel) + 24px); background: var(--scrim); color: var(--text); font-size: 16px; line-height: 20px; }
+details[open]:has(> .record-form) { --panel-max: 480px; --panel: min(var(--panel-max), 100vw); --head: 72px; --pad: var(--sp-6); }
+/* the title sits in the middle of the fixed head on one, two or three lines (a longer language), the close mark beside it */
+details[open]:has(> .record-form) > summary { position: fixed; inset: 0; z-index: 20; margin: 0; border: 0; border-radius: 0; box-shadow: none;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: var(--head); align-content: start; align-items: center; gap: var(--sp-3);
+  box-sizing: border-box; min-height: 0; height: 100vh; padding: 0 var(--pad) 0 calc(100vw - var(--panel) + var(--pad));
+  background: var(--scrim); color: var(--text); font-size: var(--fs-lg); font-weight: var(--fw-bold); line-height: 20px; }
 details[open]:has(> .record-form) > summary::after { content: ""; position: absolute; z-index: -1; top: 0; right: 0; width: var(--panel); height: var(--head);
-  background: var(--surface); border-bottom: 1px solid var(--line); }
-details[open]:has(> .record-form) > summary::before { content: "\2715"; order: 2; color: var(--muted); font-size: 16px; }
+  box-sizing: border-box; background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: var(--shadow-3); clip-path: inset(0 0 0 -40px); }
+details[open]:has(> .record-form) > summary::before { content: "\2715"; order: 2; display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-md);
+  color: var(--muted); font-size: var(--fs-body); font-weight: 400; }
 details[open]:has(> .record-form) > summary:hover { background: var(--scrim); }
+details[open]:has(> .record-form) > summary:hover::before { background: var(--hover); color: var(--text); }
 details[open] > .record-form { position: fixed; z-index: 21; top: var(--head); right: 0; bottom: 0; width: var(--panel); box-sizing: border-box; margin: 0;
-  max-width: none; overflow-y: auto; grid-template-columns: 1fr; align-content: start; padding: 20px 24px 0; background: var(--surface);
-  box-shadow: var(--shadow-3); }
-details[open] > .record-form > button[type=submit]:last-of-type { position: sticky; bottom: 16px; width: 100%; margin-top: 4px;
-  box-shadow: 0 0 0 16px var(--surface); }
+  max-width: none; overflow-y: auto; grid-template-columns: 1fr; align-content: start; padding: var(--sp-5) var(--pad) 0; background: var(--surface);
+  box-shadow: var(--shadow-3); clip-path: inset(0 0 0 -40px); }
+details[open] > .record-form fieldset { grid-template-columns: 1fr; }
+/* the Save area: a white bar with a hairline above it, always in view at the foot of the panel */
+details[open] > .record-form > button[type=submit]:last-of-type { position: sticky; bottom: var(--sp-4); width: 100%; margin-top: var(--sp-2);
+  box-shadow: 0 calc(var(--panel-max) - var(--pad)) 0 var(--panel-max) var(--surface), 0 calc(var(--panel-max) - var(--pad)) 0 calc(var(--panel-max) + 1px) var(--line); }
+/* (the two shadows are a white bar and its hairline, spread far wider than the panel and moved down by as much, so their
+   rounded corners fall outside the panel and the hairline runs straight from edge to edge, --pad above the button) */
 
 /* the final report on paper for the court (CourtPaper.tsx): a preview on screen, the court's format when printed */
 .court-paper { margin-top: 16px; border: 1px solid var(--line); border-radius: 10px; padding: 20px 24px; background: var(--surface); }
@@ -322,7 +371,6 @@ details[open] > .record-form > button[type=submit]:last-of-type { position: stic
 .earlier .chip { margin-right: 6px; }
 .guide-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .guide form, .guide .ai-draft { margin-top: 12px; }
-.guide label { display: grid; gap: 4px; font-weight: 600; }
 .guide input { width: 100%; min-height: 40px; }
 
 /* the complaint as it is read over to the informant: large, plain, easy to follow line by line */
@@ -407,13 +455,19 @@ body { overflow-wrap: break-word; }
   .cases > .list-head { padding: 0; border: 0; }
   .cases table.cards td:first-child, .cases table.cards td:last-child { padding-left: 0; padding-right: 0; }
   .cases > .empty, .cases > nav { padding-left: 0; padding-right: 0; border: 0; }
-  main section, .card { padding: 14px 14px; }
+  main section, .card, main > form.record-form { padding: 14px 14px; }
   button, .btn, select, input:not([type=checkbox]):not([type=radio]), summary, .menu-toggle { min-height: var(--touch); }
   input[type=checkbox], input[type=radio] { width: 24px; height: 24px; }
   input, select, textarea, input:not([type=checkbox]):not([type=radio]), .header-menu select { font-size: 16px; }
   .header-menu select { min-height: var(--touch); }
   .record-form, .login { max-width: none; }
   .record-form input:not([type=checkbox]):not([type=radio]), .record-form select, .record-form textarea, .record-form button, .login input, .login button { width: 100%; }
+  /* forms on a phone: labels a step larger, the panel's sides 16 px, the check box level with its first line */
+  .record-form label, .record-form .typing-field > label, .login label, form.inline label { font-size: var(--fs-md); }
+  .record-form label:has(input[type=checkbox]) > input, .record-form label:has(input[type=radio]) > input { margin-top: 0; }
+  .record-form label:has(input[type=checkbox]), .record-form label:has(input[type=radio]) { font-size: 16px; min-height: var(--touch); align-items: center; }
+  .record-form .typing-field textarea, .record-form .typing-field input { font-size: 16px; }
+  details[open]:has(> .record-form) { --pad: var(--sp-4); }
   summary { display: flex; align-items: center; padding: 0 .75rem; margin: .5rem 0; border: 1px solid var(--primary); border-radius: 8px; }
 
   /* the lists an officer reads in the field become one card per row, each value with its column name */
@@ -435,8 +489,8 @@ body { overflow-wrap: break-word; }
   .fir-parts select { width: 100%; }
   .fir-part:not(.shown) { display: none; }
   /* the small forms inside a line (link evidence, accept a gap, withdraw) take their own full-width line */
-  form.inline { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; margin: .5rem 0; }
-  form.inline label { display: grid; gap: .2rem; flex: 1 1 12rem; min-width: 0; }
+  form.inline { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: end; margin: var(--sp-2) 0; }
+  form.inline label { display: grid; gap: var(--sp-1); flex: 1 1 12rem; min-width: 0; }
   form.inline select, form.inline input { width: 100%; }
   details.inline { display: block; margin-left: 0; }
 }
